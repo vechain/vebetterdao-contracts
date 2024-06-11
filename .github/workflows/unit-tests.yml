@@ -1,0 +1,58 @@
+name: Unit Testing
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  run-unit-tests:
+    name: Unit Testing
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Use Node v20
+        uses: actions/setup-node@v3
+        with:
+          node-version-file: .nvmrc
+          cache: "yarn"
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Compile contracts
+        run: yarn compile
+
+      - name: Unit Tests
+        run: yarn test:hardhat
+
+      - name: Run Slither
+        uses: crytic/slither-action@v0.3.1
+        id: slither
+        with:
+          ignore-compile: true
+          target: "packages/contracts/"
+          solc-version: "0.8.20"
+          fail-on: none
+          slither-args: --filter-paths "openzeppelin" --exclude-informational --exclude-optimization --checklist --markdown-root ${{ github.server_url }}/${{ github.repository }}/blob/${{ github.sha }}/
+
+      - name: Create/update checklist as PR comment
+        uses: actions/github-script@v7
+        if: github.event_name == 'pull_request' && steps.contract_changes.outputs.src == 'true'
+        env:
+          REPORT: ${{ steps.slither.outputs.stdout }}
+        with:
+          script: |
+            const script = require('.github/scripts/comment')
+            const header = '# Slither report'
+            const body = process.env.REPORT
+            await script({ github, context, header, body })
