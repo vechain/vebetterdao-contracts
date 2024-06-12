@@ -40,7 +40,7 @@ jobs:
         id: slither
         with:
           ignore-compile: true
-          target: "packages/contracts/"
+          target: "contracts/"
           solc-version: "0.8.20"
           fail-on: none
           slither-args: --filter-paths "openzeppelin" --exclude-informational --exclude-optimization --checklist --markdown-root ${{ github.server_url }}/${{ github.repository }}/blob/${{ github.sha }}/
