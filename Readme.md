@@ -1,4 +1,4 @@
-# VeBetterDAO Smart Contracts Repository 🌟
+# VeBetterDAO Smart Contracts 🌟
 
                                      #######
                                 ################
