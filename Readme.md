@@ -80,4 +80,4 @@ yarn test:thor-solo
 
 # Disclaimer
 
-This repository is for educational and demonstration purposes. Please review and test the code thoroughly before using it in a production environment. The maintainers are not liable for any misuse or faults within the code.
+This repository is for educational and demonstration purposes. The maintainers are not liable for any misuse or faults within the code.
