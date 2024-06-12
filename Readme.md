@@ -21,7 +21,7 @@
                                   ##############
                                   #########
 
-Welcome to the VeBetterDAO Smart Contracts repository! This open-source repository houses the smart contracts powering the decentralized VeBetterDAO on the Vechain Thor blockchain. Dive into a world of transparent and auditable governance mechanisms, leveraging Solidity, Hardhat, and more to ensure robust decentralized operations.
+Welcome to the VeBetterDAO Smart Contracts repository! This open-source repository houses the smart contracts powering the decentralized VeBetterDAO on the VeChain Thor blockchain. Dive into a world of transparent and auditable governance mechanisms, leveraging Solidity, Hardhat, and more to ensure robust decentralized operations.
 
 ## Requirements
 
@@ -35,7 +35,7 @@ Before contributing or deploying, ensure your environment meets the following sp
 
 ### Contracts (contracts/) 📜
 
-Core smart contracts written in Solidity. Managed with Hardhat, these contracts are ready for deployment on the Vechain Thor blockchain.
+Core smart contracts written in Solidity. Managed with Hardhat, these contracts are ready for deployment on the VeChain Thor blockchain.
 
 ### Artifacts (artifacts/) 🏺
 
