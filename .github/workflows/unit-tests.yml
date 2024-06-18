@@ -34,3 +34,14 @@ jobs:
 
       - name: Unit Tests
         run: yarn test:hardhat
+
+      - name: Generate coverage
+        run: test:coverage:solidity
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          verbose: true
+          directory: coverage/
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
