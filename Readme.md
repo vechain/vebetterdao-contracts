@@ -23,6 +23,10 @@
 
 Welcome to the VeBetterDAO Smart Contracts repository! This open-source repository houses the smart contracts powering the decentralized VeBetterDAO on the VeChain Thor blockchain. Dive into a world of transparent and auditable governance mechanisms, leveraging Solidity, Hardhat, and more to ensure robust decentralized operations.
 
+## Audit
+
+The VeBetterDAO smart contracts have undergone a comprehensive audit by [Hacken](https://hacken.io/). The audit report (`Hacken_Vechain Foundation_[SCA] VeChain _ VeBetter DAO _ May2024_P-2024-304_1_20240621 16_17`) can be found in the root of the repo.
+
 ## Requirements
 
 Before contributing or deploying, ensure your environment meets the following specifications:
@@ -82,7 +86,3 @@ yarn test:thor-solo
 # Disclaimer
 
 This repository is for educational and demonstration purposes. The maintainers are not liable for any misuse or faults within the code.
-
-# Audit
-
-The VeBetterDAO smart contracts have undergone a comprehensive audit by [Hacken](https://hacken.io/). The audit report (`Hacken_Vechain Foundation_[SCA] VeChain _ VeBetter DAO _ May2024_P-2024-304_1_20240621 16_17`) can be found in the root of the repo.
