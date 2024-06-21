@@ -21,7 +21,7 @@
 //                                   ##############
 //                                   #########
 
-pragma solidity ^0.8.20;
+pragma solidity 0.8.20;
 
 import { XAllocationVotingGovernor } from "../XAllocationVotingGovernor.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
@@ -118,9 +118,9 @@ abstract contract ExternalContractsUpgradeable is Initializable, XAllocationVoti
   function _setEmissions(IEmissions newEmisionsAddress) internal virtual {
     require(address(newEmisionsAddress) != address(0), "XAllocationVotingGovernor: emissions is the zero address");
     ExternalContractsStorage storage $ = _getExternalContractsStorage();
-    $._emissions = IEmissions(newEmisionsAddress);
 
     emit EmissionsSet(address($._emissions), address(newEmisionsAddress));
+    $._emissions = IEmissions(newEmisionsAddress);
   }
 
   /**
@@ -134,9 +134,8 @@ abstract contract ExternalContractsUpgradeable is Initializable, XAllocationVoti
 
     ExternalContractsStorage storage $ = _getExternalContractsStorage();
 
-    $._x2EarnApps = newX2EarnApps;
-
     emit X2EarnAppsSet(address($._x2EarnApps), address(newX2EarnApps));
+    $._x2EarnApps = newX2EarnApps;
   }
 
   /**
@@ -148,8 +147,7 @@ abstract contract ExternalContractsUpgradeable is Initializable, XAllocationVoti
 
     ExternalContractsStorage storage $ = _getExternalContractsStorage();
 
-    $._voterRewards = newVoterRewards;
-
     emit VoterRewardsSet(address($._voterRewards), address(newVoterRewards));
+    $._voterRewards = newVoterRewards;
   }
 }

@@ -21,7 +21,7 @@
 //                                   ##############
 //                                   #########
 
-pragma solidity ^0.8.20;
+pragma solidity 0.8.20;
 
 import { XAllocationVotingGovernor } from "../XAllocationVotingGovernor.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
@@ -113,7 +113,7 @@ abstract contract RoundsStorageUpgradeable is Initializable, XAllocationVotingGo
   /**
    * @dev Get the data of a round
    */
-  function getRound(uint256 roundId) public view returns (RoundCore memory) {
+  function getRound(uint256 roundId) external view returns (RoundCore memory) {
     RoundsStorageStorage storage $ = _getRoundsStorageStorage();
     return $._rounds[roundId];
   }
@@ -175,16 +175,21 @@ abstract contract RoundsStorageUpgradeable is Initializable, XAllocationVotingGo
   /**
    * @dev Get all the apps in the form of {App} eligible for voting in a round
    *
-   * This function could not be efficient with a large number of apps
+   * @notice This function could not be efficient with a large number of apps, in that case, use {getAppIdsOfRound}
+   * and then call {IX2EarnApps-app} for each app id
    */
-  function getAppsOfRound(uint256 roundId) public view returns (X2EarnAppsDataTypes.App[] memory) {
+  function getAppsOfRound(
+    uint256 roundId
+  ) external view returns (X2EarnAppsDataTypes.AppWithDetailsReturnType[] memory) {
     RoundsStorageStorage storage $ = _getRoundsStorageStorage();
 
     bytes32[] memory appsInRound = $._appsEligibleForVoting[roundId];
-    X2EarnAppsDataTypes.App[] memory allApps = new X2EarnAppsDataTypes.App[](appsInRound.length);
-
     uint256 length = appsInRound.length;
-    for (uint i = 0; i < length; i++) {
+    X2EarnAppsDataTypes.AppWithDetailsReturnType[] memory allApps = new X2EarnAppsDataTypes.AppWithDetailsReturnType[](
+      length
+    );
+
+    for (uint i; i < length; i++) {
       allApps[i] = x2EarnApps().app(appsInRound[i]);
     }
     return allApps;

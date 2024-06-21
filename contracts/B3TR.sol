@@ -21,7 +21,7 @@
 //                                   ##############
 //                                   #########
 
-pragma solidity ^0.8.20;
+pragma solidity 0.8.20;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Capped.sol";
@@ -34,17 +34,19 @@ contract B3TR is ERC20Capped, ERC20Pausable, AccessControl {
   bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
   bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
 
+  /// @notice The maximum amount of B3TR tokens that can be minted
+  uint256 private constant B3TR_CAP = 1000243154;
+
   /// @dev Initializes the contract with specified cap, token details, and admin roles
   /// @param _admin The address that will be granted the default admin role
   /// @param _defaultMinter The address that will be granted the minter role initially
   /// @param _pauser The address that will be granted the pauser role initially
-  /// @param _cap The maximum amount of tokens that can be minted (expressed in token units)
   constructor(
     address _admin,
     address _defaultMinter,
-    address _pauser,
-    uint256 _cap
-  ) ERC20("B3TR", "B3TR") ERC20Capped(_cap * 1e18) {
+    address _pauser
+  ) ERC20("B3TR", "B3TR") ERC20Capped(B3TR_CAP * 1e18) {
+    require(_admin != address(0), "B3TR: admin address cannot be zero");
     _grantRole(DEFAULT_ADMIN_ROLE, _admin);
     _grantRole(MINTER_ROLE, _defaultMinter);
     _grantRole(PAUSER_ROLE, _pauser);
@@ -52,13 +54,13 @@ contract B3TR is ERC20Capped, ERC20Pausable, AccessControl {
 
   /// @notice Pauses all token transfers and minting actions
   /// @dev Accessible only by accounts with the default admin role
-  function pause() public onlyRole(PAUSER_ROLE) {
+  function pause() external onlyRole(PAUSER_ROLE) {
     _pause();
   }
 
   /// @notice Resumes all token transfers and minting actions
   /// @dev Accessible only by accounts with the default admin role
-  function unpause() public onlyRole(PAUSER_ROLE) {
+  function unpause() external onlyRole(PAUSER_ROLE) {
     _unpause();
   }
 

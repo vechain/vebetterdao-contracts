@@ -1,19 +1,21 @@
 import { ethers, network } from "hardhat"
 import { expect } from "chai"
 import {
-  getOrDeployContractInstances,
-  catchRevert,
   createProposalAndExecuteIt,
   bootstrapAndStartEmissions,
   bootstrapEmissions,
   participateInAllocationVoting,
-} from "./helpers"
+} from "./helpers/common"
+import { getOrDeployContractInstances } from "./helpers/deploy"
+import { catchRevert } from "./helpers/exceptions"
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers"
 import { describe, it, before } from "mocha"
 import { fundTreasuryVET, fundTreasuryVTHO } from "./helpers/fundTreasury"
-import { B3TR, B3TRGovernor, Treasury, Treasury__factory } from "../typechain-types"
+import { B3TR, B3TRGovernor, MyERC1155, Treasury, Treasury__factory } from "../typechain-types"
 import { createLocalConfig } from "../config/contracts/envs/local"
 import { deployProxy } from "../scripts/helpers"
+import { getEventName } from "./helpers/events"
+import { ZERO_ADDRESS } from "./helpers"
 
 describe("Treasury", () => {
   let treasuryProxy: Treasury
@@ -47,6 +49,74 @@ describe("Treasury", () => {
     const operatorRole = await b3tr.MINTER_ROLE()
     await b3tr.grantRole(operatorRole, owner)
     await b3tr.mint(await treasuryProxy.getAddress(), ethers.parseEther("20"))
+  })
+  describe("Initilization", () => {
+    it("Should revert if B3TR is set to zero address in initilisation", async () => {
+      const config = createLocalConfig()
+      const { owner, vot3 } = await getOrDeployContractInstances({
+        forceDeploy: false,
+        config,
+      })
+
+      await expect(
+        deployProxy("Treasury", [
+          ZERO_ADDRESS,
+          await vot3.getAddress(),
+          owner.address,
+          owner.address,
+          owner.address,
+          owner.address,
+          config.TREASURY_TRANSFER_LIMIT_VET,
+          config.TREASURY_TRANSFER_LIMIT_B3TR,
+          config.TREASURY_TRANSFER_LIMIT_VOT3,
+          config.TREASURY_TRANSFER_LIMIT_VTHO,
+        ]),
+      ).to.be.reverted
+    })
+    it("Should revert if VOT3 is set to zero address in initilisation", async () => {
+      const config = createLocalConfig()
+      const { owner, b3tr } = await getOrDeployContractInstances({
+        forceDeploy: false,
+        config,
+      })
+
+      await expect(
+        deployProxy("Treasury", [
+          await b3tr.getAddress(),
+          ZERO_ADDRESS,
+          owner.address,
+          owner.address,
+          owner.address,
+          owner.address,
+          config.TREASURY_TRANSFER_LIMIT_VET,
+          config.TREASURY_TRANSFER_LIMIT_B3TR,
+          config.TREASURY_TRANSFER_LIMIT_VOT3,
+          config.TREASURY_TRANSFER_LIMIT_VTHO,
+        ]),
+      ).to.be.reverted
+    })
+    it("Should revert if admin is set to zero address in initilisation", async () => {
+      const config = createLocalConfig()
+      const { owner, vot3, b3tr } = await getOrDeployContractInstances({
+        forceDeploy: false,
+        config,
+      })
+
+      await expect(
+        deployProxy("Treasury", [
+          await b3tr.getAddress(),
+          await vot3.getAddress(),
+          owner.address,
+          ZERO_ADDRESS,
+          owner.address,
+          owner.address,
+          config.TREASURY_TRANSFER_LIMIT_VET,
+          config.TREASURY_TRANSFER_LIMIT_B3TR,
+          config.TREASURY_TRANSFER_LIMIT_VOT3,
+          config.TREASURY_TRANSFER_LIMIT_VTHO,
+        ]),
+      ).to.be.reverted
+    })
   })
   describe("Tokens", () => {
     describe("VTHO", () => {
@@ -91,8 +161,13 @@ describe("Treasury", () => {
       it("Should revert if transfer exceeds limit", async () => {
         await catchRevert(treasuryProxy.transferVET(otherAccount.address, ethers.parseEther("2")))
       })
-      it("Should be able to set transfer limit", async () => {
-        await treasuryProxy.connect(owner).setTransferLimitVET(ethers.parseEther("2"))
+      it("Should be able to set transfer limit for VET", async () => {
+        const tx = await treasuryProxy.connect(owner).setTransferLimitVET(ethers.parseEther("2"))
+        const receipt = await tx.wait()
+
+        const name = getEventName(receipt, treasuryProxy)
+        expect(name).to.eql("TransferLimitVETUpdated")
+
         expect(await treasuryProxy.getTransferLimitVET()).to.eql(ethers.parseEther("2"))
         await treasuryProxy.transferVET(otherAccount.address, ethers.parseEther("2"))
         expect(await treasuryProxy.getVETBalance()).to.eql(ethers.parseEther("7"))
@@ -195,7 +270,13 @@ describe("Treasury", () => {
       })
       it("Should be able to set transfer limit", async () => {
         await treasuryProxy.convertB3TR(ethers.parseEther("10"))
-        await treasuryProxy.connect(owner).setTransferLimitToken(await vot3.getAddress(), ethers.parseEther("2"))
+        const tx = await treasuryProxy
+          .connect(owner)
+          .setTransferLimitToken(await vot3.getAddress(), ethers.parseEther("2"))
+        const receipt = await tx.wait()
+
+        const name = getEventName(receipt, treasuryProxy)
+        expect(name).to.eql("TransferLimitUpdated")
         expect(await treasuryProxy.getTransferLimitToken(await vot3.getAddress())).to.eql(ethers.parseEther("2"))
         await treasuryProxy.transferVOT3(otherAccount.address, ethers.parseEther("2"))
         expect(await treasuryProxy.getVOT3Balance()).to.eql(ethers.parseEther("12"))
@@ -282,6 +363,40 @@ describe("Treasury", () => {
       })
       it("should revert if not enough balance", async () => {
         await catchRevert(treasuryProxy.transferNFT(await galaxyMember.getAddress(), otherAccount.address, 1))
+      })
+    })
+    describe("ERC1155", () => {
+      let erc1155: MyERC1155
+      before(async () => {
+        const erc1155ContractFactory = await ethers.getContractFactory("MyERC1155")
+        erc1155 = await erc1155ContractFactory.deploy(owner.address)
+      })
+      it("should transfer ERC1155", async () => {
+        await erc1155.connect(owner).mint(await treasuryProxy.getAddress(), 1, 1, new Uint8Array(0))
+        expect(await treasuryProxy.getERC1155TokenBalance(await erc1155.getAddress(), 1)).to.eql(1n)
+
+        await treasuryProxy.transferERC1155Tokens(await erc1155.getAddress(), owner.address, 1, 1, new Uint8Array(0))
+
+        expect(await treasuryProxy.getERC1155TokenBalance(await erc1155.getAddress(), 1)).to.eql(0n)
+
+        expect(await erc1155.balanceOf(owner.address, 1)).to.eql(1n)
+      })
+      it("should revert if not called by GOVERNANCE_ROLE", async () => {
+        await catchRevert(
+          treasuryProxy
+            .connect(otherAccount)
+            .transferERC1155Tokens(await erc1155.getAddress(), owner.address, 1, 1, new Uint8Array(0)),
+        )
+      })
+      it("should revert if not enough balance", async () => {
+        await catchRevert(
+          treasuryProxy.transferERC1155Tokens(await erc1155.getAddress(), owner.address, 1, 1, new Uint8Array(0)),
+        )
+      })
+      it("should be able to recieve a batch of ERC1155 tokens", async () => {
+        await erc1155.connect(owner).mintBatch(await treasuryProxy.getAddress(), [2, 3], [2, 3], new Uint8Array(0))
+        expect(await treasuryProxy.getERC1155TokenBalance(await erc1155.getAddress(), 2)).to.eql(2n)
+        expect(await treasuryProxy.getERC1155TokenBalance(await erc1155.getAddress(), 3)).to.eql(3n)
       })
     })
   })

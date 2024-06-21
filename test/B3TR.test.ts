@@ -29,7 +29,7 @@ describe("B3TR Token", function () {
       const { b3tr } = await getOrDeployContractInstances({ forceDeploy: false, config })
 
       const cap = await b3tr.cap()
-      expect(cap).to.eql(ethers.parseEther(config.B3TR_CAP.toString()))
+      expect(cap).to.eql(ethers.parseEther("1000243154"))
     })
 
     it("admin role is set correctly upon deploy", async function () {
@@ -50,6 +50,12 @@ describe("B3TR Token", function () {
 
       // test that operator role is not set for other accounts
       expect(await b3tr.hasRole(operatorRole, otherAccount)).to.eql(false)
+    })
+
+    it("should revert if default admin set to zero address on initilisation", async function () {
+      const { owner, minterAccount } = await getOrDeployContractInstances({ forceDeploy: false })
+      const B3trContract = await ethers.getContractFactory("B3TR")
+      await expect(B3trContract.deploy(ethers.ZeroAddress, minterAccount, owner)).to.be.reverted
     })
   })
 
@@ -178,10 +184,10 @@ describe("B3TR Token", function () {
       const operatorRole = await b3tr.MINTER_ROLE()
 
       await b3tr.grantRole(operatorRole, owner)
-      await expect(b3tr.mint(otherAccount, ethers.parseEther(config.B3TR_CAP.toString()))).not.to.be.reverted
+      await expect(b3tr.mint(otherAccount, ethers.parseEther("1000243154"))).not.to.be.reverted
 
       const balance = await b3tr.balanceOf(otherAccount)
-      expect(String(balance)).to.eql(ethers.parseEther(config.B3TR_CAP.toString()).toString())
+      expect(String(balance)).to.eql(ethers.parseEther("1000243154").toString())
     })
   })
 

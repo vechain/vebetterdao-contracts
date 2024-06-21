@@ -20,6 +20,7 @@ import {
   ZERO_ADDRESS,
   waitForQueuedProposalToBeReady,
   waitForNextCycle,
+  getEventName,
 } from "./helpers"
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers"
 import { describe, it } from "mocha"
@@ -32,9 +33,10 @@ describe("Governor and TimeLock", function () {
   describe("Governor deployment", function () {
     it("Should set constructors correctly", async function () {
       const config = createLocalConfig()
-      const { governor, vot3, owner, timeLock, xAllocationVoting, voterRewards } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
+      const { governor, vot3, b3tr, owner, timeLock, xAllocationVoting, voterRewards } =
+        await getOrDeployContractInstances({
+          forceDeploy: true,
+        })
 
       await bootstrapAndStartEmissions()
 
@@ -87,6 +89,10 @@ describe("Governor and TimeLock", function () {
       // should be unpaused
       const paused = await governor.paused()
       expect(paused).to.be.false
+
+      // b3tr address is set correctly
+      const b3trAddress = await governor.b3tr()
+      expect(b3trAddress).to.eql(await b3tr.getAddress())
     })
 
     it("Should be able to upgrade the governor contract through governance", async function () {
@@ -167,7 +173,7 @@ describe("Governor and TimeLock", function () {
       expect(await governor.state(proposalId)).to.eql(5n)
 
       await governor.execute([await governor.getAddress()], [0], [encodedFunctionCall], descriptionHash)
-      expect(await governor.state(proposalId)).to.eql(7n)
+      expect(await governor.state(proposalId)).to.eql(6n)
 
       await governor.connect(owner).withdraw(proposalId, owner.address)
       await vot3.connect(owner).approve(await governor.getAddress(), ethers.parseEther("1000"))
@@ -181,7 +187,11 @@ describe("Governor and TimeLock", function () {
       // Check that the new implementation works
       const newGovernor = Contract.attach(await governor.getAddress()) as B3TRGovernor
 
-      await newGovernor.connect(owner).setWhitelistFunction(b3tr, funcSig, true) // whitelist the function for b3tr contract
+      const tx1 = await newGovernor.connect(owner).setWhitelistFunction(b3tr, funcSig, true) // whitelist the function for b3tr contract
+      const receipt = await tx1.wait()
+
+      const name = getEventName(receipt, newGovernor)
+      expect(name).to.eql("FunctionWhitelisted")
 
       // start new round
       await emissions.distribute()
@@ -210,7 +220,7 @@ describe("Governor and TimeLock", function () {
 
       expect(newProposalId).to.exist
       // expect data of previous contract to be untouched
-      expect(await governor.state(proposalId)).to.eql(7n)
+      expect(await governor.state(proposalId)).to.eql(6n)
       expect(await governor.quorumReached(proposalId)).to.eql(true)
     })
 
@@ -289,7 +299,7 @@ describe("Governor and TimeLock", function () {
       expect(await governor.state(proposalId)).to.eql(5n)
 
       await governor.execute([await governor.getAddress()], [0], [encodedFunctionCall], descriptionHash)
-      expect(await governor.state(proposalId)).to.eql(7n)
+      expect(await governor.state(proposalId)).to.eql(6n)
 
       await governor.connect(owner).withdraw(proposalId, owner.address)
       await vot3.connect(owner).approve(await governor.getAddress(), ethers.parseEther("1000"))
@@ -373,6 +383,363 @@ describe("Governor and TimeLock", function () {
 
       await governor.connect(owner).setWhitelistFunctions(await governor.getAddress(), ["0x12345678"], false) // Admin can perform the onlyAdminOrGovernance restricted method
     })
+
+    it("Should revert if the governor admin is set to the zero address during initilization", async function () {
+      const config = createLocalConfig()
+      const {
+        b3tr,
+        owner,
+        vot3,
+        timeLock,
+        xAllocationVoting,
+        voterRewards,
+        governorClockLogicLib,
+        governorConfiguratorLib,
+        governorDepositLogicLib,
+        governorFunctionRestrictionsLogicLib,
+        governorProposalLogicLib,
+        governorQuorumLogicLib,
+        governorStateLogicLib,
+        governorVotesLogicLib,
+      } = await getOrDeployContractInstances({
+        forceDeploy: false,
+      })
+
+      await expect(
+        deployProxy(
+          "B3TRGovernor",
+          [
+            {
+              vot3Token: await vot3.getAddress(),
+              timelock: await timeLock.getAddress(),
+              xAllocationVoting: await xAllocationVoting.getAddress(),
+              b3tr: await b3tr.getAddress(),
+              quorumPercentage: config.B3TR_GOVERNOR_QUORUM_PERCENTAGE, // quorum percentage
+              initialDepositThreshold: config.B3TR_GOVERNOR_DEPOSIT_THRESHOLD, // deposit threshold
+              initialMinVotingDelay: config.B3TR_GOVERNOR_MIN_VOTING_DELAY, // delay before vote starts
+              initialVotingThreshold: config.B3TR_GOVERNOR_VOTING_THRESHOLD, // voting threshold
+              voterRewards: await voterRewards.getAddress(),
+              isFunctionRestrictionEnabled: true,
+            },
+            {
+              governorAdmin: ZERO_ADDRESS,
+              pauser: owner.address,
+              contractsAddressManager: owner.address,
+              proposalExecutor: owner.address,
+              governorFunctionSettingsRoleAddress: owner.address,
+            },
+          ],
+          {
+            GovernorClockLogic: await governorClockLogicLib.getAddress(),
+            GovernorConfigurator: await governorConfiguratorLib.getAddress(),
+            GovernorDepositLogic: await governorDepositLogicLib.getAddress(),
+            GovernorFunctionRestrictionsLogic: await governorFunctionRestrictionsLogicLib.getAddress(),
+            GovernorProposalLogic: await governorProposalLogicLib.getAddress(),
+            GovernorQuorumLogic: await governorQuorumLogicLib.getAddress(),
+            GovernorStateLogic: await governorStateLogicLib.getAddress(),
+            GovernorVotesLogic: await governorVotesLogicLib.getAddress(),
+          },
+        ),
+      ).to.be.reverted
+    })
+
+    it("Should revert if the governor timelock is set to the zero address during initilization", async function () {
+      const config = createLocalConfig()
+      const {
+        b3tr,
+        owner,
+        vot3,
+        xAllocationVoting,
+        voterRewards,
+        governorClockLogicLib,
+        governorConfiguratorLib,
+        governorDepositLogicLib,
+        governorFunctionRestrictionsLogicLib,
+        governorProposalLogicLib,
+        governorQuorumLogicLib,
+        governorStateLogicLib,
+        governorVotesLogicLib,
+      } = await getOrDeployContractInstances({
+        forceDeploy: false,
+      })
+
+      await expect(
+        deployProxy(
+          "B3TRGovernor",
+          [
+            {
+              vot3Token: await vot3.getAddress(),
+              timelock: ZERO_ADDRESS,
+              xAllocationVoting: await xAllocationVoting.getAddress(),
+              b3tr: await b3tr.getAddress(),
+              quorumPercentage: config.B3TR_GOVERNOR_QUORUM_PERCENTAGE, // quorum percentage
+              initialDepositThreshold: config.B3TR_GOVERNOR_DEPOSIT_THRESHOLD, // deposit threshold
+              initialMinVotingDelay: config.B3TR_GOVERNOR_MIN_VOTING_DELAY, // delay before vote starts
+              initialVotingThreshold: config.B3TR_GOVERNOR_VOTING_THRESHOLD, // voting threshold
+              voterRewards: await voterRewards.getAddress(),
+              isFunctionRestrictionEnabled: true,
+            },
+            {
+              governorAdmin: owner.address,
+              pauser: owner.address,
+              contractsAddressManager: owner.address,
+              proposalExecutor: owner.address,
+              governorFunctionSettingsRoleAddress: owner.address,
+            },
+          ],
+          {
+            GovernorClockLogic: await governorClockLogicLib.getAddress(),
+            GovernorConfigurator: await governorConfiguratorLib.getAddress(),
+            GovernorDepositLogic: await governorDepositLogicLib.getAddress(),
+            GovernorFunctionRestrictionsLogic: await governorFunctionRestrictionsLogicLib.getAddress(),
+            GovernorProposalLogic: await governorProposalLogicLib.getAddress(),
+            GovernorQuorumLogic: await governorQuorumLogicLib.getAddress(),
+            GovernorStateLogic: await governorStateLogicLib.getAddress(),
+            GovernorVotesLogic: await governorVotesLogicLib.getAddress(),
+          },
+        ),
+      ).to.be.reverted
+    })
+
+    it("Should revert if the B3TR address is set to the zero address during initilization", async function () {
+      const config = createLocalConfig()
+      const {
+        owner,
+        vot3,
+        timeLock,
+        xAllocationVoting,
+        voterRewards,
+        governorClockLogicLib,
+        governorConfiguratorLib,
+        governorDepositLogicLib,
+        governorFunctionRestrictionsLogicLib,
+        governorProposalLogicLib,
+        governorQuorumLogicLib,
+        governorStateLogicLib,
+        governorVotesLogicLib,
+      } = await getOrDeployContractInstances({
+        forceDeploy: false,
+      })
+
+      await expect(
+        deployProxy(
+          "B3TRGovernor",
+          [
+            {
+              vot3Token: await vot3.getAddress(),
+              timelock: await timeLock.getAddress(),
+              xAllocationVoting: await xAllocationVoting.getAddress(),
+              b3tr: ZERO_ADDRESS,
+              quorumPercentage: config.B3TR_GOVERNOR_QUORUM_PERCENTAGE, // quorum percentage
+              initialDepositThreshold: config.B3TR_GOVERNOR_DEPOSIT_THRESHOLD, // deposit threshold
+              initialMinVotingDelay: config.B3TR_GOVERNOR_MIN_VOTING_DELAY, // delay before vote starts
+              initialVotingThreshold: config.B3TR_GOVERNOR_VOTING_THRESHOLD, // voting threshold
+              voterRewards: await voterRewards.getAddress(),
+              isFunctionRestrictionEnabled: true,
+            },
+            {
+              governorAdmin: owner.address,
+              pauser: owner.address,
+              contractsAddressManager: owner.address,
+              proposalExecutor: owner.address,
+              governorFunctionSettingsRoleAddress: owner.address,
+            },
+          ],
+          {
+            GovernorClockLogic: await governorClockLogicLib.getAddress(),
+            GovernorConfigurator: await governorConfiguratorLib.getAddress(),
+            GovernorDepositLogic: await governorDepositLogicLib.getAddress(),
+            GovernorFunctionRestrictionsLogic: await governorFunctionRestrictionsLogicLib.getAddress(),
+            GovernorProposalLogic: await governorProposalLogicLib.getAddress(),
+            GovernorQuorumLogic: await governorQuorumLogicLib.getAddress(),
+            GovernorStateLogic: await governorStateLogicLib.getAddress(),
+            GovernorVotesLogic: await governorVotesLogicLib.getAddress(),
+          },
+        ),
+      ).to.be.reverted
+    })
+
+    it("Should revert if the VOT3 address is set to the zero address during initilization", async function () {
+      const config = createLocalConfig()
+      const {
+        b3tr,
+        owner,
+        timeLock,
+        xAllocationVoting,
+        voterRewards,
+        governorClockLogicLib,
+        governorConfiguratorLib,
+        governorDepositLogicLib,
+        governorFunctionRestrictionsLogicLib,
+        governorProposalLogicLib,
+        governorQuorumLogicLib,
+        governorStateLogicLib,
+        governorVotesLogicLib,
+      } = await getOrDeployContractInstances({
+        forceDeploy: false,
+      })
+
+      await expect(
+        deployProxy(
+          "B3TRGovernor",
+          [
+            {
+              vot3Token: ZERO_ADDRESS,
+              timelock: await timeLock.getAddress(),
+              xAllocationVoting: await xAllocationVoting.getAddress(),
+              b3tr: await b3tr.getAddress(),
+              quorumPercentage: config.B3TR_GOVERNOR_QUORUM_PERCENTAGE, // quorum percentage
+              initialDepositThreshold: config.B3TR_GOVERNOR_DEPOSIT_THRESHOLD, // deposit threshold
+              initialMinVotingDelay: config.B3TR_GOVERNOR_MIN_VOTING_DELAY, // delay before vote starts
+              initialVotingThreshold: config.B3TR_GOVERNOR_VOTING_THRESHOLD, // voting threshold
+              voterRewards: await voterRewards.getAddress(),
+              isFunctionRestrictionEnabled: true,
+            },
+            {
+              governorAdmin: owner.address,
+              pauser: owner.address,
+              contractsAddressManager: owner.address,
+              proposalExecutor: owner.address,
+              governorFunctionSettingsRoleAddress: owner.address,
+            },
+          ],
+          {
+            GovernorClockLogic: await governorClockLogicLib.getAddress(),
+            GovernorConfigurator: await governorConfiguratorLib.getAddress(),
+            GovernorDepositLogic: await governorDepositLogicLib.getAddress(),
+            GovernorFunctionRestrictionsLogic: await governorFunctionRestrictionsLogicLib.getAddress(),
+            GovernorProposalLogic: await governorProposalLogicLib.getAddress(),
+            GovernorQuorumLogic: await governorQuorumLogicLib.getAddress(),
+            GovernorStateLogic: await governorStateLogicLib.getAddress(),
+            GovernorVotesLogic: await governorVotesLogicLib.getAddress(),
+          },
+        ),
+      ).to.be.reverted
+    })
+
+    it("Should revert if the xAllocationVoting address is set to the zero address during initilization", async function () {
+      const config = createLocalConfig()
+      const {
+        b3tr,
+        owner,
+        vot3,
+        timeLock,
+        voterRewards,
+        governorClockLogicLib,
+        governorConfiguratorLib,
+        governorDepositLogicLib,
+        governorFunctionRestrictionsLogicLib,
+        governorProposalLogicLib,
+        governorQuorumLogicLib,
+        governorStateLogicLib,
+        governorVotesLogicLib,
+      } = await getOrDeployContractInstances({
+        forceDeploy: false,
+      })
+
+      await expect(
+        deployProxy(
+          "B3TRGovernor",
+          [
+            {
+              vot3Token: await vot3.getAddress(),
+              timelock: await timeLock.getAddress(),
+              xAllocationVoting: ZERO_ADDRESS,
+              b3tr: await b3tr.getAddress(),
+              quorumPercentage: config.B3TR_GOVERNOR_QUORUM_PERCENTAGE, // quorum percentage
+              initialDepositThreshold: config.B3TR_GOVERNOR_DEPOSIT_THRESHOLD, // deposit threshold
+              initialMinVotingDelay: config.B3TR_GOVERNOR_MIN_VOTING_DELAY, // delay before vote starts
+              initialVotingThreshold: config.B3TR_GOVERNOR_VOTING_THRESHOLD, // voting threshold
+              voterRewards: await voterRewards.getAddress(),
+              isFunctionRestrictionEnabled: true,
+            },
+            {
+              governorAdmin: owner.address,
+              pauser: owner.address,
+              contractsAddressManager: owner.address,
+              proposalExecutor: owner.address,
+              governorFunctionSettingsRoleAddress: owner.address,
+            },
+          ],
+          {
+            GovernorClockLogic: await governorClockLogicLib.getAddress(),
+            GovernorConfigurator: await governorConfiguratorLib.getAddress(),
+            GovernorDepositLogic: await governorDepositLogicLib.getAddress(),
+            GovernorFunctionRestrictionsLogic: await governorFunctionRestrictionsLogicLib.getAddress(),
+            GovernorProposalLogic: await governorProposalLogicLib.getAddress(),
+            GovernorQuorumLogic: await governorQuorumLogicLib.getAddress(),
+            GovernorStateLogic: await governorStateLogicLib.getAddress(),
+            GovernorVotesLogic: await governorVotesLogicLib.getAddress(),
+          },
+        ),
+      ).to.be.reverted
+    })
+
+    it("Should revert if the voterRewards address is set to the zero address during initilization", async function () {
+      const config = createLocalConfig()
+      const {
+        b3tr,
+        owner,
+        vot3,
+        timeLock,
+        xAllocationVoting,
+        governorClockLogicLib,
+        governorConfiguratorLib,
+        governorDepositLogicLib,
+        governorFunctionRestrictionsLogicLib,
+        governorProposalLogicLib,
+        governorQuorumLogicLib,
+        governorStateLogicLib,
+        governorVotesLogicLib,
+      } = await getOrDeployContractInstances({
+        forceDeploy: false,
+      })
+
+      await expect(
+        deployProxy(
+          "B3TRGovernor",
+          [
+            {
+              vot3Token: await vot3.getAddress(),
+              timelock: await timeLock.getAddress(),
+              xAllocationVoting: await xAllocationVoting.getAddress(),
+              b3tr: await b3tr.getAddress(),
+              quorumPercentage: config.B3TR_GOVERNOR_QUORUM_PERCENTAGE, // quorum percentage
+              initialDepositThreshold: config.B3TR_GOVERNOR_DEPOSIT_THRESHOLD, // deposit threshold
+              initialMinVotingDelay: config.B3TR_GOVERNOR_MIN_VOTING_DELAY, // delay before vote starts
+              initialVotingThreshold: config.B3TR_GOVERNOR_VOTING_THRESHOLD, // voting threshold
+              voterRewards: ZERO_ADDRESS,
+              isFunctionRestrictionEnabled: true,
+            },
+            {
+              governorAdmin: owner.address,
+              pauser: owner.address,
+              contractsAddressManager: owner.address,
+              proposalExecutor: owner.address,
+              governorFunctionSettingsRoleAddress: owner.address,
+            },
+          ],
+          {
+            GovernorClockLogic: await governorClockLogicLib.getAddress(),
+            GovernorConfigurator: await governorConfiguratorLib.getAddress(),
+            GovernorDepositLogic: await governorDepositLogicLib.getAddress(),
+            GovernorFunctionRestrictionsLogic: await governorFunctionRestrictionsLogicLib.getAddress(),
+            GovernorProposalLogic: await governorProposalLogicLib.getAddress(),
+            GovernorQuorumLogic: await governorQuorumLogicLib.getAddress(),
+            GovernorStateLogic: await governorStateLogicLib.getAddress(),
+            GovernorVotesLogic: await governorVotesLogicLib.getAddress(),
+          },
+        ),
+      ).to.be.reverted
+    })
+
+    it("Should not support invalid interface", async function () {
+      const { governor } = await getOrDeployContractInstances({
+        forceDeploy: false,
+      })
+
+      expect(await governor.depositThresholdPercentage()).to.eql(2n)
+    })
   })
 
   describe("Governor settings", function () {
@@ -426,6 +793,19 @@ describe("Governor and TimeLock", function () {
 
       const updatedAddress = await governor.timelock()
       expect(updatedAddress).to.eql(newAddress)
+    })
+
+    it("Should not be able to update the timelock if not governance", async function () {
+      const { governor, otherAccount } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      const newAddress = ethers.Wallet.createRandom().address
+
+      await catchRevert(governor.connect(otherAccount).updateTimelock(newAddress))
+
+      const updatedAddress = await governor.timelock()
+      expect(updatedAddress).to.not.eql(newAddress)
     })
 
     it("should be able to update the xAllocationVoting address through governance", async function () {
@@ -529,6 +909,30 @@ describe("Governor and TimeLock", function () {
       expect(updatedAddress).to.eql(newAddress)
     })
 
+    it("Updating voterRewards address to zero address will revert", async function () {
+      const { governor, owner } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      await expect(governor.connect(owner).setVoterRewards(ZERO_ADDRESS)).to.be.reverted
+    })
+
+    it("Updating xAllocationVoting address to zero address will revert", async function () {
+      const { governor, owner } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      await expect(governor.connect(owner).setXAllocationVoting(ZERO_ADDRESS)).to.be.reverted
+    })
+
+    it("Updating timelock address to zero address will revert", async function () {
+      const { governor, owner } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      await expect(governor.connect(owner).updateTimelock(ZERO_ADDRESS)).to.be.reverted
+    })
+
     it("only governance or CONTRACTS_ADDRESS_MANAGER_ROLE can update voterRewards address", async function () {
       const { governor, otherAccount } = await getOrDeployContractInstances({
         forceDeploy: true,
@@ -574,6 +978,29 @@ describe("Governor and TimeLock", function () {
       const newThreshold = 10n
 
       await catchRevert(governor.connect(owner).setDepositThresholdPercentage(newThreshold))
+
+      const updatedThreshold = await governor.depositThresholdPercentage()
+      expect(updatedThreshold).to.not.eql(newThreshold)
+    })
+
+    it("Cannot update proposal threshold to more than 100%", async function () {
+      const { governor, owner } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      const newThreshold = 101n
+
+      await catchRevert(
+        createProposalAndExecuteIt(
+          owner,
+          owner,
+          governor,
+          b3trGovernorFactory,
+          "Update Deposit Threshold",
+          "setDepositThresholdPercentage",
+          [newThreshold],
+        ),
+      )
 
       const updatedThreshold = await governor.depositThresholdPercentage()
       expect(updatedThreshold).to.not.eql(newThreshold)
@@ -630,6 +1057,15 @@ describe("Governor and TimeLock", function () {
 
       const updatedDelay = await governor.minVotingDelay()
       expect(updatedDelay).to.eql(newDelay)
+    })
+
+    it("Can fetch min voting delay", async function () {
+      const { governor } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      const delay = await governor.minVotingDelay()
+      expect(delay).to.eql(1n)
     })
 
     it("only governance can update min voting delay", async function () {
@@ -857,6 +1293,14 @@ describe("Governor and TimeLock", function () {
       ).to.be.reverted
     })
 
+    it("Should revert if the target address is the zero address", async () => {
+      const { governor, owner } = await getOrDeployContractInstances({
+        forceDeploy: false,
+      })
+      const funcSig = governor.interface.getFunction("updateQuorumNumerator")?.selector
+      await expect(governor.connect(owner).setWhitelistFunction(ZERO_ADDRESS, funcSig, true)).to.be.reverted
+    })
+
     it("Should be able to update the quorum percentage through governance", async function () {
       const { governor, owner } = await getOrDeployContractInstances({
         forceDeploy: true,
@@ -879,6 +1323,28 @@ describe("Governor and TimeLock", function () {
 
       const updatedQuorum = await governor["quorumNumerator()"]()
       expect(updatedQuorum).to.eql(newQuorum)
+    })
+
+    it("Should not be ablet to update the quorum percentage if not governance", async function () {
+      const { governor, otherAccount } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      const newQuorum = 10n
+      await catchRevert(
+        createProposalAndExecuteIt(
+          otherAccount,
+          otherAccount,
+          governor,
+          b3trGovernorFactory,
+          "Update Quorum Percentage",
+          "updateQuorumNumerator",
+          [newQuorum],
+        ),
+      )
+
+      const updatedQuorum = await governor["quorumNumerator()"]()
+      expect(updatedQuorum).to.not.eql(newQuorum)
     })
 
     it("Should not be able to set a quorum numerator higher than the denominator", async function () {
@@ -1110,6 +1576,73 @@ describe("Governor and TimeLock", function () {
           },
           "EnforcedPause",
         )
+      })
+    })
+
+    describe("Fallbacks", async function () {
+      it("Can't send VET to the contract", async function () {
+        const { governor, owner } = await getOrDeployContractInstances({
+          forceDeploy: true,
+        })
+
+        await expect(
+          owner.sendTransaction({
+            to: await governor.getAddress(),
+            value: ethers.parseEther("1.0"), // Sends exactly 1.0 ether
+          }),
+        ).to.be.reverted
+
+        const balance = await ethers.provider.getBalance(await governor.getAddress())
+        expect(balance).to.equal(0n)
+      })
+
+      it("Can't send ERC721 to the contract", async function () {
+        const { myErc721, governor, owner } = await getOrDeployContractInstances({
+          forceDeploy: true,
+          deployMocks: true,
+        })
+
+        if (!myErc721) throw new Error("No ERC721 contract")
+
+        await myErc721.connect(owner).safeMint(owner.address, 1)
+
+        // @ts-ignore
+        await expect(myErc721.connect(owner).safeTransferFrom(owner.address, await governor.getAddress(), 1)).to.be
+          .rejected
+      })
+
+      it("Cannot send ERC1155 to the contract", async function () {
+        const { myErc1155, governor, owner } = await getOrDeployContractInstances({
+          forceDeploy: true,
+          deployMocks: true,
+        })
+
+        if (!myErc1155) throw new Error("No ERC1155 contract")
+
+        await myErc1155.connect(owner).mint(owner.address, 1, 1, "0x")
+
+        // @ts-ignore
+        await expect(myErc1155.connect(owner).safeTransferFrom(owner.address, await governor.getAddress(), 1, 1, "0x"))
+          .to.be.reverted
+      })
+
+      it("Cannot batch send ERC1155 to the contract", async function () {
+        const { myErc1155, governor, owner } = await getOrDeployContractInstances({
+          forceDeploy: true,
+          deployMocks: true,
+        })
+
+        if (!myErc1155) throw new Error("No ERC1155 contract")
+
+        await myErc1155.connect(owner).mint(owner.address, 1, 2, "0x")
+        await myErc1155.connect(owner).mint(owner.address, 2, 2, "0x")
+
+        // @ts-ignore
+        await expect(
+          myErc1155
+            .connect(owner)
+            .safeBatchTransferFrom(owner.address, await governor.getAddress(), [1, 2], [2, 2], "0x"),
+        ).to.be.reverted
       })
     })
   })
@@ -1671,7 +2204,7 @@ describe("Governor and TimeLock", function () {
 
       // Can still execute even if there is nothing to execute
       await governor.execute([], [], [], descriptionHash)
-      expect(await governor.state(proposalId)).to.eql(7n)
+      expect(await governor.state(proposalId)).to.eql(6n)
     })
 
     it("Can create a proposal with no deposit", async () => {
@@ -2294,6 +2827,24 @@ describe("Governor and TimeLock", function () {
             },
           ),
       ).to.be.reverted
+    })
+
+    it("Can fetch proposal creator", async () => {
+      const { governor, B3trContract, b3tr, owner } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+      const functionToCall = "tokenDetails"
+      const description = "Get token details"
+
+      // Start emissions
+      await bootstrapAndStartEmissions()
+
+      // Now we can create a proposal
+      const tx = await createProposal(b3tr, B3trContract, owner, description, functionToCall, [])
+      const proposalId = await getProposalIdFromTx(tx)
+
+      const creator = await governor.proposalProposer(proposalId)
+      expect(creator).to.eql(owner.address)
     })
   })
 
@@ -3164,6 +3715,10 @@ describe("Governor and TimeLock", function () {
       let proposalState = await governor.state(proposalId)
       expect(proposalState.toString()).to.eql("4") // succeded
 
+      // can fetch eta
+      let eta = await governor.proposalEta(proposalId)
+      expect(eta).to.eql(0n)
+
       // queue it
       const b3trAddress = await b3tr.getAddress()
       const encodedFunctionCall = B3trContract.interface.encodeFunctionData(functionToCall, [])
@@ -3174,6 +3729,10 @@ describe("Governor and TimeLock", function () {
       // proposal should be in queued state
       proposalState = await governor.state(proposalId)
       expect(proposalState.toString()).to.eql("5")
+
+      // can fetch eta
+      eta = await governor.proposalEta(proposalId)
+      expect(eta).to.be.gt(0n)
     })
 
     // this test needs the previous one to be run first
@@ -3230,7 +3789,7 @@ describe("Governor and TimeLock", function () {
 
       // proposal should be in executed state
       proposalState = await governor.state(proposalId)
-      expect(proposalState.toString()).to.eql("7")
+      expect(proposalState.toString()).to.eql("6")
     })
 
     it("cannot execute proposal twice", async function () {
@@ -3284,7 +3843,7 @@ describe("Governor and TimeLock", function () {
 
       // proposal should be in executed state
       proposalState = await governor.state(proposalId)
-      expect(proposalState.toString()).to.eql("7")
+      expect(proposalState.toString()).to.eql("6")
 
       // try to execute again
       await catchRevert(governor.execute([b3trAddress], [0], [encodedFunctionCall], descriptionHash))
@@ -3356,7 +3915,7 @@ describe("Governor and TimeLock", function () {
 
       // proposal should be in executed state
       proposalState = await governor.state(proposalId)
-      expect(proposalState.toString()).to.eql("7")
+      expect(proposalState.toString()).to.eql("6")
     })
 
     it("If PROPOSAL_EXECUTOR_ROLE is set to ZERO_ADDRESS then anyone can execute proposals", async function () {
@@ -3425,7 +3984,7 @@ describe("Governor and TimeLock", function () {
 
       // proposal should be in executed state
       proposalState = await governor.state(proposalId)
-      expect(proposalState.toString()).to.eql("7")
+      expect(proposalState.toString()).to.eql("6")
     })
 
     it("Cannot execute prpopsal directly from TimeLock", async function () {
@@ -3580,7 +4139,7 @@ describe("Governor and TimeLock", function () {
 
       // proposal should be in executed state
       proposalState = await governor.state(proposalId)
-      expect(proposalState.toString()).to.eql("7")
+      expect(proposalState.toString()).to.eql("6")
     })
   })
 
@@ -3754,11 +4313,11 @@ describe("Governor and TimeLock", function () {
       expect(await governor.proposalDepositReached(proposalId)).to.eql(false)
 
       await waitForProposalToBeActive(proposalId)
-      expect(await governor.state(proposalId)).to.eql(8n) // deposit not met
+      expect(await governor.state(proposalId)).to.eql(7n) // deposit not met
 
       await waitForNextCycle()
 
-      expect(await governor.state(proposalId)).to.eql(8n) // deposit not met
+      expect(await governor.state(proposalId)).to.eql(7n) // deposit not met
     })
 
     it("Sponsers can contribute to deposit total", async () => {
@@ -4783,6 +5342,72 @@ describe("Governor and TimeLock", function () {
         // queue
         expect(await governor.proposalNeedsQueuing(proposalId)).to.eql(true)
       })
+    })
+  })
+
+  describe("Relay", function () {
+    it("Should be able to relay a transaction", async () => {
+      const config = createLocalConfig()
+      const {
+        governor,
+        owner,
+        governorClockLogicLib,
+        governorConfiguratorLib,
+        governorDepositLogicLib,
+        governorFunctionRestrictionsLogicLib,
+        governorProposalLogicLib,
+        governorQuorumLogicLib,
+        governorStateLogicLib,
+        governorVotesLogicLib,
+      } = await getOrDeployContractInstances({
+        forceDeploy: true,
+        config,
+      })
+
+      // whitelist relay function
+      const funcSig = governor.interface.getFunction("relay")?.selector
+      await governor.connect(owner).setWhitelistFunction(await governor.getAddress(), funcSig, true)
+
+      const executionTx = await createProposalAndExecuteIt(
+        owner,
+        owner,
+        governor,
+        await ethers.getContractFactory("B3TRGovernor", {
+          libraries: {
+            GovernorClockLogic: await governorClockLogicLib.getAddress(),
+            GovernorConfigurator: await governorConfiguratorLib.getAddress(),
+            GovernorDepositLogic: await governorDepositLogicLib.getAddress(),
+            GovernorFunctionRestrictionsLogic: await governorFunctionRestrictionsLogicLib.getAddress(),
+            GovernorProposalLogic: await governorProposalLogicLib.getAddress(),
+            GovernorQuorumLogic: await governorQuorumLogicLib.getAddress(),
+            GovernorStateLogic: await governorStateLogicLib.getAddress(),
+            GovernorVotesLogic: await governorVotesLogicLib.getAddress(),
+          },
+        }),
+        "Relay transaction",
+        "relay",
+        [owner.address, 0, "0x"],
+      )
+
+      const receipt = await executionTx.wait()
+      if (!receipt) throw new Error("No receipt")
+
+      expect(receipt.status).to.eql(1)
+    })
+
+    it("Only governance can relay a transaction", async () => {
+      const config = createLocalConfig()
+      const { governor, owner, otherAccounts } = await getOrDeployContractInstances({
+        forceDeploy: true,
+        config,
+      })
+
+      // whitelist relay function
+      const funcSig = governor.interface.getFunction("relay")?.selector
+      await governor.connect(owner).setWhitelistFunction(await governor.getAddress(), funcSig, true)
+
+      await expect(governor.connect(otherAccounts[0]).relay(owner.address, 0, "0x", { gasLimit: 10_000_000 })).to.be
+        .reverted
     })
   })
 })

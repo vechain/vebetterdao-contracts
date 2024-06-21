@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity 0.8.20;
 
 import { X2EarnAppsDataTypes } from "../libraries/X2EarnAppsDataTypes.sol";
 
@@ -35,9 +35,39 @@ interface IX2EarnApps {
   error X2EarnUnauthorizedUser(address user);
 
   /**
+   * @dev Invalid start index for get apps pagination
+   */
+  error X2EarnInvalidStartIndex();
+
+  /**
    * @dev Lookup to future votes is not available.
    */
   error ERC5805FutureLookup(uint256 timepoint, uint48 clock);
+
+  /**
+   * @dev The `percentage` is not valid.
+   */
+  error X2EarnInvalidAllocationPercentage(uint256 percentage);
+
+  /**
+   * @dev The `distributorAddress` is not valid.
+   */
+  error X2EarnNonexistentRewardDistributor(bytes32 appId, address distributorAddress);
+
+  /**
+   * @dev The `moderator` is not valid.
+   */
+  error X2EarnNonexistentModerator(bytes32 appId, address moderator);
+
+  /**
+   * @dev The maximum number of moderators has been reached.
+   */
+  error X2EarnMaxModeratorsReached(bytes32 appId);
+
+  /**
+   * @dev The maximum number of reward distributors has been reached.
+   */
+  error X2EarnMaxRewardDistributorsReached(bytes32 appId);
 
   /**
    * @dev Event fired when a new app is added.
@@ -60,6 +90,16 @@ interface IX2EarnApps {
   event ModeratorRemovedFromApp(bytes32 indexed appId, address moderator);
 
   /**
+   * @dev Event fired when the admin adds a new reward distributor to the app.
+   */
+  event RewardDistributorAddedToApp(bytes32 indexed appId, address distributorAddress);
+
+  /**
+   * @dev Event fired when the admin removes a reward distributor from the app.
+   */
+  event RewardDistributorRemovedFromApp(bytes32 indexed appId, address distributorAddress);
+
+  /**
    * @dev Event fired when the admin of an app changes.
    */
   event AppAdminUpdated(bytes32 indexed appId, address oldAdmin, address newAdmin);
@@ -67,7 +107,7 @@ interface IX2EarnApps {
   /**
    * @dev Event fired when the address where the x2earn app receives allocation funds is changed.
    */
-  event AppReceiverAddressUpdated(bytes32 indexed appId, address oldReceiverAddress, address newReceiverAddress);
+  event TeamWalletAddressUpdated(bytes32 indexed appId, address oldTeamWalletAddress, address newTeamWalletAddress);
 
   /**
    * @dev Event fired when the metadata URI of the app is changed.
@@ -80,6 +120,11 @@ interface IX2EarnApps {
   event BaseURIUpdated(string oldBaseURI, string newBaseURI);
 
   /**
+   * @dev Event fired when the team allocation percentage is updated.
+   */
+  event TeamAllocationPercentageUpdated(bytes32 indexed appId, uint256 oldPercentage, uint256 newPercentage);
+
+  /**
    * @dev Generates the hash of the app name to be used as the app id.
    *
    * @param name the name of the app
@@ -89,21 +134,38 @@ interface IX2EarnApps {
   /**
    * @dev Add a new app to the x2earn apps.
    *
-   * @param receiverAddress the address where the app should receive allocation funds
+   * @param teamWalletAddress the address where the app should receive allocation funds
    * @param admin the address of the admin that will be able to manage the app and perform all administration actions
    * @param appName the name of the app
    * @param metadataURI the metadata URI of the app
    *
    * Emits a {AppAdded} event.
    */
-  function addApp(address receiverAddress, address admin, string memory appName, string memory metadataURI) external;
+  function addApp(address teamWalletAddress, address admin, string memory appName, string memory metadataURI) external;
 
   /**
    * @dev Get the app data by its id.
    *
    * @param appId the id of the app
    */
-  function app(bytes32 appId) external view returns (X2EarnAppsDataTypes.App memory);
+  function app(bytes32 appId) external view returns (X2EarnAppsDataTypes.AppWithDetailsReturnType memory);
+
+  /**
+   * @dev Function to get the number of apps.
+   */
+  function appsCount() external view returns (uint256);
+
+  /**
+   * @dev Get a paginated list of apps
+   * @param startIndex The starting index of the pagination
+   * @param count The number of items to return
+   */
+  function getPaginatedApps(uint startIndex, uint count) external view returns (X2EarnAppsDataTypes.App[] memory);
+
+  /**
+   * @dev Get all apps
+   */
+  function apps() external view returns (X2EarnAppsDataTypes.AppWithDetailsReturnType[] memory);
 
   /**
    * @dev Add a new moderator to the app.
@@ -143,21 +205,72 @@ interface IX2EarnApps {
   function appAdmin(bytes32 appId) external view returns (address);
 
   /**
+   * @dev Check if an account is the admin of the app
+   *
+   * @param appId the hashed name of the app
+   * @param account the address of the account
+   */
+  function isAppAdmin(bytes32 appId, address account) external view returns (bool);
+
+  /**
    * @dev Update the address where the x2earn app receives allocation funds.
    *
    * @param appId the id of the app
-   * @param newReceiverAddress the new address where the app should receive allocation funds
+   * @param newTeamWalletAddress the new address where the app should receive allocation funds
    *
-   * Emits a {AppReceiverAddressUpdated} event.
+   * Emits a {TeamWalletAddressUpdated} event.
    */
-  function updateAppReceiverAddress(bytes32 appId, address newReceiverAddress) external;
+  function updateTeamWalletAddress(bytes32 appId, address newTeamWalletAddress) external;
 
   /**
    * @dev Get the address where the x2earn app receives allocation funds.
    *
    * @param appId the id of the app
    */
-  function appReceiverAddress(bytes32 appId) external view returns (address);
+  function teamWalletAddress(bytes32 appId) external view returns (address);
+
+  /**
+   * @dev Function to get the percentage of the allocation sent to the team address each round.
+   *
+   * @param appId the app id
+   */
+  function teamAllocationPercentage(bytes32 appId) external view returns (uint256);
+
+  /**
+   * @dev Update the allocation percentage to be sent to the team
+   *
+   * @param appId the id of the app
+   * @param percentage the new percentage of the allocation
+   */
+  function setTeamAllocationPercentage(bytes32 appId, uint256 percentage) external;
+
+  /**
+   * @dev Add a new reward distributor to the app.
+   *
+   * @param appId the id of the app
+   * @param distributorAddress the address of the reward distributor
+   *
+   * Emits a {RewardDistributorAddedToApp} event.
+   */
+  function addRewardDistributor(bytes32 appId, address distributorAddress) external;
+
+  /**
+   * @dev Remove a reward distributor from the app.
+   *
+   * @param appId the id of the app
+   * @param distributorAddress the address of the reward distributor
+   *
+   * Emits a {RewardDistributorRemovedFromApp} event.
+   */
+  function removeRewardDistributor(bytes32 appId, address distributorAddress) external;
+
+  /**
+   * @dev Returns true if an account is a reward distributor of the app
+   *
+   * @param appId the id of the app
+   * @param distributorAddress the address of the account
+   */
+  function isRewardDistributor(bytes32 appId, address distributorAddress) external view returns (bool);
 
   /**
    * @dev Update the metadata URI of the app.

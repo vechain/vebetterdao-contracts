@@ -4,7 +4,6 @@ export function createTestConfig() {
   return defineConfig({
     NEXT_PUBLIC_APP_ENV: "local",
 
-    B3TR_CAP: 1_000_243_154, // 1B
     B3TR_GOVERNOR_QUORUM_PERCENTAGE: 4, // 4 -> Need 4% of voters to pass
     TIMELOCK_MIN_DELAY: 30, //after a vote passes, you have 5 min before you can vote queue the proposal
     B3TR_GOVERNOR_DEPOSIT_THRESHOLD: 2, // 2% of total B3TR supply needed to be deposited to create a proposal
