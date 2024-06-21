@@ -36,7 +36,7 @@ jobs:
         run: yarn test:hardhat
 
       - name: Generate coverage
-        run: test:coverage:solidity
+        run: yarn test:coverage:solidity
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
