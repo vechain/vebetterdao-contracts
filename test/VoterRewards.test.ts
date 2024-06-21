@@ -21,7 +21,7 @@ import {
 } from "./helpers"
 import { expect } from "chai"
 import { ethers } from "hardhat"
-import { createLocalConfig } from "../config/contracts/envs/local"
+import { createLocalConfig } from "@repo/config/contracts/envs/local"
 import { createTestConfig } from "./helpers/config"
 import { getImplementationAddress } from "@openzeppelin/upgrades-core"
 import { deployProxy } from "../scripts/helpers"
@@ -89,6 +89,7 @@ describe("VoterRewards", () => {
           ),
       ).to.be.reverted
     })
+
 
     it("Should revert if admin is set to zero address in initilisation", async () => {
       const config = createLocalConfig()

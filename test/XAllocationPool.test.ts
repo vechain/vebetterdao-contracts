@@ -15,7 +15,7 @@ import {
 } from "./helpers"
 import { describe, it } from "mocha"
 import { getImplementationAddress } from "@openzeppelin/upgrades-core"
-import { createLocalConfig } from "../config/contracts/envs/local"
+import { createLocalConfig } from "@repo/config/contracts/envs/local"
 import { deployProxy } from "../scripts/helpers"
 import { XAllocationPool } from "../typechain-types"
 
