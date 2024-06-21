@@ -1,4 +1,4 @@
-import { defineConfig } from "@repo/config/contracts/defineConfig"
+import { defineConfig } from "../../config/contracts/defineConfig"
 
 export function createTestConfig() {
   return defineConfig({
