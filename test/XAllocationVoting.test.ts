@@ -25,7 +25,7 @@ import { describe, it } from "mocha"
 import { getImplementationAddress } from "@openzeppelin/upgrades-core"
 import { deployProxy } from "../scripts/helpers"
 import { XAllocationVoting } from "../typechain-types"
-import { createLocalConfig } from "@repo/config/contracts/envs/local"
+import { createLocalConfig } from "../config/contracts/envs/local"
 
 describe("X-Allocation Voting", function () {
   describe("Deployment", function () {

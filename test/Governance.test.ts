@@ -24,7 +24,7 @@ import {
 } from "./helpers"
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers"
 import { describe, it } from "mocha"
-import { createLocalConfig } from "@repo/config/contracts/envs/local"
+import { createLocalConfig } from "../config/contracts/envs/local"
 import { getImplementationAddress } from "@openzeppelin/upgrades-core"
 import { B3TRGovernor, B3TRGovernor__factory } from "../typechain-types"
 import { deployProxy } from "../scripts/helpers"

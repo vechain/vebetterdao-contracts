@@ -12,7 +12,7 @@ import {
 import { assert, expect } from "chai"
 import { ethers, network } from "hardhat"
 import { calculateTreasuryAllocation } from "./helpers/allocations"
-import { createLocalConfig } from "@repo/config/contracts/envs/local"
+import { createLocalConfig } from "../config/contracts/envs/local"
 import { createTestConfig } from "./helpers/config"
 import { generateB3trAllocations } from "./helpers/generateB3trAllocations"
 import { getImplementationAddress } from "@openzeppelin/upgrades-core"
