@@ -21,7 +21,7 @@
 //                                   ##############
 //                                   #########
 
-pragma solidity ^0.8.20;
+pragma solidity 0.8.20;
 
 import { GovernorStorageTypes } from "./GovernorStorageTypes.sol";
 import { GovernorTypes } from "./GovernorTypes.sol";
@@ -361,7 +361,7 @@ library GovernorProposalLogic {
 
     // before execute: register governance call in queue.
     if (GovernorGovernanceLogic.executor(self) != contractAddress) {
-      for (uint256 i = 0; i < targets.length; ++i) {
+      for (uint256 i; i < targets.length; ++i) {
         if (targets[i] == address(this)) {
           self.governanceCall.pushBack(keccak256(calldatas[i]));
         }
@@ -382,7 +382,7 @@ library GovernorProposalLogic {
 
   /**
    * @notice Cancels a proposal.
-   * @dev Cancels a proposal in any state other than Canceled, Expired, or Executed.
+   * @dev Cancels a proposal in any state other than Canceled or Executed.
    * @param self The storage reference for the GovernorStorage.
    * @param targets The addresses of the contracts to call.
    * @param values The values to send to the contracts.
@@ -410,7 +410,6 @@ library GovernorProposalLogic {
       proposalId,
       GovernorStateLogic.ALL_PROPOSAL_STATES_BITMAP ^
         GovernorStateLogic.encodeStateBitmap(GovernorTypes.ProposalState.Canceled) ^
-        GovernorStateLogic.encodeStateBitmap(GovernorTypes.ProposalState.Expired) ^
         GovernorStateLogic.encodeStateBitmap(GovernorTypes.ProposalState.Executed)
     );
 
@@ -747,7 +746,7 @@ library GovernorProposalLogic {
     }
 
     // Parse the 40 characters following the marker as uint160
-    uint160 recovered = 0;
+    uint160 recovered;
     for (uint256 i = len - 40; i < len; ++i) {
       (bool isHex, uint8 value) = tryHexToUint(bytes(description)[i]);
       // If any of the characters is not a hex digit, ignore the suffix entirely

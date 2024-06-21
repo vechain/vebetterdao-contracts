@@ -90,6 +90,27 @@ describe("VoterRewards", () => {
       ).to.be.reverted
     })
 
+    it("Should revert if admin is set to zero address in initilisation", async () => {
+      const config = createLocalConfig()
+      const { owner, b3tr, galaxyMember, emissions } = await getOrDeployContractInstances({
+        forceDeploy: true,
+        config,
+      })
+
+      await expect(
+        deployProxy("VoterRewards", [
+          ZERO_ADDRESS, // admin
+          owner.address, // upgrader
+          owner.address, // contractsAddressManager
+          await emissions.getAddress(),
+          await galaxyMember.getAddress(),
+          await b3tr.getAddress(),
+          levels,
+          multipliers,
+        ]),
+      ).to.be.reverted
+    })
+
     it("Should not be able to register vote for zero address voter", async () => {
       const { voterRewards, otherAccount, owner } = await getOrDeployContractInstances({
         forceDeploy: true,

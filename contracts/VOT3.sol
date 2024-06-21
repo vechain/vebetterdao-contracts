@@ -21,7 +21,7 @@
 //                                   ##############
 //                                   #########
 
-pragma solidity ^0.8.20;
+pragma solidity 0.8.20;
 
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
@@ -29,7 +29,6 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUp
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20VotesUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/NoncesUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 
@@ -37,7 +36,6 @@ import "@openzeppelin/contracts/utils/math/Math.sol";
 /// @dev Extends ERC20 Fungible Token Standard basic implementation with upgradeability, pausability, ability for gasless transactions and governance capabilities.
 /// @notice This contract governs the issuance and management of VOT3 tokens, which are the tokens used for voting in the VeBetter DAO Ecosystem.
 contract VOT3 is
-  Initializable,
   ERC20Upgradeable,
   ERC20PausableUpgradeable,
   AccessControlUpgradeable,
@@ -79,7 +77,7 @@ contract VOT3 is
   /// @param _upgrader Address to grant upgrader roles
   /// @param _pauser Address to grant pauser roles
   /// @param _b3tr B3TR token contract address
-  function initialize(address _admin, address _upgrader, address _pauser, address _b3tr) public initializer {
+  function initialize(address _admin, address _upgrader, address _pauser, address _b3tr) external initializer {
     __ERC20_init("VOT3", "VOT3");
     __ERC20Pausable_init();
     __AccessControl_init();
@@ -89,23 +87,27 @@ contract VOT3 is
     __Nonces_init();
 
     VOT3Storage storage $ = _getVOT3Storage();
+
+    require(_admin != address(0), "VOT3: Admin address cannot be 0");
     // Grant the contract deployer the default admin role and the UPGRADER_ROLE
     _grantRole(DEFAULT_ADMIN_ROLE, _admin);
     _grantRole(UPGRADER_ROLE, _upgrader);
     _grantRole(PAUSER_ROLE, _pauser);
+
+    require(_b3tr != address(0), "VOT3: B3TR address cannot be 0");
     $.b3tr = IERC20(_b3tr);
   }
 
   /// @notice Pauses the VOT3 contract
   /// @dev pausing the contract will prevent minting, staking, upgrading, and transferring of tokens
   /// @dev Only callable by the admin role
-  function pause() public onlyRole(PAUSER_ROLE) {
+  function pause() external onlyRole(PAUSER_ROLE) {
     _pause();
   }
 
   /// @notice Unpauses the VOT3 contract
   /// @dev Only callable by the admin role
-  function unpause() public onlyRole(PAUSER_ROLE) {
+  function unpause() external onlyRole(PAUSER_ROLE) {
     _unpause();
   }
 
@@ -117,7 +119,7 @@ contract VOT3 is
   /// @notice Retrieves the number of converted B3TR tokens for a specific user
   /// @param account Address of the user to check
   /// @return uint256 The amount of converted tokens
-  function convertedB3trOf(address account) public view returns (uint256) {
+  function convertedB3trOf(address account) external view returns (uint256) {
     VOT3Storage storage $ = _getVOT3Storage();
     return $._convertedB3TR[account];
   }

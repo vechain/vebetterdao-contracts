@@ -21,8 +21,6 @@ const getEnvMnemonic = () => {
   return mnemonic ?? ""
 }
 
-console.log(process.env.NEXT_PUBLIC_APP_ENV)
-
 const getSoloUrl = () => {
   const url = process.env.NEXT_PUBLIC_APP_ENV
     ? getConfig(process.env.NEXT_PUBLIC_APP_ENV as EnvConfig).network.urls[0]

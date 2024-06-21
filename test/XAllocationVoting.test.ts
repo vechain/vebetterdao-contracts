@@ -117,12 +117,155 @@ describe("X-Allocation Voting", function () {
       expect(await xAllocationVoting.CLOCK_MODE()).to.eql(await vot3.CLOCK_MODE())
     })
 
+    it("Clock returns block number if token does not implement clock function", async function () {
+      const { xAllocationVoting, timeLock, voterRewards, emissions, otherAccounts, x2EarnApps, b3tr } =
+        await getOrDeployContractInstances({
+          forceDeploy: false,
+        })
+
+      let clock = await xAllocationVoting.clock()
+
+      expect(parseInt(clock.toString())).to.eql(await ethers.provider.getBlockNumber())
+
+      const xAllocationVotingWithB3TR = (await deployProxy("XAllocationVoting", [
+        {
+          vot3Token: await b3tr.getAddress(),
+          quorumPercentage: 1,
+          initialVotingPeriod: 2,
+          timeLock: await timeLock.getAddress(),
+          voterRewards: await voterRewards.getAddress(),
+          emissions: await emissions.getAddress(),
+          admins: [await timeLock.getAddress(), otherAccounts[2].address, otherAccounts[2].address],
+          upgrader: otherAccounts[2].address,
+          contractsAddressManager: otherAccounts[2].address,
+          x2EarnAppsAddress: await x2EarnApps.getAddress(),
+          baseAllocationPercentage: 2,
+          appSharesCap: 2,
+          votingThreshold: BigInt(1),
+        },
+      ])) as XAllocationVoting
+
+      clock = await xAllocationVotingWithB3TR.clock()
+      expect(parseInt(clock.toString())).to.eql(await ethers.provider.getBlockNumber())
+
+      //CLOKC_MODE should return "mode=blocknumber&from=default"
+      expect(await xAllocationVotingWithB3TR.CLOCK_MODE()).to.eql("mode=blocknumber&from=default")
+    })
+
     it("Voter rewards address is set correctly", async function () {
       const { xAllocationVoting, voterRewards } = await getOrDeployContractInstances({
         forceDeploy: true,
       })
 
       expect(await xAllocationVoting.voterRewards()).to.eql(await voterRewards.getAddress())
+    })
+
+    it("Should revert if VOT3 is set to zero address in initilisation", async () => {
+      const config = createLocalConfig()
+      const { owner, x2EarnApps, timeLock, emissions, voterRewards } = await getOrDeployContractInstances({
+        forceDeploy: true,
+        config,
+      })
+
+      await expect(
+        deployProxy("XAllocationVoting", [
+          {
+            vot3Token: ZERO_ADDRESS,
+            quorumPercentage: config.X_ALLOCATION_VOTING_QUORUM_PERCENTAGE, // quorum percentage
+            initialVotingPeriod: config.EMISSIONS_CYCLE_DURATION - 1, // X Alloc voting period
+            timeLock: await timeLock.getAddress(),
+            voterRewards: await voterRewards.getAddress(),
+            emissions: await emissions.getAddress(),
+            admins: [await timeLock.getAddress(), owner.address],
+            upgrader: owner.address,
+            contractsAddressManager: owner.address,
+            x2EarnAppsAddress: await x2EarnApps.getAddress(),
+            baseAllocationPercentage: config.X_ALLOCATION_POOL_BASE_ALLOCATION_PERCENTAGE,
+            appSharesCap: config.X_ALLOCATION_POOL_APP_SHARES_MAX_CAP,
+            votingThreshold: config.X_ALLOCATION_VOTING_VOTING_THRESHOLD,
+          },
+        ])).to.be.reverted
+    })
+
+    it("Should revert if VoterRewards is set to zero address in initilisation", async () => {
+      const config = createLocalConfig()
+      const { owner, x2EarnApps, timeLock, emissions, vot3 } = await getOrDeployContractInstances({
+        forceDeploy: true,
+        config,
+      })
+
+      await expect(
+        deployProxy("XAllocationVoting", [
+          {
+            vot3Token: await vot3.getAddress(),
+            quorumPercentage: config.X_ALLOCATION_VOTING_QUORUM_PERCENTAGE, // quorum percentage
+            initialVotingPeriod: config.EMISSIONS_CYCLE_DURATION - 1, // X Alloc voting period
+            timeLock: await timeLock.getAddress(),
+            voterRewards: ZERO_ADDRESS,
+            emissions: await emissions.getAddress(),
+            admins: [await timeLock.getAddress(), owner.address],
+            upgrader: owner.address,
+            contractsAddressManager: owner.address,
+            x2EarnAppsAddress: await x2EarnApps.getAddress(),
+            baseAllocationPercentage: config.X_ALLOCATION_POOL_BASE_ALLOCATION_PERCENTAGE,
+            appSharesCap: config.X_ALLOCATION_POOL_APP_SHARES_MAX_CAP,
+            votingThreshold: config.X_ALLOCATION_VOTING_VOTING_THRESHOLD,
+          },
+        ])).to.be.reverted
+    })
+
+    it("Should revert if Emissions is set to zero address in initilisation", async () => {
+      const config = createLocalConfig()
+      const { owner, x2EarnApps, timeLock, vot3, voterRewards } = await getOrDeployContractInstances({
+        forceDeploy: true,
+        config,
+      })
+
+      await expect(
+        deployProxy("XAllocationVoting", [
+          {
+            vot3Token: await vot3.getAddress(),
+            quorumPercentage: config.X_ALLOCATION_VOTING_QUORUM_PERCENTAGE, // quorum percentage
+            initialVotingPeriod: config.EMISSIONS_CYCLE_DURATION - 1, // X Alloc voting period
+            timeLock: await timeLock.getAddress(),
+            voterRewards: await voterRewards.getAddress(),
+            emissions: ZERO_ADDRESS,
+            admins: [await timeLock.getAddress(), owner.address],
+            upgrader: owner.address,
+            contractsAddressManager: owner.address,
+            x2EarnAppsAddress: await x2EarnApps.getAddress(),
+            baseAllocationPercentage: config.X_ALLOCATION_POOL_BASE_ALLOCATION_PERCENTAGE,
+            appSharesCap: config.X_ALLOCATION_POOL_APP_SHARES_MAX_CAP,
+            votingThreshold: config.X_ALLOCATION_VOTING_VOTING_THRESHOLD,
+          },
+        ])).to.be.reverted
+    })
+
+    it("Should revert if an admin is set to zero address in initilisation", async () => {
+      const config = createLocalConfig()
+      const { owner, x2EarnApps, timeLock, vot3, voterRewards, emissions } = await getOrDeployContractInstances({
+        forceDeploy: true,
+        config,
+      })
+
+      await expect(
+        deployProxy("XAllocationVoting", [
+          {
+            vot3Token: await vot3.getAddress(),
+            quorumPercentage: config.X_ALLOCATION_VOTING_QUORUM_PERCENTAGE, // quorum percentage
+            initialVotingPeriod: config.EMISSIONS_CYCLE_DURATION - 1, // X Alloc voting period
+            timeLock: await timeLock.getAddress(),
+            voterRewards: await voterRewards.getAddress(),
+            emissions: await emissions.getAddress(),
+            admins: [await timeLock.getAddress(), ZERO_ADDRESS],
+            upgrader: owner.address,
+            contractsAddressManager: owner.address,
+            x2EarnAppsAddress: await x2EarnApps.getAddress(),
+            baseAllocationPercentage: config.X_ALLOCATION_POOL_BASE_ALLOCATION_PERCENTAGE,
+            appSharesCap: config.X_ALLOCATION_POOL_APP_SHARES_MAX_CAP,
+            votingThreshold: config.X_ALLOCATION_VOTING_VOTING_THRESHOLD,
+          },
+        ])).to.be.reverted
     })
   })
 
@@ -258,7 +401,7 @@ describe("X-Allocation Voting", function () {
       expect(await governor.state(proposalId)).to.eql(5n)
 
       await governor.execute([await xAllocationVoting.getAddress()], [0], [encodedFunctionCall], descriptionHash)
-      expect(await governor.state(proposalId)).to.eql(7n)
+      expect(await governor.state(proposalId)).to.eql(6n)
 
       const newImplAddress = await getImplementationAddress(ethers.provider, await xAllocationVoting.getAddress())
       expect(newImplAddress.toUpperCase()).to.eql((await implementation.getAddress()).toUpperCase())
@@ -647,7 +790,7 @@ describe("X-Allocation Voting", function () {
         expect(await governor.state(proposalId)).to.eql(5n)
 
         await governor.execute([await xAllocationVoting.getAddress()], [0], [encodedFunctionCall], descriptionHash)
-        expect(await governor.state(proposalId)).to.eql(7n)
+        expect(await governor.state(proposalId)).to.eql(6n)
 
         const votingPeriod = await xAllocationVoting.votingPeriod()
         expect(votingPeriod).to.eql(cycleDuration - 1n)
@@ -1387,6 +1530,8 @@ describe("X-Allocation Voting", function () {
         .addApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
       const app1 = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[0].address))
 
+      await x2EarnApps.setTeamAllocationPercentage(app1, 100)
+
       await getVot3Tokens(otherAccount, "1000")
 
       await emissions.connect(minterAccount).start()
@@ -1411,7 +1556,12 @@ describe("X-Allocation Voting", function () {
       expect(appShares).to.eql([0n, 0n])
 
       let appEarnings = await xAllocationPool.roundEarnings(roundId, app1)
-      expect(appEarnings).to.eql([await xAllocationPool.baseAllocationAmount(roundId), 0n])
+      expect(appEarnings).to.eql([
+        await xAllocationPool.baseAllocationAmount(roundId),
+        0n,
+        await xAllocationPool.baseAllocationAmount(roundId),
+        0n,
+      ])
     })
 
     it("I should be able to vote only for apps available in the allocation round", async function () {
@@ -1788,6 +1938,19 @@ describe("X-Allocation Voting", function () {
   })
 
   describe("Allocation Voting finalization", function () {
+    it("Cannot finalize active round", async function () {
+      const { xAllocationVoting } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      let round1 = await startNewAllocationRound()
+
+      await catchRevert(xAllocationVoting.finalizeRound(round1))
+
+      let isFinalized = await xAllocationVoting.isFinalized(round1)
+      expect(isFinalized).to.eql(false)
+    })
+
     it("Previous round is finalized correctly when a new one starts", async function () {
       const { xAllocationVoting } = await getOrDeployContractInstances({
         forceDeploy: true,
@@ -1923,6 +2086,30 @@ describe("X-Allocation Voting", function () {
 
       let isFinalized = await xAllocationVoting.isFinalized(round1)
       expect(isFinalized).to.eql(false)
+    })
+
+    it("Finalizing a failed round should point to the latest succeeded round", async function () {
+      const { xAllocationVoting, emissions, otherAccount } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      // we need to mint some token otherwise there is no quorum to reach
+      await getVot3Tokens(otherAccount, "1000")
+
+      // first round always succeeds
+      await bootstrapAndStartEmissions()
+      await waitForCurrentRoundToEnd()
+
+      // start and end new round
+      await emissions.distribute()
+      await waitForCurrentRoundToEnd()
+
+      // start round 3, it should finalize round 2
+      await emissions.distribute()
+
+      expect(await xAllocationVoting.state(2)).to.eql(1n) // quorum failed
+      expect(await xAllocationVoting.isFinalized(2)).to.eql(true)
+      expect(await xAllocationVoting.latestSucceededRoundId(2)).to.eql(1n)
     })
   })
 

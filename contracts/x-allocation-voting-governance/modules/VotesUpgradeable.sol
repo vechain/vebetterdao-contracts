@@ -21,7 +21,7 @@
 //                                   ##############
 //                                   #########
 
-pragma solidity ^0.8.20;
+pragma solidity 0.8.20;
 
 import { XAllocationVotingGovernor } from "../XAllocationVotingGovernor.sol";
 import { IVotes } from "@openzeppelin/contracts/governance/utils/IVotes.sol";

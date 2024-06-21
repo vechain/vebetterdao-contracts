@@ -22,10 +22,14 @@ import {
   GovernorQuorumLogic,
   GovernorStateLogic,
   GovernorVotesLogic,
+  X2EarnRewardsPool,
+  MyERC721,
+  MyERC1155,
 } from "../../typechain-types"
 import { createLocalConfig } from "../../config/contracts/envs/local"
 import { deployProxy } from "../../scripts/helpers"
 import { setWhitelistedFunctions } from "../../scripts/deploy/deploy"
+import { bootstrapAndStartEmissions as callBootstrapAndStartEmissions } from "./common"
 
 interface DeployInstance {
   B3trContract: ContractFactory
@@ -40,6 +44,7 @@ interface DeployInstance {
   emissions: Emissions
   voterRewards: VoterRewards
   treasury: Treasury
+  x2EarnRewardsPool: X2EarnRewardsPool
   owner: HardhatEthersSigner
   otherAccount: HardhatEthersSigner
   minterAccount: HardhatEthersSigner
@@ -54,6 +59,8 @@ interface DeployInstance {
   governorQuorumLogicLib: GovernorQuorumLogic
   governorStateLogicLib: GovernorStateLogic
   governorVotesLogicLib: GovernorVotesLogic
+  myErc721: MyERC721 | undefined
+  myErc1155: MyERC1155 | undefined
 }
 
 export const NFT_NAME = "GalaxyMember"
@@ -69,6 +76,8 @@ export const getOrDeployContractInstances = async ({
   forceDeploy = false,
   config = createLocalConfig(),
   maxMintableLevel = DEFAULT_MAX_MINTABLE_LEVEL,
+  bootstrapAndStartEmissions = false,
+  deployMocks = false,
 }) => {
   if (!forceDeploy && cachedDeployInstance !== undefined) {
     return cachedDeployInstance
@@ -146,7 +155,7 @@ export const getOrDeployContractInstances = async ({
   // ---------------------- Deploy Contracts ----------------------
   // Deploy B3TR
   const B3trContract = await ethers.getContractFactory("B3TR")
-  const b3tr = await B3trContract.deploy(owner, minterAccount, owner, config.B3TR_CAP)
+  const b3tr = await B3trContract.deploy(owner, minterAccount, owner)
 
   // Deploy VOT3
   const vot3 = (await deployProxy("VOT3", [
@@ -205,6 +214,15 @@ export const getOrDeployContractInstances = async ({
     owner.address,
   ])) as X2EarnApps
 
+  // Deploy X2EarnRewardsPool
+  const x2EarnRewardsPool = (await deployProxy("X2EarnRewardsPool", [
+    owner.address,
+    owner.address,
+    owner.address,
+    await b3tr.getAddress(),
+    await x2EarnApps.getAddress(),
+  ])) as X2EarnRewardsPool
+
   // Deploy XAllocationPool
   const xAllocationPool = (await deployProxy("XAllocationPool", [
     owner.address,
@@ -213,6 +231,7 @@ export const getOrDeployContractInstances = async ({
     await b3tr.getAddress(),
     await treasury.getAddress(),
     await x2EarnApps.getAddress(),
+    await x2EarnRewardsPool.getAddress(),
   ])) as XAllocationPool
 
   const X_ALLOCATIONS_ADDRESS = await xAllocationPool.getAddress()
@@ -223,6 +242,8 @@ export const getOrDeployContractInstances = async ({
       minter: minterAccount.address,
       admin: owner.address,
       upgrader: owner.address,
+      contractsAddressManager: owner.address,
+      decaySettingsManager: owner.address,
       b3trAddress: await b3tr.getAddress(),
       destinations: [X_ALLOCATIONS_ADDRESS, VOTE_2_EARN_ADDRESS, await treasury.getAddress(), config.MIGRATION_ADDRESS],
       initialXAppAllocation: config.INITIAL_X_ALLOCATION,
@@ -377,6 +398,23 @@ export const getOrDeployContractInstances = async ({
     .grantRole(roundStarterRole, owner.address)
     .then(async tx => await tx.wait())
 
+  // Bootstrap and start emissions
+  if (bootstrapAndStartEmissions) {
+    await callBootstrapAndStartEmissions()
+  }
+
+  // deploy Mocks
+  let myErc1155, myErc721
+  if (deployMocks) {
+    const MyERC721 = await ethers.getContractFactory("MyERC721")
+    myErc721 = await MyERC721.deploy(owner.address)
+    await myErc721.waitForDeployment()
+
+    const MyERC1155 = await ethers.getContractFactory("MyERC1155")
+    myErc1155 = await MyERC1155.deploy(owner.address)
+    await myErc1155.waitForDeployment()
+  }
+
   cachedDeployInstance = {
     B3trContract,
     b3tr,
@@ -395,6 +433,7 @@ export const getOrDeployContractInstances = async ({
     timelockAdmin,
     otherAccounts,
     treasury,
+    x2EarnRewardsPool,
     governorClockLogicLib: GovernorClockLogicLib,
     governorConfiguratorLib: GovernorConfiguratorLib,
     governorDepositLogicLib: GovernorDepositLogicLib,
@@ -404,6 +443,8 @@ export const getOrDeployContractInstances = async ({
     governorQuorumLogicLib: GovernorQuorumLogicLib,
     governorStateLogicLib: GovernorStateLogicLib,
     governorVotesLogicLib: GovernorVotesLogicLib,
+    myErc721: myErc721,
+    myErc1155: myErc1155,
   }
   return cachedDeployInstance
 }

@@ -21,7 +21,7 @@
 //                                   ##############
 //                                   #########
 
-pragma solidity ^0.8.20;
+pragma solidity 0.8.20;
 
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { X2EarnAppsUpgradeable } from "../X2EarnAppsUpgradeable.sol";
@@ -65,10 +65,12 @@ abstract contract VoteEligibilityUpgradeable is Initializable, X2EarnAppsUpgrade
 
   function __VoteEligibility_init_unchained() internal onlyInitializing {}
 
+  // ---------- Internal ---------- //
+
   /**
    * @dev Update the app availability for voting checkpoint.
    */
-  function _setVotingEligibility(bytes32 appId, bool canBeVoted) internal virtual override {
+  function _setVotingEligibility(bytes32 appId, bool canBeVoted) internal override {
     if (!appExists(appId)) {
       revert X2EarnNonexistentApp(appId);
     }
@@ -129,6 +131,8 @@ abstract contract VoteEligibilityUpgradeable is Initializable, X2EarnAppsUpgrade
     return store.push(clock(), delta);
   }
 
+  // ---------- Getters ---------- //
+
   /**
    * @dev All apps that are currently eligible for voting in x-allocation rounds
    */
@@ -164,7 +168,7 @@ abstract contract VoteEligibilityUpgradeable is Initializable, X2EarnAppsUpgrade
    *
    * @param appId the hashed name of the app
    */
-  function isEligibleNow(bytes32 appId) public view returns (bool) {
+  function isEligibleNow(bytes32 appId) public view override returns (bool) {
     if (!appExists(appId)) {
       return false;
     }
