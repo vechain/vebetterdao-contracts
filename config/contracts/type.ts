@@ -1,7 +1,6 @@
 export type ContractsConfig = {
-  NEXT_PUBLIC_APP_ENV: "local" | "e2e" | "testnet" | "production"
+  NEXT_PUBLIC_APP_ENV: "local" | "testnet"
 
-  B3TR_CAP: number
   B3TR_GOVERNOR_QUORUM_PERCENTAGE: number
   TIMELOCK_MIN_DELAY: number
   B3TR_GOVERNOR_DEPOSIT_THRESHOLD: number
