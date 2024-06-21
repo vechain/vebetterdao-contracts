@@ -54,6 +54,7 @@ Set up your environment to integrate smoothly with the blockchain:
 ## Getting Started 🏁
 
 Clone the repository and install dependencies with ease:
+
 ```bash
 yarn install # Run this at the root level of the project
 ```
@@ -81,3 +82,7 @@ yarn test:thor-solo
 # Disclaimer
 
 This repository is for educational and demonstration purposes. The maintainers are not liable for any misuse or faults within the code.
+
+# Audit
+
+The VeBetterDAO smart contracts have undergone a comprehensive audit by [Hacken](https://hacken.io/). The audit report (`Hacken_Vechain Foundation_[SCA] VeChain _ VeBetter DAO _ May2024_P-2024-304_1_20240621 16_17`) can be found in the root of the repo.
