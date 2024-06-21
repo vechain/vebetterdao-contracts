@@ -1,7 +1,7 @@
 import fs from "fs/promises"
 import { ethers } from "hardhat"
 import { calculateNextXAllocation, calculateTreasuryAllocation, calculateVote2Earn } from "./allocations"
-import { ContractsConfig } from "../../config/contracts"
+import { ContractsConfig } from "@repo/config/contracts"
 
 /**
  * Interface for the token allocations.
@@ -39,7 +39,7 @@ async function saveAllocationsToFile(allocations: Allocation[], path: string): P
 export async function generateB3trAllocations(config: ContractsConfig, path?: string): Promise<Allocation[]> {
   const xAllocations: Allocation[] = []
 
-  const b3trCap = ethers.parseEther(config.B3TR_CAP.toString())
+  const b3trCap = ethers.parseEther("1000243154")
   let b3trSupply: bigint = config.MIGRATION_AMOUNT
   let cycle: number = 1
   let lastCycleEmissions: bigint | undefined = undefined

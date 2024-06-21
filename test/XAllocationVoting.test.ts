@@ -25,7 +25,7 @@ import { describe, it } from "mocha"
 import { getImplementationAddress } from "@openzeppelin/upgrades-core"
 import { deployProxy } from "../scripts/helpers"
 import { XAllocationVoting } from "../typechain-types"
-import { createLocalConfig } from "../config/contracts/envs/local"
+import { createLocalConfig } from "@repo/config/contracts/envs/local"
 
 describe("X-Allocation Voting", function () {
   describe("Deployment", function () {
@@ -184,8 +184,7 @@ describe("X-Allocation Voting", function () {
             appSharesCap: config.X_ALLOCATION_POOL_APP_SHARES_MAX_CAP,
             votingThreshold: config.X_ALLOCATION_VOTING_VOTING_THRESHOLD,
           },
-        ]),
-      ).to.be.reverted
+        ])).to.be.reverted
     })
 
     it("Should revert if VoterRewards is set to zero address in initilisation", async () => {
@@ -212,8 +211,7 @@ describe("X-Allocation Voting", function () {
             appSharesCap: config.X_ALLOCATION_POOL_APP_SHARES_MAX_CAP,
             votingThreshold: config.X_ALLOCATION_VOTING_VOTING_THRESHOLD,
           },
-        ]),
-      ).to.be.reverted
+        ])).to.be.reverted
     })
 
     it("Should revert if Emissions is set to zero address in initilisation", async () => {
@@ -240,8 +238,7 @@ describe("X-Allocation Voting", function () {
             appSharesCap: config.X_ALLOCATION_POOL_APP_SHARES_MAX_CAP,
             votingThreshold: config.X_ALLOCATION_VOTING_VOTING_THRESHOLD,
           },
-        ]),
-      ).to.be.reverted
+        ])).to.be.reverted
     })
 
     it("Should revert if an admin is set to zero address in initilisation", async () => {
@@ -268,8 +265,7 @@ describe("X-Allocation Voting", function () {
             appSharesCap: config.X_ALLOCATION_POOL_APP_SHARES_MAX_CAP,
             votingThreshold: config.X_ALLOCATION_VOTING_VOTING_THRESHOLD,
           },
-        ]),
-      ).to.be.reverted
+        ])).to.be.reverted
     })
   })
 

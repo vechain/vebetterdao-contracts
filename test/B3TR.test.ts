@@ -2,7 +2,7 @@ import { ethers } from "hardhat"
 import { expect } from "chai"
 import { catchRevert, getOrDeployContractInstances } from "./helpers"
 import { describe, it } from "mocha"
-import { createLocalConfig } from "../config/contracts/envs/local"
+import { createLocalConfig } from "@repo/config/contracts/envs/local"
 
 describe("B3TR Token", function () {
   describe("Deployment", function () {
