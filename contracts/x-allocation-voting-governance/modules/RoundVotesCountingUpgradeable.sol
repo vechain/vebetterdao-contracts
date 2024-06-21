@@ -21,7 +21,7 @@
 //                                   ##############
 //                                   #########
 
-pragma solidity ^0.8.20;
+pragma solidity 0.8.20;
 
 import { XAllocationVotingGovernor } from "../XAllocationVotingGovernor.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
@@ -150,16 +150,16 @@ abstract contract RoundVotesCountingUpgradeable is Initializable, XAllocationVot
     uint256 roundStart = roundSnapshot(roundId);
 
     // To hold the total weight of votes cast by the voter
-    uint256 totalWeight = 0;
+    uint256 totalWeight;
     // To hold the total adjustment to the quadratic funding value for the given app
-    uint256 totalQFVotesAdjustment = 0;
+    uint256 totalQFVotesAdjustment;
 
     // Get the total voting power of the voter to use in the for loop to check
     // if the total weight of votes cast by the voter is greater than the voter's available voting power
     uint256 voterAvailableVotes = getVotes(voter, roundStart);
 
     // Iterate through the apps and weights to calculate the total weight of votes cast by the voter
-    for (uint256 i = 0; i < apps.length; i++) {
+    for (uint256 i; i < apps.length; i++) {
       // Update the total weight of votes cast by the voter
       totalWeight += weights[i];
 

@@ -21,7 +21,7 @@
 //                                   ##############
 //                                   #########
 
-pragma solidity ^0.8.20;
+pragma solidity 0.8.20;
 
 import { GovernorStorageTypes } from "./GovernorStorageTypes.sol";
 import { IVOT3 } from "../../interfaces/IVOT3.sol";

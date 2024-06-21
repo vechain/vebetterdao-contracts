@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity 0.8.20;
 
 interface ITreasury {
+  event TransferLimitUpdated(address indexed token, uint256 limit);
+  event TransferLimitVETUpdated(uint256 limit);
   function pause() external;
   function unpause() external;
   function transferVTHO(address _to, uint256 _value) external;

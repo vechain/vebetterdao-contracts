@@ -1,8 +1,9 @@
 import { assert, ethers } from "hardhat"
 import { expect } from "chai"
-import { catchRevert, getOrDeployContractInstances, getVot3Tokens } from "./helpers"
+import { ZERO_ADDRESS, catchRevert, getOrDeployContractInstances, getVot3Tokens } from "./helpers"
 import { describe, it } from "mocha"
 import { getImplementationAddress } from "@openzeppelin/upgrades-core"
+import { deployProxy } from "../scripts/helpers"
 
 describe("VOT3", function () {
   describe("Deployment", function () {
@@ -70,6 +71,22 @@ describe("VOT3", function () {
       const { vot3, b3tr } = await getOrDeployContractInstances({ forceDeploy: true })
 
       expect(await vot3.b3tr()).to.eql(await b3tr.getAddress())
+    })
+
+    it("Should revert if B3TR is set to zero address in initilisation", async () => {
+      const { owner } = await getOrDeployContractInstances({
+        forceDeploy: false,
+      })
+
+      await expect(deployProxy("VOT3", [owner.address, owner.address, owner.address, ZERO_ADDRESS])).to.be.reverted
+    })
+    it("Should revert if admin is set to zero address in initilisation", async () => {
+      const { owner, b3tr } = await getOrDeployContractInstances({
+        forceDeploy: false,
+      })
+
+      await expect(deployProxy("VOT3", [ZERO_ADDRESS, owner.address, owner.address, await b3tr.getAddress()])).to.be
+        .reverted
     })
   })
 

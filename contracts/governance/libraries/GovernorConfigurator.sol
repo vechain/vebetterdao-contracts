@@ -21,7 +21,7 @@
 //                                   ##############
 //                                   #########
 
-pragma solidity ^0.8.20;
+pragma solidity 0.8.20;
 
 import { GovernorStorageTypes } from "./GovernorStorageTypes.sol";
 import { IVOT3 } from "../../interfaces/IVOT3.sol";
@@ -85,6 +85,7 @@ library GovernorConfigurator {
    * @param newVoterRewards The new voter rewards contract.
    */
   function setVoterRewards(GovernorStorageTypes.GovernorStorage storage self, IVoterRewards newVoterRewards) external {
+    require(address(newVoterRewards) != address(0), "GovernorConfigurator: voterRewards address cannot be zero");
     emit VoterRewardsSet(address(self.voterRewards), address(newVoterRewards));
     self.voterRewards = newVoterRewards;
   }
@@ -99,6 +100,10 @@ library GovernorConfigurator {
     GovernorStorageTypes.GovernorStorage storage self,
     IXAllocationVotingGovernor newXAllocationVoting
   ) external {
+    require(
+      address(newXAllocationVoting) != address(0),
+      "GovernorConfigurator: xAllocationVoting address cannot be zero"
+    );
     emit XAllocationVotingSet(address(self.xAllocationVoting), address(newXAllocationVoting));
     self.xAllocationVoting = newXAllocationVoting;
   }
@@ -131,6 +136,7 @@ library GovernorConfigurator {
     GovernorStorageTypes.GovernorStorage storage self,
     TimelockControllerUpgradeable newTimelock
   ) external {
+    require(address(newTimelock) != address(0), "GovernorConfigurator: timelock address cannot be zero");
     emit TimelockChange(address(self.timelock), address(newTimelock));
     self.timelock = newTimelock;
   }

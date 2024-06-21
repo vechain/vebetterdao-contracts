@@ -158,8 +158,12 @@ export const waitForVotingPeriodToEnd = async (proposalId: number) => {
   await moveBlocks(parseInt((deadline - currentBlock + BigInt(1)).toString()))
 }
 
-export const waitForRoundToEnd = async (roundId: number) => {
+export const waitForRoundToEnd = async (roundId: number | BigInt) => {
   const { xAllocationVoting } = await getOrDeployContractInstances({})
+
+  if (typeof roundId === "bigint") roundId = parseInt(roundId.toString())
+  if (typeof roundId !== "number") throw new Error("Invalid roundId")
+
   const deadline = await xAllocationVoting.roundDeadline(roundId)
 
   const currentBlock = await xAllocationVoting.clock()

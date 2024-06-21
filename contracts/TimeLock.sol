@@ -21,10 +21,9 @@
 //                                   ##############
 //                                   #########
 
-pragma solidity ^0.8.20;
+pragma solidity 0.8.20;
 
 import { TimelockControllerUpgradeable } from "@openzeppelin/contracts-upgradeable/governance/TimelockControllerUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 /**
@@ -32,7 +31,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
  * @notice This contract is used to perform the actions of the B3TRGovernor contract with a time delay.
  * The proposers and executors roles should be assigned only to the B3TRGovernor contract.
  */
-contract TimeLock is Initializable, TimelockControllerUpgradeable, UUPSUpgradeable {
+contract TimeLock is TimelockControllerUpgradeable, UUPSUpgradeable {
   bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
 
   /// @custom:oz-upgrades-unsafe-allow constructor
@@ -46,7 +45,7 @@ contract TimeLock is Initializable, TimelockControllerUpgradeable, UUPSUpgradeab
     address[] memory executors,
     address admin,
     address upgrader
-  ) public initializer {
+  ) external initializer {
     __TimelockController_init(minDelay, proposers, executors, admin);
     __UUPSUpgradeable_init();
 
