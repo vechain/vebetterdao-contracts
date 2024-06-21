@@ -26,7 +26,7 @@ import {
   MyERC721,
   MyERC1155,
 } from "../../typechain-types"
-import { createLocalConfig } from "@repo/config/contracts/envs/local"
+import { createLocalConfig } from "../../config/contracts/envs/local"
 import { deployProxy } from "../../scripts/helpers"
 import { setWhitelistedFunctions } from "../../scripts/deploy/deploy"
 import { bootstrapAndStartEmissions as callBootstrapAndStartEmissions } from "./common"
