@@ -112,7 +112,7 @@ yarn test:coverage:solidity
 
 A folder named `coverage` will be created in the root directory with the coverage report. Open `index.html` in your browser to view the report.
 
-Additionally a report is generated each time a PR is merged on main and can be found [here](https://vebetterdao.github.io/vebetterdao-smart-contracts/coverage/).
+Additionally a report is generated each time a PR is merged on main and can be found [here](https://app.codecov.io/gh/vechain/vebetterdao-contracts).
 
 ### Slither
 
