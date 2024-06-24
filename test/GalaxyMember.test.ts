@@ -799,7 +799,7 @@ describe("Galaxy Member", () => {
       expect(await galaxyMember.tokenByIndex(0)).to.equal(0) // Token ID of the first NFT is 1
       expect(await galaxyMember.tokenOfOwnerByIndex(await otherAccount.getAddress(), 0)).to.equal(0) // Token ID of the first NFT owned by otherAccount is 1
 
-      expect(await galaxyMember.tokenURI(0)).to.equal(`${config.GM_NFT_BASE_URI}1`) // Token URI of the first NFT is the "base URI/level"
+      expect(await galaxyMember.tokenURI(0)).to.equal(`${config.GM_NFT_BASE_URI}1.json`) // Token URI of the first NFT is the "base URI/level"
     })
 
     it("Should be able to free mint multiple NFTs", async () => {
