@@ -38,6 +38,8 @@ import { IERC721Receiver } from "@openzeppelin/contracts/token/ERC721/IERC721Rec
  * The XAllocationPool contract or other contracts/users can deposit funds into this contract by specifying the app
  * that can access the funds.
  * Admins of x2EarnApps can withdraw funds from the rewards pool, whihch are sent to the team wallet.
+ * Reward distributors of a x2Earn app can distribute rewards to users that performed sustainable actions or withdraw funds
+ * to the team wallet.
  * The contract is upgradable through the UUPS proxy pattern and UPGRADER_ROLE can authorize the upgrade.
  */
 contract X2EarnRewardsPool is
@@ -131,7 +133,10 @@ contract X2EarnRewardsPool is
 
     require($.x2EarnApps.appExists(appId), "X2EarnRewardsPool: app does not exist");
 
-    require($.x2EarnApps.isAppAdmin(appId, msg.sender), "X2EarnRewardsPool: not an app admin");
+    require(
+      $.x2EarnApps.isAppAdmin(appId, msg.sender) || $.x2EarnApps.isRewardDistributor(appId, msg.sender),
+      "X2EarnRewardsPool: not an app admin nor a reward distributor"
+    );
 
     // check if the app has enough available funds to withdraw
     require($.availableFunds[appId] >= amount, "X2EarnRewardsPool: app has insufficient funds");

@@ -374,6 +374,56 @@ describe("X2EarnRewardsPool", function () {
       expect(event[0].args[4]).to.equal("For the team")
     })
 
+    it("The app distributor can withdraw", async function () {
+      const { x2EarnRewardsPool, x2EarnApps, b3tr, owner, otherAccounts, minterAccount } =
+        await getOrDeployContractInstances({
+          forceDeploy: true,
+          bootstrapAndStartEmissions: true,
+        })
+
+      const teamWallet = otherAccounts[10]
+      const appAdmin = otherAccounts[11]
+      const appDistributor = otherAccounts[12]
+      const amount = ethers.parseEther("100")
+
+      await b3tr.connect(minterAccount).mint(owner.address, amount)
+
+      const appId = await x2EarnApps.hashAppName("My app")
+      await x2EarnApps.addApp(teamWallet.address, appAdmin.address, "My app", "metadataURI")
+
+      await x2EarnApps.connect(appAdmin).addRewardDistributor(appId, appDistributor.address)
+      expect(await x2EarnApps.isRewardDistributor(appId, appDistributor.address)).to.equal(true)
+
+      await b3tr.connect(owner).approve(await x2EarnRewardsPool.getAddress(), amount)
+      await x2EarnRewardsPool.connect(owner).deposit(amount, appId)
+
+      expect(await b3tr.balanceOf(teamWallet.address)).to.equal(0n)
+
+      await x2EarnRewardsPool.connect(appDistributor).withdraw(ethers.parseEther("1"), appId, "")
+
+      expect(await b3tr.balanceOf(await x2EarnRewardsPool.getAddress())).to.equal(ethers.parseEther("99"))
+
+      // money are sent to team wallet
+      expect(await b3tr.balanceOf(teamWallet.address)).to.equal(ethers.parseEther("1"))
+
+      // can leave a reason
+      const tx = await x2EarnRewardsPool
+        .connect(appDistributor)
+        .withdraw(ethers.parseEther("1"), await x2EarnApps.hashAppName("My app"), "For the team")
+
+      // "Should emit Withdraw event"
+      const receipt = await tx.wait()
+      if (!receipt) throw new Error("No receipt")
+
+      let event = filterEventsByName(receipt.logs, "TeamWithdrawal")
+      expect(event).not.to.eql([])
+      expect(event[0].args[0]).to.equal(ethers.parseEther("1"))
+      expect(event[0].args[1]).to.equal(await x2EarnApps.hashAppName("My app"))
+      expect(event[0].args[2]).to.equal(teamWallet.address)
+      expect(event[0].args[3]).to.equal(appDistributor.address)
+      expect(event[0].args[4]).to.equal("For the team")
+    })
+
     it("App must exist", async function () {
       const { x2EarnRewardsPool, b3tr, owner, x2EarnApps } = await getOrDeployContractInstances({
         forceDeploy: true,
@@ -387,7 +437,7 @@ describe("X2EarnRewardsPool", function () {
       )
     })
 
-    it("Only admin can withdraw", async function () {
+    it("Normal users cannot withdraw", async function () {
       const { x2EarnRewardsPool, x2EarnApps, b3tr, owner, otherAccount, minterAccount } =
         await getOrDeployContractInstances({
           forceDeploy: true,
