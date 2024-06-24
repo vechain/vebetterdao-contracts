@@ -13,3 +13,4 @@ artifacts
 docs
 
 config/local.ts
+.DS_Store

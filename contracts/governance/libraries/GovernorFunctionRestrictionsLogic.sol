@@ -21,7 +21,7 @@
 //                                   ##############
 //                                   #########
 
-pragma solidity ^0.8.20;
+pragma solidity 0.8.20;
 
 import { GovernorStorageTypes } from "./GovernorStorageTypes.sol";
 
@@ -36,6 +36,12 @@ library GovernorFunctionRestrictionsLogic {
   /// @notice Error message for when a function selector is invalid.
   /// @param selector The function selector that is invalid.
   error GovernorFunctionInvalidSelector(bytes selector);
+
+  /// @notice Emitted when a function is whitelisted by the governor.
+  /// @param target The address of the contract.
+  /// @param functionSelector The function selector.
+  /// @param isWhitelisted Boolean indicating if the function is whitelisted.
+  event FunctionWhitelisted(address indexed target, bytes4 indexed functionSelector, bool isWhitelisted);
 
   // --------------- SETTERS ---------------
   /**
@@ -52,7 +58,9 @@ library GovernorFunctionRestrictionsLogic {
     bytes4 functionSelector,
     bool isWhitelisted
   ) public {
+    require(target != address(0), "GovernorFunctionRestrictionsLogic: target is the zero address");
     self.whitelistedFunctions[target][functionSelector] = isWhitelisted;
+    emit FunctionWhitelisted(target, functionSelector, isWhitelisted);
   }
 
   /**
@@ -69,7 +77,7 @@ library GovernorFunctionRestrictionsLogic {
     bytes4[] memory functionSelectors,
     bool isWhitelisted
   ) external {
-    for (uint256 i = 0; i < functionSelectors.length; i++) {
+    for (uint256 i; i < functionSelectors.length; i++) {
       setWhitelistFunction(self, target, functionSelectors[i], isWhitelisted);
     }
   }
@@ -114,7 +122,7 @@ library GovernorFunctionRestrictionsLogic {
     bytes[] memory calldatas
   ) internal view {
     if (self.isFunctionRestrictionEnabled) {
-      for (uint256 i = 0; i < targets.length; i++) {
+      for (uint256 i; i < targets.length; i++) {
         bytes4 functionSelector = extractFunctionSelector(calldatas[i]);
         if (!self.whitelistedFunctions[targets[i]][functionSelector]) {
           revert GovernorRestrictedFunction(functionSelector);

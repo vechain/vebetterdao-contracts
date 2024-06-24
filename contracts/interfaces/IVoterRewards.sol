@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity 0.8.20;
 
 interface IVoterRewards {
   error AccessControlBadConfirmation();
@@ -37,6 +37,12 @@ interface IVoterRewards {
   event Upgraded(address indexed implementation);
 
   event VoteRegistered(uint256 indexed cycle, address indexed voter, uint256 votes, uint256 rewardWeightedVote);
+
+  event GalaxyMemberAddressUpdated(address indexed newAddress, address indexed oldAddress);
+
+  event EmissionsAddressUpdated(address indexed newAddress, address indexed oldAddress);
+
+  event LevelToMultiplierSet(uint256 indexed level, uint256 multiplier);
 
   function DEFAULT_ADMIN_ROLE() external view returns (bytes32);
 
