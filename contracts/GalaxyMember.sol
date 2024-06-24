@@ -564,7 +564,7 @@ contract GalaxyMember is
   function tokenURI(uint256 tokenId) public view override(ERC721Upgradeable) returns (string memory) {
     GalaxyMemberStorage storage $ = _getGalaxyMemberStorage();
     uint256 levelOfToken = $.levelOf[tokenId];
-    return levelOfToken > 0 ? string.concat(baseURI(), Strings.toString(levelOfToken)) : "";
+    return levelOfToken > 0 ? string.concat(baseURI(), Strings.toString(levelOfToken), ".json") : "";
   }
 
   /// @notice Gets the xAllocationsGovernor contract address

@@ -4,7 +4,6 @@ export function createLocalConfig() {
   return defineConfig({
     NEXT_PUBLIC_APP_ENV: "local",
 
-    B3TR_CAP: 1_000_243_154, // Allows for 643 cycles
     B3TR_GOVERNOR_QUORUM_PERCENTAGE: 4, // 4 -> Need 4% of voters to pass
     TIMELOCK_MIN_DELAY: 0, //time to wait before you can execute a queued proposal, 0 for immediate execution
     B3TR_GOVERNOR_DEPOSIT_THRESHOLD: 2, // Percentage of total B3TR supply needed to be deposited to create a proposal
@@ -56,7 +55,7 @@ export function createLocalConfig() {
 
     INITIAL_X_ALLOCATION: BigInt("2000000000000000000000000"), // 2M B3TR
 
-    GM_NFT_BASE_URI: "ipfs://bafybeidngidiqpenmmvnnmxtnxar3stxtnltpknt5tg7jbgt4dkfhkcxha/", // IPFS base URI for the GM NFT
+    GM_NFT_BASE_URI: "ipfs://bafybeienna2npuyliqaqsrxziu4texyginznh5ewxcvlvlqcxfyw7ef52q/metadata/", // IPFS base URI for the GM NFT
 
     /*
       Level => B3TR Required
