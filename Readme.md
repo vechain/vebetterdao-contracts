@@ -21,7 +21,7 @@
                                   ##############
                                   #########
 
-[![codecov](https://codecov.io/gh/vechain/vebetterdao-contracts/graph/badge.svg?token=3OMYFKUMS9)](https://codecov.io/gh/vechain/vebetterdao-contracts)
+[![codecov](https://codecov.io/gh/vechain/vebetterdao-contracts/graph/badge.svg?token=3OMYFKUMS9)](https://app.codecov.io/gh/vechain/vebetterdao-contracts)
 
 Welcome to the VeBetterDAO Smart Contracts repository! This open-source repository houses the smart contracts powering the decentralized VeBetterDAO on the VeChain Thor blockchain. Dive into a world of transparent and auditable governance mechanisms, leveraging Solidity, Hardhat, and more to ensure robust decentralized operations.
 
