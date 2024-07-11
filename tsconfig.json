@@ -10,6 +10,6 @@
     "resolveJsonModule": true,
     "declaration": true
   },
-  "include": ["index.ts", "abis/**/*.json", "addresses/**/*.json", "./typechain-types"],
+  "include": ["index.ts", "abis/**/*.json", "addresses/**/*.json", "./typechain-types", "abis/B3TR.ts", "abis/B3TRGovernor.ts", "abis/Emissions.ts", "abis/GalaxyMember.ts", "abis/TimeLock.ts", "abis/Treasury.ts", "abis/VOT3.ts", "abis/VoterRewards.ts"],
   "exclude": ["node_modules"]
 }

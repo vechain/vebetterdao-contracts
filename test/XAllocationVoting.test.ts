@@ -184,7 +184,8 @@ describe("X-Allocation Voting", function () {
             appSharesCap: config.X_ALLOCATION_POOL_APP_SHARES_MAX_CAP,
             votingThreshold: config.X_ALLOCATION_VOTING_VOTING_THRESHOLD,
           },
-        ])).to.be.reverted
+        ]),
+      ).to.be.reverted
     })
 
     it("Should revert if VoterRewards is set to zero address in initilisation", async () => {
@@ -211,7 +212,8 @@ describe("X-Allocation Voting", function () {
             appSharesCap: config.X_ALLOCATION_POOL_APP_SHARES_MAX_CAP,
             votingThreshold: config.X_ALLOCATION_VOTING_VOTING_THRESHOLD,
           },
-        ])).to.be.reverted
+        ]),
+      ).to.be.reverted
     })
 
     it("Should revert if Emissions is set to zero address in initilisation", async () => {
@@ -238,7 +240,8 @@ describe("X-Allocation Voting", function () {
             appSharesCap: config.X_ALLOCATION_POOL_APP_SHARES_MAX_CAP,
             votingThreshold: config.X_ALLOCATION_VOTING_VOTING_THRESHOLD,
           },
-        ])).to.be.reverted
+        ]),
+      ).to.be.reverted
     })
 
     it("Should revert if an admin is set to zero address in initilisation", async () => {
@@ -265,7 +268,8 @@ describe("X-Allocation Voting", function () {
             appSharesCap: config.X_ALLOCATION_POOL_APP_SHARES_MAX_CAP,
             votingThreshold: config.X_ALLOCATION_VOTING_VOTING_THRESHOLD,
           },
-        ])).to.be.reverted
+        ]),
+      ).to.be.reverted
     })
   })
 
@@ -703,13 +707,13 @@ describe("X-Allocation Voting", function () {
         // Bootstrap emissions
         await bootstrapEmissions()
 
-        let round1 = await startNewAllocationRound()
+        const round1 = await startNewAllocationRound()
         await waitForRoundToEnd(round1)
 
-        let quorum = await xAllocationVoting.roundQuorum(round1)
+        const quorum = await xAllocationVoting.roundQuorum(round1)
 
-        let snapshot = await xAllocationVoting.roundSnapshot(round1)
-        let quorumAtSnapshot = await xAllocationVoting.quorum(snapshot)
+        const snapshot = await xAllocationVoting.roundSnapshot(round1)
+        const quorumAtSnapshot = await xAllocationVoting.quorum(snapshot)
 
         expect(quorum).to.eql(quorumAtSnapshot)
       })
@@ -722,7 +726,7 @@ describe("X-Allocation Voting", function () {
         await getVot3Tokens(otherAccount, "1000")
 
         // @ts-ignore
-        let initialQuorumNumerator = await xAllocationVoting.quorumNumerator()
+        const initialQuorumNumerator = await xAllocationVoting.quorumNumerator()
 
         // Bootstrap emissions
         await bootstrapAndStartEmissions()
@@ -737,9 +741,9 @@ describe("X-Allocation Voting", function () {
           [1],
         )
 
-        let snapshot = await xAllocationVoting.roundSnapshot(1)
+        const snapshot = await xAllocationVoting.roundSnapshot(1)
         //@ts-ignore
-        let quorumNumerator = await xAllocationVoting.quorumNumerator(snapshot, {})
+        const quorumNumerator = await xAllocationVoting.quorumNumerator(snapshot, {})
 
         expect(quorumNumerator).to.eql(initialQuorumNumerator)
       })
@@ -993,15 +997,15 @@ describe("X-Allocation Voting", function () {
         .connect(owner)
         .addApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
 
-      let tx = await xAllocationVoting.connect(owner).startNewRound()
-      let receipt = await tx.wait()
+      const tx = await xAllocationVoting.connect(owner).startNewRound()
+      const receipt = await tx.wait()
       if (!receipt) throw new Error("No receipt")
 
       // Event should be emitted
-      let roundCreated = filterEventsByName(receipt.logs, "RoundCreated")
+      const roundCreated = filterEventsByName(receipt.logs, "RoundCreated")
       expect(roundCreated).not.to.eql([])
 
-      let { roundId, proposer, voteStart, voteEnd, appsIds } = parseRoundStartedEvent(
+      const { roundId, proposer, voteStart, voteEnd, appsIds } = parseRoundStartedEvent(
         roundCreated[0],
         xAllocationVoting,
       )
@@ -1012,10 +1016,10 @@ describe("X-Allocation Voting", function () {
       expect(appsIds).to.eql(await xAllocationVoting.getAppIdsOfRound(roundId))
 
       //Proposal should be active
-      let roundState = await xAllocationVoting.state(roundId)
+      const roundState = await xAllocationVoting.state(roundId)
       expect(roundState).to.eql(BigInt(0))
 
-      let round = await xAllocationVoting.getRound(roundId)
+      const round = await xAllocationVoting.getRound(roundId)
       expect(round.proposer).to.eql(owner.address)
       expect(round.voteStart.toString()).to.eql(receipt.blockNumber.toString())
       expect(round.voteDuration).to.eql(await xAllocationVoting.votingPeriod())
@@ -1028,18 +1032,18 @@ describe("X-Allocation Voting", function () {
 
       await getVot3Tokens(otherAccount, "1000")
 
-      let tx = await xAllocationVoting.connect(owner).startNewRound()
-      let receipt = await tx.wait()
+      const tx = await xAllocationVoting.connect(owner).startNewRound()
+      const receipt = await tx.wait()
       if (!receipt) throw new Error("No receipt")
 
       // Event should be emitted
-      let roundCreated = filterEventsByName(receipt.logs, "RoundCreated")
+      const roundCreated = filterEventsByName(receipt.logs, "RoundCreated")
       expect(roundCreated).not.to.eql([])
 
-      let { roundId } = parseRoundStartedEvent(roundCreated[0], xAllocationVoting)
+      const { roundId } = parseRoundStartedEvent(roundCreated[0], xAllocationVoting)
 
       // Proposal should be active
-      let roundState = await xAllocationVoting.state(roundId)
+      const roundState = await xAllocationVoting.state(roundId)
       expect(roundState).to.eql(BigInt(0))
 
       // should not be able to start a new allocation round if there is an active one
@@ -1138,9 +1142,9 @@ describe("X-Allocation Voting", function () {
 
       await emissions.connect(minterAccount).start()
 
-      let roundId = await xAllocationVoting.currentRoundId()
-      let roundSnapshot = await xAllocationVoting.currentRoundSnapshot()
-      let deadline = await xAllocationVoting.currentRoundDeadline()
+      const roundId = await xAllocationVoting.currentRoundId()
+      const roundSnapshot = await xAllocationVoting.currentRoundSnapshot()
+      const deadline = await xAllocationVoting.currentRoundDeadline()
 
       expect(roundSnapshot).to.eql(await xAllocationVoting.roundSnapshot(roundId))
       expect(deadline).to.eql(await xAllocationVoting.roundDeadline(roundId))
@@ -1156,8 +1160,8 @@ describe("X-Allocation Voting", function () {
 
       await emissions.connect(minterAccount).start()
 
-      let roundId = await xAllocationVoting.currentRoundId()
-      let roundProposer = await xAllocationVoting.roundProposer(roundId)
+      const roundId = await xAllocationVoting.currentRoundId()
+      const roundProposer = await xAllocationVoting.roundProposer(roundId)
 
       expect(roundProposer).to.eql(await emissions.getAddress())
     })
@@ -1213,12 +1217,12 @@ describe("X-Allocation Voting", function () {
 
       await getVot3Tokens(otherAccount, "1000")
 
-      let tx = await xAllocationVoting.startNewRound()
-      let receipt = await tx.wait()
+      const tx = await xAllocationVoting.startNewRound()
+      const receipt = await tx.wait()
       if (!receipt) throw new Error("No receipt")
       // Event should be emitted
-      let roundCreated = filterEventsByName(receipt.logs, "RoundCreated")
-      let { roundId } = parseRoundStartedEvent(roundCreated[0], xAllocationVoting)
+      const roundCreated = filterEventsByName(receipt.logs, "RoundCreated")
+      const { roundId } = parseRoundStartedEvent(roundCreated[0], xAllocationVoting)
 
       // I cannot cast a vote with higher balance than I have
       await catchRevert(xAllocationVoting.connect(otherAccount).castVote(roundId, [app1], [ethers.parseEther("1500")]))
@@ -1242,18 +1246,18 @@ describe("X-Allocation Voting", function () {
 
       await emissions.connect(minterAccount).start()
 
-      let roundId = await xAllocationVoting.currentRoundId()
+      const roundId = await xAllocationVoting.currentRoundId()
       expect(roundId).to.eql(1n)
 
       // I should be able to cast a vote
-      let tx = await xAllocationVoting.connect(otherAccount).castVote(roundId, [app1], [ethers.parseEther("1000")])
-      let receipt = await tx.wait()
+      const tx = await xAllocationVoting.connect(otherAccount).castVote(roundId, [app1], [ethers.parseEther("1000")])
+      const receipt = await tx.wait()
       if (!receipt) throw new Error("No receipt")
 
-      let allocationVoteCast = filterEventsByName(receipt.logs, "AllocationVoteCast")
+      const allocationVoteCast = filterEventsByName(receipt.logs, "AllocationVoteCast")
       expect(allocationVoteCast).not.to.eql([])
 
-      let {
+      const {
         voter,
         apps: votedApps,
         voteWeights,
@@ -1265,10 +1269,10 @@ describe("X-Allocation Voting", function () {
       expect(voteWeights).to.eql([ethers.parseEther("1000")])
 
       // Votes should be tracked correctly
-      let appVotes = await xAllocationVoting.getAppVotes(roundId, app1)
+      const appVotes = await xAllocationVoting.getAppVotes(roundId, app1)
       expect(appVotes).to.eql(ethers.parseEther("1000"))
 
-      let totalVotes = await xAllocationVoting.totalVotes(roundId)
+      const totalVotes = await xAllocationVoting.totalVotes(roundId)
       expect(totalVotes).to.eql(ethers.parseEther("1000"))
     })
 
@@ -1286,12 +1290,12 @@ describe("X-Allocation Voting", function () {
 
       await getVot3Tokens(otherAccount, "0.1")
 
-      let tx = await xAllocationVoting.startNewRound()
-      let receipt = await tx.wait()
+      const tx = await xAllocationVoting.startNewRound()
+      const receipt = await tx.wait()
       if (!receipt) throw new Error("No receipt")
       // Event should be emitted
-      let roundCreated = filterEventsByName(receipt.logs, "RoundCreated")
-      let { roundId } = parseRoundStartedEvent(roundCreated[0], xAllocationVoting)
+      const roundCreated = filterEventsByName(receipt.logs, "RoundCreated")
+      const { roundId } = parseRoundStartedEvent(roundCreated[0], xAllocationVoting)
 
       // I cannot cast a vote twice for the same round
       await expect(
@@ -1317,8 +1321,8 @@ describe("X-Allocation Voting", function () {
       let receipt = await tx.wait()
       if (!receipt) throw new Error("No receipt")
       // Event should be emitted
-      let roundCreated = filterEventsByName(receipt.logs, "RoundCreated")
-      let { roundId } = parseRoundStartedEvent(roundCreated[0], xAllocationVoting)
+      const roundCreated = filterEventsByName(receipt.logs, "RoundCreated")
+      const { roundId } = parseRoundStartedEvent(roundCreated[0], xAllocationVoting)
 
       // I should be able to cast a vote
       tx = await xAllocationVoting.connect(otherAccount).castVote(roundId, [app1], [ethers.parseEther("500")])
@@ -1347,8 +1351,8 @@ describe("X-Allocation Voting", function () {
       let receipt = await tx.wait()
       if (!receipt) throw new Error("No receipt")
       // Event should be emitted
-      let roundCreated = filterEventsByName(receipt.logs, "RoundCreated")
-      let { roundId } = parseRoundStartedEvent(roundCreated[0], xAllocationVoting)
+      const roundCreated = filterEventsByName(receipt.logs, "RoundCreated")
+      const { roundId } = parseRoundStartedEvent(roundCreated[0], xAllocationVoting)
 
       // I should be able to cast a vote
       tx = await xAllocationVoting.connect(otherAccount).castVote(roundId, [app1], [ethers.parseEther("500")])
@@ -1382,9 +1386,9 @@ describe("X-Allocation Voting", function () {
       let receipt = await tx.wait()
       if (!receipt) throw new Error("No receipt")
 
-      let roundCreated = filterEventsByName(receipt.logs, "RoundCreated")
+      const roundCreated = filterEventsByName(receipt.logs, "RoundCreated")
       expect(roundCreated).not.to.eql([])
-      let { roundId } = parseRoundStartedEvent(roundCreated[0], xAllocationVoting)
+      const { roundId } = parseRoundStartedEvent(roundCreated[0], xAllocationVoting)
 
       await waitForNextBlock()
 
@@ -1399,7 +1403,7 @@ describe("X-Allocation Voting", function () {
       expect(avaiableApps[0]).to.equal(app1)
       expect(avaiableApps[1]).to.equal(app2)
 
-      let appsVotedInSpecificRound = await xAllocationVoting.getAppIdsOfRound(roundId)
+      const appsVotedInSpecificRound = await xAllocationVoting.getAppIdsOfRound(roundId)
       expect(appsVotedInSpecificRound.length).to.equal(2)
       expect(appsVotedInSpecificRound[0]).to.equal(app1)
       expect(appsVotedInSpecificRound[1]).to.equal(app2)
@@ -1411,9 +1415,9 @@ describe("X-Allocation Voting", function () {
       receipt = await tx.wait()
       if (!receipt) throw new Error("No receipt")
 
-      let allocationVoteCast = filterEventsByName(receipt.logs, "AllocationVoteCast")
+      const allocationVoteCast = filterEventsByName(receipt.logs, "AllocationVoteCast")
       expect(roundCreated).not.to.eql([])
-      let {
+      const {
         voter,
         apps: votedApps,
         voteWeights,
@@ -1430,7 +1434,7 @@ describe("X-Allocation Voting", function () {
       appVotes = await xAllocationVoting.getAppVotes(roundId, app2)
       expect(appVotes).to.eql(ethers.parseEther("200"))
 
-      let totalVotes = await xAllocationVoting.totalVotes(roundId)
+      const totalVotes = await xAllocationVoting.totalVotes(roundId)
       expect(totalVotes).to.eql(ethers.parseEther("500"))
     })
 
@@ -1461,9 +1465,9 @@ describe("X-Allocation Voting", function () {
       let receipt = await tx.wait()
       if (!receipt) throw new Error("No receipt")
 
-      let roundCreated = filterEventsByName(receipt.logs, "RoundCreated")
+      const roundCreated = filterEventsByName(receipt.logs, "RoundCreated")
       expect(roundCreated).not.to.eql([])
-      let { roundId } = parseRoundStartedEvent(roundCreated[0], xAllocationVoting)
+      const { roundId } = parseRoundStartedEvent(roundCreated[0], xAllocationVoting)
 
       tx = await xAllocationVoting
         .connect(otherAccount)
@@ -1493,7 +1497,7 @@ describe("X-Allocation Voting", function () {
       expect(totalVotes).to.eql(ethers.parseEther("1400"))
 
       // Total voters should be tracked correctly
-      let totalVoters = await xAllocationVoting.totalVoters(roundId)
+      const totalVoters = await xAllocationVoting.totalVoters(roundId)
       expect(totalVoters).to.eql(BigInt(3))
 
       await waitForRoundToEnd(roundId)
@@ -1536,26 +1540,26 @@ describe("X-Allocation Voting", function () {
 
       await emissions.connect(minterAccount).start()
 
-      let roundId = await xAllocationVoting.currentRoundId()
+      const roundId = await xAllocationVoting.currentRoundId()
       expect(roundId).to.eql(1n)
 
       await waitForRoundToEnd(Number(roundId))
       expect(await xAllocationVoting.state(roundId)).to.eql(1n) // quorum failed
 
       // Votes should be tracked correctly
-      let appVotes = await xAllocationVoting.getAppVotes(roundId, app1)
+      const appVotes = await xAllocationVoting.getAppVotes(roundId, app1)
       expect(appVotes).to.eql(ethers.parseEther("0"))
 
-      let totalVotes = await xAllocationVoting.totalVotes(roundId)
+      const totalVotes = await xAllocationVoting.totalVotes(roundId)
       expect(totalVotes).to.eql(ethers.parseEther("0"))
 
-      let totalVoters = await xAllocationVoting.totalVoters(roundId)
+      const totalVoters = await xAllocationVoting.totalVoters(roundId)
       expect(totalVoters).to.eql(BigInt(0))
 
-      let appShares = await xAllocationPool.getAppShares(roundId, app1)
+      const appShares = await xAllocationPool.getAppShares(roundId, app1)
       expect(appShares).to.eql([0n, 0n])
 
-      let appEarnings = await xAllocationPool.roundEarnings(roundId, app1)
+      const appEarnings = await xAllocationPool.roundEarnings(roundId, app1)
       expect(appEarnings).to.eql([
         await xAllocationPool.baseAllocationAmount(roundId),
         0n,
@@ -1584,13 +1588,13 @@ describe("X-Allocation Voting", function () {
 
       await getVot3Tokens(otherAccount, "1000")
 
-      let tx = await xAllocationVoting.startNewRound()
-      let receipt = await tx.wait()
+      const tx = await xAllocationVoting.startNewRound()
+      const receipt = await tx.wait()
       if (!receipt) throw new Error("No receipt")
 
-      let roundCreated = filterEventsByName(receipt.logs, "RoundCreated")
+      const roundCreated = filterEventsByName(receipt.logs, "RoundCreated")
       expect(roundCreated).not.to.eql([])
-      let { roundId } = parseRoundStartedEvent(roundCreated[0], xAllocationVoting)
+      const { roundId } = parseRoundStartedEvent(roundCreated[0], xAllocationVoting)
 
       await catchRevert(xAllocationVoting.connect(otherAccount).castVote(roundId, [app3], [ethers.parseEther("300")]))
 
@@ -1602,7 +1606,7 @@ describe("X-Allocation Voting", function () {
       appVotes = await xAllocationVoting.getAppVotes(roundId, app3)
       expect(appVotes).to.eql(ethers.parseEther("0"))
 
-      let totalVotes = await xAllocationVoting.totalVotes(roundId)
+      const totalVotes = await xAllocationVoting.totalVotes(roundId)
       expect(totalVotes).to.eql(ethers.parseEther("0"))
     })
 
@@ -1627,14 +1631,14 @@ describe("X-Allocation Voting", function () {
       await getVot3Tokens(otherAccount, "1000")
 
       let tx = await xAllocationVoting.startNewRound()
-      let receipt = await tx.wait()
+      const receipt = await tx.wait()
       if (!receipt) throw new Error("No receipt")
 
       const timepoint = receipt.blockNumber
 
-      let roundCreated = filterEventsByName(receipt.logs, "RoundCreated")
+      const roundCreated = filterEventsByName(receipt.logs, "RoundCreated")
       expect(roundCreated).not.to.eql([])
-      let { roundId } = parseRoundStartedEvent(roundCreated[0], xAllocationVoting)
+      const { roundId } = parseRoundStartedEvent(roundCreated[0], xAllocationVoting)
 
       tx = await xAllocationVoting
         .connect(otherAccount)
@@ -1675,13 +1679,13 @@ describe("X-Allocation Voting", function () {
       await getVot3Tokens(otherAccount, "1000")
 
       let tx = await xAllocationVoting.startNewRound()
-      let receipt = await tx.wait()
+      const receipt = await tx.wait()
       if (!receipt) throw new Error("No receipt")
       const timepoint = receipt.blockNumber
 
-      let roundCreated = filterEventsByName(receipt.logs, "RoundCreated")
+      const roundCreated = filterEventsByName(receipt.logs, "RoundCreated")
       expect(roundCreated).not.to.eql([])
-      let { roundId } = parseRoundStartedEvent(roundCreated[0], xAllocationVoting)
+      const { roundId } = parseRoundStartedEvent(roundCreated[0], xAllocationVoting)
 
       tx = await xAllocationVoting
         .connect(otherAccount)
@@ -1717,7 +1721,7 @@ describe("X-Allocation Voting", function () {
         .connect(owner)
         .addApp(otherAccounts[1].address, otherAccounts[1].address, otherAccounts[1].address, "metadataURI")
       const app2 = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[1].address))
-      let round1 = await startNewAllocationRound()
+      const round1 = await startNewAllocationRound()
       let getAppIdsOfRound = await xAllocationVoting.getAppIdsOfRound(round1)
       expect(getAppIdsOfRound.length).to.equal(2n)
 
@@ -1731,7 +1735,7 @@ describe("X-Allocation Voting", function () {
       await waitForRoundToEnd(round1)
 
       // 4 apps in round2
-      let round2 = await startNewAllocationRound()
+      const round2 = await startNewAllocationRound()
       getAppIdsOfRound = await xAllocationVoting.getAppIdsOfRound(round2)
       expect(getAppIdsOfRound.length).to.equal(4n)
 
@@ -1741,7 +1745,7 @@ describe("X-Allocation Voting", function () {
       await waitForRoundToEnd(round2)
 
       // 2 app in round 3
-      let round3 = await startNewAllocationRound()
+      const round3 = await startNewAllocationRound()
       getAppIdsOfRound = await xAllocationVoting.getAppIdsOfRound(round3)
       expect(getAppIdsOfRound.length).to.equal(2n)
 
@@ -1752,7 +1756,7 @@ describe("X-Allocation Voting", function () {
       await waitForRoundToEnd(round3)
 
       // 3 apps in round 4
-      let round4 = await startNewAllocationRound()
+      const round4 = await startNewAllocationRound()
       getAppIdsOfRound = await xAllocationVoting.getAppIdsOfRound(round4)
       expect(getAppIdsOfRound.length).to.equal(3n)
 
@@ -1779,11 +1783,11 @@ describe("X-Allocation Voting", function () {
         .connect(owner)
         .addApp(otherAccounts[1].address, otherAccounts[1].address, otherAccounts[1].address, "metadataURI")
       const app2 = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[1].address))
-      let round1 = await startNewAllocationRound()
-      let getAppIdsOfRound = await xAllocationVoting.getAppIdsOfRound(round1)
+      const round1 = await startNewAllocationRound()
+      const getAppIdsOfRound = await xAllocationVoting.getAppIdsOfRound(round1)
       expect(getAppIdsOfRound.length).to.equal(2n)
 
-      let apps = await xAllocationVoting.getAppsOfRound(round1)
+      const apps = await xAllocationVoting.getAppsOfRound(round1)
       expect(apps.length).to.equal(2n)
       expect(apps[0].id).to.equal(app1)
       expect(apps[1].id).to.equal(app2)
@@ -1836,7 +1840,7 @@ describe("X-Allocation Voting", function () {
       // Bootstrap emissions
       await bootstrapAndStartEmissions()
 
-      let roundId = await xAllocationVoting.currentRoundId()
+      const roundId = await xAllocationVoting.currentRoundId()
       expect(roundId).to.eql(1n)
 
       // I should be able to cast a vote
@@ -1861,7 +1865,7 @@ describe("X-Allocation Voting", function () {
       // Bootstrap emissions
       await bootstrapAndStartEmissions()
 
-      let roundId = await xAllocationVoting.currentRoundId()
+      const roundId = await xAllocationVoting.currentRoundId()
       expect(roundId).to.eql(1n)
 
       // I should be able to cast a vote
@@ -1890,7 +1894,7 @@ describe("X-Allocation Voting", function () {
       await bootstrapAndStartEmissions()
       await waitForNextBlock()
 
-      let roundId = await xAllocationVoting.currentRoundId()
+      const roundId = await xAllocationVoting.currentRoundId()
       expect(roundId).to.eql(1n)
 
       expect(await xAllocationVoting.quorumReached(1)).to.eql(false)
@@ -1943,11 +1947,11 @@ describe("X-Allocation Voting", function () {
         forceDeploy: true,
       })
 
-      let round1 = await startNewAllocationRound()
+      const round1 = await startNewAllocationRound()
 
       await catchRevert(xAllocationVoting.finalizeRound(round1))
 
-      let isFinalized = await xAllocationVoting.isFinalized(round1)
+      const isFinalized = await xAllocationVoting.isFinalized(round1)
       expect(isFinalized).to.eql(false)
     })
 
@@ -1956,7 +1960,7 @@ describe("X-Allocation Voting", function () {
         forceDeploy: true,
       })
 
-      let round1 = await startNewAllocationRound()
+      const round1 = await startNewAllocationRound()
       let isFinalized = await xAllocationVoting.isFinalized(round1)
       expect(isFinalized).to.eql(false)
       await waitForRoundToEnd(round1)
@@ -1976,11 +1980,11 @@ describe("X-Allocation Voting", function () {
       })
       await getVot3Tokens(otherAccount, "1000")
 
-      let round1 = await startNewAllocationRound()
+      const round1 = await startNewAllocationRound()
       await waitForRoundToEnd(round1)
 
       // should be failed since quorum is not reached
-      let state = await xAllocationVoting.state(round1)
+      const state = await xAllocationVoting.state(round1)
       expect(state).to.eql(1n)
 
       let isFinalized = await xAllocationVoting.isFinalized(round1)
@@ -2010,11 +2014,11 @@ describe("X-Allocation Voting", function () {
       // check that round 1 is finalized
       expect(await xAllocationVoting.isFinalized(1)).to.eql(true)
 
-      let roundId = await xAllocationVoting.currentRoundId()
+      const roundId = await xAllocationVoting.currentRoundId()
       await waitForCurrentRoundToEnd()
 
       // should be failed since quorum is not reached
-      let state = await xAllocationVoting.state(roundId)
+      const state = await xAllocationVoting.state(roundId)
       expect(state).to.eql(1n)
 
       let isFinalized = await xAllocationVoting.isFinalized(roundId)
@@ -2080,11 +2084,11 @@ describe("X-Allocation Voting", function () {
         forceDeploy: true,
       })
 
-      let round1 = await startNewAllocationRound()
+      const round1 = await startNewAllocationRound()
 
       await catchRevert(xAllocationVoting.finalizeRound(round1))
 
-      let isFinalized = await xAllocationVoting.isFinalized(round1)
+      const isFinalized = await xAllocationVoting.isFinalized(round1)
       expect(isFinalized).to.eql(false)
     })
 
