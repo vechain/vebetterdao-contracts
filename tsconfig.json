@@ -2,6 +2,7 @@
   "compilerOptions": {
     "target": "es2020",
     "module": "commonjs",
+    "outDir": "./dist",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
@@ -9,5 +10,6 @@
     "resolveJsonModule": true,
     "declaration": true
   },
+  "include": ["index.ts", "abis/**/*.json", "addresses/**/*.json", "./typechain-types"],
   "exclude": ["node_modules"]
 }
