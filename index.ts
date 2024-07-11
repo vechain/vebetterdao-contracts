@@ -1,16 +1,17 @@
-import Vot3ContractJson from "./artifacts/contracts/VOT3.sol/VOT3.json"
-import VoterRewardsContractJson from "./artifacts/contracts/VoterRewards.sol/VoterRewards.json"
-import B3trContractJson from "./artifacts/contracts/B3TR.sol/B3TR.json"
-import GalaxyMemberContractJson from "./artifacts/contracts/GalaxyMember.sol/GalaxyMember.json"
-import EmissionsContractJson from "./artifacts/contracts/Emissions.sol/Emissions.json"
-import B3TRGovernorJson from "./artifacts/contracts/B3TRGovernor.sol/B3TRGovernor.json"
-import TimeLockContractJson from "./artifacts/contracts/TimeLock.sol/TimeLock.json"
-import XAllocationPoolJson from "./artifacts/contracts/XAllocationPool.sol/XAllocationPool.json"
-import XAllocationVotingJson from "./artifacts/contracts/XAllocationVoting.sol/XAllocationVoting.json"
-import XAllocationVotingGovernorJson from "./artifacts/contracts/x-allocation-voting-governance/XAllocationVotingGovernor.sol/XAllocationVotingGovernor.json"
-import TreasuryContractJson from "./artifacts/contracts/Treasury.sol/Treasury.json"
-import X2EarnAppsJson from "./artifacts/contracts/X2EarnApps.sol/X2EarnApps.json"
-import TreasuryJson from "./artifacts/contracts/Treasury.sol/Treasury.json"
+import B3TRAbi from './abis/B3TR.json';
+import B3TRGovernorAbi from './abis/B3TRGovernor.json';
+import EmissionsAbi from './abis/Emissions.json';
+import GalaxyMemberAbi from './abis/GalaxyMember.json';
+import TimeLockAbi from './abis/TimeLock.json';
+import TreasuryAbi from './abis/Treasury.json';
+import VOT3Abi from './abis/VOT3.json';
+import VoterRewardsAbi from './abis/VoterRewards.json';
+import X2EarnAppsAbi from './abis/X2EarnApps.json';
+import X2EarnRewardsPoolAbi from './abis/X2EarnRewardsPool.json';
+import XAllocationPoolAbi from './abis/XAllocationPool.json';
+import XAllocationVotingAbi from './abis/XAllocationVoting.json';
+
+import mainnetAddresses from './addresses/mainnet.json';
 
 export {
   VOT3__factory,
@@ -27,18 +28,15 @@ export {
   Treasury__factory,
 } from "./typechain-types"
 
-export {
-  Vot3ContractJson,
-  VoterRewardsContractJson,
-  B3trContractJson,
-  GalaxyMemberContractJson,
-  EmissionsContractJson,
-  B3TRGovernorJson,
-  TimeLockContractJson,
-  XAllocationPoolJson,
-  XAllocationVotingJson,
-  XAllocationVotingGovernorJson,
-  TreasuryContractJson,
-  X2EarnAppsJson,
-  TreasuryJson,
-}
+export const B3TR = { abi: B3TRAbi, mainnet: mainnetAddresses.B3TR };
+export const B3TRGovernor = { abi: B3TRGovernorAbi, mainnet: mainnetAddresses.B3TRGovernor };
+export const Emissions = { abi: EmissionsAbi, mainnet: mainnetAddresses.Emissions };
+export const GalaxyMember = { abi: GalaxyMemberAbi, mainnet: mainnetAddresses.GalaxyMember };
+export const TimeLock = { abi: TimeLockAbi, mainnet: mainnetAddresses.TimeLock };
+export const Treasury = { abi: TreasuryAbi, mainnet: mainnetAddresses.Treasury };
+export const VOT3 = { abi: VOT3Abi, mainnet: mainnetAddresses.VOT3 };
+export const VoterRewards = { abi: VoterRewardsAbi, mainnet: mainnetAddresses.VoterRewards };
+export const X2EarnApps = { abi: X2EarnAppsAbi, mainnet: mainnetAddresses.X2EarnApps };
+export const X2EarnRewardsPool = { abi: X2EarnRewardsPoolAbi, mainnet: mainnetAddresses.X2EarnRewardsPool };
+export const XAllocationPool = { abi: XAllocationPoolAbi, mainnet: mainnetAddresses.XAllocationPool };
+export const XAllocationVoting = { abi: XAllocationVotingAbi, mainnet: mainnetAddresses.XAllocationVoting };
