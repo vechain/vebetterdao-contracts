@@ -116,13 +116,6 @@ A folder named `coverage` will be created in the root directory with the coverag
 
 Additionally a report is generated each time a PR is merged on main and can be found [here](https://app.codecov.io/gh/vechain/vebetterdao-contracts).
 
-### Slither
-
-Note that slither does not seem to be working with the repo as-is, resulting in an enum type not found error:
-
-```bash
-slither.solc_parsing.exceptions.ParsingError: Type not found struct Checkpoints.Trace208
-```
 
 # Disclaimer
 
