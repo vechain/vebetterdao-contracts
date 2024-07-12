@@ -46,7 +46,6 @@ jobs:
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
-      # Run Slither if Solidity changes are detected
       - name: Run Slither
         uses: crytic/slither-action@v0.4.0
         id: slither
