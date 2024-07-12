@@ -26,6 +26,9 @@ jobs:
           node-version-file: .nvmrc
           cache: "yarn"
 
+      - name: Clean build artifacts
+        run: yarn clean
+
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
