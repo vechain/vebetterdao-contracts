@@ -27,13 +27,13 @@ jobs:
           cache: "yarn"
 
       - name: Clean build artifacts
-        run: yarn clean
+        run: rm -rf artifacts cache dist typechain-types coverage
 
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
       - name: Compile contracts
-        run: yarn compile
+        run: npx hardhat compile
 
       - name: Unit Tests
         run: yarn test:hardhat
@@ -49,9 +49,19 @@ jobs:
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
+      - name: Check for Solidity changes
+        uses: dorny/paths-filter@v3
+        id: contract_changes
+        with:
+          filters: |
+            contracts:
+              - '**/*.sol'
+
+      # Run Slither if Solidity changes are detected
       - name: Run Slither
         uses: crytic/slither-action@v0.4.0
         id: slither
+        if: steps.contract_changes.outputs.contracts == 'true'
         with:
           ignore-compile: true
           target: "./"
@@ -61,7 +71,7 @@ jobs:
 
       - name: Create/update checklist as PR comment
         uses: actions/github-script@v7
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && steps.contract_changes.outputs.contracts == 'true'
         env:
           REPORT: ${{ steps.slither.outputs.stdout }}
         with:
