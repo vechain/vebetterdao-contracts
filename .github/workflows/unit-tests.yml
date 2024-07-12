@@ -33,7 +33,7 @@ jobs:
         run: yarn install --frozen-lockfile
 
       - name: Compile contracts
-        run: npx hardhat compile
+        run: yarn compile
 
       - name: Unit Tests
         run: yarn test:hardhat
