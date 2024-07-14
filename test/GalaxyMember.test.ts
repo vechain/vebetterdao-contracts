@@ -1442,17 +1442,17 @@ describe("Galaxy Member", () => {
 
       expect(await galaxyMember.levelOf(0)).to.equal(2) // Level 2
 
-      let tx = await galaxyMember
+      const tx = await galaxyMember
         .connect(owner)
         .transferFrom(await owner.getAddress(), await otherAccount.getAddress(), 0)
 
-      let receipt = await tx.wait()
+      const receipt = await tx.wait()
 
       if (!receipt?.blockNumber) throw new Error("No receipt block number")
 
-      let events = receipt?.logs
+      const events = receipt?.logs
 
-      let decodedEvents = events?.map(event => {
+      const decodedEvents = events?.map(event => {
         return galaxyMember.interface.parseLog({
           topics: event?.topics as string[],
           data: event?.data as string,
