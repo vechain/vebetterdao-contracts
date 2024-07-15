@@ -57,6 +57,15 @@ jobs:
             contracts:
               - '**/*.sol'
 
+      # Clean and compile again before running Slither
+      - name: Clean build artifacts for Slither
+        if: steps.contract_changes.outputs.contracts == 'true'
+        run: rm -rf artifacts cache dist typechain-types coverage
+
+      - name: Compile contracts for Slither
+        if: steps.contract_changes.outputs.contracts == 'true'
+        run: yarn compile
+
       # Run Slither if Solidity changes are detected
       - name: Run Slither
         uses: crytic/slither-action@v0.4.0
