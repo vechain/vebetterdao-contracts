@@ -26,14 +26,17 @@ jobs:
           node-version-file: .nvmrc
           cache: "yarn"
 
-      - name: Clean build artifacts
-        run: rm -rf artifacts cache dist typechain-types coverage
-
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
       - name: Compile contracts
         run: yarn compile
+
+      - name: Unit Tests
+        run: yarn test:hardhat
+
+      - name: Generate coverage
+        run: yarn test:coverage:solidity
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
