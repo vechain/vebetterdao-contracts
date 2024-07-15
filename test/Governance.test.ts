@@ -3480,9 +3480,9 @@ describe("Governor and TimeLock", function () {
       expect(await governor.quorumNumerator()).to.equal(4n)
 
       const checkUserSupplyPercentage = async (user: HardhatEthersSigner) => {
-        let totalSupply = await vot3.totalSupply()
-        let userBalance = await vot3.balanceOf(user.address)
-        let userPercentage = (userBalance * 100n) / totalSupply
+        const totalSupply = await vot3.totalSupply()
+        const userBalance = await vot3.balanceOf(user.address)
+        const userPercentage = (userBalance * 100n) / totalSupply
 
         return userPercentage
       }
@@ -3551,9 +3551,9 @@ describe("Governor and TimeLock", function () {
       expect(await governor.quorumNumerator()).to.equal(4n)
 
       const checkUserSupplyPercentage = async (user: HardhatEthersSigner) => {
-        let totalSupply = await vot3.totalSupply()
-        let userBalance = await vot3.balanceOf(user.address)
-        let userPercentage = (userBalance * 100n) / totalSupply
+        const totalSupply = await vot3.totalSupply()
+        const userBalance = await vot3.balanceOf(user.address)
+        const userPercentage = (userBalance * 100n) / totalSupply
 
         return userPercentage
       }

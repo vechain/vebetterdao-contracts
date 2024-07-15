@@ -505,7 +505,7 @@ describe("VoterRewards", () => {
       expect(totalVotes).to.eql(ethers.parseEther("1400"))
 
       // Total voters should be tracked correctly
-      let totalVoters = await xAllocationVoting.totalVoters(roundId)
+      const totalVoters = await xAllocationVoting.totalVoters(roundId)
       expect(totalVoters).to.eql(BigInt(3))
 
       // Voter rewards checks

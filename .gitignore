@@ -4,6 +4,7 @@ coverage
 coverage.json
 typechain
 typechain-types
+dist/*
 
 # Hardhat files
 cache
@@ -14,3 +15,4 @@ docs
 
 config/local.ts
 .DS_Store
+idea

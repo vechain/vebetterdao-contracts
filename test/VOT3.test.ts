@@ -433,7 +433,7 @@ describe("VOT3", function () {
       expect(await vot3.delegates(otherAccount)).to.eql(otherAccount.address)
 
       // transfer
-      let tx = await vot3
+      const tx = await vot3
         .connect(otherAccount)
         .transfer(minterAccount, ethers.parseEther("1"), { gasLimit: 10_000_000 })
       const receipt = await tx.wait()

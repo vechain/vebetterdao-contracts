@@ -299,7 +299,7 @@ describe("X2EarnRewardsPool", function () {
       const receipt = await tx.wait()
       if (!receipt) throw new Error("No receipt")
 
-      let event = filterEventsByName(receipt.logs, "NewDeposit")
+      const event = filterEventsByName(receipt.logs, "NewDeposit")
       expect(event).not.to.eql([])
 
       expect(event[0].args[0]).to.equal(amount)
@@ -365,7 +365,7 @@ describe("X2EarnRewardsPool", function () {
       const receipt = await tx.wait()
       if (!receipt) throw new Error("No receipt")
 
-      let event = filterEventsByName(receipt.logs, "TeamWithdrawal")
+      const event = filterEventsByName(receipt.logs, "TeamWithdrawal")
       expect(event).not.to.eql([])
       expect(event[0].args[0]).to.equal(ethers.parseEther("1"))
       expect(event[0].args[1]).to.equal(await x2EarnApps.hashAppName("My app"))
@@ -415,7 +415,7 @@ describe("X2EarnRewardsPool", function () {
       const receipt = await tx.wait()
       if (!receipt) throw new Error("No receipt")
 
-      let event = filterEventsByName(receipt.logs, "TeamWithdrawal")
+      const event = filterEventsByName(receipt.logs, "TeamWithdrawal")
       expect(event).not.to.eql([])
       expect(event[0].args[0]).to.equal(ethers.parseEther("1"))
       expect(event[0].args[1]).to.equal(await x2EarnApps.hashAppName("My app"))
@@ -570,7 +570,7 @@ describe("X2EarnRewardsPool", function () {
       // event emitted
       if (!receipt) throw new Error("No receipt")
 
-      let event = filterEventsByName(receipt.logs, "RewardDistributed")
+      const event = filterEventsByName(receipt.logs, "RewardDistributed")
 
       expect(event).not.to.eql([])
       expect(event[0].args[0]).to.equal(ethers.parseEther("1"))
