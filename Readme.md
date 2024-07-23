@@ -44,11 +44,30 @@ The complete documentation for the VeBetterDAO and the contracts can be found [h
   "XAllocationVoting": "0x89A00Bb0947a30FF95BEeF77a66AEdE3842Fe5B7"
 ```
 
+## Testnet contract addresses
+
+```
+  "B3TR": "0xbf64cf86894Ee0877C4e7d03936e35Ee8D8b864F",
+  "B3TRGovernor": "0xDF5E114D391CAC840529802fe8D01f6bdeBE41eC",
+  "Emissions": "0x148d21032F4a7b4aeF236E2E9C0c5bF62d10f8EB",
+  "GalaxyMember": "0xCf73039913e05aa1838d5869E72290d2b454C1E8",
+  "TimeLock": "0x30ee94F303643902a68aD8A7A6456cA69d763192",
+  "Treasury": "0x039893EBe092A2D22B08E2b029735D211bfF7F50",
+  "VOT3": "0xa704c45971995467696EE9544Da77DD42Bc9706E",
+  "VoterRewards": "0x2E47fc4aabB3403037fB5E1f38995E7a91Ce8Ed2",
+  "X2EarnApps": "0xcB23Eb1bBD5c07553795b9538b1061D0f4ABA153",
+  "X2EarnRewardsPool": "0x5F8f86B8D0Fa93cdaE20936d150175dF0205fB38",
+  "XAllocationPool": "0x9B9CA9D0C41Add1d204f90BA0E9a6844f1843A84",
+  "XAllocationVoting": "0x5859ff910d8b0c127364c98E24233b0af7443c1c",
+  "B3TRFaucet": "0x5e9c1F0f52aC6b5004122059053b00017EAfB561"
+```
+
 ## Audit
 
 The VeBetterDAO smart contracts have undergone a comprehensive audit by [Hacken](https://hacken.io/). The audit report (`Hacken_Vechain Foundation_[SCA] VeChain _ VeBetter DAO _ May2024_P-2024-304_1_20240621 16_17`) can be found in the root of the repo.
 
 ## Install via NPM
+
 You can install the package via NPM to get the ABIs, contract addresses and interfaces:
 
 ```bash

@@ -1,4 +1,5 @@
 import mainnetAddresses from "./addresses/mainnet.json"
+import testnetAddresses from "./addresses/testnet.json"
 
 import {
   VOT3__factory,
@@ -17,61 +18,97 @@ import {
 
 export const B3TR = {
   abi: B3TR__factory.abi,
-  address: mainnetAddresses.B3TR,
+  address: {
+    mainnet: mainnetAddresses.B3TR,
+    testnet: testnetAddresses.B3TR,
+  },
   interface: B3TR__factory.createInterface(),
 }
 export const B3TRGovernor = {
   abi: B3TRGovernor__factory.abi,
-  address: mainnetAddresses.B3TRGovernor,
+  address: {
+    mainnet: mainnetAddresses.B3TRGovernor,
+    testnet: testnetAddresses.B3TRGovernor,
+  },
   interface: B3TRGovernor__factory.createInterface(),
 }
 export const Emissions = {
   abi: Emissions__factory.abi,
-  address: mainnetAddresses.Emissions,
+  address: {
+    mainnet: mainnetAddresses.Emissions,
+    testnet: testnetAddresses.Emissions,
+  },
   interface: Emissions__factory.createInterface(),
 }
 export const GalaxyMember = {
   abi: GalaxyMember__factory.abi,
-  address: mainnetAddresses.GalaxyMember,
+  address: {
+    mainnet: mainnetAddresses.GalaxyMember,
+    testnet: testnetAddresses.GalaxyMember,
+  },
   interface: GalaxyMember__factory.createInterface(),
 }
 export const TimeLock = {
   abi: TimeLock__factory.abi,
-  address: mainnetAddresses.TimeLock,
+  address: {
+    mainnet: mainnetAddresses.TimeLock,
+    testnet: testnetAddresses.TimeLock,
+  },
   interface: TimeLock__factory.createInterface(),
 }
 export const Treasury = {
   abi: Treasury__factory.abi,
-  address: mainnetAddresses.Treasury,
+  address: {
+    mainnet: mainnetAddresses.Treasury,
+    testnet: testnetAddresses.Treasury,
+  },
   interface: Treasury__factory.createInterface(),
 }
 export const VOT3 = {
   abi: VOT3__factory.abi,
-  address: mainnetAddresses.VOT3,
+  address: {
+    mainnet: mainnetAddresses.VOT3,
+    testnet: testnetAddresses.VOT3,
+  },
   interface: VOT3__factory.createInterface(),
 }
 export const VoterRewards = {
   abi: VoterRewards__factory.abi,
-  address: mainnetAddresses.VoterRewards,
+  address: {
+    mainnet: mainnetAddresses.VoterRewards,
+    testnet: testnetAddresses.VoterRewards,
+  },
   interface: VoterRewards__factory.createInterface(),
 }
 export const X2EarnApps = {
   abi: X2EarnApps__factory.abi,
-  address: mainnetAddresses.X2EarnApps,
+  address: {
+    mainnet: mainnetAddresses.X2EarnApps,
+    testnet: testnetAddresses.X2EarnApps,
+  },
   interface: X2EarnApps__factory.createInterface(),
 }
 export const X2EarnRewardsPool = {
   abi: X2EarnRewardsPool__factory.abi,
-  address: mainnetAddresses.X2EarnRewardsPool,
+  address: {
+    mainnet: mainnetAddresses.X2EarnRewardsPool,
+    testnet: testnetAddresses.X2EarnRewardsPool,
+  },
   interface: X2EarnRewardsPool__factory.createInterface(),
 }
 export const XAllocationPool = {
   abi: XAllocationPool__factory.abi,
-  address: mainnetAddresses.XAllocationPool,
+  address: {
+    mainnet: mainnetAddresses.XAllocationPool,
+    testnet: testnetAddresses.XAllocationPool,
+  },
   interface: XAllocationPool__factory.createInterface(),
 }
 export const XAllocationVoting = {
   abi: XAllocationVoting__factory.abi,
-  address: mainnetAddresses.XAllocationVoting,
+  address: {
+    mainnet: mainnetAddresses.XAllocationVoting,
+    testnet: testnetAddresses.XAllocationVoting,
+  },
   interface: XAllocationVoting__factory.createInterface(),
 }
