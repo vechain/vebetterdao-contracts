@@ -24,7 +24,9 @@
     "package.json",
     "README.md",
     "LICENSE",
-    "contracts"
+    "contracts",
+    "artifacts/contracts",
+    "artifacts/@openzeppelin"
   ],
   "scripts": {
     "build": "npx hardhat typechain && tsup index.ts --format esm,cjs --dts",
