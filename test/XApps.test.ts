@@ -749,7 +749,7 @@ describe("X-Apps", function () {
       expect(appURI).to.eql((await x2EarnApps.baseURI()) + newMetadataURI)
     })
 
-    it("Unatuhtorized users cannot update app metadata", async function () {
+    it("Unauthtorized users cannot update app metadata", async function () {
       const { x2EarnApps, otherAccounts, owner } = await getOrDeployContractInstances({ forceDeploy: true })
       const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
       const appAdmin = otherAccounts[9]
