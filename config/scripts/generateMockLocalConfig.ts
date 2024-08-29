@@ -56,7 +56,7 @@ export const generateMockLocalConfig = () => {
         "isTrunk": true,
         "transactions": []
       }
-    }
+    },
     "b3trGovernorLibraries": {
       "governorClockLogicAddress": "0x5036111024873CDEdb5112626E30fc6E16bd4364",
       "governorConfiguratorAddress": "0x76924CcDF0234635944229180DFACfa5133f79cA",

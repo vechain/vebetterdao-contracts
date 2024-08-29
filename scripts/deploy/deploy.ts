@@ -11,6 +11,7 @@ import {
   XAllocationPool,
   Treasury,
   X2EarnApps,
+  X2EarnRewardsPool,
 } from "../../typechain-types"
 import { ContractsConfig } from "../../config/contracts/type"
 import { HttpNetworkConfig } from "hardhat/types"
@@ -110,7 +111,6 @@ export async function deployAll(config: ContractsConfig) {
     TEMP_ADMIN,
     TEMP_ADMIN, // Minter
     config.CONTRACTS_ADMIN_ADDRESS, // Pauser
-    config.B3TR_CAP,
   )
 
   const vot3 = (await deployProxy("VOT3", [
@@ -152,6 +152,18 @@ export async function deployAll(config: ContractsConfig) {
   ])) as X2EarnApps
   console.log(`X2EarnApps deployed at ${await x2EarnApps.getAddress()}`)
 
+  const x2EarnRewardsPool = (await deployProxy(
+    "X2EarnRewardsPool",
+    [
+      config.CONTRACTS_ADMIN_ADDRESS, // admin
+      config.CONTRACTS_ADMIN_ADDRESS, // contracts address manager
+      config.CONTRACTS_ADMIN_ADDRESS, // upgrader
+      await b3tr.getAddress(),
+      await x2EarnApps.getAddress(),
+    ]
+  )) as X2EarnRewardsPool
+  console.log(`X2EarnRewardsPool deployed at ${await x2EarnRewardsPool.getAddress()}`)
+  
   const xAllocationPool = (await deployProxy("XAllocationPool", [
     TEMP_ADMIN, // admin
     config.CONTRACTS_ADMIN_ADDRESS, // upgrader
@@ -159,6 +171,7 @@ export async function deployAll(config: ContractsConfig) {
     await b3tr.getAddress(),
     await treasury.getAddress(),
     await x2EarnApps.getAddress(),
+    await x2EarnRewardsPool.getAddress(),
   ])) as XAllocationPool
   console.log(`XAllocationPool deployed at ${await xAllocationPool.getAddress()}`)
 
@@ -186,6 +199,8 @@ export async function deployAll(config: ContractsConfig) {
       minter: TEMP_ADMIN,
       admin: TEMP_ADMIN,
       upgrader: config.CONTRACTS_ADMIN_ADDRESS,
+      contractsAddressManager: TEMP_ADMIN,
+      decaySettingsManager: TEMP_ADMIN,
       b3trAddress: await b3tr.getAddress(),
       destinations: [
         await xAllocationPool.getAddress(),
@@ -205,7 +220,7 @@ export async function deployAll(config: ContractsConfig) {
       maxVote2EarnDecay: config.EMISSIONS_MAX_VOTE_2_EARN_DECAY_PERCENTAGE,
       migrationAmount: config.MIGRATION_AMOUNT,
     },
-  ])) as Emissions
+  ],)) as Emissions
   console.log(`Emissions deployed at ${await emissions.getAddress()}`)
 
   const voterRewards = (await deployProxy("VoterRewards", [
@@ -905,9 +920,9 @@ const transferGovernorFunctionSettingsRole = async (
   console.log("Governor Function Settings Role transferred successfully on " + (await contract.getAddress()))
 }
 
-async function deployB3trToken(admin: string, minter: string, pauser: string, cap: number): Promise<B3TR> {
+async function deployB3trToken(admin: string, minter: string, pauser: string): Promise<B3TR> {
   const B3trContract = await ethers.getContractFactory("B3TR") // Use the global variable
-  const contract = await B3trContract.deploy(admin, minter, pauser, cap)
+  const contract = await B3trContract.deploy(admin, minter, pauser)
 
   await contract.waitForDeployment()
 
