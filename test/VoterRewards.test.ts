@@ -191,7 +191,7 @@ describe("VoterRewards", () => {
         false,
       )
 
-      const tx = await voterRewards.connect(owner).disableQuadraticRewarding(true)
+      const tx = await voterRewards.connect(owner).toggleQuadraticRewarding()
 
       const receipt = await tx.wait()
       if (!receipt) throw new Error("No receipt")
@@ -205,7 +205,7 @@ describe("VoterRewards", () => {
         })
       })
 
-      const event = decodedEvents.find(event => event?.name === "QuadraticRewardingDisabled")
+      const event = decodedEvents.find(event => event?.name === "QuadraticRewardingToggled")
 
       expect(event).to.not.equal(undefined)
 
@@ -223,7 +223,7 @@ describe("VoterRewards", () => {
     it("Only admin should be able to disable Quadratic Rewards", async () => {
       const { voterRewards, otherAccount } = await getOrDeployContractInstances({ forceDeploy: true })
 
-      await expect(voterRewards.connect(otherAccount).disableQuadraticRewarding(true)).to.be.reverted
+      await expect(voterRewards.connect(otherAccount).toggleQuadraticRewarding()).to.be.reverted
     })
 
     it("Clock should return correct block number", async () => {
@@ -988,7 +988,10 @@ describe("VoterRewards", () => {
         forceDeploy: true,
       })
 
-      await voterRewards.connect(owner).disableQuadraticRewarding(true)
+      await voterRewards.connect(owner).toggleQuadraticRewarding()
+      expect(await voterRewards.isQuadraticRewardingDisabledAtBlock(await ethers.provider.getBlockNumber())).to.eql(
+        true,
+      )
 
       await x2EarnApps
         .connect(owner)
@@ -2569,7 +2572,10 @@ describe("VoterRewards", () => {
         },
       })
 
-      await voterRewards.disableQuadraticRewarding(true)
+      await voterRewards.toggleQuadraticRewarding()
+      expect(await voterRewards.isQuadraticRewardingDisabledAtBlock(await ethers.provider.getBlockNumber())).to.eql(
+        true,
+      )
 
       const galaxyMember = (await deployProxy("GalaxyMember", [
         {
@@ -2804,7 +2810,7 @@ describe("VoterRewards", () => {
       expect(await galaxyMember.getHighestLevel(voter1.address)).to.equal(5)
 
       // Disable quadratic rewarding mid round
-      await voterRewards.disableQuadraticRewarding(true)
+      await voterRewards.toggleQuadraticRewarding()
 
       // Quadratic rewarding should still be enabled for the current round
       expect(await voterRewards.isQuadraticRewardingDisabledForCurrentCycle()).to.be.false
@@ -2900,9 +2906,10 @@ describe("VoterRewards", () => {
           ...config,
           EMISSIONS_CYCLE_DURATION: 200,
           B3TR_GOVERNOR_DEPOSIT_THRESHOLD: 0,
-          QUADRATIC_REWARDING_ENABLED: false,
         },
       })
+
+      expect(await voterRewards.isQuadraticRewardingDisabledAtBlock(await ethers.provider.getBlockNumber())).to.be.false
 
       const galaxyMember = (await deployProxy("GalaxyMember", [
         {
@@ -2974,7 +2981,7 @@ describe("VoterRewards", () => {
       expect(await galaxyMember.getHighestLevel(voter1.address)).to.equal(5)
 
       // Disable quadratic rewarding mid round
-      await voterRewards.disableQuadraticRewarding(true)
+      await voterRewards.toggleQuadraticRewarding()
 
       // Quadratic rewarding should still be disabled for the current round
       expect(await voterRewards.isQuadraticRewardingDisabledForCurrentCycle()).to.be.false

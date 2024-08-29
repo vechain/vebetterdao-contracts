@@ -131,11 +131,58 @@ contract VoterRewards is AccessControlUpgradeable, ReentrancyGuardUpgradeable, U
 
   /// @notice Emits true if quadratic rewarding is disabled, false otherwise.
   /// @param disabled - The flag to enable or disable quadratic rewarding.
-  event QuadraticRewardingDisabled(bool indexed disabled);
+  event QuadraticRewardingToggled(bool indexed disabled);
 
   /// @custom:oz-upgrades-unsafe-allow constructor
   constructor() {
     _disableInitializers();
+  }
+
+  /// @notice Initialize the VoterRewards contract.
+  /// @param admin - The address of the admin.
+  /// @param upgrader - The address of the upgrader.
+  /// @param contractsAddressManager - The address of the contract address manager.
+  /// @param _emissions - The address of the emissions contract.
+  /// @param _galaxyMember - The address of the Galaxy Member contract.
+  /// @param _b3tr - The address of the B3TR token contract.
+  /// @param levels - The levels of the Galaxy Member NFTs.
+  /// @param multipliers  - The multipliers for the levels of the Galaxy Member NFTs.
+  function initialize(
+    address admin,
+    address upgrader,
+    address contractsAddressManager,
+    address _emissions,
+    address _galaxyMember,
+    address _b3tr,
+    uint256[] memory levels,
+    uint256[] memory multipliers
+  ) external initializer {
+    require(_galaxyMember != address(0), "VoterRewards: _galaxyMember cannot be the zero address");
+    require(_emissions != address(0), "VoterRewards: emissions cannot be the zero address");
+    require(_b3tr != address(0), "VoterRewards: _b3tr cannot be the zero address");
+
+    require(levels.length > 0, "VoterRewards: levels must have at least one element");
+    require(levels.length == multipliers.length, "VoterRewards: levels and multipliers must have the same length");
+
+    __AccessControl_init();
+    __ReentrancyGuard_init();
+    __UUPSUpgradeable_init();
+
+    VoterRewardsStorage storage $ = _getVoterRewardsStorage();
+
+    $.galaxyMember = IGalaxyMember(_galaxyMember);
+    $.b3tr = IB3TR(_b3tr);
+    $.emissions = IEmissions(_emissions);
+
+    // Set the level to multiplier mapping.
+    for (uint256 i; i < levels.length; i++) {
+      $.levelToMultiplier[levels[i]] = multipliers[i];
+    }
+
+    require(admin != address(0), "VoterRewards: admin cannot be the zero address");
+    _grantRole(DEFAULT_ADMIN_ROLE, admin);
+    _grantRole(UPGRADER_ROLE, upgrader);
+    _grantRole(CONTRACTS_ADDRESS_MANAGER_ROLE, contractsAddressManager);
   }
 
   /// @notice Upgrade the implementation of the VoterRewards contract.
@@ -298,7 +345,7 @@ contract VoterRewards is AccessControlUpgradeable, ReentrancyGuardUpgradeable, U
   /// @dev To check if quadratic rewarding was disabled for a cycle, use the block number the cycle started.
   /// @param blockNumber - The block number to check the quadratic rewarding status.
   /// @return true if quadratic rewarding is disabled, false otherwise.
-  function isQuadraticRewardingDisabledAtBlock(uint48 blockNumber) external view returns (bool) {
+  function isQuadraticRewardingDisabledAtBlock(uint48 blockNumber) public view returns (bool) {
     VoterRewardsStorage storage $ = _getVoterRewardsStorage();
 
     // Check if quadratic rewarding is enabled or disabled at the block number.
@@ -307,7 +354,7 @@ contract VoterRewards is AccessControlUpgradeable, ReentrancyGuardUpgradeable, U
 
   /// @notice Check if quadratic rewarding is disabled for the current cycle.
   /// @return true if quadratic rewarding is disabled, false otherwise.
-  function isQuadraticRewardingDisabledForCurrentCycle() external view returns (bool) {
+  function isQuadraticRewardingDisabledForCurrentCycle() public view returns (bool) {
     VoterRewardsStorage storage $ = _getVoterRewardsStorage();
     // Get the block number the emission cycle started.
     uint256 emissionCycleStartBlock = $.emissions.lastEmissionBlock();
@@ -357,17 +404,20 @@ contract VoterRewards is AccessControlUpgradeable, ReentrancyGuardUpgradeable, U
     $.emissions = IEmissions(_emissions);
   }
 
-  /// @notice Disable quadratic rewarding for a specific cycle.
-  /// @dev This function is used to disable quadratic rewarding for a specific cycle by default is enabled.
-  /// @param _disableQuadraticRewarding - The flag to enable or disable quadratic rewarding, true to disable, false to enable.
-  function disableQuadraticRewarding(bool _disableQuadraticRewarding) external onlyRole(DEFAULT_ADMIN_ROLE) {
+  /// @notice Toggle quadratic rewarding for a specific cycle.
+  /// @dev This function toggles the state of quadratic rewarding for a specific cycle.
+  /// The state will flip between enabled and disabled each time the function is called.
+  function toggleQuadraticRewarding() external onlyRole(DEFAULT_ADMIN_ROLE) {
     VoterRewardsStorage storage $ = _getVoterRewardsStorage();
 
-    // Set the quadratic rewarding flag -> 0: enabled, 1: disabled.
-    $.quadraticRewardingDisabled.push(clock(), _disableQuadraticRewarding ? 1 : 0);
+    // Get the current status
+    bool currentStatus = isQuadraticRewardingDisabledForCurrentCycle();
 
-    // Emit an event to log the quadratic rewarding status.
-    emit QuadraticRewardingDisabled(_disableQuadraticRewarding);
+    // Toggle the status -> 0: enabled, 1: disabled
+    $.quadraticRewardingDisabled.push(clock(), currentStatus ? 0 : 1);
+
+    // Emit an event to log the new quadratic rewarding status.
+    emit QuadraticRewardingToggled(!currentStatus);
   }
 
   /// @notice Returns the version of the contract
