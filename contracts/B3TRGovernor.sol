@@ -67,6 +67,9 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
  *
  * The contract is upgradeable and uses the UUPS pattern.
  * @dev The contract is upgradeable and uses the UUPS pattern. All logic is stored in libraries.
+ * 
+ * ------------------ VERSION 2 ------------------
+ * - Replaced onlyGovernance modifier with onlyRoleOrGovernance which checks if the caller has the DEFAULT_ADMIN_ROLE role or if the function is called through a governance proposal
  */
 contract B3TRGovernor is
   IB3TRGovernor,
@@ -173,7 +176,7 @@ contract B3TRGovernor is
    * @param value The amount of ether to send
    * @param data The data to call the target with
    */
-  function relay(address target, uint256 value, bytes calldata data) external payable virtual onlyGovernance {
+  function relay(address target, uint256 value, bytes calldata data) external payable virtual onlyRoleOrGovernance(DEFAULT_ADMIN_ROLE) {
     (bool success, bytes memory returndata) = target.call{ value: value }(data);
     Address.verifyCallResult(success, returndata);
   }
@@ -537,7 +540,7 @@ contract B3TRGovernor is
    * @return string The version of the governor
    */
   function version() external pure returns (string memory) {
-    return "1";
+    return "2";
   }
 
   /**
@@ -763,7 +766,7 @@ contract B3TRGovernor is
    * Emits a {QuorumNumeratorUpdated} event.
    * @param newQuorumNumerator The new quorum numerator
    */
-  function updateQuorumNumerator(uint256 newQuorumNumerator) external onlyGovernance {
+  function updateQuorumNumerator(uint256 newQuorumNumerator) external onlyRoleOrGovernance(DEFAULT_ADMIN_ROLE) {
     GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
     GovernorQuorumLogic.updateQuorumNumerator($, newQuorumNumerator);
   }
@@ -814,7 +817,7 @@ contract B3TRGovernor is
    * Emits a {DepositThresholdSet} event.
    * @param newDepositThreshold The new deposit threshold
    */
-  function setDepositThresholdPercentage(uint256 newDepositThreshold) public onlyGovernance {
+  function setDepositThresholdPercentage(uint256 newDepositThreshold) public onlyRoleOrGovernance(DEFAULT_ADMIN_ROLE) {
     GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
     GovernorConfigurator.setDepositThresholdPercentage($, newDepositThreshold);
   }
@@ -824,7 +827,7 @@ contract B3TRGovernor is
    * Emits a {VotingThresholdSet} event.
    * @param newVotingThreshold The new voting threshold
    */
-  function setVotingThreshold(uint256 newVotingThreshold) public onlyGovernance {
+  function setVotingThreshold(uint256 newVotingThreshold) public onlyRoleOrGovernance(DEFAULT_ADMIN_ROLE) {
     GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
     GovernorConfigurator.setVotingThreshold($, newVotingThreshold);
   }
@@ -835,7 +838,7 @@ contract B3TRGovernor is
    * Emits a {MinVotingDelaySet} event.
    * @param newMinVotingDelay The new minimum voting delay
    */
-  function setMinVotingDelay(uint256 newMinVotingDelay) public onlyGovernance {
+  function setMinVotingDelay(uint256 newMinVotingDelay) public onlyRoleOrGovernance(DEFAULT_ADMIN_ROLE) {
     GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
     GovernorConfigurator.setMinVotingDelay($, newMinVotingDelay);
   }
@@ -868,7 +871,7 @@ contract B3TRGovernor is
    * CAUTION: It is not recommended to change the timelock while there are other queued governance proposals.
    * @param newTimelock The new timelock controller
    */
-  function updateTimelock(TimelockControllerUpgradeable newTimelock) external virtual onlyGovernance {
+  function updateTimelock(TimelockControllerUpgradeable newTimelock) external virtual onlyRoleOrGovernance(DEFAULT_ADMIN_ROLE) {
     GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
     GovernorConfigurator.updateTimelock($, newTimelock);
   }
@@ -879,7 +882,7 @@ contract B3TRGovernor is
    * @notice Authorizes upgrade to a new implementation
    * @param newImplementation The address of the new implementation
    */
-  function _authorizeUpgrade(address newImplementation) internal override onlyGovernance {}
+  function _authorizeUpgrade(address newImplementation) internal override onlyRoleOrGovernance(DEFAULT_ADMIN_ROLE) {}
 
   /**
    * @notice Checks if the contract supports a specific interface
