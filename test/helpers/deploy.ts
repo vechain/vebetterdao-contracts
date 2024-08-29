@@ -25,9 +25,10 @@ import {
   X2EarnRewardsPool,
   MyERC721,
   MyERC1155,
+  B3TRGovernorV1,
 } from "../../typechain-types"
 import { createLocalConfig } from "../../config/contracts/envs/local"
-import { deployProxy } from "../../scripts/helpers"
+import { deployProxy, upgradeProxy } from "../../scripts/helpers"
 import { setWhitelistedFunctions } from "../../scripts/deploy/deploy"
 import { bootstrapAndStartEmissions as callBootstrapAndStartEmissions } from "./common"
 
@@ -37,6 +38,7 @@ interface DeployInstance {
   vot3: VOT3
   timeLock: TimeLock
   governor: B3TRGovernor
+  governorV1: B3TRGovernorV1
   galaxyMember: GalaxyMember
   x2EarnApps: X2EarnApps
   xAllocationVoting: XAllocationVoting
@@ -294,8 +296,8 @@ export const getOrDeployContractInstances = async ({
   ])) as XAllocationVoting
 
   // Deploy Governor
-  const governor = (await deployProxy(
-    "B3TRGovernor",
+  const governorV1 = (await deployProxy(
+    "B3TRGovernorV1",
     [
       {
         vot3Token: await vot3.getAddress(),
@@ -327,7 +329,21 @@ export const getOrDeployContractInstances = async ({
       GovernorStateLogic: await GovernorStateLogicLib.getAddress(),
       GovernorVotesLogic: await GovernorVotesLogicLib.getAddress(),
     },
-  )) as B3TRGovernor
+  )) as B3TRGovernorV1
+
+  const governor = (await upgradeProxy("B3TRGovernorV1", "B3TRGovernor", await governorV1.getAddress(), [], {
+    version: 2,
+    libraries: {
+      GovernorClockLogic: await GovernorClockLogicLib.getAddress(),
+      GovernorConfigurator: await GovernorConfiguratorLib.getAddress(),
+      GovernorDepositLogic: await GovernorDepositLogicLib.getAddress(),
+      GovernorFunctionRestrictionsLogic: await GovernorFunctionRestrictionsLogicLib.getAddress(),
+      GovernorProposalLogic: await GovernorProposalLogicLib.getAddress(),
+      GovernorQuorumLogic: await GovernorQuorumLogicLib.getAddress(),
+      GovernorStateLogic: await GovernorStateLogicLib.getAddress(),
+      GovernorVotesLogic: await GovernorVotesLogicLib.getAddress(),
+    },
+  })) as B3TRGovernor
 
   const contractAddresses: Record<string, string> = {
     B3TR: await b3tr.getAddress(),
@@ -421,6 +437,7 @@ export const getOrDeployContractInstances = async ({
     vot3,
     timeLock,
     governor,
+    governorV1,
     galaxyMember,
     x2EarnApps,
     xAllocationVoting,
