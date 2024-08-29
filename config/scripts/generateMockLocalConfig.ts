@@ -57,6 +57,16 @@ export const generateMockLocalConfig = () => {
         "transactions": []
       }
     }
+    "b3trGovernorLibraries": {
+      "governorClockLogicAddress": "0x5036111024873CDEdb5112626E30fc6E16bd4364",
+      "governorConfiguratorAddress": "0x76924CcDF0234635944229180DFACfa5133f79cA",
+      "governorDepositLogicAddress": "0x71F4Da0291CC79189d8E87F2B7ECDD441A4189f4",
+      "governorFunctionRestrictionsLogicAddress": "0x0256e9a6040EC87cacf92eD5D868905C80dE0A2C",
+      "governorProposalLogicAddressAddress": "0x3380211819C2dF57Dc577d06956889374255Df52",
+      "governorQuorumLogicAddress": "0xAD2765a76243CcDB4b49e7957CF3C5F5a68F388C",
+      "governorStateLogicAddress": "0x64378225012ABA6569Bf20643561fac66BB69e99",
+      "governorVotesLogicAddress": "0x45290a8969f2E5396a7770a21a90aE6B7708ef8F"
+    }
     }
     export default config;
     `

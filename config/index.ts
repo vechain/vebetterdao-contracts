@@ -2,6 +2,17 @@ import localConfig from "./local"
 import { EnvConfig, getContractsConfig } from "./contracts"
 import { Network } from "../constants"
 
+type B3TRGovernorLibraries = {
+  governorClockLogicAddress: string
+  governorConfiguratorAddress: string
+  governorDepositLogicAddress: string
+  governorFunctionRestrictionsLogicAddress: string
+  governorProposalLogicAddressAddress: string
+  governorQuorumLogicAddress: string
+  governorStateLogicAddress: string
+  governorVotesLogicAddress: string
+}
+
 export type AppConfig = {
   environment: EnvConfig
   basePath?: string
@@ -17,6 +28,7 @@ export type AppConfig = {
   galaxyMemberContractAddress: string
   treasuryContractAddress: string
   x2EarnAppsContractAddress: string
+  b3trGovernorLibraries: B3TRGovernorLibraries
   nodeUrl: string
   network: Network
 }
