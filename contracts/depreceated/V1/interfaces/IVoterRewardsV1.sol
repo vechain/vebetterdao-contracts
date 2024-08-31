@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.20;
 
-interface IVoterRewards {
+interface IVoterRewardsV1 {
   error AccessControlBadConfirmation();
 
   error AccessControlUnauthorizedAccount(address account, bytes32 neededRole);
@@ -44,8 +44,6 @@ interface IVoterRewards {
 
   event LevelToMultiplierSet(uint256 indexed level, uint256 multiplier);
 
-  event QuadraticRewardingDisabled(bool indexed disabled);
-
   function DEFAULT_ADMIN_ROLE() external view returns (bytes32);
 
   function UPGRADER_ROLE() external view returns (bytes32);
@@ -74,6 +72,16 @@ interface IVoterRewards {
 
   function hasRole(bytes32 role, address account) external view returns (bool);
 
+  function initialize(
+    address admin,
+    address upgrader,
+    address _emissions,
+    address _galaxyMember,
+    address _b3tr,
+    uint256[] memory levels,
+    uint256[] memory multipliers
+  ) external;
+
   function levelToMultiplier(uint256 level) external view returns (uint256);
 
   function proxiableUUID() external view returns (bytes32);
@@ -101,12 +109,4 @@ interface IVoterRewards {
   function version() external view returns (string memory);
 
   function upgradeToAndCall(address newImplementation, bytes memory data) external payable;
-
-  function initializeV2(bool _quadraticRewardingFlag) external;
-
-  function isQuadraticRewardingDisabledAtBlock(uint48 blockNumber) external view returns (bool);
-
-  function isQuadraticRewardingDisabledForCurrentCycle() external view returns (bool);
-
-  function disableQuadraticRewarding(bool _disableQuadraticRewarding) external;
 }

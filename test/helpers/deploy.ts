@@ -25,9 +25,10 @@ import {
   X2EarnRewardsPool,
   MyERC721,
   MyERC1155,
+  VoterRewardsV1,
 } from "../../typechain-types"
 import { createLocalConfig } from "../../config/contracts/envs/local"
-import { deployProxy } from "../../scripts/helpers"
+import { deployProxy, upgradeProxy } from "../../scripts/helpers"
 import { setWhitelistedFunctions } from "../../scripts/deploy/deploy"
 import { bootstrapAndStartEmissions as callBootstrapAndStartEmissions } from "./common"
 
@@ -43,6 +44,7 @@ interface DeployInstance {
   xAllocationPool: XAllocationPool
   emissions: Emissions
   voterRewards: VoterRewards
+  voterRewardsV1: VoterRewardsV1
   treasury: Treasury
   x2EarnRewardsPool: X2EarnRewardsPool
   owner: HardhatEthersSigner
@@ -260,7 +262,7 @@ export const getOrDeployContractInstances = async ({
     },
   ])) as Emissions
 
-  const voterRewards = (await deployProxy("VoterRewards", [
+  const voterRewardsV1 = (await deployProxy("VoterRewardsV1", [
     owner.address, // admin
     owner.address, // upgrader
     owner.address, // contractsAddressManager
@@ -269,7 +271,11 @@ export const getOrDeployContractInstances = async ({
     await b3tr.getAddress(),
     levels,
     multipliers,
-  ])) as VoterRewards
+  ])) as VoterRewardsV1
+
+  const voterRewards = (await upgradeProxy("VoterRewardsV1", "VoterRewards", await voterRewardsV1.getAddress(), [], {
+    version: 2,
+  })) as VoterRewards
 
   // Set vote 2 earn (VoterRewards deployed contract) address in emissions
   await emissions.connect(owner).setVote2EarnAddress(await voterRewards.getAddress())
@@ -427,6 +433,7 @@ export const getOrDeployContractInstances = async ({
     xAllocationPool,
     emissions,
     voterRewards,
+    voterRewardsV1,
     owner,
     otherAccount,
     minterAccount,

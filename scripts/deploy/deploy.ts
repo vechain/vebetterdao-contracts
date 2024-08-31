@@ -11,13 +11,14 @@ import {
   XAllocationPool,
   Treasury,
   X2EarnApps,
+  X2EarnRewardsPool,
 } from "../../typechain-types"
 import { ContractsConfig } from "../../config/contracts/type"
 import { HttpNetworkConfig } from "hardhat/types"
 import { setupLocalEnvironment, setupTestEnvironment } from "./setup"
 import { simulateRounds } from "./simulateRounds"
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers"
-import { deployProxy } from "../helpers"
+import { deployAndUpgrade, deployProxy } from "../helpers"
 import { shouldRunSimulation } from "../../config/contracts"
 
 // GalaxyMember NFT Values
@@ -110,7 +111,6 @@ export async function deployAll(config: ContractsConfig) {
     TEMP_ADMIN,
     TEMP_ADMIN, // Minter
     config.CONTRACTS_ADMIN_ADDRESS, // Pauser
-    config.B3TR_CAP,
   )
 
   const vot3 = (await deployProxy("VOT3", [
@@ -152,6 +152,18 @@ export async function deployAll(config: ContractsConfig) {
   ])) as X2EarnApps
   console.log(`X2EarnApps deployed at ${await x2EarnApps.getAddress()}`)
 
+  const x2EarnRewardsPool = (await deployProxy(
+    "X2EarnRewardsPool",
+    [
+      config.CONTRACTS_ADMIN_ADDRESS, // admin
+      config.CONTRACTS_ADMIN_ADDRESS, // contracts address manager
+      config.CONTRACTS_ADMIN_ADDRESS, // upgrader
+      await b3tr.getAddress(),
+      await x2EarnApps.getAddress(),
+    ])) as X2EarnRewardsPool
+
+  console.log(`X2EarnRewardsPool deployed at ${await x2EarnRewardsPool.getAddress()}`)
+
   const xAllocationPool = (await deployProxy("XAllocationPool", [
     TEMP_ADMIN, // admin
     config.CONTRACTS_ADMIN_ADDRESS, // upgrader
@@ -159,7 +171,9 @@ export async function deployAll(config: ContractsConfig) {
     await b3tr.getAddress(),
     await treasury.getAddress(),
     await x2EarnApps.getAddress(),
+    await x2EarnRewardsPool.getAddress(),
   ])) as XAllocationPool
+
   console.log(`XAllocationPool deployed at ${await xAllocationPool.getAddress()}`)
 
   // Deploy the GalaxyMember contract with Max Mintable Level 1
@@ -181,11 +195,13 @@ export async function deployAll(config: ContractsConfig) {
   ])) as GalaxyMember
   console.log(`GalaxyMember deployed at ${await galaxyMember.getAddress()}`)
 
-  const emissions = (await deployProxy("Emissions", [
+  const emissions = (await deployProxy("Emissions",  [
     {
       minter: TEMP_ADMIN,
       admin: TEMP_ADMIN,
       upgrader: config.CONTRACTS_ADMIN_ADDRESS,
+      contractsAddressManager: TEMP_ADMIN,
+      decaySettingsManager: TEMP_ADMIN,
       b3trAddress: await b3tr.getAddress(),
       destinations: [
         await xAllocationPool.getAddress(),
@@ -208,17 +224,25 @@ export async function deployAll(config: ContractsConfig) {
   ])) as Emissions
   console.log(`Emissions deployed at ${await emissions.getAddress()}`)
 
-  const voterRewards = (await deployProxy("VoterRewards", [
-    TEMP_ADMIN, // admin
-    config.CONTRACTS_ADMIN_ADDRESS, // upgrader
-    config.CONTRACTS_ADMIN_ADDRESS, // contractsAddressManager
-    await emissions.getAddress(),
-    await galaxyMember.getAddress(),
-    await b3tr.getAddress(),
-    config.VOTER_REWARDS_LEVELS,
-    config.VOTER_REWARDS_MULTIPLIER,
-  ])) as VoterRewards
-  console.log(`VoterRewards deployed at ${await voterRewards.getAddress()}`)
+  const voterRewards = (await deployAndUpgrade(
+    ["VoterRewardsV1", "VoterRewards"],
+    [
+      [
+        TEMP_ADMIN, // admin
+        config.CONTRACTS_ADMIN_ADDRESS, // upgrader
+        config.CONTRACTS_ADMIN_ADDRESS, // contractsAddressManager
+        await emissions.getAddress(),
+        await galaxyMember.getAddress(),
+        await b3tr.getAddress(),
+        config.VOTER_REWARDS_LEVELS,
+        config.VOTER_REWARDS_MULTIPLIER,
+      ],
+      [],
+    ],
+    {
+      versions: [undefined, 2],
+    },
+  )) as VoterRewards
 
   const xAllocationVoting = (await deployProxy("XAllocationVoting", [
     {
@@ -280,19 +304,22 @@ export async function deployAll(config: ContractsConfig) {
 
   const contractAddresses: Record<string, string> = {
     B3TR: await b3tr.getAddress(),
-    VoterRewards: await voterRewards.getAddress(),
-    Treasury: await treasury.getAddress(),
-    XAllocationVoting: await xAllocationVoting.getAddress(),
+    B3TRGovernor: await governor.getAddress(),
     Emissions: await emissions.getAddress(),
     GalaxyMember: await galaxyMember.getAddress(),
     TimeLock: await timelock.getAddress(),
+    Treasury: await treasury.getAddress(),
     VOT3: await vot3.getAddress(),
-    XAllocationPool: await xAllocationPool.getAddress(),
-    B3TRGovernor: await governor.getAddress(),
+    VoterRewards: await voterRewards.getAddress(),
     X2EarnApps: await x2EarnApps.getAddress(),
+    X2EarnRewardsPool: await x2EarnRewardsPool.getAddress(),
+    XAllocationPool: await xAllocationPool.getAddress(),
+    XAllocationVoting: await xAllocationVoting.getAddress(),
   }
 
-  const libraries = {
+  const libraries: {
+    B3TRGovernor: Record<string, string>
+  } = {
     B3TRGovernor: {
       GovernorClockLogic: await GovernorClockLogicLib.getAddress(),
       GovernorConfigurator: await GovernorConfiguratorLib.getAddress(),
@@ -309,7 +336,7 @@ export async function deployAll(config: ContractsConfig) {
 
   // ---------- Configure contract roles for setup ---------- //
 
-  console.log("================ Configuring contract roles for setup =================")
+  console.log("================ Configuring contract roles for setup")
 
   // TODO: Uncomment this line to pause public minting of GM NFTs when deploying to Mainnet
   // await galaxyMember.connect(admin).setIsPublicMintingPaused(true)
@@ -700,6 +727,7 @@ export async function deployAll(config: ContractsConfig) {
     voterRewards: voterRewards,
     treasury: treasury,
     x2EarnApps: x2EarnApps,
+    x2EarnRewardsPool: x2EarnRewardsPool,
   }
   // close the script
 }
@@ -828,7 +856,7 @@ const transferGovernanceRole = async (
 }
 
 const transferContractsAddressManagerRole = async (
-  contract: GalaxyMember | XAllocationPool | XAllocationVoting,
+  contract: GalaxyMember | XAllocationPool | XAllocationVoting | Emissions,
   admin: HardhatEthersSigner,
   newAddress: string,
 ) => {
@@ -877,9 +905,9 @@ const transferGovernorFunctionSettingsRole = async (
   console.log("Governor Function Settings Role transferred successfully on " + (await contract.getAddress()))
 }
 
-async function deployB3trToken(admin: string, minter: string, pauser: string, cap: number): Promise<B3TR> {
+async function deployB3trToken(admin: string, minter: string, pauser: string): Promise<B3TR> {
   const B3trContract = await ethers.getContractFactory("B3TR") // Use the global variable
-  const contract = await B3trContract.deploy(admin, minter, pauser, cap)
+  const contract = await B3trContract.deploy(admin, minter, pauser)
 
   await contract.waitForDeployment()
 
@@ -950,6 +978,7 @@ const validateContractRole = async (
     | Treasury
     | TimeLock
     | B3TRGovernor
+    | X2EarnRewardsPool
     | X2EarnApps,
   expectedAddress: string,
   tempAdmin: string,
