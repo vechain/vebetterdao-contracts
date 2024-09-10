@@ -3,12 +3,12 @@
 pragma solidity 0.8.20;
 
 /**
- * @title IX2EarnRewardsPool
+ * @title IX2EarnRewardsPoolV1
  * @dev Interface designed to be used by a contract that allows x2Earn apps to reward users that performed sustainable actions.
  * Funds can be deposited into this contract by specifying the app id that can access the funds.
  * Admins of x2EarnApps can withdraw funds from the rewards pool, whihc are sent to the team wallet.
  */
-interface IX2EarnRewardsPool {
+interface IX2EarnRewardsPoolV1 {
   /**
    * @dev Event emitted when a new deposit is made into the rewards pool.
    *
@@ -89,59 +89,7 @@ interface IX2EarnRewardsPool {
    * @param appId the app id that is emitting the reward
    * @param amount the amount of B3TR token the user is rewarded with
    * @param receiver the address of the user that performed the sustainable action and is rewarded
-   * @param proof deprecated argument, pass an empty string instead
+   * @param proof a JSON file uploaded on IPFS by the app that adds information on the type of action that was performed
    */
   function distributeReward(bytes32 appId, uint256 amount, address receiver, string memory proof) external;
-
-  /**
-   * @dev Function used by x2earn apps to reward users that performed sustainable actions.
-   * @notice This function is depracted in favor of distributeRewardWithProof.
-   *
-   * @param appId the app id that is emitting the reward
-   * @param amount the amount of B3TR token the user is rewarded with
-   * @param receiver the address of the user that performed the sustainable action and is rewarded
-   * @param proof the JSON string that contains the proof and impact of the sustainable action
-   */
-  function distributeRewardDeprecated(bytes32 appId, uint256 amount, address receiver, string memory proof) external;
-
-  /**
-   * @dev Function used by x2earn apps to reward users that performed sustainable actions.
-   *
-   * @param appId the app id that is emitting the reward
-   * @param amount the amount of B3TR token the user is rewarded with
-   * @param receiver the address of the user that performed the sustainable action and is rewarded
-   * @param proofTypes the types of the proof of the sustainable action
-   * @param proofValues the values of the proof of the sustainable action
-   * @param impactCodes the codes of the impacts of the sustainable action
-   * @param impactValues the values of the impacts of the sustainable action
-   * @param description the description of the sustainable action
-   */
-  function distributeRewardWithProof(
-    bytes32 appId,
-    uint256 amount,
-    address receiver,
-    string[] memory proofTypes, // link, photo, video, text, etc.
-    string[] memory proofValues, // "https://...", "Qm...", etc.,
-    string[] memory impactCodes, // carbon, water, etc.
-    uint256[] memory impactValues, // 100, 200, etc.,
-    string memory description
-  ) external;
-
-  /**
-   * @dev Builds the JSON proof string that will be stored
-   * on chain regarding the proofs, impacts and description of the sustainable action.
-   *
-   * @param proofTypes the types of the proof of the sustainable action
-   * @param proofValues the values of the proof of the sustainable action
-   * @param impactCodes the codes of the impacts of the sustainable action
-   * @param impactValues the values of the impacts of the sustainable action
-   * @param description the description of the sustainable action
-   */
-  function buildProof(
-    string[] memory proofTypes, // link, photo, video, text, etc.
-    string[] memory proofValues, // "https://...", "Qm...", etc.,
-    string[] memory impactCodes, // carbon, water, etc.
-    uint256[] memory impactValues, // 100, 200, etc.,
-    string memory description
-  ) external returns (string memory);
 }

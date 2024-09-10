@@ -152,15 +152,24 @@ export async function deployAll(config: ContractsConfig) {
   ])) as X2EarnApps
   console.log(`X2EarnApps deployed at ${await x2EarnApps.getAddress()}`)
 
-  const x2EarnRewardsPool = (await deployProxy(
-    "X2EarnRewardsPool",
+  const x2EarnRewardsPool = (await deployAndUpgrade(
+    ["X2EarnRewardsPoolV1", "X2EarnRewardsPool"],
     [
-      config.CONTRACTS_ADMIN_ADDRESS, // admin
-      config.CONTRACTS_ADMIN_ADDRESS, // contracts address manager
-      config.CONTRACTS_ADMIN_ADDRESS, // upgrader
-      await b3tr.getAddress(),
-      await x2EarnApps.getAddress(),
-    ])) as X2EarnRewardsPool
+      [
+        config.CONTRACTS_ADMIN_ADDRESS, // admin
+        config.CONTRACTS_ADMIN_ADDRESS, // contracts address manager
+        config.CONTRACTS_ADMIN_ADDRESS, // upgrader
+        await b3tr.getAddress(),
+        await x2EarnApps.getAddress(),
+      ],
+      [
+        config.CONTRACTS_ADMIN_ADDRESS, // impact admin address
+      ],
+    ],
+    {
+      versions: [undefined, 2],
+    },
+  )) as X2EarnRewardsPool
 
   console.log(`X2EarnRewardsPool deployed at ${await x2EarnRewardsPool.getAddress()}`)
 
@@ -195,7 +204,7 @@ export async function deployAll(config: ContractsConfig) {
   ])) as GalaxyMember
   console.log(`GalaxyMember deployed at ${await galaxyMember.getAddress()}`)
 
-  const emissions = (await deployProxy("Emissions",  [
+  const emissions = (await deployProxy("Emissions", [
     {
       minter: TEMP_ADMIN,
       admin: TEMP_ADMIN,
