@@ -89,5 +89,17 @@ export function createTestConfig() {
     // Migration
     MIGRATION_ADDRESS: "0x865306084235Bf804c8Bba8a8d56890940ca8F0b", // 10th account from mnemonic of solo network
     MIGRATION_AMOUNT: BigInt("3750000000000000000000000"), // 3.75 million B3TR tokens from pilot show
+
+    // X 2 Earn Rewards Pool
+    X_2_EARN_INITIAL_IMPACT_KEYS: [
+      "carbon",
+      "water",
+      "energy",
+      "waste_mass",
+      "education_time",
+      "timber",
+      "plastic",
+      "trees_planted",
+    ],
   })
 }
