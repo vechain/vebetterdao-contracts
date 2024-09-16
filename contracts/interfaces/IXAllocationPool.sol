@@ -124,4 +124,22 @@ interface IXAllocationPool {
    * @return string The version of the contract
    */
   function version() external view returns (string memory);
+
+  /**
+   * @dev Check if quadratic funding is disabled at a given round
+    * @param roundId The round ID
+   * @return true if quadratic funding is disabled at the given round
+   */
+  function isQuadraticFundingDisabledForRound(uint256 roundId) external view returns (bool);
+
+  /**
+   * @dev Check if quadratic funding is disabled for the current round
+   * @return true if quadratic funding is disabled for the current round
+   */
+  function isQuadraticFundingDisabledForCurrentRound() external view returns (bool);
+
+  /**
+   * @dev Function to toggle quadratic funding on/off
+   */
+  function toggleQuadraticFunding() external;
 }
