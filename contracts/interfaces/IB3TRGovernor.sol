@@ -73,7 +73,11 @@ interface IB3TRGovernor is IERC165, IERC6372 {
    *
    * See {Governor-_encodeStateBitmap}.
    */
-  error GovernorUnexpectedProposalState(uint256 proposalId, GovernorTypes.ProposalState current, bytes32 expectedStates);
+  error GovernorUnexpectedProposalState(
+    uint256 proposalId,
+    GovernorTypes.ProposalState current,
+    bytes32 expectedStates
+  );
 
   /**
    * @dev The voting period set is not a valid period.
@@ -193,6 +197,12 @@ interface IB3TRGovernor is IERC165, IERC6372 {
     uint256 power,
     string reason
   );
+
+  /**
+   * @notice Emits true if quadratic voting is disabled, false otherwise.
+   * @param disabled - The flag to enable or disable quadratic voting.
+   */
+  event QuadraticVotingToggled(bool indexed disabled);
 
   /**
    * @dev Emitted when a deposit is made to a proposal.

@@ -84,5 +84,11 @@ library GovernorStorageTypes {
     mapping(uint256 => uint256) proposalTotalVotes;
     // minimum amount of tokens needed to cast a vote
     uint256 votingThreshold;
+    
+    // ------------------------------- Version 2 -------------------------------
+
+    // ------------------------------- Voting Storage -------------------------------
+    // checkpoints for the quadratic voting status for each round
+    Checkpoints.Trace208 quadraticVotingDisabled;
   }
 }
