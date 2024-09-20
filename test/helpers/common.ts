@@ -441,7 +441,7 @@ export const voteOnApps = async (
 export const addAppsToAllocationVoting = async (apps: string[], owner: HardhatEthersSigner) => {
   const { x2EarnApps } = await getOrDeployContractInstances({})
 
-  const appIds: string[] = []
+  let appIds: string[] = []
   for (const app of apps) {
     await x2EarnApps.connect(owner).addApp(app, app, app, "metadataURI")
     appIds.push(ethers.keccak256(ethers.toUtf8Bytes(app)))
@@ -469,15 +469,15 @@ export const calculateBaseAllocationOffChain = async (roundId: number) => {
   const { emissions, xAllocationVoting } = await getOrDeployContractInstances({})
 
   // Amount available for this round (assuming the amount is already scaled by 1e18 for precision)
-  const totalAmount = await emissions.getXAllocationAmount(roundId)
+  let totalAmount = await emissions.getXAllocationAmount(roundId)
 
-  const elegibleApps = await xAllocationVoting.getAppIdsOfRound(roundId)
+  let elegibleApps = await xAllocationVoting.getAppIdsOfRound(roundId)
 
   const baseAllcoationPercentage = await xAllocationVoting.getRoundBaseAllocationPercentage(roundId)
 
-  const remaining = (totalAmount * baseAllcoationPercentage) / BigInt(100)
+  let remaining = (totalAmount * baseAllcoationPercentage) / BigInt(100)
 
-  const amountPerApp = remaining / BigInt(elegibleApps.length)
+  let amountPerApp = remaining / BigInt(elegibleApps.length)
 
   return amountPerApp
 }
@@ -486,14 +486,14 @@ export const calculateVariableAppAllocationOffChain = async (roundId: number, ap
   const { emissions, xAllocationVoting, xAllocationPool } = await getOrDeployContractInstances({})
 
   // Amount available for this round (assuming the amount is already scaled by 1e18 for precision)
-  const totalAmount = await emissions.getXAllocationAmount(roundId)
+  let totalAmount = await emissions.getXAllocationAmount(roundId)
 
-  const totalAvailable =
+  let totalAvailable =
     (totalAmount * (BigInt(100) - (await xAllocationVoting.getRoundBaseAllocationPercentage(roundId)))) / BigInt(100)
 
   const roundAppShares = await xAllocationPool.getAppShares(roundId, appId)
 
-  const appShares = roundAppShares[0] / BigInt(100)
+  let appShares = roundAppShares[0] / BigInt(100)
 
   return (totalAvailable * appShares) / BigInt(100)
 }
@@ -502,14 +502,14 @@ export const calculateUnallocatedAppAllocationOffChain = async (roundId: number,
   const { emissions, xAllocationVoting, xAllocationPool } = await getOrDeployContractInstances({})
 
   // Amount available for this round (assuming the amount is already scaled by 1e18 for precision)
-  const totalAmount = await emissions.getXAllocationAmount(roundId)
+  let totalAmount = await emissions.getXAllocationAmount(roundId)
 
-  const totalAvailable =
+  let totalAvailable =
     (totalAmount * (BigInt(100) - (await xAllocationVoting.getRoundBaseAllocationPercentage(roundId)))) / BigInt(100)
 
   const roundAppShares = await xAllocationPool.getAppShares(roundId, appId)
 
-  const appShares = roundAppShares[1] / BigInt(100)
+  let appShares = roundAppShares[1] / BigInt(100)
 
   return (totalAvailable * appShares) / BigInt(100)
 }

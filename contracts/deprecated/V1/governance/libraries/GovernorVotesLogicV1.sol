@@ -23,21 +23,16 @@
 
 pragma solidity 0.8.20;
 
-import { GovernorStorageTypes } from "./GovernorStorageTypes.sol";
-import { GovernorTypes } from "./GovernorTypes.sol";
-import { GovernorStateLogic } from "./GovernorStateLogic.sol";
-import { GovernorConfigurator } from "./GovernorConfigurator.sol";
-import { GovernorProposalLogic } from "./GovernorProposalLogic.sol";
-import { GovernorClockLogic } from "./GovernorClockLogic.sol";
+import { GovernorStorageTypesV1 } from "./GovernorStorageTypesV1.sol";
+import { GovernorTypesV1 } from "./GovernorTypesV1.sol";
+import { GovernorStateLogicV1} from "./GovernorStateLogicV1.sol";
+import { GovernorConfiguratorV1 } from "./GovernorConfiguratorV1.sol";
+import { GovernorProposalLogicV1 } from "./GovernorProposalLogicV1.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
-import { Checkpoints } from "@openzeppelin/contracts/utils/structs/Checkpoints.sol";
-import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /// @title GovernorVotesLogic
 /// @notice Library for handling voting logic in the Governor contract.
-library GovernorVotesLogic {
-  using Checkpoints for Checkpoints.Trace208;
-
+library GovernorVotesLogicV1 {
   /// @dev Thrown when a vote has already been cast by the voter.
   /// @param voter The address of the voter who already cast a vote.
   error GovernorAlreadyCastVote(address voter);
@@ -66,10 +61,6 @@ library GovernorVotesLogic {
     string reason
   );
 
-  /// @notice Emits true if quadratic voting is disabled, false otherwise.
-  /// @param disabled - The flag to enable or disable quadratic voting.
-  event QuadraticVotingToggled(bool indexed disabled);
-
   /** ------------------ INTERNAL FUNCTIONS ------------------ **/
 
   /**
@@ -82,29 +73,26 @@ library GovernorVotesLogic {
    * @param power The voting power of the voter.
    */
   function _countVote(
-    GovernorStorageTypes.GovernorStorage storage self,
+    GovernorStorageTypesV1.GovernorStorage storage self,
     uint256 proposalId,
     address account,
     uint8 support,
     uint256 weight,
     uint256 power
   ) private {
-    GovernorTypes.ProposalVote storage proposalVote = self.proposalVotes[proposalId];
+    GovernorTypesV1.ProposalVote storage proposalVote = self.proposalVotes[proposalId];
 
     if (proposalVote.hasVoted[account]) {
       revert GovernorAlreadyCastVote(account);
     }
     proposalVote.hasVoted[account] = true;
 
-    // if quadratic voting is disabled, use the weight as the vote otherwise use the power as the vote
-    uint256 vote = isQuadraticVotingDisabledForCurrentRound(self) ? weight : power;
-
-    if (support == uint8(GovernorTypes.VoteType.Against)) {
-      proposalVote.againstVotes += vote;
-    } else if (support == uint8(GovernorTypes.VoteType.For)) {
-      proposalVote.forVotes += vote;
-    } else if (support == uint8(GovernorTypes.VoteType.Abstain)) {
-      proposalVote.abstainVotes += vote;
+    if (support == uint8(GovernorTypesV1.VoteType.Against)) {
+      proposalVote.againstVotes += power;
+    } else if (support == uint8(GovernorTypesV1.VoteType.For)) {
+      proposalVote.forVotes += power;
+    } else if (support == uint8(GovernorTypesV1.VoteType.Abstain)) {
+      proposalVote.abstainVotes += power;
     } else {
       revert GovernorInvalidVoteType();
     }
@@ -124,10 +112,10 @@ library GovernorVotesLogic {
    * @return True if the vote succeeded, false otherwise.
    */
   function voteSucceeded(
-    GovernorStorageTypes.GovernorStorage storage self,
+    GovernorStorageTypesV1.GovernorStorage storage self,
     uint256 proposalId
   ) internal view returns (bool) {
-    GovernorTypes.ProposalVote storage proposalVote = self.proposalVotes[proposalId];
+    GovernorTypesV1.ProposalVote storage proposalVote = self.proposalVotes[proposalId];
     return proposalVote.forVotes > proposalVote.againstVotes;
   }
 
@@ -141,7 +129,7 @@ library GovernorVotesLogic {
    * @return The votes of the account at the given timepoint.
    */
   function getVotes(
-    GovernorStorageTypes.GovernorStorage storage self,
+    GovernorStorageTypesV1.GovernorStorage storage self,
     address account,
     uint256 timepoint
   ) internal view returns (uint256) {
@@ -156,7 +144,7 @@ library GovernorVotesLogic {
    * @return The quadratic voting power of the account.
    */
   function getQuadraticVotingPower(
-    GovernorStorageTypes.GovernorStorage storage self,
+    GovernorStorageTypesV1.GovernorStorage storage self,
     address account,
     uint256 timepoint
   ) external view returns (uint256) {
@@ -172,7 +160,7 @@ library GovernorVotesLogic {
    * @return True if the account has voted, false otherwise.
    */
   function hasVoted(
-    GovernorStorageTypes.GovernorStorage storage self,
+    GovernorStorageTypesV1.GovernorStorage storage self,
     uint256 proposalId,
     address account
   ) internal view returns (bool) {
@@ -188,10 +176,10 @@ library GovernorVotesLogic {
    * @return abstainVotes The number of abstain votes.
    */
   function getProposalVotes(
-    GovernorStorageTypes.GovernorStorage storage self,
+    GovernorStorageTypesV1.GovernorStorage storage self,
     uint256 proposalId
   ) internal view returns (uint256 againstVotes, uint256 forVotes, uint256 abstainVotes) {
-    GovernorTypes.ProposalVote storage proposalVote = self.proposalVotes[proposalId];
+    GovernorTypesV1.ProposalVote storage proposalVote = self.proposalVotes[proposalId];
     return (proposalVote.againstVotes, proposalVote.forVotes, proposalVote.abstainVotes);
   }
 
@@ -201,7 +189,7 @@ library GovernorVotesLogic {
    * @param user The address of the user.
    * @return True if the user has voted once, false otherwise.
    */
-  function userVotedOnce(GovernorStorageTypes.GovernorStorage storage self, address user) internal view returns (bool) {
+  function userVotedOnce(GovernorStorageTypesV1.GovernorStorage storage self, address user) internal view returns (bool) {
     return self.hasVotedOnce[user];
   }
 
@@ -217,84 +205,27 @@ library GovernorVotesLogic {
    * @return The weight of the vote.
    */
   function castVote(
-    GovernorStorageTypes.GovernorStorage storage self,
+    GovernorStorageTypesV1.GovernorStorage storage self,
     uint256 proposalId,
     address voter,
     uint8 support,
     string calldata reason
   ) external returns (uint256) {
-    GovernorStateLogic.validateStateBitmap(
-      self,
-      proposalId,
-      GovernorStateLogic.encodeStateBitmap(GovernorTypes.ProposalState.Active)
-    );
+    GovernorStateLogicV1.validateStateBitmap(self, proposalId, GovernorStateLogicV1.encodeStateBitmap(GovernorTypesV1.ProposalState.Active));
 
-    uint256 proposalSnapshot = GovernorProposalLogic._proposalSnapshot(self, proposalId);
-    uint256 weight = self.vot3.getPastVotes(voter, proposalSnapshot);
+    uint256 weight = self.vot3.getPastVotes(voter, GovernorProposalLogicV1._proposalSnapshot(self, proposalId));
     uint256 power = Math.sqrt(weight) * 1e9;
 
-    if (weight < GovernorConfigurator.getVotingThreshold(self)) {
-      revert GovernorVotingThresholdNotMet(weight, GovernorConfigurator.getVotingThreshold(self));
+    if (weight < GovernorConfiguratorV1.getVotingThreshold(self)) {
+      revert GovernorVotingThresholdNotMet(weight, GovernorConfiguratorV1.getVotingThreshold(self));
     }
 
     _countVote(self, proposalId, voter, support, weight, power);
 
-    self.voterRewards.registerVote(proposalSnapshot, voter, weight, Math.sqrt(weight));
+    self.voterRewards.registerVote(GovernorProposalLogicV1._proposalSnapshot(self, proposalId), voter, weight, Math.sqrt(weight));
 
     emit VoteCast(voter, proposalId, support, weight, power, reason);
 
     return weight;
-  }
-
-  /**
-   * @notice Toggle quadratic voting for a specific cycle.
-   * @dev This function toggles the state of quadratic voting for a specific cycle.
-   * @param self - The storage reference for the GovernorStorage.
-   * The state will flip between enabled and disabled each time the function is called.
-   */
-  function toggleQuadraticVoting(GovernorStorageTypes.GovernorStorage storage self) external {
-    bool isQuadraticDisabled =  self.quadraticVotingDisabled.upperLookupRecent(GovernorClockLogic.clock(self)) == 1; // 0: enabled, 1: disabled
-
-    // If quadratic voting is disabled, set the new status to enabled, otherwise set it to disabled.
-    uint208 newStatus = isQuadraticDisabled ? 0 : 1;
-
-    // Toggle the status -> 0: enabled, 1: disabled
-    self.quadraticVotingDisabled.push(GovernorClockLogic.clock(self), newStatus);
-
-    // Emit an event to log the new quadratic voting status.
-    emit QuadraticVotingToggled(!isQuadraticDisabled);
-  }
-
-  /**
-   * @notice Check if quadratic voting is disabled at a specific round.
-   * @dev To check if quadratic voting was disabled for a round, use the block number the round started.
-   * @param self - The storage reference for the GovernorStorage.
-   * @param roundId - The round ID for which to check if quadratic voting is disabled.
-   * @return true if quadratic voting is disabled, false otherwise.
-   */
-  function isQuadraticVotingDisabledForRound(
-    GovernorStorageTypes.GovernorStorage storage self,
-    uint256 roundId
-  ) external view returns (bool) {
-    // Get the block number the round started.
-    uint48 blockNumber = SafeCast.toUint48(self.xAllocationVoting.roundSnapshot(roundId));
-
-    // Check if quadratic voting is enabled or disabled at the block number.
-    return self.quadraticVotingDisabled.upperLookupRecent(blockNumber) == 1; // 0: enabled, 1: disabled
-  }
-
-  /**
-   * @notice Check if quadratic voting is disabled for the current round.
-   * @param self - The storage reference for the GovernorStorage.
-   * @return true if quadratic voting is disabled, false otherwise.
-   */
-  function isQuadraticVotingDisabledForCurrentRound(
-    GovernorStorageTypes.GovernorStorage storage self
-  ) public view returns (bool) {
-    // Get the block number the emission round started.
-    uint256 roundStartBlock = self.xAllocationVoting.currentRoundSnapshot();
-
-    // Check if quadratic voting is enabled or disabled for the current round.
-    return self.quadraticVotingDisabled.upperLookupRecent(SafeCast.toUint48(roundStartBlock)) == 1; // 0: enabled, 1: disabled
   }
 }
