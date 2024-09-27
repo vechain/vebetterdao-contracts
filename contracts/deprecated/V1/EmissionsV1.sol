@@ -26,14 +26,14 @@ pragma solidity 0.8.20;
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import "./interfaces/IB3TR.sol";
-import "./interfaces/IXAllocationVotingGovernor.sol";
+import "./interfaces/IXAllocationVotingGovernorV1.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 /// @title Emissions Distribution Contract
 /// @dev Manages the periodic distribution of B3TR tokens to XAllocation, Vote2Earn, and Treasury allocations.
 /// @dev This contract leverages openzeppelin's AccessControl, ReentrancyGuard, and UUPSUpgradeable libraries for access control, reentrancy protection, and upgradability.
 /// @notice This contract is responsible for the scheduled distribution of emissions based on predefined cycles and decay settings.
-contract Emissions is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPSUpgradeable {
+contract EmissionsV1 is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPSUpgradeable {
   /// @notice Role for addresses allowed to mint new tokens
   bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
   /// @notice Role for addresses that can upgrade the contract
@@ -124,8 +124,6 @@ contract Emissions is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPS
     uint256 lastEmissionBlock; // Block number for last emissions
     mapping(uint256 => Emission) emissions; // Past emissions for each distributed cycle
     uint256 totalEmissions; // Total emissions distributed
-    // ----------- Flags ----------- //
-    bool _isEmissionsNotAligned; // Flag to indicate if emissions are not aligned with the Emissions schedule
   }
 
   /// @dev Storage slot for the EmissionsStorage struct
@@ -234,13 +232,6 @@ contract Emissions is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPS
     _grantRole(DECAY_SETTINGS_MANAGER_ROLE, data.decaySettingsManager);
   }
 
-  /// @notice Reinitializes the contract with new parameters
-  /// @param _isEmissionsNotAligned Flag to indicate if emissions are aligned with the Emissions schedule
-  function initializeV2(bool _isEmissionsNotAligned) external reinitializer(2) {
-    EmissionsStorage storage $ = _getEmissionsStorage();
-    $._isEmissionsNotAligned = _isEmissionsNotAligned;
-  }
-
   /// @notice Authorized upgrading of the contract implementation
   /// @dev This function can only be called by addresses with the UPGRADER_ROLE
   /// @param newImplementation Address of the new contract implementation
@@ -292,7 +283,7 @@ contract Emissions is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPS
   }
 
   /// @notice Distributes the tokens for the current cycle, calculates allocations based on decay rates.
-  function distribute() public virtual nonReentrant {
+  function distribute() external nonReentrant {
     EmissionsStorage storage $ = _getEmissionsStorage();
     require($.nextCycle > 1, "Emissions: Please start emissions first");
     require(isNextCycleDistributable(), "Emissions: Next cycle not started yet");
@@ -327,7 +318,7 @@ contract Emissions is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPS
   /// @dev Calculates emissions based on the previous cycle's emissions and applies decay if a new decay period has started
   /// @dev If it's the first cycle, returns the initial allocation
   /// @return uint256 The calculated number of tokens for the next cycle
-  function _calculateNextXAllocation() internal view virtual returns (uint256) {
+  function _calculateNextXAllocation() internal view returns (uint256) {
     EmissionsStorage storage $ = _getEmissionsStorage();
 
     // If this is the first cycle, return the initial amount
@@ -337,20 +328,6 @@ contract Emissions is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPS
 
     // Get emissions from the previous cycle
     uint256 lastCycleEmissions = $.emissions[$.nextCycle - 1].xAllocations * SCALING_FACTOR;
-
-    // Cycle 14 has a special case where the emissions are 1,840,000 B3TR to maintain the expected emissions with decays. Only applies if emissions are not aligned
-    if ($._isEmissionsNotAligned && $.nextCycle == 14) {
-      lastCycleEmissions =
-        ((lastCycleEmissions * (100 - $.xAllocationsDecay)) / 100) -
-        (lastCycleEmissions * (4)) /
-        100;
-    }
-
-    // Emissions of cycle 13 are used to calculate the emissions of cycle 15. Only applies if emissions are not aligned
-    if ($._isEmissionsNotAligned && $.nextCycle == 15) {
-      lastCycleEmissions = $.emissions[$.nextCycle - 2].xAllocations * SCALING_FACTOR;
-      lastCycleEmissions = (lastCycleEmissions * (100 - $.xAllocationsDecay)) / 100;
-    }
 
     // Check if we need to decay again by getting the modulus
     if (($.nextCycle - 1) % $.xAllocationsDecayPeriod == 0) {
@@ -363,7 +340,7 @@ contract Emissions is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPS
   /// @dev Used to determine how many times the decay rate should be applied to the Vote2Earn emissions
   /// @dev The number of decay periods is calculated as follows: `number of decay periods = floor(number of periods / decay period)`
   /// @return uint256 The number of decay periods since the start of emissions
-  function _calculateVote2EarnDecayPeriods() internal view virtual returns (uint256) {
+  function _calculateVote2EarnDecayPeriods() internal view returns (uint256) {
     EmissionsStorage storage $ = _getEmissionsStorage();
 
     require($.nextCycle > 0, "Emissions: Invalid cycle number");
@@ -379,7 +356,7 @@ contract Emissions is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPS
   /// @dev The decay percentage is calculated as follows: `decay percentage = decay rate * number of decay periods`
   /// @dev The decay percentage is capped at a maximum value to ensure sustainability
   /// @return uint256 The calculated decay percentage for the next cycle
-  function _calculateVote2EarnDecayPercentage() internal view virtual returns (uint256) {
+  function _calculateVote2EarnDecayPercentage() internal view returns (uint256) {
     EmissionsStorage storage $ = _getEmissionsStorage();
     uint256 vote2earnDecayPeriods = _calculateVote2EarnDecayPeriods();
 
@@ -391,7 +368,7 @@ contract Emissions is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPS
   /// @notice Calculates the token allocation for Vote2Earn for the upcoming cycle
   /// @dev Applies the calculated decay percentage to the XAllocation from the upcoming cycle to determine Vote2Earn allocation
   /// @return uint256 The calculated number of tokens for Vote2Earn for the next cycle
-  function _calculateVote2EarnAmount() internal view virtual returns (uint256) {
+  function _calculateVote2EarnAmount() internal view returns (uint256) {
     uint256 percentageToDecay = _calculateVote2EarnDecayPercentage();
 
     uint256 scaledXAllocation = _calculateNextXAllocation() * SCALING_FACTOR;
@@ -404,7 +381,7 @@ contract Emissions is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPS
   /// @notice Calculates the token allocation for the Treasury based on the total allocations to XAllocations and Vote2Earn
   /// @dev Treasury gets a percentage of the combined XAllocations and Vote2Earn amounts, adjusted by the treasury percentage
   /// @return unit256 The calculated number of tokens for the Treasury for the next cycle
-  function _calculateTreasuryAmount() internal view virtual returns (uint256) {
+  function _calculateTreasuryAmount() internal view returns (uint256) {
     EmissionsStorage storage $ = _getEmissionsStorage();
     uint256 scaledAllocations = (_calculateNextXAllocation() + _calculateVote2EarnAmount()) * SCALING_FACTOR;
     uint256 treasuryAmount = (scaledAllocations * $.treasuryPercentage) / 10000;
@@ -418,7 +395,7 @@ contract Emissions is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPS
   /// @dev Returns the allocated amount if the cycle has been distributed, otherwise calculates the expected allocation
   /// @param cycle The cycle number to query
   /// @return uint256 The amount of XAllocations for the specified cycle
-  function getXAllocationAmount(uint256 cycle) public view virtual returns (uint256) {
+  function getXAllocationAmount(uint256 cycle) public view returns (uint256) {
     EmissionsStorage storage $ = _getEmissionsStorage();
 
     require(cycle <= $.nextCycle, "Emissions: Cycle not reached yet");
@@ -429,7 +406,7 @@ contract Emissions is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPS
   /// @dev Returns the allocated amount if the cycle has been distributed, otherwise calculates the expected allocation
   /// @param cycle The cycle number to query
   /// @return uint256 The amount of Vote2Earn for the specified cycle
-  function getVote2EarnAmount(uint256 cycle) public view virtual returns (uint256) {
+  function getVote2EarnAmount(uint256 cycle) public view returns (uint256) {
     EmissionsStorage storage $ = _getEmissionsStorage();
 
     require(cycle <= $.nextCycle, "Emissions: Cycle not reached yet");
@@ -440,7 +417,7 @@ contract Emissions is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPS
   /// @dev Returns the allocated amount if the cycle has been distributed, otherwise calculates the expected allocation
   /// @param cycle The cycle number to query
   /// @return uint256 The amount of Treasury allocation for the specified cycle
-  function getTreasuryAmount(uint256 cycle) public view virtual returns (uint256) {
+  function getTreasuryAmount(uint256 cycle) public view returns (uint256) {
     EmissionsStorage storage $ = _getEmissionsStorage();
 
     require(cycle <= $.nextCycle, "Emissions: Cycle not reached yet");
@@ -450,7 +427,7 @@ contract Emissions is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPS
   /// @notice Checks if a specific cycle's allocations have been distributed
   /// @param cycle The cycle number to check
   /// @return True if the cycle has been distributed, false otherwise
-  function isCycleDistributed(uint256 cycle) public view virtual returns (bool) {
+  function isCycleDistributed(uint256 cycle) public view returns (bool) {
     EmissionsStorage storage $ = _getEmissionsStorage();
     return $.emissions[cycle].xAllocations != 0;
   }
@@ -458,7 +435,7 @@ contract Emissions is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPS
   /// @notice Determines if a specific cycle has ended
   /// @param cycle The cycle number to check
   /// @return True if the cycle has ended, false otherwise
-  function isCycleEnded(uint256 cycle) public view virtual returns (bool) {
+  function isCycleEnded(uint256 cycle) public view returns (bool) {
     require(cycle <= getCurrentCycle(), "Emissions: Cycle not reached yet");
 
     if (cycle < getCurrentCycle()) {
@@ -472,7 +449,7 @@ contract Emissions is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPS
   /// @notice Retrieves the current cycle number
   /// @dev The current cycle is the next cycle minus one
   /// @return uint256 The current cycle number
-  function getCurrentCycle() public view virtual returns (uint256) {
+  function getCurrentCycle() public view returns (uint256) {
     EmissionsStorage storage $ = _getEmissionsStorage();
     require($.nextCycle > 0, "Emissions: not bootstrapped yet");
     return $.nextCycle - 1;
@@ -480,14 +457,14 @@ contract Emissions is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPS
 
   /// @notice Retrieves the block number when the next cycle will start
   /// @return uint256 The starting block number of the next cycle
-  function getNextCycleBlock() public view virtual returns (uint256) {
+  function getNextCycleBlock() public view returns (uint256) {
     EmissionsStorage storage $ = _getEmissionsStorage();
     return $.lastEmissionBlock + $.cycleDuration;
   }
 
   /// @notice Checks if the next cycle can start based on the block number
   /// @return True if the next cycle can be started, false otherwise
-  function isNextCycleDistributable() public view virtual returns (bool) {
+  function isNextCycleDistributable() public view returns (bool) {
     EmissionsStorage storage $ = _getEmissionsStorage();
     return block.number >= $.lastEmissionBlock + $.cycleDuration;
   }
@@ -596,15 +573,11 @@ contract Emissions is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPS
     return _getEmissionsStorage().emissions[cycle];
   }
 
-  function isEmissionsNotAligned() public view returns (bool) {
-    return _getEmissionsStorage()._isEmissionsNotAligned;
-  }
-
   /// @notice Retrieves the current version of the contract
   /// @dev This function is used to identify the version of the contract and should be overridden in each new version
   /// @return The version of the contract
   function version() public pure virtual returns (string memory) {
-    return "2";
+    return "1";
   }
 
   // ----------- Setters ----------- //
@@ -612,7 +585,7 @@ contract Emissions is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPS
   /// @notice Sets the address for XAllocations
   /// @dev Requires admin privileges and a non-zero address
   /// @param xAllocationAddress The new address to set for XAllocations
-  function setXallocationsAddress(address xAllocationAddress) public virtual onlyRole(CONTRACTS_ADDRESS_MANAGER_ROLE) {
+  function setXallocationsAddress(address xAllocationAddress) public onlyRole(CONTRACTS_ADDRESS_MANAGER_ROLE) {
     require(xAllocationAddress != address(0), "Emissions: xAllocationAddress cannot be the zero address");
     EmissionsStorage storage $ = _getEmissionsStorage();
     emit XAllocationsAddressUpdated(xAllocationAddress, $._xAllocations);
@@ -622,7 +595,7 @@ contract Emissions is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPS
   /// @notice Sets the address for Vote2Earn allocations
   /// @dev Requires admin privileges and a non-zero address
   /// @param vote2EarnAddress The new address to set for Vote2Earn
-  function setVote2EarnAddress(address vote2EarnAddress) public virtual onlyRole(CONTRACTS_ADDRESS_MANAGER_ROLE) {
+  function setVote2EarnAddress(address vote2EarnAddress) public onlyRole(CONTRACTS_ADDRESS_MANAGER_ROLE) {
     require(vote2EarnAddress != address(0), "Emissions: vote2EarnAddress cannot be the zero address");
     EmissionsStorage storage $ = _getEmissionsStorage();
     emit Vote2EarnAddressUpdated(vote2EarnAddress, $._vote2Earn);
@@ -632,7 +605,7 @@ contract Emissions is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPS
   /// @notice Sets the address for the Treasury
   /// @dev Requires admin privileges and a non-zero address
   /// @param treasuryAddress The new address to set for the Treasury
-  function setTreasuryAddress(address treasuryAddress) public virtual onlyRole(CONTRACTS_ADDRESS_MANAGER_ROLE) {
+  function setTreasuryAddress(address treasuryAddress) public onlyRole(CONTRACTS_ADDRESS_MANAGER_ROLE) {
     require(treasuryAddress != address(0), "Emissions: treasuryAddress cannot be the zero address");
     EmissionsStorage storage $ = _getEmissionsStorage();
     emit TreasuryAddressUpdated(treasuryAddress, $._treasury);
@@ -642,7 +615,7 @@ contract Emissions is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPS
   /// @notice Sets the duration of each emission cycle
   /// @dev Requires admin privileges and a duration greater than 0
   /// @param _cycleDuration The duration of the cycle in blocks
-  function setCycleDuration(uint256 _cycleDuration) public virtual onlyRole(DECAY_SETTINGS_MANAGER_ROLE) {
+  function setCycleDuration(uint256 _cycleDuration) public onlyRole(DECAY_SETTINGS_MANAGER_ROLE) {
     require(_cycleDuration > 0, "Emissions: Cycle duration must be greater than 0");
     EmissionsStorage storage $ = _getEmissionsStorage();
     require(
@@ -656,7 +629,7 @@ contract Emissions is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPS
   /// @notice Sets the decay rate for XAllocations
   /// @dev Requires admin privileges
   /// @param _decay Decay rate as a percentage
-  function setXAllocationsDecay(uint256 _decay) public virtual onlyRole(DECAY_SETTINGS_MANAGER_ROLE) {
+  function setXAllocationsDecay(uint256 _decay) public onlyRole(DECAY_SETTINGS_MANAGER_ROLE) {
     require(_decay <= 100, "Emissions: xAllocations decay must be between 0 and 100");
     EmissionsStorage storage $ = _getEmissionsStorage();
     emit XAllocationsDecayUpdated(_decay, $.xAllocationsDecay);
@@ -666,7 +639,7 @@ contract Emissions is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPS
   /// @notice Sets the decay rate for Vote2Earn allocations
   /// @dev Requires admin privileges
   /// @param _decay Decay rate as a percentage
-  function setVote2EarnDecay(uint256 _decay) public virtual onlyRole(DECAY_SETTINGS_MANAGER_ROLE) {
+  function setVote2EarnDecay(uint256 _decay) public onlyRole(DECAY_SETTINGS_MANAGER_ROLE) {
     require(_decay <= 100, "Emissions: vote2Earn decay must be between 0 and 100");
     EmissionsStorage storage $ = _getEmissionsStorage();
     emit Vote2EarnDecayUpdated(_decay, $.vote2EarnDecay);
@@ -676,7 +649,7 @@ contract Emissions is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPS
   /// @notice Sets the number of cycles after which the XAllocations decay rate is applied
   /// @dev Requires admin privileges and a period greater than 0
   /// @param _period Number of cycles
-  function setXAllocationsDecayPeriod(uint256 _period) public virtual onlyRole(DECAY_SETTINGS_MANAGER_ROLE) {
+  function setXAllocationsDecayPeriod(uint256 _period) public onlyRole(DECAY_SETTINGS_MANAGER_ROLE) {
     require(_period > 0, "Emissions: xAllocations decay period must be greater than 0");
     EmissionsStorage storage $ = _getEmissionsStorage();
     emit XAllocationsDecayPeriodUpdated(_period, $.xAllocationsDecayPeriod);
@@ -686,7 +659,7 @@ contract Emissions is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPS
   /// @notice Sets the number of cycles after which the Vote2Earn decay rate is applied
   /// @dev Requires admin privileges and a period greater than 0
   /// @param _period Number of cycles
-  function setVote2EarnDecayPeriod(uint256 _period) public virtual onlyRole(DECAY_SETTINGS_MANAGER_ROLE) {
+  function setVote2EarnDecayPeriod(uint256 _period) public onlyRole(DECAY_SETTINGS_MANAGER_ROLE) {
     require(_period > 0, "Emissions: vote2Earn decay period must be greater than 0");
     EmissionsStorage storage $ = _getEmissionsStorage();
     emit Vote2EarnDecayPeriodUpdated(_period, $.vote2EarnDecayPeriod);
@@ -697,7 +670,7 @@ contract Emissions is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPS
   /// @dev The treasury percentage is a value between 0 and 10000, scaled by 100 to allow fractional percentages (87.5% for example)
   /// @dev Requires admin privileges
   /// @param _percentage Treasury percentage (scaled by 100)
-  function setTreasuryPercentage(uint256 _percentage) public virtual onlyRole(DECAY_SETTINGS_MANAGER_ROLE) {
+  function setTreasuryPercentage(uint256 _percentage) public onlyRole(DECAY_SETTINGS_MANAGER_ROLE) {
     require(_percentage <= 10000, "Emissions: Treasury percentage must be between 0 and 10000");
     EmissionsStorage storage $ = _getEmissionsStorage();
     emit TreasuryPercentageUpdated(_percentage, $.treasuryPercentage);
@@ -707,7 +680,7 @@ contract Emissions is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPS
   /// @notice Sets the maximum decay rate for Vote2Earn allocations
   /// @dev Requires admin privileges and a decay rate between 0 and 100
   /// @param _maxVote2EarnDecay Maximum decay rate as a percentage
-  function setMaxVote2EarnDecay(uint256 _maxVote2EarnDecay) public virtual onlyRole(DECAY_SETTINGS_MANAGER_ROLE) {
+  function setMaxVote2EarnDecay(uint256 _maxVote2EarnDecay) public onlyRole(DECAY_SETTINGS_MANAGER_ROLE) {
     require(_maxVote2EarnDecay <= 100, "Emissions: Max vote2Earn decay must be between 0 and 100");
     EmissionsStorage storage $ = _getEmissionsStorage();
     emit MaxVote2EarnDecayUpdated(_maxVote2EarnDecay, $.maxVote2EarnDecay);

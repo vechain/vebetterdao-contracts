@@ -17,8 +17,9 @@ import { createTestConfig } from "./helpers/config"
 import { generateB3trAllocations } from "./helpers/generateB3trAllocations"
 import { getImplementationAddress } from "@openzeppelin/upgrades-core"
 import { deployProxy } from "../scripts/helpers"
+import b3trAllocationsEmissionsDisaligned from "./fixture/full-allocations-round-14-decay.json"
 
-describe("Emissions", () => {
+describe.only("Emissions", () => {
   describe("Contract parameters", () => {
     it("Should have correct parameters set on deployment", async () => {
       const config = createLocalConfig()
@@ -934,7 +935,7 @@ describe("Emissions", () => {
         forceDeploy: true,
       })
 
-      expect(await emissions.version()).to.equal("1")
+      expect(await emissions.version()).to.equal("2")
     })
   })
 
@@ -1563,6 +1564,98 @@ describe("Emissions", () => {
 
       // Check supply
       expect(await b3tr.totalSupply()).to.equal(await emissions.totalEmissions()) // 999,884,045.14 B3TR
+    }).timeout(1000 * 60 * 5) // 5 minutes
+
+    it("Should be able to perform all cycles till reaching B3TR supply cap with Emissions alignment", async function () {
+      if (network.name !== "hardhat") {
+        console.log(`\nThe test "${this?.test?.title}" is only supported on hardhat network. Skipping...\n`)
+        return
+      }
+      const config = createTestConfig()
+      const { emissions, b3tr, minterAccount } = await getOrDeployContractInstances({
+        forceDeploy: true,
+        config: {
+          ...config,
+          EMISSIONS_IS_NOT_ALIGNED: true,
+          EMISSIONS_X_ALLOCATION_DECAY_PERIOD: 912, // Erroneous value to replicate mainnet configuration
+        },
+      })
+
+      expect(await emissions.isEmissionsNotAligned()).to.equal(true)
+
+      // Bootstrap emissions
+      await bootstrapEmissions()
+
+      // Start emissions
+      await emissions.connect(minterAccount).start()
+
+      // Variables to hold calculated amounts for assertions
+      let xAllocationsAmount = BigInt(0)
+      let vote2EarnAmount = BigInt(0)
+      let treasuryAmount = BigInt(0)
+      let _totalEmissions = config.MIGRATION_AMOUNT
+      const cap = await b3tr.cap()
+
+      const b3trAllocations = b3trAllocationsEmissionsDisaligned
+
+      // Loop through all cycles as simulated in the b3tr emissions spreadsheet
+      for (let i = 0; i < b3trAllocations.length; i++) {
+        await waitForNextCycle()
+
+        const allocations = b3trAllocations[i]
+
+        // Calculate decayed amounts
+        xAllocationsAmount = await emissions.getXAllocationAmount(allocations.cycle)
+        vote2EarnAmount = await emissions.getVote2EarnAmount(allocations.cycle)
+        treasuryAmount = await emissions.getTreasuryAmount(allocations.cycle)
+        const totalEmissionsFromContract = await emissions.totalEmissions()
+        _totalEmissions = _totalEmissions + xAllocationsAmount + vote2EarnAmount + treasuryAmount
+        const remainingEmissionsFromContract = await emissions.getRemainingEmissions()
+
+        // Log the cycle and amounts for debugging
+        // Uncomment to view the emissions for each cycle
+        // console.log(
+        //   `Cycle ${allocations.cycle}: XAllocations = ${ethers.formatEther(xAllocationsAmount)}, Vote2Earn = ${ethers.formatEther(vote2EarnAmount)}`,
+        //   `Treasury = ${ethers.formatEther(treasuryAmount)} Total Emissions = ${ethers.formatEther(totalEmissionsFromContract)} Remaining Emissions = ${ethers.formatEther(remainingEmissionsFromContract)}`,
+        // )
+
+        // Assert the calculated amounts match the expected amounts from the spreadsheet
+        expect(xAllocationsAmount).to.equal(allocations.xAllocation)
+        expect(vote2EarnAmount).to.equal(allocations.vote2EarnAllocation)
+        expect(treasuryAmount).to.equal(allocations.treasuryAllocation)
+        expect(totalEmissionsFromContract).to.equal(_totalEmissions)
+        expect(remainingEmissionsFromContract).to.equal(cap - totalEmissionsFromContract)
+
+        // Don't distribute on the last cycle
+        if (i >= b3trAllocations.length - 1) {
+          // console.log(`Not distributing cycle ${allocations.cycle}`)
+          continue
+        }
+
+        // console.log(`Distributing cycle ${allocations.cycle + 1}`)
+        await emissions.distribute()
+
+        expect(await emissions.getCurrentCycle()).to.equal(allocations.cycle + 1)
+
+        // Replicate mainnet transaction setting the correct decay period for the XAllocations
+        if ((await emissions.getCurrentCycle()) === BigInt(13)) {
+          await emissions.setXAllocationsDecayPeriod(12)
+        }
+
+        xAllocationsAmount = await emissions.getXAllocationAmount(allocations.cycle)
+        vote2EarnAmount = await emissions.getVote2EarnAmount(allocations.cycle)
+        treasuryAmount = await emissions.getTreasuryAmount(allocations.cycle)
+        expect(xAllocationsAmount).to.equal(allocations.xAllocation)
+        expect(vote2EarnAmount).to.equal(allocations.vote2EarnAllocation)
+        expect(treasuryAmount).to.equal(allocations.treasuryAllocation)
+      }
+
+      await catchRevert(emissions.connect(minterAccount).distribute()) // Should not be able to distribute more than the B3TR supply cap
+
+      // Check supply
+      expect(await b3tr.totalSupply()).to.equal(await emissions.totalEmissions())
+
+      console.log(`Total emissions: ${ethers.formatEther(await emissions.totalEmissions())}`)
     }).timeout(1000 * 60 * 5) // 5 minutes
 
     it("Should not be able to distribute if cycle is not ready", async () => {
