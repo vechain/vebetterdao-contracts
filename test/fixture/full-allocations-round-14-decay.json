@@ -1,0 +1,3806 @@
+[
+  {
+    "cycle": 1,
+    "xAllocation": "2000000000000000000000000",
+    "vote2EarnAllocation": "2000000000000000000000000",
+    "treasuryAllocation": "1000000000000000000000000"
+  },
+  {
+    "cycle": 2,
+    "xAllocation": "2000000000000000000000000",
+    "vote2EarnAllocation": "2000000000000000000000000",
+    "treasuryAllocation": "1000000000000000000000000"
+  },
+  {
+    "cycle": 3,
+    "xAllocation": "2000000000000000000000000",
+    "vote2EarnAllocation": "2000000000000000000000000",
+    "treasuryAllocation": "1000000000000000000000000"
+  },
+  {
+    "cycle": 4,
+    "xAllocation": "2000000000000000000000000",
+    "vote2EarnAllocation": "2000000000000000000000000",
+    "treasuryAllocation": "1000000000000000000000000"
+  },
+  {
+    "cycle": 5,
+    "xAllocation": "2000000000000000000000000",
+    "vote2EarnAllocation": "2000000000000000000000000",
+    "treasuryAllocation": "1000000000000000000000000"
+  },
+  {
+    "cycle": 6,
+    "xAllocation": "2000000000000000000000000",
+    "vote2EarnAllocation": "2000000000000000000000000",
+    "treasuryAllocation": "1000000000000000000000000"
+  },
+  {
+    "cycle": 7,
+    "xAllocation": "2000000000000000000000000",
+    "vote2EarnAllocation": "2000000000000000000000000",
+    "treasuryAllocation": "1000000000000000000000000"
+  },
+  {
+    "cycle": 8,
+    "xAllocation": "2000000000000000000000000",
+    "vote2EarnAllocation": "2000000000000000000000000",
+    "treasuryAllocation": "1000000000000000000000000"
+  },
+  {
+    "cycle": 9,
+    "xAllocation": "2000000000000000000000000",
+    "vote2EarnAllocation": "2000000000000000000000000",
+    "treasuryAllocation": "1000000000000000000000000"
+  },
+  {
+    "cycle": 10,
+    "xAllocation": "2000000000000000000000000",
+    "vote2EarnAllocation": "2000000000000000000000000",
+    "treasuryAllocation": "1000000000000000000000000"
+  },
+  {
+    "cycle": 11,
+    "xAllocation": "2000000000000000000000000",
+    "vote2EarnAllocation": "2000000000000000000000000",
+    "treasuryAllocation": "1000000000000000000000000"
+  },
+  {
+    "cycle": 12,
+    "xAllocation": "2000000000000000000000000",
+    "vote2EarnAllocation": "2000000000000000000000000",
+    "treasuryAllocation": "1000000000000000000000000"
+  },
+  {
+    "cycle": 13,
+    "xAllocation": "2000000000000000000000000",
+    "vote2EarnAllocation": "2000000000000000000000000",
+    "treasuryAllocation": "1000000000000000000000000"
+  },
+  {
+    "cycle": 14,
+    "xAllocation": "1840000000000000000000000",
+    "vote2EarnAllocation": "1840000000000000000000000",
+    "treasuryAllocation": "920000000000000000000000"
+  },
+  {
+    "cycle": 15,
+    "xAllocation": "1920000000000000000000000",
+    "vote2EarnAllocation": "1920000000000000000000000",
+    "treasuryAllocation": "960000000000000000000000"
+  },
+  {
+    "cycle": 16,
+    "xAllocation": "1920000000000000000000000",
+    "vote2EarnAllocation": "1920000000000000000000000",
+    "treasuryAllocation": "960000000000000000000000"
+  },
+  {
+    "cycle": 17,
+    "xAllocation": "1920000000000000000000000",
+    "vote2EarnAllocation": "1920000000000000000000000",
+    "treasuryAllocation": "960000000000000000000000"
+  },
+  {
+    "cycle": 18,
+    "xAllocation": "1920000000000000000000000",
+    "vote2EarnAllocation": "1920000000000000000000000",
+    "treasuryAllocation": "960000000000000000000000"
+  },
+  {
+    "cycle": 19,
+    "xAllocation": "1920000000000000000000000",
+    "vote2EarnAllocation": "1920000000000000000000000",
+    "treasuryAllocation": "960000000000000000000000"
+  },
+  {
+    "cycle": 20,
+    "xAllocation": "1920000000000000000000000",
+    "vote2EarnAllocation": "1920000000000000000000000",
+    "treasuryAllocation": "960000000000000000000000"
+  },
+  {
+    "cycle": 21,
+    "xAllocation": "1920000000000000000000000",
+    "vote2EarnAllocation": "1920000000000000000000000",
+    "treasuryAllocation": "960000000000000000000000"
+  },
+  {
+    "cycle": 22,
+    "xAllocation": "1920000000000000000000000",
+    "vote2EarnAllocation": "1920000000000000000000000",
+    "treasuryAllocation": "960000000000000000000000"
+  },
+  {
+    "cycle": 23,
+    "xAllocation": "1920000000000000000000000",
+    "vote2EarnAllocation": "1920000000000000000000000",
+    "treasuryAllocation": "960000000000000000000000"
+  },
+  {
+    "cycle": 24,
+    "xAllocation": "1920000000000000000000000",
+    "vote2EarnAllocation": "1920000000000000000000000",
+    "treasuryAllocation": "960000000000000000000000"
+  },
+  {
+    "cycle": 25,
+    "xAllocation": "1843200000000000000000000",
+    "vote2EarnAllocation": "1843200000000000000000000",
+    "treasuryAllocation": "921600000000000000000000"
+  },
+  {
+    "cycle": 26,
+    "xAllocation": "1843200000000000000000000",
+    "vote2EarnAllocation": "1843200000000000000000000",
+    "treasuryAllocation": "921600000000000000000000"
+  },
+  {
+    "cycle": 27,
+    "xAllocation": "1843200000000000000000000",
+    "vote2EarnAllocation": "1843200000000000000000000",
+    "treasuryAllocation": "921600000000000000000000"
+  },
+  {
+    "cycle": 28,
+    "xAllocation": "1843200000000000000000000",
+    "vote2EarnAllocation": "1843200000000000000000000",
+    "treasuryAllocation": "921600000000000000000000"
+  },
+  {
+    "cycle": 29,
+    "xAllocation": "1843200000000000000000000",
+    "vote2EarnAllocation": "1843200000000000000000000",
+    "treasuryAllocation": "921600000000000000000000"
+  },
+  {
+    "cycle": 30,
+    "xAllocation": "1843200000000000000000000",
+    "vote2EarnAllocation": "1843200000000000000000000",
+    "treasuryAllocation": "921600000000000000000000"
+  },
+  {
+    "cycle": 31,
+    "xAllocation": "1843200000000000000000000",
+    "vote2EarnAllocation": "1843200000000000000000000",
+    "treasuryAllocation": "921600000000000000000000"
+  },
+  {
+    "cycle": 32,
+    "xAllocation": "1843200000000000000000000",
+    "vote2EarnAllocation": "1843200000000000000000000",
+    "treasuryAllocation": "921600000000000000000000"
+  },
+  {
+    "cycle": 33,
+    "xAllocation": "1843200000000000000000000",
+    "vote2EarnAllocation": "1843200000000000000000000",
+    "treasuryAllocation": "921600000000000000000000"
+  },
+  {
+    "cycle": 34,
+    "xAllocation": "1843200000000000000000000",
+    "vote2EarnAllocation": "1843200000000000000000000",
+    "treasuryAllocation": "921600000000000000000000"
+  },
+  {
+    "cycle": 35,
+    "xAllocation": "1843200000000000000000000",
+    "vote2EarnAllocation": "1843200000000000000000000",
+    "treasuryAllocation": "921600000000000000000000"
+  },
+  {
+    "cycle": 36,
+    "xAllocation": "1843200000000000000000000",
+    "vote2EarnAllocation": "1843200000000000000000000",
+    "treasuryAllocation": "921600000000000000000000"
+  },
+  {
+    "cycle": 37,
+    "xAllocation": "1769472000000000000000000",
+    "vote2EarnAllocation": "1769472000000000000000000",
+    "treasuryAllocation": "884736000000000000000000"
+  },
+  {
+    "cycle": 38,
+    "xAllocation": "1769472000000000000000000",
+    "vote2EarnAllocation": "1769472000000000000000000",
+    "treasuryAllocation": "884736000000000000000000"
+  },
+  {
+    "cycle": 39,
+    "xAllocation": "1769472000000000000000000",
+    "vote2EarnAllocation": "1769472000000000000000000",
+    "treasuryAllocation": "884736000000000000000000"
+  },
+  {
+    "cycle": 40,
+    "xAllocation": "1769472000000000000000000",
+    "vote2EarnAllocation": "1769472000000000000000000",
+    "treasuryAllocation": "884736000000000000000000"
+  },
+  {
+    "cycle": 41,
+    "xAllocation": "1769472000000000000000000",
+    "vote2EarnAllocation": "1769472000000000000000000",
+    "treasuryAllocation": "884736000000000000000000"
+  },
+  {
+    "cycle": 42,
+    "xAllocation": "1769472000000000000000000",
+    "vote2EarnAllocation": "1769472000000000000000000",
+    "treasuryAllocation": "884736000000000000000000"
+  },
+  {
+    "cycle": 43,
+    "xAllocation": "1769472000000000000000000",
+    "vote2EarnAllocation": "1769472000000000000000000",
+    "treasuryAllocation": "884736000000000000000000"
+  },
+  {
+    "cycle": 44,
+    "xAllocation": "1769472000000000000000000",
+    "vote2EarnAllocation": "1769472000000000000000000",
+    "treasuryAllocation": "884736000000000000000000"
+  },
+  {
+    "cycle": 45,
+    "xAllocation": "1769472000000000000000000",
+    "vote2EarnAllocation": "1769472000000000000000000",
+    "treasuryAllocation": "884736000000000000000000"
+  },
+  {
+    "cycle": 46,
+    "xAllocation": "1769472000000000000000000",
+    "vote2EarnAllocation": "1769472000000000000000000",
+    "treasuryAllocation": "884736000000000000000000"
+  },
+  {
+    "cycle": 47,
+    "xAllocation": "1769472000000000000000000",
+    "vote2EarnAllocation": "1769472000000000000000000",
+    "treasuryAllocation": "884736000000000000000000"
+  },
+  {
+    "cycle": 48,
+    "xAllocation": "1769472000000000000000000",
+    "vote2EarnAllocation": "1769472000000000000000000",
+    "treasuryAllocation": "884736000000000000000000"
+  },
+  {
+    "cycle": 49,
+    "xAllocation": "1698693120000000000000000",
+    "vote2EarnAllocation": "1698693120000000000000000",
+    "treasuryAllocation": "849346560000000000000000"
+  },
+  {
+    "cycle": 50,
+    "xAllocation": "1698693120000000000000000",
+    "vote2EarnAllocation": "1698693120000000000000000",
+    "treasuryAllocation": "849346560000000000000000"
+  },
+  {
+    "cycle": 51,
+    "xAllocation": "1698693120000000000000000",
+    "vote2EarnAllocation": "1358954496000000000000000",
+    "treasuryAllocation": "764411904000000000000000"
+  },
+  {
+    "cycle": 52,
+    "xAllocation": "1698693120000000000000000",
+    "vote2EarnAllocation": "1358954496000000000000000",
+    "treasuryAllocation": "764411904000000000000000"
+  },
+  {
+    "cycle": 53,
+    "xAllocation": "1698693120000000000000000",
+    "vote2EarnAllocation": "1358954496000000000000000",
+    "treasuryAllocation": "764411904000000000000000"
+  },
+  {
+    "cycle": 54,
+    "xAllocation": "1698693120000000000000000",
+    "vote2EarnAllocation": "1358954496000000000000000",
+    "treasuryAllocation": "764411904000000000000000"
+  },
+  {
+    "cycle": 55,
+    "xAllocation": "1698693120000000000000000",
+    "vote2EarnAllocation": "1358954496000000000000000",
+    "treasuryAllocation": "764411904000000000000000"
+  },
+  {
+    "cycle": 56,
+    "xAllocation": "1698693120000000000000000",
+    "vote2EarnAllocation": "1358954496000000000000000",
+    "treasuryAllocation": "764411904000000000000000"
+  },
+  {
+    "cycle": 57,
+    "xAllocation": "1698693120000000000000000",
+    "vote2EarnAllocation": "1358954496000000000000000",
+    "treasuryAllocation": "764411904000000000000000"
+  },
+  {
+    "cycle": 58,
+    "xAllocation": "1698693120000000000000000",
+    "vote2EarnAllocation": "1358954496000000000000000",
+    "treasuryAllocation": "764411904000000000000000"
+  },
+  {
+    "cycle": 59,
+    "xAllocation": "1698693120000000000000000",
+    "vote2EarnAllocation": "1358954496000000000000000",
+    "treasuryAllocation": "764411904000000000000000"
+  },
+  {
+    "cycle": 60,
+    "xAllocation": "1698693120000000000000000",
+    "vote2EarnAllocation": "1358954496000000000000000",
+    "treasuryAllocation": "764411904000000000000000"
+  },
+  {
+    "cycle": 61,
+    "xAllocation": "1630745395200000000000000",
+    "vote2EarnAllocation": "1304596316160000000000000",
+    "treasuryAllocation": "733835427840000000000000"
+  },
+  {
+    "cycle": 62,
+    "xAllocation": "1630745395200000000000000",
+    "vote2EarnAllocation": "1304596316160000000000000",
+    "treasuryAllocation": "733835427840000000000000"
+  },
+  {
+    "cycle": 63,
+    "xAllocation": "1630745395200000000000000",
+    "vote2EarnAllocation": "1304596316160000000000000",
+    "treasuryAllocation": "733835427840000000000000"
+  },
+  {
+    "cycle": 64,
+    "xAllocation": "1630745395200000000000000",
+    "vote2EarnAllocation": "1304596316160000000000000",
+    "treasuryAllocation": "733835427840000000000000"
+  },
+  {
+    "cycle": 65,
+    "xAllocation": "1630745395200000000000000",
+    "vote2EarnAllocation": "1304596316160000000000000",
+    "treasuryAllocation": "733835427840000000000000"
+  },
+  {
+    "cycle": 66,
+    "xAllocation": "1630745395200000000000000",
+    "vote2EarnAllocation": "1304596316160000000000000",
+    "treasuryAllocation": "733835427840000000000000"
+  },
+  {
+    "cycle": 67,
+    "xAllocation": "1630745395200000000000000",
+    "vote2EarnAllocation": "1304596316160000000000000",
+    "treasuryAllocation": "733835427840000000000000"
+  },
+  {
+    "cycle": 68,
+    "xAllocation": "1630745395200000000000000",
+    "vote2EarnAllocation": "1304596316160000000000000",
+    "treasuryAllocation": "733835427840000000000000"
+  },
+  {
+    "cycle": 69,
+    "xAllocation": "1630745395200000000000000",
+    "vote2EarnAllocation": "1304596316160000000000000",
+    "treasuryAllocation": "733835427840000000000000"
+  },
+  {
+    "cycle": 70,
+    "xAllocation": "1630745395200000000000000",
+    "vote2EarnAllocation": "1304596316160000000000000",
+    "treasuryAllocation": "733835427840000000000000"
+  },
+  {
+    "cycle": 71,
+    "xAllocation": "1630745395200000000000000",
+    "vote2EarnAllocation": "1304596316160000000000000",
+    "treasuryAllocation": "733835427840000000000000"
+  },
+  {
+    "cycle": 72,
+    "xAllocation": "1630745395200000000000000",
+    "vote2EarnAllocation": "1304596316160000000000000",
+    "treasuryAllocation": "733835427840000000000000"
+  },
+  {
+    "cycle": 73,
+    "xAllocation": "1565515579392000000000000",
+    "vote2EarnAllocation": "1252412463513600000000000",
+    "treasuryAllocation": "704482010726400000000000"
+  },
+  {
+    "cycle": 74,
+    "xAllocation": "1565515579392000000000000",
+    "vote2EarnAllocation": "1252412463513600000000000",
+    "treasuryAllocation": "704482010726400000000000"
+  },
+  {
+    "cycle": 75,
+    "xAllocation": "1565515579392000000000000",
+    "vote2EarnAllocation": "1252412463513600000000000",
+    "treasuryAllocation": "704482010726400000000000"
+  },
+  {
+    "cycle": 76,
+    "xAllocation": "1565515579392000000000000",
+    "vote2EarnAllocation": "1252412463513600000000000",
+    "treasuryAllocation": "704482010726400000000000"
+  },
+  {
+    "cycle": 77,
+    "xAllocation": "1565515579392000000000000",
+    "vote2EarnAllocation": "1252412463513600000000000",
+    "treasuryAllocation": "704482010726400000000000"
+  },
+  {
+    "cycle": 78,
+    "xAllocation": "1565515579392000000000000",
+    "vote2EarnAllocation": "1252412463513600000000000",
+    "treasuryAllocation": "704482010726400000000000"
+  },
+  {
+    "cycle": 79,
+    "xAllocation": "1565515579392000000000000",
+    "vote2EarnAllocation": "1252412463513600000000000",
+    "treasuryAllocation": "704482010726400000000000"
+  },
+  {
+    "cycle": 80,
+    "xAllocation": "1565515579392000000000000",
+    "vote2EarnAllocation": "1252412463513600000000000",
+    "treasuryAllocation": "704482010726400000000000"
+  },
+  {
+    "cycle": 81,
+    "xAllocation": "1565515579392000000000000",
+    "vote2EarnAllocation": "1252412463513600000000000",
+    "treasuryAllocation": "704482010726400000000000"
+  },
+  {
+    "cycle": 82,
+    "xAllocation": "1565515579392000000000000",
+    "vote2EarnAllocation": "1252412463513600000000000",
+    "treasuryAllocation": "704482010726400000000000"
+  },
+  {
+    "cycle": 83,
+    "xAllocation": "1565515579392000000000000",
+    "vote2EarnAllocation": "1252412463513600000000000",
+    "treasuryAllocation": "704482010726400000000000"
+  },
+  {
+    "cycle": 84,
+    "xAllocation": "1565515579392000000000000",
+    "vote2EarnAllocation": "1252412463513600000000000",
+    "treasuryAllocation": "704482010726400000000000"
+  },
+  {
+    "cycle": 85,
+    "xAllocation": "1502894956216320000000000",
+    "vote2EarnAllocation": "1202315964973056000000000",
+    "treasuryAllocation": "676302730297344000000000"
+  },
+  {
+    "cycle": 86,
+    "xAllocation": "1502894956216320000000000",
+    "vote2EarnAllocation": "1202315964973056000000000",
+    "treasuryAllocation": "676302730297344000000000"
+  },
+  {
+    "cycle": 87,
+    "xAllocation": "1502894956216320000000000",
+    "vote2EarnAllocation": "1202315964973056000000000",
+    "treasuryAllocation": "676302730297344000000000"
+  },
+  {
+    "cycle": 88,
+    "xAllocation": "1502894956216320000000000",
+    "vote2EarnAllocation": "1202315964973056000000000",
+    "treasuryAllocation": "676302730297344000000000"
+  },
+  {
+    "cycle": 89,
+    "xAllocation": "1502894956216320000000000",
+    "vote2EarnAllocation": "1202315964973056000000000",
+    "treasuryAllocation": "676302730297344000000000"
+  },
+  {
+    "cycle": 90,
+    "xAllocation": "1502894956216320000000000",
+    "vote2EarnAllocation": "1202315964973056000000000",
+    "treasuryAllocation": "676302730297344000000000"
+  },
+  {
+    "cycle": 91,
+    "xAllocation": "1502894956216320000000000",
+    "vote2EarnAllocation": "1202315964973056000000000",
+    "treasuryAllocation": "676302730297344000000000"
+  },
+  {
+    "cycle": 92,
+    "xAllocation": "1502894956216320000000000",
+    "vote2EarnAllocation": "1202315964973056000000000",
+    "treasuryAllocation": "676302730297344000000000"
+  },
+  {
+    "cycle": 93,
+    "xAllocation": "1502894956216320000000000",
+    "vote2EarnAllocation": "1202315964973056000000000",
+    "treasuryAllocation": "676302730297344000000000"
+  },
+  {
+    "cycle": 94,
+    "xAllocation": "1502894956216320000000000",
+    "vote2EarnAllocation": "1202315964973056000000000",
+    "treasuryAllocation": "676302730297344000000000"
+  },
+  {
+    "cycle": 95,
+    "xAllocation": "1502894956216320000000000",
+    "vote2EarnAllocation": "1202315964973056000000000",
+    "treasuryAllocation": "676302730297344000000000"
+  },
+  {
+    "cycle": 96,
+    "xAllocation": "1502894956216320000000000",
+    "vote2EarnAllocation": "1202315964973056000000000",
+    "treasuryAllocation": "676302730297344000000000"
+  },
+  {
+    "cycle": 97,
+    "xAllocation": "1442779157967667200000000",
+    "vote2EarnAllocation": "1154223326374133760000000",
+    "treasuryAllocation": "649250621085450240000000"
+  },
+  {
+    "cycle": 98,
+    "xAllocation": "1442779157967667200000000",
+    "vote2EarnAllocation": "1154223326374133760000000",
+    "treasuryAllocation": "649250621085450240000000"
+  },
+  {
+    "cycle": 99,
+    "xAllocation": "1442779157967667200000000",
+    "vote2EarnAllocation": "1154223326374133760000000",
+    "treasuryAllocation": "649250621085450240000000"
+  },
+  {
+    "cycle": 100,
+    "xAllocation": "1442779157967667200000000",
+    "vote2EarnAllocation": "1154223326374133760000000",
+    "treasuryAllocation": "649250621085450240000000"
+  },
+  {
+    "cycle": 101,
+    "xAllocation": "1442779157967667200000000",
+    "vote2EarnAllocation": "865667494780600320000000",
+    "treasuryAllocation": "577111663187066880000000"
+  },
+  {
+    "cycle": 102,
+    "xAllocation": "1442779157967667200000000",
+    "vote2EarnAllocation": "865667494780600320000000",
+    "treasuryAllocation": "577111663187066880000000"
+  },
+  {
+    "cycle": 103,
+    "xAllocation": "1442779157967667200000000",
+    "vote2EarnAllocation": "865667494780600320000000",
+    "treasuryAllocation": "577111663187066880000000"
+  },
+  {
+    "cycle": 104,
+    "xAllocation": "1442779157967667200000000",
+    "vote2EarnAllocation": "865667494780600320000000",
+    "treasuryAllocation": "577111663187066880000000"
+  },
+  {
+    "cycle": 105,
+    "xAllocation": "1442779157967667200000000",
+    "vote2EarnAllocation": "865667494780600320000000",
+    "treasuryAllocation": "577111663187066880000000"
+  },
+  {
+    "cycle": 106,
+    "xAllocation": "1442779157967667200000000",
+    "vote2EarnAllocation": "865667494780600320000000",
+    "treasuryAllocation": "577111663187066880000000"
+  },
+  {
+    "cycle": 107,
+    "xAllocation": "1442779157967667200000000",
+    "vote2EarnAllocation": "865667494780600320000000",
+    "treasuryAllocation": "577111663187066880000000"
+  },
+  {
+    "cycle": 108,
+    "xAllocation": "1442779157967667200000000",
+    "vote2EarnAllocation": "865667494780600320000000",
+    "treasuryAllocation": "577111663187066880000000"
+  },
+  {
+    "cycle": 109,
+    "xAllocation": "1385067991648960512000000",
+    "vote2EarnAllocation": "831040794989376307200000",
+    "treasuryAllocation": "554027196659584204800000"
+  },
+  {
+    "cycle": 110,
+    "xAllocation": "1385067991648960512000000",
+    "vote2EarnAllocation": "831040794989376307200000",
+    "treasuryAllocation": "554027196659584204800000"
+  },
+  {
+    "cycle": 111,
+    "xAllocation": "1385067991648960512000000",
+    "vote2EarnAllocation": "831040794989376307200000",
+    "treasuryAllocation": "554027196659584204800000"
+  },
+  {
+    "cycle": 112,
+    "xAllocation": "1385067991648960512000000",
+    "vote2EarnAllocation": "831040794989376307200000",
+    "treasuryAllocation": "554027196659584204800000"
+  },
+  {
+    "cycle": 113,
+    "xAllocation": "1385067991648960512000000",
+    "vote2EarnAllocation": "831040794989376307200000",
+    "treasuryAllocation": "554027196659584204800000"
+  },
+  {
+    "cycle": 114,
+    "xAllocation": "1385067991648960512000000",
+    "vote2EarnAllocation": "831040794989376307200000",
+    "treasuryAllocation": "554027196659584204800000"
+  },
+  {
+    "cycle": 115,
+    "xAllocation": "1385067991648960512000000",
+    "vote2EarnAllocation": "831040794989376307200000",
+    "treasuryAllocation": "554027196659584204800000"
+  },
+  {
+    "cycle": 116,
+    "xAllocation": "1385067991648960512000000",
+    "vote2EarnAllocation": "831040794989376307200000",
+    "treasuryAllocation": "554027196659584204800000"
+  },
+  {
+    "cycle": 117,
+    "xAllocation": "1385067991648960512000000",
+    "vote2EarnAllocation": "831040794989376307200000",
+    "treasuryAllocation": "554027196659584204800000"
+  },
+  {
+    "cycle": 118,
+    "xAllocation": "1385067991648960512000000",
+    "vote2EarnAllocation": "831040794989376307200000",
+    "treasuryAllocation": "554027196659584204800000"
+  },
+  {
+    "cycle": 119,
+    "xAllocation": "1385067991648960512000000",
+    "vote2EarnAllocation": "831040794989376307200000",
+    "treasuryAllocation": "554027196659584204800000"
+  },
+  {
+    "cycle": 120,
+    "xAllocation": "1385067991648960512000000",
+    "vote2EarnAllocation": "831040794989376307200000",
+    "treasuryAllocation": "554027196659584204800000"
+  },
+  {
+    "cycle": 121,
+    "xAllocation": "1329665271983002091520000",
+    "vote2EarnAllocation": "797799163189801254912000",
+    "treasuryAllocation": "531866108793200836608000"
+  },
+  {
+    "cycle": 122,
+    "xAllocation": "1329665271983002091520000",
+    "vote2EarnAllocation": "797799163189801254912000",
+    "treasuryAllocation": "531866108793200836608000"
+  },
+  {
+    "cycle": 123,
+    "xAllocation": "1329665271983002091520000",
+    "vote2EarnAllocation": "797799163189801254912000",
+    "treasuryAllocation": "531866108793200836608000"
+  },
+  {
+    "cycle": 124,
+    "xAllocation": "1329665271983002091520000",
+    "vote2EarnAllocation": "797799163189801254912000",
+    "treasuryAllocation": "531866108793200836608000"
+  },
+  {
+    "cycle": 125,
+    "xAllocation": "1329665271983002091520000",
+    "vote2EarnAllocation": "797799163189801254912000",
+    "treasuryAllocation": "531866108793200836608000"
+  },
+  {
+    "cycle": 126,
+    "xAllocation": "1329665271983002091520000",
+    "vote2EarnAllocation": "797799163189801254912000",
+    "treasuryAllocation": "531866108793200836608000"
+  },
+  {
+    "cycle": 127,
+    "xAllocation": "1329665271983002091520000",
+    "vote2EarnAllocation": "797799163189801254912000",
+    "treasuryAllocation": "531866108793200836608000"
+  },
+  {
+    "cycle": 128,
+    "xAllocation": "1329665271983002091520000",
+    "vote2EarnAllocation": "797799163189801254912000",
+    "treasuryAllocation": "531866108793200836608000"
+  },
+  {
+    "cycle": 129,
+    "xAllocation": "1329665271983002091520000",
+    "vote2EarnAllocation": "797799163189801254912000",
+    "treasuryAllocation": "531866108793200836608000"
+  },
+  {
+    "cycle": 130,
+    "xAllocation": "1329665271983002091520000",
+    "vote2EarnAllocation": "797799163189801254912000",
+    "treasuryAllocation": "531866108793200836608000"
+  },
+  {
+    "cycle": 131,
+    "xAllocation": "1329665271983002091520000",
+    "vote2EarnAllocation": "797799163189801254912000",
+    "treasuryAllocation": "531866108793200836608000"
+  },
+  {
+    "cycle": 132,
+    "xAllocation": "1329665271983002091520000",
+    "vote2EarnAllocation": "797799163189801254912000",
+    "treasuryAllocation": "531866108793200836608000"
+  },
+  {
+    "cycle": 133,
+    "xAllocation": "1276478661103682007859200",
+    "vote2EarnAllocation": "765887196662209204715520",
+    "treasuryAllocation": "510591464441472803143680"
+  },
+  {
+    "cycle": 134,
+    "xAllocation": "1276478661103682007859200",
+    "vote2EarnAllocation": "765887196662209204715520",
+    "treasuryAllocation": "510591464441472803143680"
+  },
+  {
+    "cycle": 135,
+    "xAllocation": "1276478661103682007859200",
+    "vote2EarnAllocation": "765887196662209204715520",
+    "treasuryAllocation": "510591464441472803143680"
+  },
+  {
+    "cycle": 136,
+    "xAllocation": "1276478661103682007859200",
+    "vote2EarnAllocation": "765887196662209204715520",
+    "treasuryAllocation": "510591464441472803143680"
+  },
+  {
+    "cycle": 137,
+    "xAllocation": "1276478661103682007859200",
+    "vote2EarnAllocation": "765887196662209204715520",
+    "treasuryAllocation": "510591464441472803143680"
+  },
+  {
+    "cycle": 138,
+    "xAllocation": "1276478661103682007859200",
+    "vote2EarnAllocation": "765887196662209204715520",
+    "treasuryAllocation": "510591464441472803143680"
+  },
+  {
+    "cycle": 139,
+    "xAllocation": "1276478661103682007859200",
+    "vote2EarnAllocation": "765887196662209204715520",
+    "treasuryAllocation": "510591464441472803143680"
+  },
+  {
+    "cycle": 140,
+    "xAllocation": "1276478661103682007859200",
+    "vote2EarnAllocation": "765887196662209204715520",
+    "treasuryAllocation": "510591464441472803143680"
+  },
+  {
+    "cycle": 141,
+    "xAllocation": "1276478661103682007859200",
+    "vote2EarnAllocation": "765887196662209204715520",
+    "treasuryAllocation": "510591464441472803143680"
+  },
+  {
+    "cycle": 142,
+    "xAllocation": "1276478661103682007859200",
+    "vote2EarnAllocation": "765887196662209204715520",
+    "treasuryAllocation": "510591464441472803143680"
+  },
+  {
+    "cycle": 143,
+    "xAllocation": "1276478661103682007859200",
+    "vote2EarnAllocation": "765887196662209204715520",
+    "treasuryAllocation": "510591464441472803143680"
+  },
+  {
+    "cycle": 144,
+    "xAllocation": "1276478661103682007859200",
+    "vote2EarnAllocation": "765887196662209204715520",
+    "treasuryAllocation": "510591464441472803143680"
+  },
+  {
+    "cycle": 145,
+    "xAllocation": "1225419514659534727544832",
+    "vote2EarnAllocation": "735251708795720836526899",
+    "treasuryAllocation": "490167805863813891017932"
+  },
+  {
+    "cycle": 146,
+    "xAllocation": "1225419514659534727544832",
+    "vote2EarnAllocation": "735251708795720836526899",
+    "treasuryAllocation": "490167805863813891017932"
+  },
+  {
+    "cycle": 147,
+    "xAllocation": "1225419514659534727544832",
+    "vote2EarnAllocation": "735251708795720836526899",
+    "treasuryAllocation": "490167805863813891017932"
+  },
+  {
+    "cycle": 148,
+    "xAllocation": "1225419514659534727544832",
+    "vote2EarnAllocation": "735251708795720836526899",
+    "treasuryAllocation": "490167805863813891017932"
+  },
+  {
+    "cycle": 149,
+    "xAllocation": "1225419514659534727544832",
+    "vote2EarnAllocation": "735251708795720836526899",
+    "treasuryAllocation": "490167805863813891017932"
+  },
+  {
+    "cycle": 150,
+    "xAllocation": "1225419514659534727544832",
+    "vote2EarnAllocation": "735251708795720836526899",
+    "treasuryAllocation": "490167805863813891017932"
+  },
+  {
+    "cycle": 151,
+    "xAllocation": "1225419514659534727544832",
+    "vote2EarnAllocation": "490167805863813891017932",
+    "treasuryAllocation": "428896830130837154640691"
+  },
+  {
+    "cycle": 152,
+    "xAllocation": "1225419514659534727544832",
+    "vote2EarnAllocation": "490167805863813891017932",
+    "treasuryAllocation": "428896830130837154640691"
+  },
+  {
+    "cycle": 153,
+    "xAllocation": "1225419514659534727544832",
+    "vote2EarnAllocation": "490167805863813891017932",
+    "treasuryAllocation": "428896830130837154640691"
+  },
+  {
+    "cycle": 154,
+    "xAllocation": "1225419514659534727544832",
+    "vote2EarnAllocation": "490167805863813891017932",
+    "treasuryAllocation": "428896830130837154640691"
+  },
+  {
+    "cycle": 155,
+    "xAllocation": "1225419514659534727544832",
+    "vote2EarnAllocation": "490167805863813891017932",
+    "treasuryAllocation": "428896830130837154640691"
+  },
+  {
+    "cycle": 156,
+    "xAllocation": "1225419514659534727544832",
+    "vote2EarnAllocation": "490167805863813891017932",
+    "treasuryAllocation": "428896830130837154640691"
+  },
+  {
+    "cycle": 157,
+    "xAllocation": "1176402734073153338443038",
+    "vote2EarnAllocation": "470561093629261335377215",
+    "treasuryAllocation": "411740956925603668455063"
+  },
+  {
+    "cycle": 158,
+    "xAllocation": "1176402734073153338443038",
+    "vote2EarnAllocation": "470561093629261335377215",
+    "treasuryAllocation": "411740956925603668455063"
+  },
+  {
+    "cycle": 159,
+    "xAllocation": "1176402734073153338443038",
+    "vote2EarnAllocation": "470561093629261335377215",
+    "treasuryAllocation": "411740956925603668455063"
+  },
+  {
+    "cycle": 160,
+    "xAllocation": "1176402734073153338443038",
+    "vote2EarnAllocation": "470561093629261335377215",
+    "treasuryAllocation": "411740956925603668455063"
+  },
+  {
+    "cycle": 161,
+    "xAllocation": "1176402734073153338443038",
+    "vote2EarnAllocation": "470561093629261335377215",
+    "treasuryAllocation": "411740956925603668455063"
+  },
+  {
+    "cycle": 162,
+    "xAllocation": "1176402734073153338443038",
+    "vote2EarnAllocation": "470561093629261335377215",
+    "treasuryAllocation": "411740956925603668455063"
+  },
+  {
+    "cycle": 163,
+    "xAllocation": "1176402734073153338443038",
+    "vote2EarnAllocation": "470561093629261335377215",
+    "treasuryAllocation": "411740956925603668455063"
+  },
+  {
+    "cycle": 164,
+    "xAllocation": "1176402734073153338443038",
+    "vote2EarnAllocation": "470561093629261335377215",
+    "treasuryAllocation": "411740956925603668455063"
+  },
+  {
+    "cycle": 165,
+    "xAllocation": "1176402734073153338443038",
+    "vote2EarnAllocation": "470561093629261335377215",
+    "treasuryAllocation": "411740956925603668455063"
+  },
+  {
+    "cycle": 166,
+    "xAllocation": "1176402734073153338443038",
+    "vote2EarnAllocation": "470561093629261335377215",
+    "treasuryAllocation": "411740956925603668455063"
+  },
+  {
+    "cycle": 167,
+    "xAllocation": "1176402734073153338443038",
+    "vote2EarnAllocation": "470561093629261335377215",
+    "treasuryAllocation": "411740956925603668455063"
+  },
+  {
+    "cycle": 168,
+    "xAllocation": "1176402734073153338443038",
+    "vote2EarnAllocation": "470561093629261335377215",
+    "treasuryAllocation": "411740956925603668455063"
+  },
+  {
+    "cycle": 169,
+    "xAllocation": "1129346624710227204905316",
+    "vote2EarnAllocation": "451738649884090881962126",
+    "treasuryAllocation": "395271318648579521716860"
+  },
+  {
+    "cycle": 170,
+    "xAllocation": "1129346624710227204905316",
+    "vote2EarnAllocation": "451738649884090881962126",
+    "treasuryAllocation": "395271318648579521716860"
+  },
+  {
+    "cycle": 171,
+    "xAllocation": "1129346624710227204905316",
+    "vote2EarnAllocation": "451738649884090881962126",
+    "treasuryAllocation": "395271318648579521716860"
+  },
+  {
+    "cycle": 172,
+    "xAllocation": "1129346624710227204905316",
+    "vote2EarnAllocation": "451738649884090881962126",
+    "treasuryAllocation": "395271318648579521716860"
+  },
+  {
+    "cycle": 173,
+    "xAllocation": "1129346624710227204905316",
+    "vote2EarnAllocation": "451738649884090881962126",
+    "treasuryAllocation": "395271318648579521716860"
+  },
+  {
+    "cycle": 174,
+    "xAllocation": "1129346624710227204905316",
+    "vote2EarnAllocation": "451738649884090881962126",
+    "treasuryAllocation": "395271318648579521716860"
+  },
+  {
+    "cycle": 175,
+    "xAllocation": "1129346624710227204905316",
+    "vote2EarnAllocation": "451738649884090881962126",
+    "treasuryAllocation": "395271318648579521716860"
+  },
+  {
+    "cycle": 176,
+    "xAllocation": "1129346624710227204905316",
+    "vote2EarnAllocation": "451738649884090881962126",
+    "treasuryAllocation": "395271318648579521716860"
+  },
+  {
+    "cycle": 177,
+    "xAllocation": "1129346624710227204905316",
+    "vote2EarnAllocation": "451738649884090881962126",
+    "treasuryAllocation": "395271318648579521716860"
+  },
+  {
+    "cycle": 178,
+    "xAllocation": "1129346624710227204905316",
+    "vote2EarnAllocation": "451738649884090881962126",
+    "treasuryAllocation": "395271318648579521716860"
+  },
+  {
+    "cycle": 179,
+    "xAllocation": "1129346624710227204905316",
+    "vote2EarnAllocation": "451738649884090881962126",
+    "treasuryAllocation": "395271318648579521716860"
+  },
+  {
+    "cycle": 180,
+    "xAllocation": "1129346624710227204905316",
+    "vote2EarnAllocation": "451738649884090881962126",
+    "treasuryAllocation": "395271318648579521716860"
+  },
+  {
+    "cycle": 181,
+    "xAllocation": "1084172759721818116709103",
+    "vote2EarnAllocation": "433669103888727246683641",
+    "treasuryAllocation": "379460465902636340848186"
+  },
+  {
+    "cycle": 182,
+    "xAllocation": "1084172759721818116709103",
+    "vote2EarnAllocation": "433669103888727246683641",
+    "treasuryAllocation": "379460465902636340848186"
+  },
+  {
+    "cycle": 183,
+    "xAllocation": "1084172759721818116709103",
+    "vote2EarnAllocation": "433669103888727246683641",
+    "treasuryAllocation": "379460465902636340848186"
+  },
+  {
+    "cycle": 184,
+    "xAllocation": "1084172759721818116709103",
+    "vote2EarnAllocation": "433669103888727246683641",
+    "treasuryAllocation": "379460465902636340848186"
+  },
+  {
+    "cycle": 185,
+    "xAllocation": "1084172759721818116709103",
+    "vote2EarnAllocation": "433669103888727246683641",
+    "treasuryAllocation": "379460465902636340848186"
+  },
+  {
+    "cycle": 186,
+    "xAllocation": "1084172759721818116709103",
+    "vote2EarnAllocation": "433669103888727246683641",
+    "treasuryAllocation": "379460465902636340848186"
+  },
+  {
+    "cycle": 187,
+    "xAllocation": "1084172759721818116709103",
+    "vote2EarnAllocation": "433669103888727246683641",
+    "treasuryAllocation": "379460465902636340848186"
+  },
+  {
+    "cycle": 188,
+    "xAllocation": "1084172759721818116709103",
+    "vote2EarnAllocation": "433669103888727246683641",
+    "treasuryAllocation": "379460465902636340848186"
+  },
+  {
+    "cycle": 189,
+    "xAllocation": "1084172759721818116709103",
+    "vote2EarnAllocation": "433669103888727246683641",
+    "treasuryAllocation": "379460465902636340848186"
+  },
+  {
+    "cycle": 190,
+    "xAllocation": "1084172759721818116709103",
+    "vote2EarnAllocation": "433669103888727246683641",
+    "treasuryAllocation": "379460465902636340848186"
+  },
+  {
+    "cycle": 191,
+    "xAllocation": "1084172759721818116709103",
+    "vote2EarnAllocation": "433669103888727246683641",
+    "treasuryAllocation": "379460465902636340848186"
+  },
+  {
+    "cycle": 192,
+    "xAllocation": "1084172759721818116709103",
+    "vote2EarnAllocation": "433669103888727246683641",
+    "treasuryAllocation": "379460465902636340848186"
+  },
+  {
+    "cycle": 193,
+    "xAllocation": "1040805849332945392040738",
+    "vote2EarnAllocation": "416322339733178156816295",
+    "treasuryAllocation": "364282047266530887214258"
+  },
+  {
+    "cycle": 194,
+    "xAllocation": "1040805849332945392040738",
+    "vote2EarnAllocation": "416322339733178156816295",
+    "treasuryAllocation": "364282047266530887214258"
+  },
+  {
+    "cycle": 195,
+    "xAllocation": "1040805849332945392040738",
+    "vote2EarnAllocation": "416322339733178156816295",
+    "treasuryAllocation": "364282047266530887214258"
+  },
+  {
+    "cycle": 196,
+    "xAllocation": "1040805849332945392040738",
+    "vote2EarnAllocation": "416322339733178156816295",
+    "treasuryAllocation": "364282047266530887214258"
+  },
+  {
+    "cycle": 197,
+    "xAllocation": "1040805849332945392040738",
+    "vote2EarnAllocation": "416322339733178156816295",
+    "treasuryAllocation": "364282047266530887214258"
+  },
+  {
+    "cycle": 198,
+    "xAllocation": "1040805849332945392040738",
+    "vote2EarnAllocation": "416322339733178156816295",
+    "treasuryAllocation": "364282047266530887214258"
+  },
+  {
+    "cycle": 199,
+    "xAllocation": "1040805849332945392040738",
+    "vote2EarnAllocation": "416322339733178156816295",
+    "treasuryAllocation": "364282047266530887214258"
+  },
+  {
+    "cycle": 200,
+    "xAllocation": "1040805849332945392040738",
+    "vote2EarnAllocation": "416322339733178156816295",
+    "treasuryAllocation": "364282047266530887214258"
+  },
+  {
+    "cycle": 201,
+    "xAllocation": "1040805849332945392040738",
+    "vote2EarnAllocation": "208161169866589078408147",
+    "treasuryAllocation": "312241754799883617612221"
+  },
+  {
+    "cycle": 202,
+    "xAllocation": "1040805849332945392040738",
+    "vote2EarnAllocation": "208161169866589078408147",
+    "treasuryAllocation": "312241754799883617612221"
+  },
+  {
+    "cycle": 203,
+    "xAllocation": "1040805849332945392040738",
+    "vote2EarnAllocation": "208161169866589078408147",
+    "treasuryAllocation": "312241754799883617612221"
+  },
+  {
+    "cycle": 204,
+    "xAllocation": "1040805849332945392040738",
+    "vote2EarnAllocation": "208161169866589078408147",
+    "treasuryAllocation": "312241754799883617612221"
+  },
+  {
+    "cycle": 205,
+    "xAllocation": "999173615359627576359108",
+    "vote2EarnAllocation": "199834723071925515271821",
+    "treasuryAllocation": "299752084607888272907732"
+  },
+  {
+    "cycle": 206,
+    "xAllocation": "999173615359627576359108",
+    "vote2EarnAllocation": "199834723071925515271821",
+    "treasuryAllocation": "299752084607888272907732"
+  },
+  {
+    "cycle": 207,
+    "xAllocation": "999173615359627576359108",
+    "vote2EarnAllocation": "199834723071925515271821",
+    "treasuryAllocation": "299752084607888272907732"
+  },
+  {
+    "cycle": 208,
+    "xAllocation": "999173615359627576359108",
+    "vote2EarnAllocation": "199834723071925515271821",
+    "treasuryAllocation": "299752084607888272907732"
+  },
+  {
+    "cycle": 209,
+    "xAllocation": "999173615359627576359108",
+    "vote2EarnAllocation": "199834723071925515271821",
+    "treasuryAllocation": "299752084607888272907732"
+  },
+  {
+    "cycle": 210,
+    "xAllocation": "999173615359627576359108",
+    "vote2EarnAllocation": "199834723071925515271821",
+    "treasuryAllocation": "299752084607888272907732"
+  },
+  {
+    "cycle": 211,
+    "xAllocation": "999173615359627576359108",
+    "vote2EarnAllocation": "199834723071925515271821",
+    "treasuryAllocation": "299752084607888272907732"
+  },
+  {
+    "cycle": 212,
+    "xAllocation": "999173615359627576359108",
+    "vote2EarnAllocation": "199834723071925515271821",
+    "treasuryAllocation": "299752084607888272907732"
+  },
+  {
+    "cycle": 213,
+    "xAllocation": "999173615359627576359108",
+    "vote2EarnAllocation": "199834723071925515271821",
+    "treasuryAllocation": "299752084607888272907732"
+  },
+  {
+    "cycle": 214,
+    "xAllocation": "999173615359627576359108",
+    "vote2EarnAllocation": "199834723071925515271821",
+    "treasuryAllocation": "299752084607888272907732"
+  },
+  {
+    "cycle": 215,
+    "xAllocation": "999173615359627576359108",
+    "vote2EarnAllocation": "199834723071925515271821",
+    "treasuryAllocation": "299752084607888272907732"
+  },
+  {
+    "cycle": 216,
+    "xAllocation": "999173615359627576359108",
+    "vote2EarnAllocation": "199834723071925515271821",
+    "treasuryAllocation": "299752084607888272907732"
+  },
+  {
+    "cycle": 217,
+    "xAllocation": "959206670745242473304743",
+    "vote2EarnAllocation": "191841334149048494660948",
+    "treasuryAllocation": "287762001223572741991422"
+  },
+  {
+    "cycle": 218,
+    "xAllocation": "959206670745242473304743",
+    "vote2EarnAllocation": "191841334149048494660948",
+    "treasuryAllocation": "287762001223572741991422"
+  },
+  {
+    "cycle": 219,
+    "xAllocation": "959206670745242473304743",
+    "vote2EarnAllocation": "191841334149048494660948",
+    "treasuryAllocation": "287762001223572741991422"
+  },
+  {
+    "cycle": 220,
+    "xAllocation": "959206670745242473304743",
+    "vote2EarnAllocation": "191841334149048494660948",
+    "treasuryAllocation": "287762001223572741991422"
+  },
+  {
+    "cycle": 221,
+    "xAllocation": "959206670745242473304743",
+    "vote2EarnAllocation": "191841334149048494660948",
+    "treasuryAllocation": "287762001223572741991422"
+  },
+  {
+    "cycle": 222,
+    "xAllocation": "959206670745242473304743",
+    "vote2EarnAllocation": "191841334149048494660948",
+    "treasuryAllocation": "287762001223572741991422"
+  },
+  {
+    "cycle": 223,
+    "xAllocation": "959206670745242473304743",
+    "vote2EarnAllocation": "191841334149048494660948",
+    "treasuryAllocation": "287762001223572741991422"
+  },
+  {
+    "cycle": 224,
+    "xAllocation": "959206670745242473304743",
+    "vote2EarnAllocation": "191841334149048494660948",
+    "treasuryAllocation": "287762001223572741991422"
+  },
+  {
+    "cycle": 225,
+    "xAllocation": "959206670745242473304743",
+    "vote2EarnAllocation": "191841334149048494660948",
+    "treasuryAllocation": "287762001223572741991422"
+  },
+  {
+    "cycle": 226,
+    "xAllocation": "959206670745242473304743",
+    "vote2EarnAllocation": "191841334149048494660948",
+    "treasuryAllocation": "287762001223572741991422"
+  },
+  {
+    "cycle": 227,
+    "xAllocation": "959206670745242473304743",
+    "vote2EarnAllocation": "191841334149048494660948",
+    "treasuryAllocation": "287762001223572741991422"
+  },
+  {
+    "cycle": 228,
+    "xAllocation": "959206670745242473304743",
+    "vote2EarnAllocation": "191841334149048494660948",
+    "treasuryAllocation": "287762001223572741991422"
+  },
+  {
+    "cycle": 229,
+    "xAllocation": "920838403915432774372553",
+    "vote2EarnAllocation": "184167680783086554874510",
+    "treasuryAllocation": "276251521174629832311765"
+  },
+  {
+    "cycle": 230,
+    "xAllocation": "920838403915432774372553",
+    "vote2EarnAllocation": "184167680783086554874510",
+    "treasuryAllocation": "276251521174629832311765"
+  },
+  {
+    "cycle": 231,
+    "xAllocation": "920838403915432774372553",
+    "vote2EarnAllocation": "184167680783086554874510",
+    "treasuryAllocation": "276251521174629832311765"
+  },
+  {
+    "cycle": 232,
+    "xAllocation": "920838403915432774372553",
+    "vote2EarnAllocation": "184167680783086554874510",
+    "treasuryAllocation": "276251521174629832311765"
+  },
+  {
+    "cycle": 233,
+    "xAllocation": "920838403915432774372553",
+    "vote2EarnAllocation": "184167680783086554874510",
+    "treasuryAllocation": "276251521174629832311765"
+  },
+  {
+    "cycle": 234,
+    "xAllocation": "920838403915432774372553",
+    "vote2EarnAllocation": "184167680783086554874510",
+    "treasuryAllocation": "276251521174629832311765"
+  },
+  {
+    "cycle": 235,
+    "xAllocation": "920838403915432774372553",
+    "vote2EarnAllocation": "184167680783086554874510",
+    "treasuryAllocation": "276251521174629832311765"
+  },
+  {
+    "cycle": 236,
+    "xAllocation": "920838403915432774372553",
+    "vote2EarnAllocation": "184167680783086554874510",
+    "treasuryAllocation": "276251521174629832311765"
+  },
+  {
+    "cycle": 237,
+    "xAllocation": "920838403915432774372553",
+    "vote2EarnAllocation": "184167680783086554874510",
+    "treasuryAllocation": "276251521174629832311765"
+  },
+  {
+    "cycle": 238,
+    "xAllocation": "920838403915432774372553",
+    "vote2EarnAllocation": "184167680783086554874510",
+    "treasuryAllocation": "276251521174629832311765"
+  },
+  {
+    "cycle": 239,
+    "xAllocation": "920838403915432774372553",
+    "vote2EarnAllocation": "184167680783086554874510",
+    "treasuryAllocation": "276251521174629832311765"
+  },
+  {
+    "cycle": 240,
+    "xAllocation": "920838403915432774372553",
+    "vote2EarnAllocation": "184167680783086554874510",
+    "treasuryAllocation": "276251521174629832311765"
+  },
+  {
+    "cycle": 241,
+    "xAllocation": "884004867758815463397650",
+    "vote2EarnAllocation": "176800973551763092679530",
+    "treasuryAllocation": "265201460327644639019295"
+  },
+  {
+    "cycle": 242,
+    "xAllocation": "884004867758815463397650",
+    "vote2EarnAllocation": "176800973551763092679530",
+    "treasuryAllocation": "265201460327644639019295"
+  },
+  {
+    "cycle": 243,
+    "xAllocation": "884004867758815463397650",
+    "vote2EarnAllocation": "176800973551763092679530",
+    "treasuryAllocation": "265201460327644639019295"
+  },
+  {
+    "cycle": 244,
+    "xAllocation": "884004867758815463397650",
+    "vote2EarnAllocation": "176800973551763092679530",
+    "treasuryAllocation": "265201460327644639019295"
+  },
+  {
+    "cycle": 245,
+    "xAllocation": "884004867758815463397650",
+    "vote2EarnAllocation": "176800973551763092679530",
+    "treasuryAllocation": "265201460327644639019295"
+  },
+  {
+    "cycle": 246,
+    "xAllocation": "884004867758815463397650",
+    "vote2EarnAllocation": "176800973551763092679530",
+    "treasuryAllocation": "265201460327644639019295"
+  },
+  {
+    "cycle": 247,
+    "xAllocation": "884004867758815463397650",
+    "vote2EarnAllocation": "176800973551763092679530",
+    "treasuryAllocation": "265201460327644639019295"
+  },
+  {
+    "cycle": 248,
+    "xAllocation": "884004867758815463397650",
+    "vote2EarnAllocation": "176800973551763092679530",
+    "treasuryAllocation": "265201460327644639019295"
+  },
+  {
+    "cycle": 249,
+    "xAllocation": "884004867758815463397650",
+    "vote2EarnAllocation": "176800973551763092679530",
+    "treasuryAllocation": "265201460327644639019295"
+  },
+  {
+    "cycle": 250,
+    "xAllocation": "884004867758815463397650",
+    "vote2EarnAllocation": "176800973551763092679530",
+    "treasuryAllocation": "265201460327644639019295"
+  },
+  {
+    "cycle": 251,
+    "xAllocation": "884004867758815463397650",
+    "vote2EarnAllocation": "176800973551763092679530",
+    "treasuryAllocation": "265201460327644639019295"
+  },
+  {
+    "cycle": 252,
+    "xAllocation": "884004867758815463397650",
+    "vote2EarnAllocation": "176800973551763092679530",
+    "treasuryAllocation": "265201460327644639019295"
+  },
+  {
+    "cycle": 253,
+    "xAllocation": "848644673048462844861744",
+    "vote2EarnAllocation": "169728934609692568972348",
+    "treasuryAllocation": "254593401914538853458523"
+  },
+  {
+    "cycle": 254,
+    "xAllocation": "848644673048462844861744",
+    "vote2EarnAllocation": "169728934609692568972348",
+    "treasuryAllocation": "254593401914538853458523"
+  },
+  {
+    "cycle": 255,
+    "xAllocation": "848644673048462844861744",
+    "vote2EarnAllocation": "169728934609692568972348",
+    "treasuryAllocation": "254593401914538853458523"
+  },
+  {
+    "cycle": 256,
+    "xAllocation": "848644673048462844861744",
+    "vote2EarnAllocation": "169728934609692568972348",
+    "treasuryAllocation": "254593401914538853458523"
+  },
+  {
+    "cycle": 257,
+    "xAllocation": "848644673048462844861744",
+    "vote2EarnAllocation": "169728934609692568972348",
+    "treasuryAllocation": "254593401914538853458523"
+  },
+  {
+    "cycle": 258,
+    "xAllocation": "848644673048462844861744",
+    "vote2EarnAllocation": "169728934609692568972348",
+    "treasuryAllocation": "254593401914538853458523"
+  },
+  {
+    "cycle": 259,
+    "xAllocation": "848644673048462844861744",
+    "vote2EarnAllocation": "169728934609692568972348",
+    "treasuryAllocation": "254593401914538853458523"
+  },
+  {
+    "cycle": 260,
+    "xAllocation": "848644673048462844861744",
+    "vote2EarnAllocation": "169728934609692568972348",
+    "treasuryAllocation": "254593401914538853458523"
+  },
+  {
+    "cycle": 261,
+    "xAllocation": "848644673048462844861744",
+    "vote2EarnAllocation": "169728934609692568972348",
+    "treasuryAllocation": "254593401914538853458523"
+  },
+  {
+    "cycle": 262,
+    "xAllocation": "848644673048462844861744",
+    "vote2EarnAllocation": "169728934609692568972348",
+    "treasuryAllocation": "254593401914538853458523"
+  },
+  {
+    "cycle": 263,
+    "xAllocation": "848644673048462844861744",
+    "vote2EarnAllocation": "169728934609692568972348",
+    "treasuryAllocation": "254593401914538853458523"
+  },
+  {
+    "cycle": 264,
+    "xAllocation": "848644673048462844861744",
+    "vote2EarnAllocation": "169728934609692568972348",
+    "treasuryAllocation": "254593401914538853458523"
+  },
+  {
+    "cycle": 265,
+    "xAllocation": "814698886126524331067274",
+    "vote2EarnAllocation": "162939777225304866213454",
+    "treasuryAllocation": "244409665837957299320182"
+  },
+  {
+    "cycle": 266,
+    "xAllocation": "814698886126524331067274",
+    "vote2EarnAllocation": "162939777225304866213454",
+    "treasuryAllocation": "244409665837957299320182"
+  },
+  {
+    "cycle": 267,
+    "xAllocation": "814698886126524331067274",
+    "vote2EarnAllocation": "162939777225304866213454",
+    "treasuryAllocation": "244409665837957299320182"
+  },
+  {
+    "cycle": 268,
+    "xAllocation": "814698886126524331067274",
+    "vote2EarnAllocation": "162939777225304866213454",
+    "treasuryAllocation": "244409665837957299320182"
+  },
+  {
+    "cycle": 269,
+    "xAllocation": "814698886126524331067274",
+    "vote2EarnAllocation": "162939777225304866213454",
+    "treasuryAllocation": "244409665837957299320182"
+  },
+  {
+    "cycle": 270,
+    "xAllocation": "814698886126524331067274",
+    "vote2EarnAllocation": "162939777225304866213454",
+    "treasuryAllocation": "244409665837957299320182"
+  },
+  {
+    "cycle": 271,
+    "xAllocation": "814698886126524331067274",
+    "vote2EarnAllocation": "162939777225304866213454",
+    "treasuryAllocation": "244409665837957299320182"
+  },
+  {
+    "cycle": 272,
+    "xAllocation": "814698886126524331067274",
+    "vote2EarnAllocation": "162939777225304866213454",
+    "treasuryAllocation": "244409665837957299320182"
+  },
+  {
+    "cycle": 273,
+    "xAllocation": "814698886126524331067274",
+    "vote2EarnAllocation": "162939777225304866213454",
+    "treasuryAllocation": "244409665837957299320182"
+  },
+  {
+    "cycle": 274,
+    "xAllocation": "814698886126524331067274",
+    "vote2EarnAllocation": "162939777225304866213454",
+    "treasuryAllocation": "244409665837957299320182"
+  },
+  {
+    "cycle": 275,
+    "xAllocation": "814698886126524331067274",
+    "vote2EarnAllocation": "162939777225304866213454",
+    "treasuryAllocation": "244409665837957299320182"
+  },
+  {
+    "cycle": 276,
+    "xAllocation": "814698886126524331067274",
+    "vote2EarnAllocation": "162939777225304866213454",
+    "treasuryAllocation": "244409665837957299320182"
+  },
+  {
+    "cycle": 277,
+    "xAllocation": "782110930681463357824583",
+    "vote2EarnAllocation": "156422186136292671564916",
+    "treasuryAllocation": "234633279204439007347374"
+  },
+  {
+    "cycle": 278,
+    "xAllocation": "782110930681463357824583",
+    "vote2EarnAllocation": "156422186136292671564916",
+    "treasuryAllocation": "234633279204439007347374"
+  },
+  {
+    "cycle": 279,
+    "xAllocation": "782110930681463357824583",
+    "vote2EarnAllocation": "156422186136292671564916",
+    "treasuryAllocation": "234633279204439007347374"
+  },
+  {
+    "cycle": 280,
+    "xAllocation": "782110930681463357824583",
+    "vote2EarnAllocation": "156422186136292671564916",
+    "treasuryAllocation": "234633279204439007347374"
+  },
+  {
+    "cycle": 281,
+    "xAllocation": "782110930681463357824583",
+    "vote2EarnAllocation": "156422186136292671564916",
+    "treasuryAllocation": "234633279204439007347374"
+  },
+  {
+    "cycle": 282,
+    "xAllocation": "782110930681463357824583",
+    "vote2EarnAllocation": "156422186136292671564916",
+    "treasuryAllocation": "234633279204439007347374"
+  },
+  {
+    "cycle": 283,
+    "xAllocation": "782110930681463357824583",
+    "vote2EarnAllocation": "156422186136292671564916",
+    "treasuryAllocation": "234633279204439007347374"
+  },
+  {
+    "cycle": 284,
+    "xAllocation": "782110930681463357824583",
+    "vote2EarnAllocation": "156422186136292671564916",
+    "treasuryAllocation": "234633279204439007347374"
+  },
+  {
+    "cycle": 285,
+    "xAllocation": "782110930681463357824583",
+    "vote2EarnAllocation": "156422186136292671564916",
+    "treasuryAllocation": "234633279204439007347374"
+  },
+  {
+    "cycle": 286,
+    "xAllocation": "782110930681463357824583",
+    "vote2EarnAllocation": "156422186136292671564916",
+    "treasuryAllocation": "234633279204439007347374"
+  },
+  {
+    "cycle": 287,
+    "xAllocation": "782110930681463357824583",
+    "vote2EarnAllocation": "156422186136292671564916",
+    "treasuryAllocation": "234633279204439007347374"
+  },
+  {
+    "cycle": 288,
+    "xAllocation": "782110930681463357824583",
+    "vote2EarnAllocation": "156422186136292671564916",
+    "treasuryAllocation": "234633279204439007347374"
+  },
+  {
+    "cycle": 289,
+    "xAllocation": "750826493454204823511599",
+    "vote2EarnAllocation": "150165298690840964702319",
+    "treasuryAllocation": "225247948036261447053479"
+  },
+  {
+    "cycle": 290,
+    "xAllocation": "750826493454204823511599",
+    "vote2EarnAllocation": "150165298690840964702319",
+    "treasuryAllocation": "225247948036261447053479"
+  },
+  {
+    "cycle": 291,
+    "xAllocation": "750826493454204823511599",
+    "vote2EarnAllocation": "150165298690840964702319",
+    "treasuryAllocation": "225247948036261447053479"
+  },
+  {
+    "cycle": 292,
+    "xAllocation": "750826493454204823511599",
+    "vote2EarnAllocation": "150165298690840964702319",
+    "treasuryAllocation": "225247948036261447053479"
+  },
+  {
+    "cycle": 293,
+    "xAllocation": "750826493454204823511599",
+    "vote2EarnAllocation": "150165298690840964702319",
+    "treasuryAllocation": "225247948036261447053479"
+  },
+  {
+    "cycle": 294,
+    "xAllocation": "750826493454204823511599",
+    "vote2EarnAllocation": "150165298690840964702319",
+    "treasuryAllocation": "225247948036261447053479"
+  },
+  {
+    "cycle": 295,
+    "xAllocation": "750826493454204823511599",
+    "vote2EarnAllocation": "150165298690840964702319",
+    "treasuryAllocation": "225247948036261447053479"
+  },
+  {
+    "cycle": 296,
+    "xAllocation": "750826493454204823511599",
+    "vote2EarnAllocation": "150165298690840964702319",
+    "treasuryAllocation": "225247948036261447053479"
+  },
+  {
+    "cycle": 297,
+    "xAllocation": "750826493454204823511599",
+    "vote2EarnAllocation": "150165298690840964702319",
+    "treasuryAllocation": "225247948036261447053479"
+  },
+  {
+    "cycle": 298,
+    "xAllocation": "750826493454204823511599",
+    "vote2EarnAllocation": "150165298690840964702319",
+    "treasuryAllocation": "225247948036261447053479"
+  },
+  {
+    "cycle": 299,
+    "xAllocation": "750826493454204823511599",
+    "vote2EarnAllocation": "150165298690840964702319",
+    "treasuryAllocation": "225247948036261447053479"
+  },
+  {
+    "cycle": 300,
+    "xAllocation": "750826493454204823511599",
+    "vote2EarnAllocation": "150165298690840964702319",
+    "treasuryAllocation": "225247948036261447053479"
+  },
+  {
+    "cycle": 301,
+    "xAllocation": "720793433716036630571135",
+    "vote2EarnAllocation": "144158686743207326114227",
+    "treasuryAllocation": "216238030114810989171340"
+  },
+  {
+    "cycle": 302,
+    "xAllocation": "720793433716036630571135",
+    "vote2EarnAllocation": "144158686743207326114227",
+    "treasuryAllocation": "216238030114810989171340"
+  },
+  {
+    "cycle": 303,
+    "xAllocation": "720793433716036630571135",
+    "vote2EarnAllocation": "144158686743207326114227",
+    "treasuryAllocation": "216238030114810989171340"
+  },
+  {
+    "cycle": 304,
+    "xAllocation": "720793433716036630571135",
+    "vote2EarnAllocation": "144158686743207326114227",
+    "treasuryAllocation": "216238030114810989171340"
+  },
+  {
+    "cycle": 305,
+    "xAllocation": "720793433716036630571135",
+    "vote2EarnAllocation": "144158686743207326114227",
+    "treasuryAllocation": "216238030114810989171340"
+  },
+  {
+    "cycle": 306,
+    "xAllocation": "720793433716036630571135",
+    "vote2EarnAllocation": "144158686743207326114227",
+    "treasuryAllocation": "216238030114810989171340"
+  },
+  {
+    "cycle": 307,
+    "xAllocation": "720793433716036630571135",
+    "vote2EarnAllocation": "144158686743207326114227",
+    "treasuryAllocation": "216238030114810989171340"
+  },
+  {
+    "cycle": 308,
+    "xAllocation": "720793433716036630571135",
+    "vote2EarnAllocation": "144158686743207326114227",
+    "treasuryAllocation": "216238030114810989171340"
+  },
+  {
+    "cycle": 309,
+    "xAllocation": "720793433716036630571135",
+    "vote2EarnAllocation": "144158686743207326114227",
+    "treasuryAllocation": "216238030114810989171340"
+  },
+  {
+    "cycle": 310,
+    "xAllocation": "720793433716036630571135",
+    "vote2EarnAllocation": "144158686743207326114227",
+    "treasuryAllocation": "216238030114810989171340"
+  },
+  {
+    "cycle": 311,
+    "xAllocation": "720793433716036630571135",
+    "vote2EarnAllocation": "144158686743207326114227",
+    "treasuryAllocation": "216238030114810989171340"
+  },
+  {
+    "cycle": 312,
+    "xAllocation": "720793433716036630571135",
+    "vote2EarnAllocation": "144158686743207326114227",
+    "treasuryAllocation": "216238030114810989171340"
+  },
+  {
+    "cycle": 313,
+    "xAllocation": "691961696367395165348289",
+    "vote2EarnAllocation": "138392339273479033069657",
+    "treasuryAllocation": "207588508910218549604486"
+  },
+  {
+    "cycle": 314,
+    "xAllocation": "691961696367395165348289",
+    "vote2EarnAllocation": "138392339273479033069657",
+    "treasuryAllocation": "207588508910218549604486"
+  },
+  {
+    "cycle": 315,
+    "xAllocation": "691961696367395165348289",
+    "vote2EarnAllocation": "138392339273479033069657",
+    "treasuryAllocation": "207588508910218549604486"
+  },
+  {
+    "cycle": 316,
+    "xAllocation": "691961696367395165348289",
+    "vote2EarnAllocation": "138392339273479033069657",
+    "treasuryAllocation": "207588508910218549604486"
+  },
+  {
+    "cycle": 317,
+    "xAllocation": "691961696367395165348289",
+    "vote2EarnAllocation": "138392339273479033069657",
+    "treasuryAllocation": "207588508910218549604486"
+  },
+  {
+    "cycle": 318,
+    "xAllocation": "691961696367395165348289",
+    "vote2EarnAllocation": "138392339273479033069657",
+    "treasuryAllocation": "207588508910218549604486"
+  },
+  {
+    "cycle": 319,
+    "xAllocation": "691961696367395165348289",
+    "vote2EarnAllocation": "138392339273479033069657",
+    "treasuryAllocation": "207588508910218549604486"
+  },
+  {
+    "cycle": 320,
+    "xAllocation": "691961696367395165348289",
+    "vote2EarnAllocation": "138392339273479033069657",
+    "treasuryAllocation": "207588508910218549604486"
+  },
+  {
+    "cycle": 321,
+    "xAllocation": "691961696367395165348289",
+    "vote2EarnAllocation": "138392339273479033069657",
+    "treasuryAllocation": "207588508910218549604486"
+  },
+  {
+    "cycle": 322,
+    "xAllocation": "691961696367395165348289",
+    "vote2EarnAllocation": "138392339273479033069657",
+    "treasuryAllocation": "207588508910218549604486"
+  },
+  {
+    "cycle": 323,
+    "xAllocation": "691961696367395165348289",
+    "vote2EarnAllocation": "138392339273479033069657",
+    "treasuryAllocation": "207588508910218549604486"
+  },
+  {
+    "cycle": 324,
+    "xAllocation": "691961696367395165348289",
+    "vote2EarnAllocation": "138392339273479033069657",
+    "treasuryAllocation": "207588508910218549604486"
+  },
+  {
+    "cycle": 325,
+    "xAllocation": "664283228512699358734357",
+    "vote2EarnAllocation": "132856645702539871746871",
+    "treasuryAllocation": "199284968553809807620307"
+  },
+  {
+    "cycle": 326,
+    "xAllocation": "664283228512699358734357",
+    "vote2EarnAllocation": "132856645702539871746871",
+    "treasuryAllocation": "199284968553809807620307"
+  },
+  {
+    "cycle": 327,
+    "xAllocation": "664283228512699358734357",
+    "vote2EarnAllocation": "132856645702539871746871",
+    "treasuryAllocation": "199284968553809807620307"
+  },
+  {
+    "cycle": 328,
+    "xAllocation": "664283228512699358734357",
+    "vote2EarnAllocation": "132856645702539871746871",
+    "treasuryAllocation": "199284968553809807620307"
+  },
+  {
+    "cycle": 329,
+    "xAllocation": "664283228512699358734357",
+    "vote2EarnAllocation": "132856645702539871746871",
+    "treasuryAllocation": "199284968553809807620307"
+  },
+  {
+    "cycle": 330,
+    "xAllocation": "664283228512699358734357",
+    "vote2EarnAllocation": "132856645702539871746871",
+    "treasuryAllocation": "199284968553809807620307"
+  },
+  {
+    "cycle": 331,
+    "xAllocation": "664283228512699358734357",
+    "vote2EarnAllocation": "132856645702539871746871",
+    "treasuryAllocation": "199284968553809807620307"
+  },
+  {
+    "cycle": 332,
+    "xAllocation": "664283228512699358734357",
+    "vote2EarnAllocation": "132856645702539871746871",
+    "treasuryAllocation": "199284968553809807620307"
+  },
+  {
+    "cycle": 333,
+    "xAllocation": "664283228512699358734357",
+    "vote2EarnAllocation": "132856645702539871746871",
+    "treasuryAllocation": "199284968553809807620307"
+  },
+  {
+    "cycle": 334,
+    "xAllocation": "664283228512699358734357",
+    "vote2EarnAllocation": "132856645702539871746871",
+    "treasuryAllocation": "199284968553809807620307"
+  },
+  {
+    "cycle": 335,
+    "xAllocation": "664283228512699358734357",
+    "vote2EarnAllocation": "132856645702539871746871",
+    "treasuryAllocation": "199284968553809807620307"
+  },
+  {
+    "cycle": 336,
+    "xAllocation": "664283228512699358734357",
+    "vote2EarnAllocation": "132856645702539871746871",
+    "treasuryAllocation": "199284968553809807620307"
+  },
+  {
+    "cycle": 337,
+    "xAllocation": "637711899372191384384982",
+    "vote2EarnAllocation": "127542379874438276876996",
+    "treasuryAllocation": "191313569811657415315494"
+  },
+  {
+    "cycle": 338,
+    "xAllocation": "637711899372191384384982",
+    "vote2EarnAllocation": "127542379874438276876996",
+    "treasuryAllocation": "191313569811657415315494"
+  },
+  {
+    "cycle": 339,
+    "xAllocation": "637711899372191384384982",
+    "vote2EarnAllocation": "127542379874438276876996",
+    "treasuryAllocation": "191313569811657415315494"
+  },
+  {
+    "cycle": 340,
+    "xAllocation": "637711899372191384384982",
+    "vote2EarnAllocation": "127542379874438276876996",
+    "treasuryAllocation": "191313569811657415315494"
+  },
+  {
+    "cycle": 341,
+    "xAllocation": "637711899372191384384982",
+    "vote2EarnAllocation": "127542379874438276876996",
+    "treasuryAllocation": "191313569811657415315494"
+  },
+  {
+    "cycle": 342,
+    "xAllocation": "637711899372191384384982",
+    "vote2EarnAllocation": "127542379874438276876996",
+    "treasuryAllocation": "191313569811657415315494"
+  },
+  {
+    "cycle": 343,
+    "xAllocation": "637711899372191384384982",
+    "vote2EarnAllocation": "127542379874438276876996",
+    "treasuryAllocation": "191313569811657415315494"
+  },
+  {
+    "cycle": 344,
+    "xAllocation": "637711899372191384384982",
+    "vote2EarnAllocation": "127542379874438276876996",
+    "treasuryAllocation": "191313569811657415315494"
+  },
+  {
+    "cycle": 345,
+    "xAllocation": "637711899372191384384982",
+    "vote2EarnAllocation": "127542379874438276876996",
+    "treasuryAllocation": "191313569811657415315494"
+  },
+  {
+    "cycle": 346,
+    "xAllocation": "637711899372191384384982",
+    "vote2EarnAllocation": "127542379874438276876996",
+    "treasuryAllocation": "191313569811657415315494"
+  },
+  {
+    "cycle": 347,
+    "xAllocation": "637711899372191384384982",
+    "vote2EarnAllocation": "127542379874438276876996",
+    "treasuryAllocation": "191313569811657415315494"
+  },
+  {
+    "cycle": 348,
+    "xAllocation": "637711899372191384384982",
+    "vote2EarnAllocation": "127542379874438276876996",
+    "treasuryAllocation": "191313569811657415315494"
+  },
+  {
+    "cycle": 349,
+    "xAllocation": "612203423397303729009582",
+    "vote2EarnAllocation": "122440684679460745801916",
+    "treasuryAllocation": "183661027019191118702874"
+  },
+  {
+    "cycle": 350,
+    "xAllocation": "612203423397303729009582",
+    "vote2EarnAllocation": "122440684679460745801916",
+    "treasuryAllocation": "183661027019191118702874"
+  },
+  {
+    "cycle": 351,
+    "xAllocation": "612203423397303729009582",
+    "vote2EarnAllocation": "122440684679460745801916",
+    "treasuryAllocation": "183661027019191118702874"
+  },
+  {
+    "cycle": 352,
+    "xAllocation": "612203423397303729009582",
+    "vote2EarnAllocation": "122440684679460745801916",
+    "treasuryAllocation": "183661027019191118702874"
+  },
+  {
+    "cycle": 353,
+    "xAllocation": "612203423397303729009582",
+    "vote2EarnAllocation": "122440684679460745801916",
+    "treasuryAllocation": "183661027019191118702874"
+  },
+  {
+    "cycle": 354,
+    "xAllocation": "612203423397303729009582",
+    "vote2EarnAllocation": "122440684679460745801916",
+    "treasuryAllocation": "183661027019191118702874"
+  },
+  {
+    "cycle": 355,
+    "xAllocation": "612203423397303729009582",
+    "vote2EarnAllocation": "122440684679460745801916",
+    "treasuryAllocation": "183661027019191118702874"
+  },
+  {
+    "cycle": 356,
+    "xAllocation": "612203423397303729009582",
+    "vote2EarnAllocation": "122440684679460745801916",
+    "treasuryAllocation": "183661027019191118702874"
+  },
+  {
+    "cycle": 357,
+    "xAllocation": "612203423397303729009582",
+    "vote2EarnAllocation": "122440684679460745801916",
+    "treasuryAllocation": "183661027019191118702874"
+  },
+  {
+    "cycle": 358,
+    "xAllocation": "612203423397303729009582",
+    "vote2EarnAllocation": "122440684679460745801916",
+    "treasuryAllocation": "183661027019191118702874"
+  },
+  {
+    "cycle": 359,
+    "xAllocation": "612203423397303729009582",
+    "vote2EarnAllocation": "122440684679460745801916",
+    "treasuryAllocation": "183661027019191118702874"
+  },
+  {
+    "cycle": 360,
+    "xAllocation": "612203423397303729009582",
+    "vote2EarnAllocation": "122440684679460745801916",
+    "treasuryAllocation": "183661027019191118702874"
+  },
+  {
+    "cycle": 361,
+    "xAllocation": "587715286461411579849198",
+    "vote2EarnAllocation": "117543057292282315969839",
+    "treasuryAllocation": "176314585938423473954759"
+  },
+  {
+    "cycle": 362,
+    "xAllocation": "587715286461411579849198",
+    "vote2EarnAllocation": "117543057292282315969839",
+    "treasuryAllocation": "176314585938423473954759"
+  },
+  {
+    "cycle": 363,
+    "xAllocation": "587715286461411579849198",
+    "vote2EarnAllocation": "117543057292282315969839",
+    "treasuryAllocation": "176314585938423473954759"
+  },
+  {
+    "cycle": 364,
+    "xAllocation": "587715286461411579849198",
+    "vote2EarnAllocation": "117543057292282315969839",
+    "treasuryAllocation": "176314585938423473954759"
+  },
+  {
+    "cycle": 365,
+    "xAllocation": "587715286461411579849198",
+    "vote2EarnAllocation": "117543057292282315969839",
+    "treasuryAllocation": "176314585938423473954759"
+  },
+  {
+    "cycle": 366,
+    "xAllocation": "587715286461411579849198",
+    "vote2EarnAllocation": "117543057292282315969839",
+    "treasuryAllocation": "176314585938423473954759"
+  },
+  {
+    "cycle": 367,
+    "xAllocation": "587715286461411579849198",
+    "vote2EarnAllocation": "117543057292282315969839",
+    "treasuryAllocation": "176314585938423473954759"
+  },
+  {
+    "cycle": 368,
+    "xAllocation": "587715286461411579849198",
+    "vote2EarnAllocation": "117543057292282315969839",
+    "treasuryAllocation": "176314585938423473954759"
+  },
+  {
+    "cycle": 369,
+    "xAllocation": "587715286461411579849198",
+    "vote2EarnAllocation": "117543057292282315969839",
+    "treasuryAllocation": "176314585938423473954759"
+  },
+  {
+    "cycle": 370,
+    "xAllocation": "587715286461411579849198",
+    "vote2EarnAllocation": "117543057292282315969839",
+    "treasuryAllocation": "176314585938423473954759"
+  },
+  {
+    "cycle": 371,
+    "xAllocation": "587715286461411579849198",
+    "vote2EarnAllocation": "117543057292282315969839",
+    "treasuryAllocation": "176314585938423473954759"
+  },
+  {
+    "cycle": 372,
+    "xAllocation": "587715286461411579849198",
+    "vote2EarnAllocation": "117543057292282315969839",
+    "treasuryAllocation": "176314585938423473954759"
+  },
+  {
+    "cycle": 373,
+    "xAllocation": "564206675002955116655230",
+    "vote2EarnAllocation": "112841335000591023331046",
+    "treasuryAllocation": "169262002500886534996569"
+  },
+  {
+    "cycle": 374,
+    "xAllocation": "564206675002955116655230",
+    "vote2EarnAllocation": "112841335000591023331046",
+    "treasuryAllocation": "169262002500886534996569"
+  },
+  {
+    "cycle": 375,
+    "xAllocation": "564206675002955116655230",
+    "vote2EarnAllocation": "112841335000591023331046",
+    "treasuryAllocation": "169262002500886534996569"
+  },
+  {
+    "cycle": 376,
+    "xAllocation": "564206675002955116655230",
+    "vote2EarnAllocation": "112841335000591023331046",
+    "treasuryAllocation": "169262002500886534996569"
+  },
+  {
+    "cycle": 377,
+    "xAllocation": "564206675002955116655230",
+    "vote2EarnAllocation": "112841335000591023331046",
+    "treasuryAllocation": "169262002500886534996569"
+  },
+  {
+    "cycle": 378,
+    "xAllocation": "564206675002955116655230",
+    "vote2EarnAllocation": "112841335000591023331046",
+    "treasuryAllocation": "169262002500886534996569"
+  },
+  {
+    "cycle": 379,
+    "xAllocation": "564206675002955116655230",
+    "vote2EarnAllocation": "112841335000591023331046",
+    "treasuryAllocation": "169262002500886534996569"
+  },
+  {
+    "cycle": 380,
+    "xAllocation": "564206675002955116655230",
+    "vote2EarnAllocation": "112841335000591023331046",
+    "treasuryAllocation": "169262002500886534996569"
+  },
+  {
+    "cycle": 381,
+    "xAllocation": "564206675002955116655230",
+    "vote2EarnAllocation": "112841335000591023331046",
+    "treasuryAllocation": "169262002500886534996569"
+  },
+  {
+    "cycle": 382,
+    "xAllocation": "564206675002955116655230",
+    "vote2EarnAllocation": "112841335000591023331046",
+    "treasuryAllocation": "169262002500886534996569"
+  },
+  {
+    "cycle": 383,
+    "xAllocation": "564206675002955116655230",
+    "vote2EarnAllocation": "112841335000591023331046",
+    "treasuryAllocation": "169262002500886534996569"
+  },
+  {
+    "cycle": 384,
+    "xAllocation": "564206675002955116655230",
+    "vote2EarnAllocation": "112841335000591023331046",
+    "treasuryAllocation": "169262002500886534996569"
+  },
+  {
+    "cycle": 385,
+    "xAllocation": "541638408002836911989020",
+    "vote2EarnAllocation": "108327681600567382397804",
+    "treasuryAllocation": "162491522400851073596706"
+  },
+  {
+    "cycle": 386,
+    "xAllocation": "541638408002836911989020",
+    "vote2EarnAllocation": "108327681600567382397804",
+    "treasuryAllocation": "162491522400851073596706"
+  },
+  {
+    "cycle": 387,
+    "xAllocation": "541638408002836911989020",
+    "vote2EarnAllocation": "108327681600567382397804",
+    "treasuryAllocation": "162491522400851073596706"
+  },
+  {
+    "cycle": 388,
+    "xAllocation": "541638408002836911989020",
+    "vote2EarnAllocation": "108327681600567382397804",
+    "treasuryAllocation": "162491522400851073596706"
+  },
+  {
+    "cycle": 389,
+    "xAllocation": "541638408002836911989020",
+    "vote2EarnAllocation": "108327681600567382397804",
+    "treasuryAllocation": "162491522400851073596706"
+  },
+  {
+    "cycle": 390,
+    "xAllocation": "541638408002836911989020",
+    "vote2EarnAllocation": "108327681600567382397804",
+    "treasuryAllocation": "162491522400851073596706"
+  },
+  {
+    "cycle": 391,
+    "xAllocation": "541638408002836911989020",
+    "vote2EarnAllocation": "108327681600567382397804",
+    "treasuryAllocation": "162491522400851073596706"
+  },
+  {
+    "cycle": 392,
+    "xAllocation": "541638408002836911989020",
+    "vote2EarnAllocation": "108327681600567382397804",
+    "treasuryAllocation": "162491522400851073596706"
+  },
+  {
+    "cycle": 393,
+    "xAllocation": "541638408002836911989020",
+    "vote2EarnAllocation": "108327681600567382397804",
+    "treasuryAllocation": "162491522400851073596706"
+  },
+  {
+    "cycle": 394,
+    "xAllocation": "541638408002836911989020",
+    "vote2EarnAllocation": "108327681600567382397804",
+    "treasuryAllocation": "162491522400851073596706"
+  },
+  {
+    "cycle": 395,
+    "xAllocation": "541638408002836911989020",
+    "vote2EarnAllocation": "108327681600567382397804",
+    "treasuryAllocation": "162491522400851073596706"
+  },
+  {
+    "cycle": 396,
+    "xAllocation": "541638408002836911989020",
+    "vote2EarnAllocation": "108327681600567382397804",
+    "treasuryAllocation": "162491522400851073596706"
+  },
+  {
+    "cycle": 397,
+    "xAllocation": "519972871682723435509459",
+    "vote2EarnAllocation": "103994574336544687101891",
+    "treasuryAllocation": "155991861504817030652837"
+  },
+  {
+    "cycle": 398,
+    "xAllocation": "519972871682723435509459",
+    "vote2EarnAllocation": "103994574336544687101891",
+    "treasuryAllocation": "155991861504817030652837"
+  },
+  {
+    "cycle": 399,
+    "xAllocation": "519972871682723435509459",
+    "vote2EarnAllocation": "103994574336544687101891",
+    "treasuryAllocation": "155991861504817030652837"
+  },
+  {
+    "cycle": 400,
+    "xAllocation": "519972871682723435509459",
+    "vote2EarnAllocation": "103994574336544687101891",
+    "treasuryAllocation": "155991861504817030652837"
+  },
+  {
+    "cycle": 401,
+    "xAllocation": "519972871682723435509459",
+    "vote2EarnAllocation": "103994574336544687101891",
+    "treasuryAllocation": "155991861504817030652837"
+  },
+  {
+    "cycle": 402,
+    "xAllocation": "519972871682723435509459",
+    "vote2EarnAllocation": "103994574336544687101891",
+    "treasuryAllocation": "155991861504817030652837"
+  },
+  {
+    "cycle": 403,
+    "xAllocation": "519972871682723435509459",
+    "vote2EarnAllocation": "103994574336544687101891",
+    "treasuryAllocation": "155991861504817030652837"
+  },
+  {
+    "cycle": 404,
+    "xAllocation": "519972871682723435509459",
+    "vote2EarnAllocation": "103994574336544687101891",
+    "treasuryAllocation": "155991861504817030652837"
+  },
+  {
+    "cycle": 405,
+    "xAllocation": "519972871682723435509459",
+    "vote2EarnAllocation": "103994574336544687101891",
+    "treasuryAllocation": "155991861504817030652837"
+  },
+  {
+    "cycle": 406,
+    "xAllocation": "519972871682723435509459",
+    "vote2EarnAllocation": "103994574336544687101891",
+    "treasuryAllocation": "155991861504817030652837"
+  },
+  {
+    "cycle": 407,
+    "xAllocation": "519972871682723435509459",
+    "vote2EarnAllocation": "103994574336544687101891",
+    "treasuryAllocation": "155991861504817030652837"
+  },
+  {
+    "cycle": 408,
+    "xAllocation": "519972871682723435509459",
+    "vote2EarnAllocation": "103994574336544687101891",
+    "treasuryAllocation": "155991861504817030652837"
+  },
+  {
+    "cycle": 409,
+    "xAllocation": "499173956815414498089080",
+    "vote2EarnAllocation": "99834791363082899617816",
+    "treasuryAllocation": "149752187044624349426724"
+  },
+  {
+    "cycle": 410,
+    "xAllocation": "499173956815414498089080",
+    "vote2EarnAllocation": "99834791363082899617816",
+    "treasuryAllocation": "149752187044624349426724"
+  },
+  {
+    "cycle": 411,
+    "xAllocation": "499173956815414498089080",
+    "vote2EarnAllocation": "99834791363082899617816",
+    "treasuryAllocation": "149752187044624349426724"
+  },
+  {
+    "cycle": 412,
+    "xAllocation": "499173956815414498089080",
+    "vote2EarnAllocation": "99834791363082899617816",
+    "treasuryAllocation": "149752187044624349426724"
+  },
+  {
+    "cycle": 413,
+    "xAllocation": "499173956815414498089080",
+    "vote2EarnAllocation": "99834791363082899617816",
+    "treasuryAllocation": "149752187044624349426724"
+  },
+  {
+    "cycle": 414,
+    "xAllocation": "499173956815414498089080",
+    "vote2EarnAllocation": "99834791363082899617816",
+    "treasuryAllocation": "149752187044624349426724"
+  },
+  {
+    "cycle": 415,
+    "xAllocation": "499173956815414498089080",
+    "vote2EarnAllocation": "99834791363082899617816",
+    "treasuryAllocation": "149752187044624349426724"
+  },
+  {
+    "cycle": 416,
+    "xAllocation": "499173956815414498089080",
+    "vote2EarnAllocation": "99834791363082899617816",
+    "treasuryAllocation": "149752187044624349426724"
+  },
+  {
+    "cycle": 417,
+    "xAllocation": "499173956815414498089080",
+    "vote2EarnAllocation": "99834791363082899617816",
+    "treasuryAllocation": "149752187044624349426724"
+  },
+  {
+    "cycle": 418,
+    "xAllocation": "499173956815414498089080",
+    "vote2EarnAllocation": "99834791363082899617816",
+    "treasuryAllocation": "149752187044624349426724"
+  },
+  {
+    "cycle": 419,
+    "xAllocation": "499173956815414498089080",
+    "vote2EarnAllocation": "99834791363082899617816",
+    "treasuryAllocation": "149752187044624349426724"
+  },
+  {
+    "cycle": 420,
+    "xAllocation": "499173956815414498089080",
+    "vote2EarnAllocation": "99834791363082899617816",
+    "treasuryAllocation": "149752187044624349426724"
+  },
+  {
+    "cycle": 421,
+    "xAllocation": "479206998542797918165516",
+    "vote2EarnAllocation": "95841399708559583633103",
+    "treasuryAllocation": "143762099562839375449654"
+  },
+  {
+    "cycle": 422,
+    "xAllocation": "479206998542797918165516",
+    "vote2EarnAllocation": "95841399708559583633103",
+    "treasuryAllocation": "143762099562839375449654"
+  },
+  {
+    "cycle": 423,
+    "xAllocation": "479206998542797918165516",
+    "vote2EarnAllocation": "95841399708559583633103",
+    "treasuryAllocation": "143762099562839375449654"
+  },
+  {
+    "cycle": 424,
+    "xAllocation": "479206998542797918165516",
+    "vote2EarnAllocation": "95841399708559583633103",
+    "treasuryAllocation": "143762099562839375449654"
+  },
+  {
+    "cycle": 425,
+    "xAllocation": "479206998542797918165516",
+    "vote2EarnAllocation": "95841399708559583633103",
+    "treasuryAllocation": "143762099562839375449654"
+  },
+  {
+    "cycle": 426,
+    "xAllocation": "479206998542797918165516",
+    "vote2EarnAllocation": "95841399708559583633103",
+    "treasuryAllocation": "143762099562839375449654"
+  },
+  {
+    "cycle": 427,
+    "xAllocation": "479206998542797918165516",
+    "vote2EarnAllocation": "95841399708559583633103",
+    "treasuryAllocation": "143762099562839375449654"
+  },
+  {
+    "cycle": 428,
+    "xAllocation": "479206998542797918165516",
+    "vote2EarnAllocation": "95841399708559583633103",
+    "treasuryAllocation": "143762099562839375449654"
+  },
+  {
+    "cycle": 429,
+    "xAllocation": "479206998542797918165516",
+    "vote2EarnAllocation": "95841399708559583633103",
+    "treasuryAllocation": "143762099562839375449654"
+  },
+  {
+    "cycle": 430,
+    "xAllocation": "479206998542797918165516",
+    "vote2EarnAllocation": "95841399708559583633103",
+    "treasuryAllocation": "143762099562839375449654"
+  },
+  {
+    "cycle": 431,
+    "xAllocation": "479206998542797918165516",
+    "vote2EarnAllocation": "95841399708559583633103",
+    "treasuryAllocation": "143762099562839375449654"
+  },
+  {
+    "cycle": 432,
+    "xAllocation": "479206998542797918165516",
+    "vote2EarnAllocation": "95841399708559583633103",
+    "treasuryAllocation": "143762099562839375449654"
+  },
+  {
+    "cycle": 433,
+    "xAllocation": "460038718601086001438895",
+    "vote2EarnAllocation": "92007743720217200287779",
+    "treasuryAllocation": "138011615580325800431668"
+  },
+  {
+    "cycle": 434,
+    "xAllocation": "460038718601086001438895",
+    "vote2EarnAllocation": "92007743720217200287779",
+    "treasuryAllocation": "138011615580325800431668"
+  },
+  {
+    "cycle": 435,
+    "xAllocation": "460038718601086001438895",
+    "vote2EarnAllocation": "92007743720217200287779",
+    "treasuryAllocation": "138011615580325800431668"
+  },
+  {
+    "cycle": 436,
+    "xAllocation": "460038718601086001438895",
+    "vote2EarnAllocation": "92007743720217200287779",
+    "treasuryAllocation": "138011615580325800431668"
+  },
+  {
+    "cycle": 437,
+    "xAllocation": "460038718601086001438895",
+    "vote2EarnAllocation": "92007743720217200287779",
+    "treasuryAllocation": "138011615580325800431668"
+  },
+  {
+    "cycle": 438,
+    "xAllocation": "460038718601086001438895",
+    "vote2EarnAllocation": "92007743720217200287779",
+    "treasuryAllocation": "138011615580325800431668"
+  },
+  {
+    "cycle": 439,
+    "xAllocation": "460038718601086001438895",
+    "vote2EarnAllocation": "92007743720217200287779",
+    "treasuryAllocation": "138011615580325800431668"
+  },
+  {
+    "cycle": 440,
+    "xAllocation": "460038718601086001438895",
+    "vote2EarnAllocation": "92007743720217200287779",
+    "treasuryAllocation": "138011615580325800431668"
+  },
+  {
+    "cycle": 441,
+    "xAllocation": "460038718601086001438895",
+    "vote2EarnAllocation": "92007743720217200287779",
+    "treasuryAllocation": "138011615580325800431668"
+  },
+  {
+    "cycle": 442,
+    "xAllocation": "460038718601086001438895",
+    "vote2EarnAllocation": "92007743720217200287779",
+    "treasuryAllocation": "138011615580325800431668"
+  },
+  {
+    "cycle": 443,
+    "xAllocation": "460038718601086001438895",
+    "vote2EarnAllocation": "92007743720217200287779",
+    "treasuryAllocation": "138011615580325800431668"
+  },
+  {
+    "cycle": 444,
+    "xAllocation": "460038718601086001438895",
+    "vote2EarnAllocation": "92007743720217200287779",
+    "treasuryAllocation": "138011615580325800431668"
+  },
+  {
+    "cycle": 445,
+    "xAllocation": "441637169857042561381339",
+    "vote2EarnAllocation": "88327433971408512276267",
+    "treasuryAllocation": "132491150957112768414401"
+  },
+  {
+    "cycle": 446,
+    "xAllocation": "441637169857042561381339",
+    "vote2EarnAllocation": "88327433971408512276267",
+    "treasuryAllocation": "132491150957112768414401"
+  },
+  {
+    "cycle": 447,
+    "xAllocation": "441637169857042561381339",
+    "vote2EarnAllocation": "88327433971408512276267",
+    "treasuryAllocation": "132491150957112768414401"
+  },
+  {
+    "cycle": 448,
+    "xAllocation": "441637169857042561381339",
+    "vote2EarnAllocation": "88327433971408512276267",
+    "treasuryAllocation": "132491150957112768414401"
+  },
+  {
+    "cycle": 449,
+    "xAllocation": "441637169857042561381339",
+    "vote2EarnAllocation": "88327433971408512276267",
+    "treasuryAllocation": "132491150957112768414401"
+  },
+  {
+    "cycle": 450,
+    "xAllocation": "441637169857042561381339",
+    "vote2EarnAllocation": "88327433971408512276267",
+    "treasuryAllocation": "132491150957112768414401"
+  },
+  {
+    "cycle": 451,
+    "xAllocation": "441637169857042561381339",
+    "vote2EarnAllocation": "88327433971408512276267",
+    "treasuryAllocation": "132491150957112768414401"
+  },
+  {
+    "cycle": 452,
+    "xAllocation": "441637169857042561381339",
+    "vote2EarnAllocation": "88327433971408512276267",
+    "treasuryAllocation": "132491150957112768414401"
+  },
+  {
+    "cycle": 453,
+    "xAllocation": "441637169857042561381339",
+    "vote2EarnAllocation": "88327433971408512276267",
+    "treasuryAllocation": "132491150957112768414401"
+  },
+  {
+    "cycle": 454,
+    "xAllocation": "441637169857042561381339",
+    "vote2EarnAllocation": "88327433971408512276267",
+    "treasuryAllocation": "132491150957112768414401"
+  },
+  {
+    "cycle": 455,
+    "xAllocation": "441637169857042561381339",
+    "vote2EarnAllocation": "88327433971408512276267",
+    "treasuryAllocation": "132491150957112768414401"
+  },
+  {
+    "cycle": 456,
+    "xAllocation": "441637169857042561381339",
+    "vote2EarnAllocation": "88327433971408512276267",
+    "treasuryAllocation": "132491150957112768414401"
+  },
+  {
+    "cycle": 457,
+    "xAllocation": "423971683062760858926085",
+    "vote2EarnAllocation": "84794336612552171785217",
+    "treasuryAllocation": "127191504918828257677825"
+  },
+  {
+    "cycle": 458,
+    "xAllocation": "423971683062760858926085",
+    "vote2EarnAllocation": "84794336612552171785217",
+    "treasuryAllocation": "127191504918828257677825"
+  },
+  {
+    "cycle": 459,
+    "xAllocation": "423971683062760858926085",
+    "vote2EarnAllocation": "84794336612552171785217",
+    "treasuryAllocation": "127191504918828257677825"
+  },
+  {
+    "cycle": 460,
+    "xAllocation": "423971683062760858926085",
+    "vote2EarnAllocation": "84794336612552171785217",
+    "treasuryAllocation": "127191504918828257677825"
+  },
+  {
+    "cycle": 461,
+    "xAllocation": "423971683062760858926085",
+    "vote2EarnAllocation": "84794336612552171785217",
+    "treasuryAllocation": "127191504918828257677825"
+  },
+  {
+    "cycle": 462,
+    "xAllocation": "423971683062760858926085",
+    "vote2EarnAllocation": "84794336612552171785217",
+    "treasuryAllocation": "127191504918828257677825"
+  },
+  {
+    "cycle": 463,
+    "xAllocation": "423971683062760858926085",
+    "vote2EarnAllocation": "84794336612552171785217",
+    "treasuryAllocation": "127191504918828257677825"
+  },
+  {
+    "cycle": 464,
+    "xAllocation": "423971683062760858926085",
+    "vote2EarnAllocation": "84794336612552171785217",
+    "treasuryAllocation": "127191504918828257677825"
+  },
+  {
+    "cycle": 465,
+    "xAllocation": "423971683062760858926085",
+    "vote2EarnAllocation": "84794336612552171785217",
+    "treasuryAllocation": "127191504918828257677825"
+  },
+  {
+    "cycle": 466,
+    "xAllocation": "423971683062760858926085",
+    "vote2EarnAllocation": "84794336612552171785217",
+    "treasuryAllocation": "127191504918828257677825"
+  },
+  {
+    "cycle": 467,
+    "xAllocation": "423971683062760858926085",
+    "vote2EarnAllocation": "84794336612552171785217",
+    "treasuryAllocation": "127191504918828257677825"
+  },
+  {
+    "cycle": 468,
+    "xAllocation": "423971683062760858926085",
+    "vote2EarnAllocation": "84794336612552171785217",
+    "treasuryAllocation": "127191504918828257677825"
+  },
+  {
+    "cycle": 469,
+    "xAllocation": "407012815740250424569041",
+    "vote2EarnAllocation": "81402563148050084913808",
+    "treasuryAllocation": "122103844722075127370712"
+  },
+  {
+    "cycle": 470,
+    "xAllocation": "407012815740250424569041",
+    "vote2EarnAllocation": "81402563148050084913808",
+    "treasuryAllocation": "122103844722075127370712"
+  },
+  {
+    "cycle": 471,
+    "xAllocation": "407012815740250424569041",
+    "vote2EarnAllocation": "81402563148050084913808",
+    "treasuryAllocation": "122103844722075127370712"
+  },
+  {
+    "cycle": 472,
+    "xAllocation": "407012815740250424569041",
+    "vote2EarnAllocation": "81402563148050084913808",
+    "treasuryAllocation": "122103844722075127370712"
+  },
+  {
+    "cycle": 473,
+    "xAllocation": "407012815740250424569041",
+    "vote2EarnAllocation": "81402563148050084913808",
+    "treasuryAllocation": "122103844722075127370712"
+  },
+  {
+    "cycle": 474,
+    "xAllocation": "407012815740250424569041",
+    "vote2EarnAllocation": "81402563148050084913808",
+    "treasuryAllocation": "122103844722075127370712"
+  },
+  {
+    "cycle": 475,
+    "xAllocation": "407012815740250424569041",
+    "vote2EarnAllocation": "81402563148050084913808",
+    "treasuryAllocation": "122103844722075127370712"
+  },
+  {
+    "cycle": 476,
+    "xAllocation": "407012815740250424569041",
+    "vote2EarnAllocation": "81402563148050084913808",
+    "treasuryAllocation": "122103844722075127370712"
+  },
+  {
+    "cycle": 477,
+    "xAllocation": "407012815740250424569041",
+    "vote2EarnAllocation": "81402563148050084913808",
+    "treasuryAllocation": "122103844722075127370712"
+  },
+  {
+    "cycle": 478,
+    "xAllocation": "407012815740250424569041",
+    "vote2EarnAllocation": "81402563148050084913808",
+    "treasuryAllocation": "122103844722075127370712"
+  },
+  {
+    "cycle": 479,
+    "xAllocation": "407012815740250424569041",
+    "vote2EarnAllocation": "81402563148050084913808",
+    "treasuryAllocation": "122103844722075127370712"
+  },
+  {
+    "cycle": 480,
+    "xAllocation": "407012815740250424569041",
+    "vote2EarnAllocation": "81402563148050084913808",
+    "treasuryAllocation": "122103844722075127370712"
+  },
+  {
+    "cycle": 481,
+    "xAllocation": "390732303110640407586279",
+    "vote2EarnAllocation": "78146460622128081517255",
+    "treasuryAllocation": "117219690933192122275883"
+  },
+  {
+    "cycle": 482,
+    "xAllocation": "390732303110640407586279",
+    "vote2EarnAllocation": "78146460622128081517255",
+    "treasuryAllocation": "117219690933192122275883"
+  },
+  {
+    "cycle": 483,
+    "xAllocation": "390732303110640407586279",
+    "vote2EarnAllocation": "78146460622128081517255",
+    "treasuryAllocation": "117219690933192122275883"
+  },
+  {
+    "cycle": 484,
+    "xAllocation": "390732303110640407586279",
+    "vote2EarnAllocation": "78146460622128081517255",
+    "treasuryAllocation": "117219690933192122275883"
+  },
+  {
+    "cycle": 485,
+    "xAllocation": "390732303110640407586279",
+    "vote2EarnAllocation": "78146460622128081517255",
+    "treasuryAllocation": "117219690933192122275883"
+  },
+  {
+    "cycle": 486,
+    "xAllocation": "390732303110640407586279",
+    "vote2EarnAllocation": "78146460622128081517255",
+    "treasuryAllocation": "117219690933192122275883"
+  },
+  {
+    "cycle": 487,
+    "xAllocation": "390732303110640407586279",
+    "vote2EarnAllocation": "78146460622128081517255",
+    "treasuryAllocation": "117219690933192122275883"
+  },
+  {
+    "cycle": 488,
+    "xAllocation": "390732303110640407586279",
+    "vote2EarnAllocation": "78146460622128081517255",
+    "treasuryAllocation": "117219690933192122275883"
+  },
+  {
+    "cycle": 489,
+    "xAllocation": "390732303110640407586279",
+    "vote2EarnAllocation": "78146460622128081517255",
+    "treasuryAllocation": "117219690933192122275883"
+  },
+  {
+    "cycle": 490,
+    "xAllocation": "390732303110640407586279",
+    "vote2EarnAllocation": "78146460622128081517255",
+    "treasuryAllocation": "117219690933192122275883"
+  },
+  {
+    "cycle": 491,
+    "xAllocation": "390732303110640407586279",
+    "vote2EarnAllocation": "78146460622128081517255",
+    "treasuryAllocation": "117219690933192122275883"
+  },
+  {
+    "cycle": 492,
+    "xAllocation": "390732303110640407586279",
+    "vote2EarnAllocation": "78146460622128081517255",
+    "treasuryAllocation": "117219690933192122275883"
+  },
+  {
+    "cycle": 493,
+    "xAllocation": "375103010986214791282827",
+    "vote2EarnAllocation": "75020602197242958256565",
+    "treasuryAllocation": "112530903295864437384848"
+  },
+  {
+    "cycle": 494,
+    "xAllocation": "375103010986214791282827",
+    "vote2EarnAllocation": "75020602197242958256565",
+    "treasuryAllocation": "112530903295864437384848"
+  },
+  {
+    "cycle": 495,
+    "xAllocation": "375103010986214791282827",
+    "vote2EarnAllocation": "75020602197242958256565",
+    "treasuryAllocation": "112530903295864437384848"
+  },
+  {
+    "cycle": 496,
+    "xAllocation": "375103010986214791282827",
+    "vote2EarnAllocation": "75020602197242958256565",
+    "treasuryAllocation": "112530903295864437384848"
+  },
+  {
+    "cycle": 497,
+    "xAllocation": "375103010986214791282827",
+    "vote2EarnAllocation": "75020602197242958256565",
+    "treasuryAllocation": "112530903295864437384848"
+  },
+  {
+    "cycle": 498,
+    "xAllocation": "375103010986214791282827",
+    "vote2EarnAllocation": "75020602197242958256565",
+    "treasuryAllocation": "112530903295864437384848"
+  },
+  {
+    "cycle": 499,
+    "xAllocation": "375103010986214791282827",
+    "vote2EarnAllocation": "75020602197242958256565",
+    "treasuryAllocation": "112530903295864437384848"
+  },
+  {
+    "cycle": 500,
+    "xAllocation": "375103010986214791282827",
+    "vote2EarnAllocation": "75020602197242958256565",
+    "treasuryAllocation": "112530903295864437384848"
+  },
+  {
+    "cycle": 501,
+    "xAllocation": "375103010986214791282827",
+    "vote2EarnAllocation": "75020602197242958256565",
+    "treasuryAllocation": "112530903295864437384848"
+  },
+  {
+    "cycle": 502,
+    "xAllocation": "375103010986214791282827",
+    "vote2EarnAllocation": "75020602197242958256565",
+    "treasuryAllocation": "112530903295864437384848"
+  },
+  {
+    "cycle": 503,
+    "xAllocation": "375103010986214791282827",
+    "vote2EarnAllocation": "75020602197242958256565",
+    "treasuryAllocation": "112530903295864437384848"
+  },
+  {
+    "cycle": 504,
+    "xAllocation": "375103010986214791282827",
+    "vote2EarnAllocation": "75020602197242958256565",
+    "treasuryAllocation": "112530903295864437384848"
+  },
+  {
+    "cycle": 505,
+    "xAllocation": "360098890546766199631513",
+    "vote2EarnAllocation": "72019778109353239926302",
+    "treasuryAllocation": "108029667164029859889453"
+  },
+  {
+    "cycle": 506,
+    "xAllocation": "360098890546766199631513",
+    "vote2EarnAllocation": "72019778109353239926302",
+    "treasuryAllocation": "108029667164029859889453"
+  },
+  {
+    "cycle": 507,
+    "xAllocation": "360098890546766199631513",
+    "vote2EarnAllocation": "72019778109353239926302",
+    "treasuryAllocation": "108029667164029859889453"
+  },
+  {
+    "cycle": 508,
+    "xAllocation": "360098890546766199631513",
+    "vote2EarnAllocation": "72019778109353239926302",
+    "treasuryAllocation": "108029667164029859889453"
+  },
+  {
+    "cycle": 509,
+    "xAllocation": "360098890546766199631513",
+    "vote2EarnAllocation": "72019778109353239926302",
+    "treasuryAllocation": "108029667164029859889453"
+  },
+  {
+    "cycle": 510,
+    "xAllocation": "360098890546766199631513",
+    "vote2EarnAllocation": "72019778109353239926302",
+    "treasuryAllocation": "108029667164029859889453"
+  },
+  {
+    "cycle": 511,
+    "xAllocation": "360098890546766199631513",
+    "vote2EarnAllocation": "72019778109353239926302",
+    "treasuryAllocation": "108029667164029859889453"
+  },
+  {
+    "cycle": 512,
+    "xAllocation": "360098890546766199631513",
+    "vote2EarnAllocation": "72019778109353239926302",
+    "treasuryAllocation": "108029667164029859889453"
+  },
+  {
+    "cycle": 513,
+    "xAllocation": "360098890546766199631513",
+    "vote2EarnAllocation": "72019778109353239926302",
+    "treasuryAllocation": "108029667164029859889453"
+  },
+  {
+    "cycle": 514,
+    "xAllocation": "360098890546766199631513",
+    "vote2EarnAllocation": "72019778109353239926302",
+    "treasuryAllocation": "108029667164029859889453"
+  },
+  {
+    "cycle": 515,
+    "xAllocation": "360098890546766199631513",
+    "vote2EarnAllocation": "72019778109353239926302",
+    "treasuryAllocation": "108029667164029859889453"
+  },
+  {
+    "cycle": 516,
+    "xAllocation": "360098890546766199631513",
+    "vote2EarnAllocation": "72019778109353239926302",
+    "treasuryAllocation": "108029667164029859889453"
+  },
+  {
+    "cycle": 517,
+    "xAllocation": "345694934924895551646252",
+    "vote2EarnAllocation": "69138986984979110329250",
+    "treasuryAllocation": "103708480477468665493875"
+  },
+  {
+    "cycle": 518,
+    "xAllocation": "345694934924895551646252",
+    "vote2EarnAllocation": "69138986984979110329250",
+    "treasuryAllocation": "103708480477468665493875"
+  },
+  {
+    "cycle": 519,
+    "xAllocation": "345694934924895551646252",
+    "vote2EarnAllocation": "69138986984979110329250",
+    "treasuryAllocation": "103708480477468665493875"
+  },
+  {
+    "cycle": 520,
+    "xAllocation": "345694934924895551646252",
+    "vote2EarnAllocation": "69138986984979110329250",
+    "treasuryAllocation": "103708480477468665493875"
+  },
+  {
+    "cycle": 521,
+    "xAllocation": "345694934924895551646252",
+    "vote2EarnAllocation": "69138986984979110329250",
+    "treasuryAllocation": "103708480477468665493875"
+  },
+  {
+    "cycle": 522,
+    "xAllocation": "345694934924895551646252",
+    "vote2EarnAllocation": "69138986984979110329250",
+    "treasuryAllocation": "103708480477468665493875"
+  },
+  {
+    "cycle": 523,
+    "xAllocation": "345694934924895551646252",
+    "vote2EarnAllocation": "69138986984979110329250",
+    "treasuryAllocation": "103708480477468665493875"
+  },
+  {
+    "cycle": 524,
+    "xAllocation": "345694934924895551646252",
+    "vote2EarnAllocation": "69138986984979110329250",
+    "treasuryAllocation": "103708480477468665493875"
+  },
+  {
+    "cycle": 525,
+    "xAllocation": "345694934924895551646252",
+    "vote2EarnAllocation": "69138986984979110329250",
+    "treasuryAllocation": "103708480477468665493875"
+  },
+  {
+    "cycle": 526,
+    "xAllocation": "345694934924895551646252",
+    "vote2EarnAllocation": "69138986984979110329250",
+    "treasuryAllocation": "103708480477468665493875"
+  },
+  {
+    "cycle": 527,
+    "xAllocation": "345694934924895551646252",
+    "vote2EarnAllocation": "69138986984979110329250",
+    "treasuryAllocation": "103708480477468665493875"
+  },
+  {
+    "cycle": 528,
+    "xAllocation": "345694934924895551646252",
+    "vote2EarnAllocation": "69138986984979110329250",
+    "treasuryAllocation": "103708480477468665493875"
+  },
+  {
+    "cycle": 529,
+    "xAllocation": "331867137527899729580401",
+    "vote2EarnAllocation": "66373427505579945916080",
+    "treasuryAllocation": "99560141258369918874120"
+  },
+  {
+    "cycle": 530,
+    "xAllocation": "331867137527899729580401",
+    "vote2EarnAllocation": "66373427505579945916080",
+    "treasuryAllocation": "99560141258369918874120"
+  },
+  {
+    "cycle": 531,
+    "xAllocation": "331867137527899729580401",
+    "vote2EarnAllocation": "66373427505579945916080",
+    "treasuryAllocation": "99560141258369918874120"
+  },
+  {
+    "cycle": 532,
+    "xAllocation": "331867137527899729580401",
+    "vote2EarnAllocation": "66373427505579945916080",
+    "treasuryAllocation": "99560141258369918874120"
+  },
+  {
+    "cycle": 533,
+    "xAllocation": "331867137527899729580401",
+    "vote2EarnAllocation": "66373427505579945916080",
+    "treasuryAllocation": "99560141258369918874120"
+  },
+  {
+    "cycle": 534,
+    "xAllocation": "331867137527899729580401",
+    "vote2EarnAllocation": "66373427505579945916080",
+    "treasuryAllocation": "99560141258369918874120"
+  },
+  {
+    "cycle": 535,
+    "xAllocation": "331867137527899729580401",
+    "vote2EarnAllocation": "66373427505579945916080",
+    "treasuryAllocation": "99560141258369918874120"
+  },
+  {
+    "cycle": 536,
+    "xAllocation": "331867137527899729580401",
+    "vote2EarnAllocation": "66373427505579945916080",
+    "treasuryAllocation": "99560141258369918874120"
+  },
+  {
+    "cycle": 537,
+    "xAllocation": "331867137527899729580401",
+    "vote2EarnAllocation": "66373427505579945916080",
+    "treasuryAllocation": "99560141258369918874120"
+  },
+  {
+    "cycle": 538,
+    "xAllocation": "331867137527899729580401",
+    "vote2EarnAllocation": "66373427505579945916080",
+    "treasuryAllocation": "99560141258369918874120"
+  },
+  {
+    "cycle": 539,
+    "xAllocation": "331867137527899729580401",
+    "vote2EarnAllocation": "66373427505579945916080",
+    "treasuryAllocation": "99560141258369918874120"
+  },
+  {
+    "cycle": 540,
+    "xAllocation": "331867137527899729580401",
+    "vote2EarnAllocation": "66373427505579945916080",
+    "treasuryAllocation": "99560141258369918874120"
+  },
+  {
+    "cycle": 541,
+    "xAllocation": "318592452026783740397184",
+    "vote2EarnAllocation": "63718490405356748079436",
+    "treasuryAllocation": "95577735608035122119155"
+  },
+  {
+    "cycle": 542,
+    "xAllocation": "318592452026783740397184",
+    "vote2EarnAllocation": "63718490405356748079436",
+    "treasuryAllocation": "95577735608035122119155"
+  },
+  {
+    "cycle": 543,
+    "xAllocation": "318592452026783740397184",
+    "vote2EarnAllocation": "63718490405356748079436",
+    "treasuryAllocation": "95577735608035122119155"
+  },
+  {
+    "cycle": 544,
+    "xAllocation": "318592452026783740397184",
+    "vote2EarnAllocation": "63718490405356748079436",
+    "treasuryAllocation": "95577735608035122119155"
+  },
+  {
+    "cycle": 545,
+    "xAllocation": "318592452026783740397184",
+    "vote2EarnAllocation": "63718490405356748079436",
+    "treasuryAllocation": "95577735608035122119155"
+  },
+  {
+    "cycle": 546,
+    "xAllocation": "318592452026783740397184",
+    "vote2EarnAllocation": "63718490405356748079436",
+    "treasuryAllocation": "95577735608035122119155"
+  },
+  {
+    "cycle": 547,
+    "xAllocation": "318592452026783740397184",
+    "vote2EarnAllocation": "63718490405356748079436",
+    "treasuryAllocation": "95577735608035122119155"
+  },
+  {
+    "cycle": 548,
+    "xAllocation": "318592452026783740397184",
+    "vote2EarnAllocation": "63718490405356748079436",
+    "treasuryAllocation": "95577735608035122119155"
+  },
+  {
+    "cycle": 549,
+    "xAllocation": "318592452026783740397184",
+    "vote2EarnAllocation": "63718490405356748079436",
+    "treasuryAllocation": "95577735608035122119155"
+  },
+  {
+    "cycle": 550,
+    "xAllocation": "318592452026783740397184",
+    "vote2EarnAllocation": "63718490405356748079436",
+    "treasuryAllocation": "95577735608035122119155"
+  },
+  {
+    "cycle": 551,
+    "xAllocation": "318592452026783740397184",
+    "vote2EarnAllocation": "63718490405356748079436",
+    "treasuryAllocation": "95577735608035122119155"
+  },
+  {
+    "cycle": 552,
+    "xAllocation": "318592452026783740397184",
+    "vote2EarnAllocation": "63718490405356748079436",
+    "treasuryAllocation": "95577735608035122119155"
+  },
+  {
+    "cycle": 553,
+    "xAllocation": "305848753945712390781296",
+    "vote2EarnAllocation": "61169750789142478156259",
+    "treasuryAllocation": "91754626183713717234388"
+  },
+  {
+    "cycle": 554,
+    "xAllocation": "305848753945712390781296",
+    "vote2EarnAllocation": "61169750789142478156259",
+    "treasuryAllocation": "91754626183713717234388"
+  },
+  {
+    "cycle": 555,
+    "xAllocation": "305848753945712390781296",
+    "vote2EarnAllocation": "61169750789142478156259",
+    "treasuryAllocation": "91754626183713717234388"
+  },
+  {
+    "cycle": 556,
+    "xAllocation": "305848753945712390781296",
+    "vote2EarnAllocation": "61169750789142478156259",
+    "treasuryAllocation": "91754626183713717234388"
+  },
+  {
+    "cycle": 557,
+    "xAllocation": "305848753945712390781296",
+    "vote2EarnAllocation": "61169750789142478156259",
+    "treasuryAllocation": "91754626183713717234388"
+  },
+  {
+    "cycle": 558,
+    "xAllocation": "305848753945712390781296",
+    "vote2EarnAllocation": "61169750789142478156259",
+    "treasuryAllocation": "91754626183713717234388"
+  },
+  {
+    "cycle": 559,
+    "xAllocation": "305848753945712390781296",
+    "vote2EarnAllocation": "61169750789142478156259",
+    "treasuryAllocation": "91754626183713717234388"
+  },
+  {
+    "cycle": 560,
+    "xAllocation": "305848753945712390781296",
+    "vote2EarnAllocation": "61169750789142478156259",
+    "treasuryAllocation": "91754626183713717234388"
+  },
+  {
+    "cycle": 561,
+    "xAllocation": "305848753945712390781296",
+    "vote2EarnAllocation": "61169750789142478156259",
+    "treasuryAllocation": "91754626183713717234388"
+  },
+  {
+    "cycle": 562,
+    "xAllocation": "305848753945712390781296",
+    "vote2EarnAllocation": "61169750789142478156259",
+    "treasuryAllocation": "91754626183713717234388"
+  },
+  {
+    "cycle": 563,
+    "xAllocation": "305848753945712390781296",
+    "vote2EarnAllocation": "61169750789142478156259",
+    "treasuryAllocation": "91754626183713717234388"
+  },
+  {
+    "cycle": 564,
+    "xAllocation": "305848753945712390781296",
+    "vote2EarnAllocation": "61169750789142478156259",
+    "treasuryAllocation": "91754626183713717234388"
+  },
+  {
+    "cycle": 565,
+    "xAllocation": "293614803787883895150044",
+    "vote2EarnAllocation": "58722960757576779030008",
+    "treasuryAllocation": "88084441136365168545013"
+  },
+  {
+    "cycle": 566,
+    "xAllocation": "293614803787883895150044",
+    "vote2EarnAllocation": "58722960757576779030008",
+    "treasuryAllocation": "88084441136365168545013"
+  },
+  {
+    "cycle": 567,
+    "xAllocation": "293614803787883895150044",
+    "vote2EarnAllocation": "58722960757576779030008",
+    "treasuryAllocation": "88084441136365168545013"
+  },
+  {
+    "cycle": 568,
+    "xAllocation": "293614803787883895150044",
+    "vote2EarnAllocation": "58722960757576779030008",
+    "treasuryAllocation": "88084441136365168545013"
+  },
+  {
+    "cycle": 569,
+    "xAllocation": "293614803787883895150044",
+    "vote2EarnAllocation": "58722960757576779030008",
+    "treasuryAllocation": "88084441136365168545013"
+  },
+  {
+    "cycle": 570,
+    "xAllocation": "293614803787883895150044",
+    "vote2EarnAllocation": "58722960757576779030008",
+    "treasuryAllocation": "88084441136365168545013"
+  },
+  {
+    "cycle": 571,
+    "xAllocation": "293614803787883895150044",
+    "vote2EarnAllocation": "58722960757576779030008",
+    "treasuryAllocation": "88084441136365168545013"
+  },
+  {
+    "cycle": 572,
+    "xAllocation": "293614803787883895150044",
+    "vote2EarnAllocation": "58722960757576779030008",
+    "treasuryAllocation": "88084441136365168545013"
+  },
+  {
+    "cycle": 573,
+    "xAllocation": "293614803787883895150044",
+    "vote2EarnAllocation": "58722960757576779030008",
+    "treasuryAllocation": "88084441136365168545013"
+  },
+  {
+    "cycle": 574,
+    "xAllocation": "293614803787883895150044",
+    "vote2EarnAllocation": "58722960757576779030008",
+    "treasuryAllocation": "88084441136365168545013"
+  },
+  {
+    "cycle": 575,
+    "xAllocation": "293614803787883895150044",
+    "vote2EarnAllocation": "58722960757576779030008",
+    "treasuryAllocation": "88084441136365168545013"
+  },
+  {
+    "cycle": 576,
+    "xAllocation": "293614803787883895150044",
+    "vote2EarnAllocation": "58722960757576779030008",
+    "treasuryAllocation": "88084441136365168545013"
+  },
+  {
+    "cycle": 577,
+    "xAllocation": "281870211636368539344042",
+    "vote2EarnAllocation": "56374042327273707868808",
+    "treasuryAllocation": "84561063490910561803212"
+  },
+  {
+    "cycle": 578,
+    "xAllocation": "281870211636368539344042",
+    "vote2EarnAllocation": "56374042327273707868808",
+    "treasuryAllocation": "84561063490910561803212"
+  },
+  {
+    "cycle": 579,
+    "xAllocation": "281870211636368539344042",
+    "vote2EarnAllocation": "56374042327273707868808",
+    "treasuryAllocation": "84561063490910561803212"
+  },
+  {
+    "cycle": 580,
+    "xAllocation": "281870211636368539344042",
+    "vote2EarnAllocation": "56374042327273707868808",
+    "treasuryAllocation": "84561063490910561803212"
+  },
+  {
+    "cycle": 581,
+    "xAllocation": "281870211636368539344042",
+    "vote2EarnAllocation": "56374042327273707868808",
+    "treasuryAllocation": "84561063490910561803212"
+  },
+  {
+    "cycle": 582,
+    "xAllocation": "281870211636368539344042",
+    "vote2EarnAllocation": "56374042327273707868808",
+    "treasuryAllocation": "84561063490910561803212"
+  },
+  {
+    "cycle": 583,
+    "xAllocation": "281870211636368539344042",
+    "vote2EarnAllocation": "56374042327273707868808",
+    "treasuryAllocation": "84561063490910561803212"
+  },
+  {
+    "cycle": 584,
+    "xAllocation": "281870211636368539344042",
+    "vote2EarnAllocation": "56374042327273707868808",
+    "treasuryAllocation": "84561063490910561803212"
+  },
+  {
+    "cycle": 585,
+    "xAllocation": "281870211636368539344042",
+    "vote2EarnAllocation": "56374042327273707868808",
+    "treasuryAllocation": "84561063490910561803212"
+  },
+  {
+    "cycle": 586,
+    "xAllocation": "281870211636368539344042",
+    "vote2EarnAllocation": "56374042327273707868808",
+    "treasuryAllocation": "84561063490910561803212"
+  },
+  {
+    "cycle": 587,
+    "xAllocation": "281870211636368539344042",
+    "vote2EarnAllocation": "56374042327273707868808",
+    "treasuryAllocation": "84561063490910561803212"
+  },
+  {
+    "cycle": 588,
+    "xAllocation": "281870211636368539344042",
+    "vote2EarnAllocation": "56374042327273707868808",
+    "treasuryAllocation": "84561063490910561803212"
+  },
+  {
+    "cycle": 589,
+    "xAllocation": "270595403170913797770280",
+    "vote2EarnAllocation": "54119080634182759554056",
+    "treasuryAllocation": "81178620951274139331084"
+  },
+  {
+    "cycle": 590,
+    "xAllocation": "270595403170913797770280",
+    "vote2EarnAllocation": "54119080634182759554056",
+    "treasuryAllocation": "81178620951274139331084"
+  },
+  {
+    "cycle": 591,
+    "xAllocation": "270595403170913797770280",
+    "vote2EarnAllocation": "54119080634182759554056",
+    "treasuryAllocation": "81178620951274139331084"
+  },
+  {
+    "cycle": 592,
+    "xAllocation": "270595403170913797770280",
+    "vote2EarnAllocation": "54119080634182759554056",
+    "treasuryAllocation": "81178620951274139331084"
+  },
+  {
+    "cycle": 593,
+    "xAllocation": "270595403170913797770280",
+    "vote2EarnAllocation": "54119080634182759554056",
+    "treasuryAllocation": "81178620951274139331084"
+  },
+  {
+    "cycle": 594,
+    "xAllocation": "270595403170913797770280",
+    "vote2EarnAllocation": "54119080634182759554056",
+    "treasuryAllocation": "81178620951274139331084"
+  },
+  {
+    "cycle": 595,
+    "xAllocation": "270595403170913797770280",
+    "vote2EarnAllocation": "54119080634182759554056",
+    "treasuryAllocation": "81178620951274139331084"
+  },
+  {
+    "cycle": 596,
+    "xAllocation": "270595403170913797770280",
+    "vote2EarnAllocation": "54119080634182759554056",
+    "treasuryAllocation": "81178620951274139331084"
+  },
+  {
+    "cycle": 597,
+    "xAllocation": "270595403170913797770280",
+    "vote2EarnAllocation": "54119080634182759554056",
+    "treasuryAllocation": "81178620951274139331084"
+  },
+  {
+    "cycle": 598,
+    "xAllocation": "270595403170913797770280",
+    "vote2EarnAllocation": "54119080634182759554056",
+    "treasuryAllocation": "81178620951274139331084"
+  },
+  {
+    "cycle": 599,
+    "xAllocation": "270595403170913797770280",
+    "vote2EarnAllocation": "54119080634182759554056",
+    "treasuryAllocation": "81178620951274139331084"
+  },
+  {
+    "cycle": 600,
+    "xAllocation": "270595403170913797770280",
+    "vote2EarnAllocation": "54119080634182759554056",
+    "treasuryAllocation": "81178620951274139331084"
+  },
+  {
+    "cycle": 601,
+    "xAllocation": "259771587044077245859468",
+    "vote2EarnAllocation": "51954317408815449171893",
+    "treasuryAllocation": "77931476113223173757840"
+  },
+  {
+    "cycle": 602,
+    "xAllocation": "259771587044077245859468",
+    "vote2EarnAllocation": "51954317408815449171893",
+    "treasuryAllocation": "77931476113223173757840"
+  },
+  {
+    "cycle": 603,
+    "xAllocation": "259771587044077245859468",
+    "vote2EarnAllocation": "51954317408815449171893",
+    "treasuryAllocation": "77931476113223173757840"
+  },
+  {
+    "cycle": 604,
+    "xAllocation": "259771587044077245859468",
+    "vote2EarnAllocation": "51954317408815449171893",
+    "treasuryAllocation": "77931476113223173757840"
+  },
+  {
+    "cycle": 605,
+    "xAllocation": "259771587044077245859468",
+    "vote2EarnAllocation": "51954317408815449171893",
+    "treasuryAllocation": "77931476113223173757840"
+  },
+  {
+    "cycle": 606,
+    "xAllocation": "259771587044077245859468",
+    "vote2EarnAllocation": "51954317408815449171893",
+    "treasuryAllocation": "77931476113223173757840"
+  },
+  {
+    "cycle": 607,
+    "xAllocation": "259771587044077245859468",
+    "vote2EarnAllocation": "51954317408815449171893",
+    "treasuryAllocation": "77931476113223173757840"
+  },
+  {
+    "cycle": 608,
+    "xAllocation": "259771587044077245859468",
+    "vote2EarnAllocation": "51954317408815449171893",
+    "treasuryAllocation": "77931476113223173757840"
+  },
+  {
+    "cycle": 609,
+    "xAllocation": "259771587044077245859468",
+    "vote2EarnAllocation": "51954317408815449171893",
+    "treasuryAllocation": "77931476113223173757840"
+  },
+  {
+    "cycle": 610,
+    "xAllocation": "259771587044077245859468",
+    "vote2EarnAllocation": "51954317408815449171893",
+    "treasuryAllocation": "77931476113223173757840"
+  },
+  {
+    "cycle": 611,
+    "xAllocation": "259771587044077245859468",
+    "vote2EarnAllocation": "51954317408815449171893",
+    "treasuryAllocation": "77931476113223173757840"
+  },
+  {
+    "cycle": 612,
+    "xAllocation": "259771587044077245859468",
+    "vote2EarnAllocation": "51954317408815449171893",
+    "treasuryAllocation": "77931476113223173757840"
+  },
+  {
+    "cycle": 613,
+    "xAllocation": "249380723562314156025089",
+    "vote2EarnAllocation": "49876144712462831205017",
+    "treasuryAllocation": "74814217068694246807526"
+  },
+  {
+    "cycle": 614,
+    "xAllocation": "249380723562314156025089",
+    "vote2EarnAllocation": "49876144712462831205017",
+    "treasuryAllocation": "74814217068694246807526"
+  },
+  {
+    "cycle": 615,
+    "xAllocation": "249380723562314156025089",
+    "vote2EarnAllocation": "49876144712462831205017",
+    "treasuryAllocation": "74814217068694246807526"
+  },
+  {
+    "cycle": 616,
+    "xAllocation": "249380723562314156025089",
+    "vote2EarnAllocation": "49876144712462831205017",
+    "treasuryAllocation": "74814217068694246807526"
+  },
+  {
+    "cycle": 617,
+    "xAllocation": "249380723562314156025089",
+    "vote2EarnAllocation": "49876144712462831205017",
+    "treasuryAllocation": "74814217068694246807526"
+  },
+  {
+    "cycle": 618,
+    "xAllocation": "249380723562314156025089",
+    "vote2EarnAllocation": "49876144712462831205017",
+    "treasuryAllocation": "74814217068694246807526"
+  },
+  {
+    "cycle": 619,
+    "xAllocation": "249380723562314156025089",
+    "vote2EarnAllocation": "49876144712462831205017",
+    "treasuryAllocation": "74814217068694246807526"
+  },
+  {
+    "cycle": 620,
+    "xAllocation": "249380723562314156025089",
+    "vote2EarnAllocation": "49876144712462831205017",
+    "treasuryAllocation": "74814217068694246807526"
+  },
+  {
+    "cycle": 621,
+    "xAllocation": "249380723562314156025089",
+    "vote2EarnAllocation": "49876144712462831205017",
+    "treasuryAllocation": "74814217068694246807526"
+  },
+  {
+    "cycle": 622,
+    "xAllocation": "249380723562314156025089",
+    "vote2EarnAllocation": "49876144712462831205017",
+    "treasuryAllocation": "74814217068694246807526"
+  },
+  {
+    "cycle": 623,
+    "xAllocation": "249380723562314156025089",
+    "vote2EarnAllocation": "49876144712462831205017",
+    "treasuryAllocation": "74814217068694246807526"
+  },
+  {
+    "cycle": 624,
+    "xAllocation": "249380723562314156025089",
+    "vote2EarnAllocation": "49876144712462831205017",
+    "treasuryAllocation": "74814217068694246807526"
+  },
+  {
+    "cycle": 625,
+    "xAllocation": "239405494619821589784085",
+    "vote2EarnAllocation": "47881098923964317956817",
+    "treasuryAllocation": "71821648385946476935225"
+  },
+  {
+    "cycle": 626,
+    "xAllocation": "239405494619821589784085",
+    "vote2EarnAllocation": "47881098923964317956817",
+    "treasuryAllocation": "71821648385946476935225"
+  },
+  {
+    "cycle": 627,
+    "xAllocation": "239405494619821589784085",
+    "vote2EarnAllocation": "47881098923964317956817",
+    "treasuryAllocation": "71821648385946476935225"
+  },
+  {
+    "cycle": 628,
+    "xAllocation": "239405494619821589784085",
+    "vote2EarnAllocation": "47881098923964317956817",
+    "treasuryAllocation": "71821648385946476935225"
+  },
+  {
+    "cycle": 629,
+    "xAllocation": "239405494619821589784085",
+    "vote2EarnAllocation": "47881098923964317956817",
+    "treasuryAllocation": "71821648385946476935225"
+  },
+  {
+    "cycle": 630,
+    "xAllocation": "239405494619821589784085",
+    "vote2EarnAllocation": "47881098923964317956817",
+    "treasuryAllocation": "71821648385946476935225"
+  },
+  {
+    "cycle": 631,
+    "xAllocation": "239405494619821589784085",
+    "vote2EarnAllocation": "47881098923964317956817",
+    "treasuryAllocation": "71821648385946476935225"
+  },
+  {
+    "cycle": 632,
+    "xAllocation": "239405494619821589784085",
+    "vote2EarnAllocation": "47881098923964317956817",
+    "treasuryAllocation": "71821648385946476935225"
+  },
+  {
+    "cycle": 633,
+    "xAllocation": "239405494619821589784085",
+    "vote2EarnAllocation": "47881098923964317956817",
+    "treasuryAllocation": "71821648385946476935225"
+  },
+  {
+    "cycle": 634,
+    "xAllocation": "239405494619821589784085",
+    "vote2EarnAllocation": "47881098923964317956817",
+    "treasuryAllocation": "71821648385946476935225"
+  }
+]
