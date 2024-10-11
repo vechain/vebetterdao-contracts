@@ -27,6 +27,7 @@ export const generateMockLocalConfig = () => {
     galaxyMemberContractAddress: "0x45d5CA3f295ad8BCa291cC4ecd33382DE40E4FAc",
     treasuryContractAddress: "0x45d5CA3f295ad8BCa291cC4ecd33382DE40E4FAc",
     x2EarnAppsContractAddress: "0x45d5CA3f295ad8BCa291cC4ecd33382DE40E4FAc",
+    veBetterPassportContractAddress: "0x45d5CA3f295ad8BCa291cC4ecd33382DE40E4FAc",
     "nodeUrl": "http://localhost:8669",
     "network": {
       "id": "solo",

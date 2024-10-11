@@ -64,6 +64,13 @@ interface IB3TRGovernor is IERC165, IERC6372 {
   error GovernorInvalidQuorumFraction(uint256 quorumNumerator, uint256 quorumDenominator);
 
   /**
+   * @dev Thrown when the personhood verification fails.
+   * @param voter The address of the voter.
+   * @param explanation The reason for the failure.
+   */
+  error GovernorPersonhoodVerificationFailed(address voter, string explanation);
+
+  /**
    * @dev The current state of a proposal is not the required for performing an operation.
    * The `expectedStates` is a bitmap with the bits enabled for each ProposalState enum position
    * counting from right to left.

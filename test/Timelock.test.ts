@@ -5,7 +5,7 @@ import { describe, it } from "mocha"
 import { getImplementationAddress } from "@openzeppelin/upgrades-core"
 
 // Tests about queueing and executing proposals are in the Governance.test.ts file
-describe("TimeLock", function () {
+describe("TimeLock - @shard2", function () {
   describe("Contract upgradeablity", () => {
     it("Admin should be able to upgrade the contract", async function () {
       const { timeLock, timelockAdmin } = await getOrDeployContractInstances({

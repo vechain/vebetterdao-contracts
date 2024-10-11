@@ -5,7 +5,7 @@ import { describe, it } from "mocha"
 import { getImplementationAddress } from "@openzeppelin/upgrades-core"
 import { deployProxy } from "../scripts/helpers"
 
-describe("VOT3", function () {
+describe("VOT3 - @shard2", function () {
   describe("Deployment", function () {
     it("should deploy the contract", async function () {
       const { vot3 } = await getOrDeployContractInstances({ forceDeploy: false })
@@ -433,7 +433,7 @@ describe("VOT3", function () {
       expect(await vot3.delegates(otherAccount)).to.eql(otherAccount.address)
 
       // transfer
-      const tx = await vot3
+      let tx = await vot3
         .connect(otherAccount)
         .transfer(minterAccount, ethers.parseEther("1"), { gasLimit: 10_000_000 })
       const receipt = await tx.wait()

@@ -32,6 +32,7 @@ import { IX2EarnRewardsPool } from "./interfaces/IX2EarnRewardsPool.sol";
 import { IERC1155Receiver } from "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 import { IERC721Receiver } from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
+import { IVeBetterPassport } from "./interfaces/IVeBetterPassport.sol";
 
 /**
  * @title X2EarnRewardsPool
@@ -42,6 +43,11 @@ import "@openzeppelin/contracts/utils/Strings.sol";
  * Reward distributors of a x2Earn app can distribute rewards to users that performed sustainable actions or withdraw funds
  * to the team wallet.
  * The contract is upgradable through the UUPS proxy pattern and UPGRADER_ROLE can authorize the upgrade.
+ *
+ * ----- Version 2 -----
+ * - Added onchain proof and impact tracking
+ * ----- Version 3 -----
+ * - Added VeBetterPassport integration
  */
 contract X2EarnRewardsPool is
   IX2EarnRewardsPool,
@@ -65,6 +71,7 @@ contract X2EarnRewardsPool is
     mapping(bytes32 appId => uint256) availableFunds; // Funds that the app can use to reward users
     mapping(string => uint256) impactKeyIndex; // Mapping from impact key to its index (1-based to distinguish from non-existent)
     string[] allowedImpactKeys; // Array storing impact keys
+    IVeBetterPassport veBetterPassport;
   }
 
   // keccak256(abi.encode(uint256(keccak256("b3tr.storage.X2EarnRewardsPool")) - 1)) & ~bytes32(uint256(0xff))
@@ -114,6 +121,13 @@ contract X2EarnRewardsPool is
     for (uint256 i; i < _initialImpactKeys.length; i++) {
       _addImpactKey(_initialImpactKeys[i], $);
     }
+  }
+
+  function initializeV3(address _veBetterPassport) external reinitializer(3) {
+    require(address(_veBetterPassport) != address(0), "X2EarnRewardsPool: veBetterPassport is the zero address");
+
+    X2EarnRewardsPoolStorage storage $ = _getX2EarnRewardsPoolStorage();
+    $.veBetterPassport = IVeBetterPassport(_veBetterPassport);
   }
 
   // ---------- Modifiers ---------- //
@@ -243,6 +257,17 @@ contract X2EarnRewardsPool is
     // Transfer the rewards to the receiver
     $.availableFunds[appId] -= amount;
     require($.b3tr.transfer(receiver, amount), "X2EarnRewardsPool: Allocation transfer to app failed");
+
+    // Try to register the action in the veBetterPassport contract
+    try $.veBetterPassport.registerAction(receiver, appId) {
+      // If the call succeeds, you can optionally handle success here.
+    } catch Error(string memory reason) {
+      // If the call reverts with a revert reason string, this block is executed.
+      emit RegisterActionFailed(reason, "");
+    } catch (bytes memory lowLevelData) {
+      // If the call reverts without a revert reason or with a custom error, this block is executed.
+      emit RegisterActionFailed("Low-level error", lowLevelData);
+    }
   }
 
   /**
@@ -441,6 +466,18 @@ contract X2EarnRewardsPool is
     delete $.impactKeyIndex[keyToRemove];
   }
 
+  /**
+   * @dev Sets the VeBetterPassport contract address.
+   *
+   * @param _veBetterPassport the new VeBetterPassport contract
+   */
+  function setVeBetterPassport(IVeBetterPassport _veBetterPassport) external onlyRole(CONTRACTS_ADDRESS_MANAGER_ROLE) {
+    require(address(_veBetterPassport) != address(0), "X2EarnRewardsPool: veBetterPassport is the zero address");
+
+    X2EarnRewardsPoolStorage storage $ = _getX2EarnRewardsPoolStorage();
+    $.veBetterPassport = _veBetterPassport;
+  }
+
   // ---------- Getters ---------- //
 
   /**
@@ -455,7 +492,7 @@ contract X2EarnRewardsPool is
    * @dev See {IX2EarnRewardsPool-version}
    */
   function version() external pure virtual returns (string memory) {
-    return "2";
+    return "3";
   }
 
   /**
@@ -480,6 +517,14 @@ contract X2EarnRewardsPool is
   function getAllowedImpactKeys() external view returns (string[] memory) {
     X2EarnRewardsPoolStorage storage $ = _getX2EarnRewardsPoolStorage();
     return $.allowedImpactKeys;
+  }
+
+  /**
+   * @dev Retrieves the VeBetterPassport contract.
+   */
+  function veBetterPassport() external view returns (IVeBetterPassport) {
+    X2EarnRewardsPoolStorage storage $ = _getX2EarnRewardsPoolStorage();
+    return $.veBetterPassport;
   }
 
   // ---------- Fallbacks ---------- //

@@ -34,6 +34,9 @@ library GovernorDepositLogic {
   /// @dev Emitted when a deposit is made to a proposal.
   event ProposalDeposit(address indexed depositor, uint256 indexed proposalId, uint256 amount);
 
+  /// @dev Emitted when a deposit is withdrawn from a proposal.
+  event ProposalWithdraw(address indexed withdrawer, uint256 indexed proposalId, uint256 amount);
+
   /// @dev Thrown when there is no deposit to withdraw.
   error GovernorNoDepositToWithdraw(uint256 proposalId, address depositer);
 
@@ -97,6 +100,8 @@ library GovernorDepositLogic {
     self.deposits[proposalId][depositer] = 0;
 
     require(self.vot3.transfer(depositer, amount), "B3TRGovernor: transfer failed");
+
+    emit ProposalWithdraw(depositer, proposalId, amount);
   }
 
   /**

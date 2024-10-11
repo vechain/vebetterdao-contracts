@@ -73,10 +73,13 @@ export const initializeProxy = async (
   proxyAddress: string,
   contractName: string,
   args: any[],
+  libraries: { [libraryName: string]: string } = {},
   version?: number,
 ): Promise<BaseContract> => {
   // Get the ContractFactory
-  const Contract = await ethers.getContractFactory(contractName)
+  const Contract = await ethers.getContractFactory(contractName, {
+    libraries: libraries,
+  })
 
   // Prepare the initializer data using getInitializerData
   const initializerData = getInitializerData(Contract.interface, args, version)
@@ -98,7 +101,7 @@ export const upgradeProxy = async (
   newVersionContractName: string,
   proxyAddress: string,
   args: any[] = [],
-  options?: { version?: number; libraries?: { [libraryName: string]: string } },
+  options?: { version?: number; libraries?: { [libraryName: string]: string }; logOutput?: boolean },
 ): Promise<BaseContract> => {
   // Deploy the implementation contract
   const Contract = await ethers.getContractFactory(newVersionContractName, {
@@ -108,6 +111,8 @@ export const upgradeProxy = async (
   await implementation.waitForDeployment()
 
   const currentImplementationContract = await ethers.getContractAt(previousVersionContractName, proxyAddress)
+
+  options?.logOutput && console.log(`${newVersionContractName} impl.: ${await implementation.getAddress()}`)
 
   const tx = await currentImplementationContract.upgradeToAndCall(
     await implementation.getAddress(),
@@ -162,7 +167,7 @@ export const deployAndUpgrade = async (
       newVersionContractName,
       await proxy.getAddress(),
       contractArgs,
-      { version: options.versions?.[i], libraries: options.libraries?.[i] },
+      { version: options.versions?.[i], libraries: options.libraries?.[i], logOutput: options.logOutput },
     )
   }
 

@@ -1,5 +1,5 @@
 import { ethers, network } from "hardhat"
-import { B3TR, GalaxyMember } from "../../typechain-types"
+import { B3TR, GalaxyMember, VeBetterPassport } from "../../typechain-types"
 import { BaseContract, ContractFactory, ContractTransactionResponse } from "ethers"
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers"
 import { getOrDeployContractInstances } from "./deploy"
@@ -235,12 +235,15 @@ export const createProposalAndExecuteIt = async (
   args: any[] = [],
   roundId?: string | bigint | number,
 ) => {
-  const { governor } = await getOrDeployContractInstances({})
+  const { governor, veBetterPassport } = await getOrDeployContractInstances({})
 
   // load votes
   // console.log("Loading votes");
   await getVot3Tokens(voter, "30000")
   await waitForNextBlock()
+
+  await veBetterPassport.whitelist(voter.address)
+  if ((await veBetterPassport.isCheckEnabled(1)) === false) await veBetterPassport.toggleCheck(1)
 
   // create a new proposal
   // console.log("Creating proposal");
@@ -294,7 +297,10 @@ export const createProposalWithMultipleFunctionsAndExecuteIt = async (
   args: any[][],
   roundId?: string,
 ) => {
-  const { governor, emissions, xAllocationVoting } = await getOrDeployContractInstances({})
+  const { governor, emissions, xAllocationVoting, veBetterPassport } = await getOrDeployContractInstances({})
+
+  await veBetterPassport.whitelist(voter.address)
+  if ((await veBetterPassport.isCheckEnabled(1)) === false) await veBetterPassport.toggleCheck(1)
 
   // load votes
   // console.log("Loading votes");
@@ -431,10 +437,32 @@ export const voteOnApps = async (
   votes: Array<Array<bigint>>,
   roundId: bigint,
 ) => {
-  const { xAllocationVoting } = await getOrDeployContractInstances({})
+  const { xAllocationVoting, veBetterPassport } = await getOrDeployContractInstances({})
 
-  for (const voter of voters) {
-    await xAllocationVoting.connect(voter).castVote(roundId, apps, votes[voters.indexOf(voter)])
+  if ((await veBetterPassport.isCheckEnabled(1)) === false) await veBetterPassport.toggleCheck(1)
+
+  for (let i = 0; i < voters.length; i++) {
+    const voter = voters[i]
+    const voterVotes = votes[i]
+
+    await veBetterPassport.whitelist(voter.address)
+
+    // Filter out both zero votes and their corresponding apps
+    const filteredData = apps
+      .map((app, index) => ({
+        app,
+        vote: voterVotes[index],
+      }))
+      .filter(data => data.vote !== BigInt(0))
+
+    // If there are any valid votes left, proceed with voting
+    if (filteredData.length > 0) {
+      const validApps = filteredData.map(data => data.app)
+      const validVotes = filteredData.map(data => data.vote)
+
+      // Execute the vote with the filtered non-zero votes and corresponding apps
+      await xAllocationVoting.connect(voter).castVote(roundId, validApps, validVotes)
+    }
   }
 }
 
@@ -515,10 +543,13 @@ export const calculateUnallocatedAppAllocationOffChain = async (roundId: number,
 }
 
 export const participateInAllocationVoting = async (user: HardhatEthersSigner, waitRoundToEnd: boolean = false) => {
-  const { xAllocationVoting, x2EarnApps, owner } = await getOrDeployContractInstances({})
+  const { xAllocationVoting, x2EarnApps, owner, veBetterPassport } = await getOrDeployContractInstances({})
 
   await getVot3Tokens(user, "1")
   await getVot3Tokens(owner, "1000")
+
+  await veBetterPassport.whitelist(user.address)
+  if ((await veBetterPassport.isCheckEnabled(1)) === false) await veBetterPassport.toggleCheck(1)
 
   const appName = "App" + Math.random()
 
@@ -545,10 +576,13 @@ export const participateInGovernanceVoting = async (
   args: any[] = [],
   waitProposalToEnd: boolean = false,
 ) => {
-  const { governor } = await getOrDeployContractInstances({})
+  const { governor, veBetterPassport } = await getOrDeployContractInstances({})
 
   await getVot3Tokens(user, "1")
   await getVot3Tokens(admin, "1000")
+
+  await veBetterPassport.connect(admin).whitelist(user.address)
+  if ((await veBetterPassport.isCheckEnabled(1)) === false) await veBetterPassport.toggleCheck(1)
 
   const tx = await createProposal(contractToCall, Contract, admin, description, functionToCall, args)
   const proposalId = await getProposalIdFromTx(tx)
@@ -612,4 +646,90 @@ export const upgradeNFTtoNextLevel = async (
   await b3tr.connect(owner).approve(await nft.getAddress(), b3trToUpgrade)
 
   await nft.connect(owner).upgrade(tokenId)
+}
+
+export const delegateWithSignature = async (
+  veBetterPassport: VeBetterPassport,
+  delegator: HardhatEthersSigner,
+  delegatee: HardhatEthersSigner,
+  deadlineFromNow: number, // seconds from now
+) => {
+  const blockNumber = await ethers.provider.getBlockNumber()
+  const currentBlockTimestamp = (await ethers.provider.getBlock(blockNumber))?.timestamp
+
+  if (!currentBlockTimestamp) throw new Error("Could not get current block timestamp")
+
+  // Calculate the deadline
+  const deadline = currentBlockTimestamp + deadlineFromNow
+
+  // Set up EIP-712 domain
+  const domain = {
+    name: "VeBetterPassport",
+    version: "1",
+    chainId: 1337,
+    verifyingContract: await veBetterPassport.getAddress(),
+  }
+  let types = {
+    Delegation: [
+      { name: "delegator", type: "address" },
+      { name: "delegatee", type: "address" },
+      { name: "deadline", type: "uint256" },
+    ],
+  }
+
+  // Prepare the struct to sign
+  const delegationData = {
+    delegator: delegator.address,
+    delegatee: delegatee.address,
+    deadline,
+  }
+
+  // Create the EIP-712 signature for the delegator
+  const signature = await delegator.signTypedData(domain, types, delegationData)
+
+  // Perform the delegation using the signature
+  await veBetterPassport.connect(delegatee).delegateWithSignature(delegator.address, deadline, signature)
+}
+
+export const linkEntityToPassportWithSignature = async (
+  veBetterPassport: VeBetterPassport,
+  passport: HardhatEthersSigner,
+  entity: HardhatEthersSigner,
+  deadlineFromNow: number, // seconds from now
+) => {
+  const blockNumber = await ethers.provider.getBlockNumber()
+  const currentBlockTimestamp = (await ethers.provider.getBlock(blockNumber))?.timestamp
+
+  if (!currentBlockTimestamp) throw new Error("Could not get current block timestamp")
+
+  // Calculate the deadline
+  const deadline = currentBlockTimestamp + deadlineFromNow
+
+  // Set up EIP-712 domain
+  const domain = {
+    name: "VeBetterPassport",
+    version: "1",
+    chainId: 1337,
+    verifyingContract: await veBetterPassport.getAddress(),
+  }
+  let types = {
+    LinkEntity: [
+      { name: "entity", type: "address" },
+      { name: "passport", type: "address" },
+      { name: "deadline", type: "uint256" },
+    ],
+  }
+
+  // Prepare the struct to sign
+  const delegationData = {
+    entity: entity.address,
+    passport: passport.address,
+    deadline,
+  }
+
+  // Create the EIP-712 signature for the delegator
+  const signature = await entity.signTypedData(domain, types, delegationData)
+
+  // Perform the delegation using the signature
+  await veBetterPassport.connect(passport).linkEntityToPassportWithSignature(entity.address, deadline, signature)
 }

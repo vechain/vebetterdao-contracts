@@ -31,6 +31,7 @@ import { IVOT3 } from "../../interfaces/IVOT3.sol";
 import { DoubleEndedQueue } from "@openzeppelin/contracts/utils/structs/DoubleEndedQueue.sol";
 import { TimelockControllerUpgradeable } from "@openzeppelin/contracts-upgradeable/governance/TimelockControllerUpgradeable.sol";
 import { Checkpoints } from "@openzeppelin/contracts/utils/structs/Checkpoints.sol";
+import { IVeBetterPassport } from "../../interfaces/IVeBetterPassport.sol";
 
 /// @title GovernorStorageTypes
 /// @notice Library for defining storage types used in the Governor contract.
@@ -84,11 +85,14 @@ library GovernorStorageTypes {
     mapping(uint256 => uint256) proposalTotalVotes;
     // minimum amount of tokens needed to cast a vote
     uint256 votingThreshold;
-    
-    // ------------------------------- Version 2 -------------------------------
+    // ------------------------------- Version 3 -------------------------------
 
     // ------------------------------- Voting Storage -------------------------------
     // checkpoints for the quadratic voting status for each round
     Checkpoints.Trace208 quadraticVotingDisabled;
+    // ------------------------------- Version 2 -------------------------------
+
+    // ------------------------------- Passport -------------------------------
+    IVeBetterPassport veBetterPassport;
   }
 }

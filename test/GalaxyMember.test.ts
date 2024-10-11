@@ -25,7 +25,7 @@ import { getImplementationAddress } from "@openzeppelin/upgrades-core"
 import { deployProxy } from "../scripts/helpers"
 import { GalaxyMember } from "../typechain-types"
 
-describe("Galaxy Member", () => {
+describe("Galaxy Member - @shard2", () => {
   describe("Contract parameters", () => {
     it("Should have correct parameters set on deployment", async () => {
       const { galaxyMember, owner } = await getOrDeployContractInstances({ forceDeploy: true })
@@ -675,7 +675,7 @@ describe("Galaxy Member", () => {
     })
 
     it("User can free mint if he participated in B3TR Governance", async () => {
-      const { galaxyMember, otherAccount, b3tr, otherAccounts, governor, B3trContract } =
+      const { galaxyMember, otherAccount, b3tr, otherAccounts, governor, B3trContract, veBetterPassport } =
         await getOrDeployContractInstances({
           forceDeploy: true,
         })
@@ -690,6 +690,9 @@ describe("Galaxy Member", () => {
 
       // we do it here but will use in the next test
       await getVot3Tokens(voter, "30000")
+
+      await veBetterPassport.whitelist(voter.address)
+      await veBetterPassport.toggleCheck(1)
 
       // Now we can create a new proposal
       const tx = await createProposal(b3tr, B3trContract, otherAccount, "", "tokenDetails", [])
@@ -709,7 +712,7 @@ describe("Galaxy Member", () => {
     })
 
     it("User can free mint if he participated both in B3TR Governance and in x-allocation voting", async () => {
-      const { galaxyMember, otherAccount, b3tr, otherAccounts, governor, B3trContract } =
+      const { galaxyMember, otherAccount, b3tr, otherAccounts, governor, B3trContract, veBetterPassport } =
         await getOrDeployContractInstances({
           forceDeploy: true,
         })
@@ -718,6 +721,9 @@ describe("Galaxy Member", () => {
       await bootstrapAndStartEmissions()
 
       const voter = otherAccounts[0]
+
+      await veBetterPassport.whitelist(voter.address)
+      await veBetterPassport.toggleCheck(1)
 
       // Should not be able to free mint
       await catchRevert(galaxyMember.connect(voter).freeMint())
@@ -1442,17 +1448,17 @@ describe("Galaxy Member", () => {
 
       expect(await galaxyMember.levelOf(0)).to.equal(2) // Level 2
 
-      const tx = await galaxyMember
+      let tx = await galaxyMember
         .connect(owner)
         .transferFrom(await owner.getAddress(), await otherAccount.getAddress(), 0)
 
-      const receipt = await tx.wait()
+      let receipt = await tx.wait()
 
       if (!receipt?.blockNumber) throw new Error("No receipt block number")
 
-      const events = receipt?.logs
+      let events = receipt?.logs
 
-      const decodedEvents = events?.map(event => {
+      let decodedEvents = events?.map(event => {
         return galaxyMember.interface.parseLog({
           topics: event?.topics as string[],
           data: event?.data as string,

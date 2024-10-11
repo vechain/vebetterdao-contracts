@@ -17,7 +17,7 @@ import {
 import { describe, it } from "mocha"
 import { getImplementationAddress } from "@openzeppelin/upgrades-core"
 
-describe("X-Apps", function () {
+describe("X-Apps - @shard3", function () {
   describe("Deployment", function () {
     it("Clock mode is set correctly", async function () {
       const { x2EarnApps } = await getOrDeployContractInstances({ forceDeploy: true })
@@ -114,16 +114,16 @@ describe("X-Apps", function () {
       const { x2EarnApps, otherAccounts, owner } = await getOrDeployContractInstances({ forceDeploy: true })
       const app1Id = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[0].address))
 
-      const tx = await x2EarnApps
+      let tx = await x2EarnApps
         .connect(owner)
         .addApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-      const receipt = await tx.wait()
+      let receipt = await tx.wait()
       if (!receipt) throw new Error("No receipt")
 
-      const appAdded = filterEventsByName(receipt.logs, "AppAdded")
+      let appAdded = filterEventsByName(receipt.logs, "AppAdded")
       expect(appAdded).not.to.eql([])
 
-      const { id, address } = await parseAppAddedEvent(appAdded[0])
+      let { id, address } = await parseAppAddedEvent(appAdded[0])
       expect(id).to.eql(app1Id)
       expect(address).to.eql(otherAccounts[0].address)
     })
@@ -371,7 +371,7 @@ describe("X-Apps", function () {
         .connect(owner)
         .addApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
 
-      const roundId = await startNewAllocationRound()
+      let roundId = await startNewAllocationRound()
 
       const isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, roundId)
       expect(isEligibleForVote).to.eql(true)
@@ -389,7 +389,7 @@ describe("X-Apps", function () {
         .connect(owner)
         .addApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
 
-      const round1 = await startNewAllocationRound()
+      let round1 = await startNewAllocationRound()
 
       await x2EarnApps.connect(owner).setVotingEligibility(app1Id, false)
 
@@ -401,7 +401,7 @@ describe("X-Apps", function () {
       expect(appsVotedInSpecificRound.length).to.equal(1n)
 
       await waitForRoundToEnd(round1)
-      const round2 = await startNewAllocationRound()
+      let round2 = await startNewAllocationRound()
 
       // app should not be eligible from this round
       isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round2)
@@ -430,7 +430,7 @@ describe("X-Apps", function () {
       await x2EarnApps.connect(owner).setVotingEligibility(app1Id, false)
       expect(await x2EarnApps.isEligibleNow(app1Id)).to.eql(false)
 
-      const round1 = await startNewAllocationRound()
+      let round1 = await startNewAllocationRound()
 
       // app should still be eligible for the current round
       let isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
@@ -445,7 +445,7 @@ describe("X-Apps", function () {
 
       await waitForRoundToEnd(round1)
 
-      const round2 = await startNewAllocationRound()
+      let round2 = await startNewAllocationRound()
 
       // app should be eligible from this round
       isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round2)
@@ -503,7 +503,7 @@ describe("X-Apps", function () {
 
       // start new round
       await emissions.distribute()
-      const round1 = await xAllocationVoting.currentRoundId()
+      let round1 = await xAllocationVoting.currentRoundId()
       let isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
       expect(isEligibleForVote).to.eql(true)
 
@@ -526,7 +526,7 @@ describe("X-Apps", function () {
       await waitForCurrentRoundToEnd()
 
       await emissions.distribute()
-      const round2 = await xAllocationVoting.currentRoundId()
+      let round2 = await xAllocationVoting.currentRoundId()
 
       // app should not be eligible from this round
       isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round2)
@@ -556,9 +556,10 @@ describe("X-Apps", function () {
     })
 
     it("App needs to wait next round if added during an ongoing round", async function () {
-      const { otherAccounts, x2EarnApps, owner, xAllocationVoting } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
+      const { otherAccounts, x2EarnApps, owner, xAllocationVoting, veBetterPassport } =
+        await getOrDeployContractInstances({
+          forceDeploy: true,
+        })
 
       // Bootstrap emissions
       await bootstrapEmissions()
@@ -568,7 +569,10 @@ describe("X-Apps", function () {
 
       const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
 
-      const round1 = await startNewAllocationRound()
+      let round1 = await startNewAllocationRound()
+
+      await veBetterPassport.whitelist(voter.address)
+      await veBetterPassport.toggleCheck(1)
 
       await x2EarnApps
         .connect(owner)
@@ -582,11 +586,11 @@ describe("X-Apps", function () {
       let appVotes = await xAllocationVoting.getAppVotes(round1, app1Id)
       expect(appVotes).to.equal(0n)
 
-      const appsVotedInSpecificRound = await xAllocationVoting.getAppIdsOfRound(round1)
+      let appsVotedInSpecificRound = await xAllocationVoting.getAppIdsOfRound(round1)
       expect(appsVotedInSpecificRound.length).to.equal(0)
 
       await waitForRoundToEnd(round1)
-      const round2 = await startNewAllocationRound()
+      let round2 = await startNewAllocationRound()
 
       // app should not be eligible from this round
       isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round2)
@@ -749,7 +753,7 @@ describe("X-Apps", function () {
       expect(appURI).to.eql((await x2EarnApps.baseURI()) + newMetadataURI)
     })
 
-    it("Unauthtorized users cannot update app metadata", async function () {
+    it("Unatuhtorized users cannot update app metadata", async function () {
       const { x2EarnApps, otherAccounts, owner } = await getOrDeployContractInstances({ forceDeploy: true })
       const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
       const appAdmin = otherAccounts[9]
@@ -1389,7 +1393,7 @@ describe("X-Apps", function () {
         .addApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
       await x2EarnApps.connect(owner).setTeamAllocationPercentage(app1Id, 50)
 
-      const teamAllocationPercentage = await x2EarnApps.teamAllocationPercentage(app1Id)
+      let teamAllocationPercentage = await x2EarnApps.teamAllocationPercentage(app1Id)
       expect(teamAllocationPercentage).to.eql(50n)
     })
 
@@ -1439,16 +1443,27 @@ describe("X-Apps", function () {
         .addApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
       await x2EarnApps.connect(owner).setTeamAllocationPercentage(app1Id, 50)
 
-      const teamAllocationPercentage = await x2EarnApps.teamAllocationPercentage(app1Id)
+      let teamAllocationPercentage = await x2EarnApps.teamAllocationPercentage(app1Id)
       expect(teamAllocationPercentage).to.eql(50n)
     })
 
     it("Team allocation percentage of an app is 0 and apps need to withdraw, then they can change this", async function () {
-      const { x2EarnApps, otherAccounts, owner, xAllocationVoting, xAllocationPool, b3tr, x2EarnRewardsPool } =
-        await getOrDeployContractInstances({ forceDeploy: true })
+      const {
+        x2EarnApps,
+        otherAccounts,
+        owner,
+        xAllocationVoting,
+        xAllocationPool,
+        b3tr,
+        x2EarnRewardsPool,
+        veBetterPassport,
+      } = await getOrDeployContractInstances({ forceDeploy: true })
       const voter = otherAccounts[1]
 
       await getVot3Tokens(voter, "1")
+
+      await veBetterPassport.whitelist(voter.address)
+      await veBetterPassport.toggleCheck(1)
 
       const app1Id = await x2EarnApps.hashAppName("My app")
       await x2EarnApps
