@@ -517,6 +517,12 @@ export async function deployAll(config: ContractsConfig) {
     .toggleCheck(4)
     .then(async tx => await tx.wait())
 
+  // Assign ACTION_REGISTRAR_ROLE to X2EarnRewardsPool
+  await veBetterPassport
+    .connect(deployer)
+    .grantRole(await veBetterPassport.ACTION_REGISTRAR_ROLE(), await x2EarnRewardsPool.getAddress())
+    .then(async tx => await tx.wait())
+
   // ---------- Configure contract roles for setup ---------- //
 
   console.log("================ Configuring contract roles for setup")
