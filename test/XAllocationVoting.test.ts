@@ -20,12 +20,21 @@ import {
   ZERO_ADDRESS,
   waitForNextBlock,
   payDeposit,
+  waitForBlock,
 } from "./helpers"
 import { describe, it } from "mocha"
 import { getImplementationAddress } from "@openzeppelin/upgrades-core"
-import { deployProxy } from "../scripts/helpers"
-import { XAllocationVoting } from "../typechain-types"
+import { deployProxy, upgradeProxy } from "../scripts/helpers"
+import {
+  Emissions,
+  EmissionsV1,
+  VoterRewards,
+  VoterRewardsV1,
+  XAllocationVoting,
+  XAllocationVotingV1,
+} from "../typechain-types"
 import { createLocalConfig } from "../config/contracts/envs/local"
+import { createTestConfig } from "./helpers/config"
 
 describe("X-Allocation Voting - @shard4", function () {
   describe("Deployment", function () {
@@ -447,6 +456,235 @@ describe("X-Allocation Voting - @shard4", function () {
 
       expect(await xAllocationVoting.version()).to.equal("2")
     })
+
+    it("Should not break storage when upgrading to V2", async () => {
+      const config = createTestConfig()
+      const {
+        otherAccounts,
+        x2EarnApps,
+        xAllocationPool,
+        b3tr,
+        vot3,
+        galaxyMember,
+        timeLock,
+        treasury,
+        owner,
+        veBetterPassport,
+        minterAccount,
+      } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      const emissionsV1 = (await deployProxy("Emissions", [
+        {
+          minter: minterAccount.address,
+          admin: owner.address,
+          upgrader: owner.address,
+          contractsAddressManager: owner.address,
+          decaySettingsManager: owner.address,
+          b3trAddress: await b3tr.getAddress(),
+          destinations: [
+            await xAllocationPool.getAddress(),
+            owner.address,
+            await treasury.getAddress(),
+            config.MIGRATION_ADDRESS,
+          ],
+          initialXAppAllocation: config.INITIAL_X_ALLOCATION,
+          cycleDuration: config.EMISSIONS_CYCLE_DURATION,
+          decaySettings: [
+            config.EMISSIONS_X_ALLOCATION_DECAY_PERCENTAGE,
+            config.EMISSIONS_VOTE_2_EARN_DECAY_PERCENTAGE,
+            config.EMISSIONS_X_ALLOCATION_DECAY_PERIOD,
+            config.EMISSIONS_VOTE_2_EARN_ALLOCATION_DECAY_PERIOD,
+          ],
+          treasuryPercentage: config.EMISSIONS_TREASURY_PERCENTAGE,
+          maxVote2EarnDecay: config.EMISSIONS_MAX_VOTE_2_EARN_DECAY_PERCENTAGE,
+          migrationAmount: config.MIGRATION_AMOUNT,
+        },
+      ])) as EmissionsV1
+
+      const emissions = (await upgradeProxy(
+        "EmissionsV1",
+        "Emissions",
+        await emissionsV1.getAddress(),
+        [config.EMISSIONS_IS_NOT_ALIGNED ?? false],
+        {
+          version: 2,
+        },
+      )) as Emissions
+
+      const voterRewardsV1 = (await deployProxy("VoterRewardsV1", [
+        owner.address, // admin
+        owner.address, // upgrader
+        owner.address, // contractsAddressManager
+        await emissions.getAddress(),
+        await galaxyMember.getAddress(),
+        await b3tr.getAddress(),
+        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+        [0, 10, 20, 50, 100, 150, 200, 400, 900, 2400],
+      ])) as VoterRewardsV1
+
+      const voterRewards = (await upgradeProxy(
+        "VoterRewardsV1",
+        "VoterRewards",
+        await voterRewardsV1.getAddress(),
+        [],
+        {
+          version: 2,
+        },
+      )) as VoterRewards
+
+      // Set vote 2 earn (VoterRewards deployed contract) address in emissions
+      await emissions.connect(owner).setVote2EarnAddress(await voterRewards.getAddress())
+
+      // const deploy V1 contract
+      let xAllocationVotingV1 = (await deployProxy("XAllocationVotingV1", [
+        {
+          vot3Token: await vot3.getAddress(),
+          quorumPercentage: config.X_ALLOCATION_VOTING_QUORUM_PERCENTAGE, // quorum percentage
+          initialVotingPeriod: config.EMISSIONS_CYCLE_DURATION - 1, // X Alloc voting period
+          timeLock: await timeLock.getAddress(),
+          voterRewards: await voterRewards.getAddress(),
+          emissions: await emissions.getAddress(),
+          admins: [await timeLock.getAddress(), owner.address],
+          upgrader: owner.address,
+          contractsAddressManager: owner.address,
+          x2EarnAppsAddress: await x2EarnApps.getAddress(),
+          baseAllocationPercentage: config.X_ALLOCATION_POOL_BASE_ALLOCATION_PERCENTAGE,
+          appSharesCap: config.X_ALLOCATION_POOL_APP_SHARES_MAX_CAP,
+          votingThreshold: config.X_ALLOCATION_VOTING_VOTING_THRESHOLD,
+        },
+      ])) as XAllocationVotingV1
+      expect(await xAllocationVotingV1.version()).to.equal("1")
+
+      await emissions.setXAllocationsGovernorAddress(await xAllocationVotingV1.getAddress())
+      expect(await emissions.xAllocationsGovernor()).to.eql(await xAllocationVotingV1.getAddress())
+
+      await xAllocationPool.setXAllocationVotingAddress(await xAllocationVotingV1.getAddress())
+      expect(await xAllocationPool.xAllocationVoting()).to.eql(await xAllocationVotingV1.getAddress())
+      await xAllocationPool.setEmissionsAddress(await emissions.getAddress())
+      expect(await xAllocationPool.emissions()).to.eql(await emissions.getAddress())
+
+      // Grant Vote registrar role to XAllocationVoting
+      await voterRewards
+        .connect(owner)
+        .grantRole(await voterRewards.VOTE_REGISTRAR_ROLE(), await xAllocationVotingV1.getAddress())
+
+      // Grant admin role to voter rewards for registering x allocation voting
+      await xAllocationVotingV1
+        .connect(owner)
+        .grantRole(await xAllocationVotingV1.DEFAULT_ADMIN_ROLE(), emissions.getAddress())
+
+      //Set the emissions address and the admin as the ROUND_STARTER_ROLE in XAllocationVoting
+      const roundStarterRole = await xAllocationVotingV1.ROUND_STARTER_ROLE()
+      await xAllocationVotingV1
+        .connect(owner)
+        .grantRole(roundStarterRole, await emissions.getAddress())
+        .then(async (tx: any) => await tx.wait())
+      await xAllocationVotingV1
+        .connect(owner)
+        .grantRole(roundStarterRole, owner.address)
+        .then(async (tx: any) => await tx.wait())
+
+      const user1 = otherAccounts[0]
+      const user2 = otherAccounts[1]
+      const user3 = otherAccounts[2]
+
+      // fund wallets
+      await getVot3Tokens(user1, "1000")
+      await getVot3Tokens(user2, "1000")
+      await getVot3Tokens(user3, "1000")
+
+      // add apps
+      const app1Id = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[2].address))
+      const app2Id = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[3].address))
+      const app3Id = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[4].address))
+      await x2EarnApps.addApp(
+        otherAccounts[2].address,
+        otherAccounts[2].address,
+        otherAccounts[2].address,
+        "metadataURI",
+      )
+      await x2EarnApps.addApp(
+        otherAccounts[3].address,
+        otherAccounts[3].address,
+        otherAccounts[3].address,
+        "metadataURI",
+      )
+      await x2EarnApps.addApp(
+        otherAccounts[4].address,
+        otherAccounts[4].address,
+        otherAccounts[4].address,
+        "metadataURI",
+      )
+
+      // Grant minter role to emissions contract
+      await b3tr.connect(owner).grantRole(await b3tr.MINTER_ROLE(), await emissions.getAddress())
+      // Bootstrap emissions
+      await emissions.connect(minterAccount).bootstrap()
+
+      // start round
+      await emissions.connect(minterAccount).start()
+      expect(await xAllocationVotingV1.currentRoundId()).to.equal(1n)
+
+      // make people vote
+      await xAllocationVotingV1.connect(user1).castVote(1, [app1Id], [ethers.parseEther("100")])
+      await xAllocationVotingV1
+        .connect(user2)
+        .castVote(1, [app1Id, app2Id], [ethers.parseEther("100"), ethers.parseEther("200")])
+
+      // upgrade to V2
+      const xAllocationVotingV2 = (await upgradeProxy(
+        "XAllocationVotingV1",
+        "XAllocationVoting",
+        await xAllocationVotingV1.getAddress(),
+        [await veBetterPassport.getAddress()],
+        {
+          version: 2,
+        },
+      )) as XAllocationVoting
+      expect(await xAllocationVotingV2.version()).to.equal("2")
+
+      // set personhood threshold to 0
+      await veBetterPassport.connect(owner).setThresholdPoPScore(0)
+      await veBetterPassport.toggleCheck(4)
+
+      // check that round is ok
+      expect(await xAllocationVotingV2.currentRoundId()).to.equal(1n)
+      expect(await xAllocationVotingV2.state(1n)).to.equal(0n) // Active
+
+      // check that previous votes are ok
+      const votes = await xAllocationVotingV2.totalVotes(1)
+      expect(votes).to.equal(ethers.parseEther("400"))
+
+      expect(await xAllocationVotingV2.hasVoted(1, user1.address)).to.be.true
+      expect(await xAllocationVotingV2.hasVoted(1, user2.address)).to.be.true
+      expect(await xAllocationVotingV2.hasVoted(1, user3.address)).to.be.false
+
+      expect(await xAllocationVotingV2.getAppVotes(1, app1Id)).to.equal(ethers.parseEther("200"))
+      expect(await xAllocationVotingV2.getAppVotes(1, app2Id)).to.equal(ethers.parseEther("200"))
+      expect(await xAllocationVotingV2.getAppVotes(1, app3Id)).to.equal(ethers.parseEther("0"))
+
+      // check that can still vote on the new round
+      await xAllocationVotingV2.connect(user3).castVote(1, [app1Id], [ethers.parseEther("100")])
+      expect(await xAllocationVotingV2.getAppVotes(1, app1Id)).to.equal(ethers.parseEther("300"))
+
+      // check that round is over correctly
+      const blockNextCycle = await emissions.getNextCycleBlock()
+      await waitForBlock(Number(blockNextCycle))
+      expect(await emissions.isCycleEnded(1)).to.be.true
+
+      await emissions.distribute()
+      expect(await xAllocationVotingV2.currentRoundId()).to.equal(2n)
+
+      // check that rewards are distributed correctly
+      await expect(xAllocationPool.claim(1, app1Id)).to.not.be.reverted
+      await expect(xAllocationPool.claim(1, app2Id)).to.not.be.reverted
+      await expect(xAllocationPool.claim(1, app3Id)).to.not.be.reverted
+
+      // can cast vote for round 2
+      await xAllocationVotingV2.connect(user1).castVote(2, [app1Id], [ethers.parseEther("100")])
+    })
   })
 
   describe("Settings", function () {
@@ -595,6 +833,24 @@ describe("X-Allocation Voting - @shard4", function () {
           await expect(xAllocationVoting.connect(otherAccount).setVoterRewardsAddress(otherAccount.address)).to.be
             .reverted
         })
+      })
+
+      it("Can get and set veBetterPassport address", async function () {
+        const { xAllocationVoting, owner, otherAccount } = await getOrDeployContractInstances({ forceDeploy: true })
+
+        // assign governance role to owner
+        await xAllocationVoting.grantRole(await xAllocationVoting.GOVERNANCE_ROLE(), owner.address)
+        expect(await xAllocationVoting.hasRole(await xAllocationVoting.GOVERNANCE_ROLE(), owner.address)).to.be.true
+
+        await xAllocationVoting.connect(owner).setVeBetterPassport(owner.address)
+
+        const updatedVeBetterPassportAddress = await xAllocationVoting.veBetterPassport()
+        expect(updatedVeBetterPassportAddress).to.eql(owner.address)
+
+        // only GOVERNANCE_ROLE can set the veBetterPassport address
+        expect(await xAllocationVoting.hasRole(await xAllocationVoting.GOVERNANCE_ROLE(), otherAccount.address)).to.be
+          .false
+        await expect(xAllocationVoting.connect(otherAccount).setVeBetterPassport(otherAccount.address)).to.be.reverted
       })
     })
 
@@ -1382,6 +1638,117 @@ describe("X-Allocation Voting - @shard4", function () {
       await expect(
         xAllocationVoting.connect(otherAccount).castVote(roundId, [app1], [ethers.parseEther("0.1")]),
       ).to.be.revertedWithCustomError(xAllocationVoting, "GovernorVotingThresholdNotMet")
+    })
+
+    it("If the vote weight for an XApp is less than 1, the exact vote weight should be applied to increase the XApp's total votes, rather than using the square root of the vote weight", async function () {
+      const { xAllocationVoting, x2EarnApps, otherAccounts, owner, veBetterPassport } =
+        await getOrDeployContractInstances({
+          forceDeploy: true,
+        })
+
+      await veBetterPassport.toggleCheck(4)
+
+      // Bootstrap emissions
+      await bootstrapEmissions()
+
+      otherAccounts.forEach(async account => {
+        await getVot3Tokens(account, "10000")
+      })
+
+      //Add apps
+
+      const app1Id = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[2].address))
+      const app2Id = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[3].address))
+      const app3Id = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[4].address))
+      await x2EarnApps
+        .connect(owner)
+        .addApp(otherAccounts[2].address, otherAccounts[2].address, otherAccounts[2].address, "metadataURI")
+
+      await x2EarnApps
+        .connect(owner)
+        .addApp(otherAccounts[3].address, otherAccounts[3].address, otherAccounts[3].address, "metadataURI")
+      await x2EarnApps
+        .connect(owner)
+        .addApp(otherAccounts[4].address, otherAccounts[4].address, otherAccounts[4].address, "metadataURI")
+
+      //Start allocation round
+      const round1 = await startNewAllocationRound()
+      // Vote
+      await xAllocationVoting
+        .connect(otherAccounts[1])
+        .castVote(
+          round1,
+          [app1Id, app2Id, app3Id],
+          [ethers.parseEther("0.5"), ethers.parseEther("0.5"), ethers.parseEther("0.5")],
+        )
+
+      await xAllocationVoting
+        .connect(otherAccounts[2])
+        .castVote(
+          round1,
+          [app1Id, app2Id, app3Id],
+          [ethers.parseEther("0.4"), ethers.parseEther("0.1"), ethers.parseEther("0.5")],
+        )
+
+      await xAllocationVoting
+        .connect(otherAccounts[3])
+        .castVote(
+          round1,
+          [app1Id, app2Id, app3Id],
+          [ethers.parseEther("0.1"), ethers.parseEther("4"), ethers.parseEther("0")],
+        )
+
+      // Votes should be tracked correctly
+      let appVotes = await xAllocationVoting.getAppVotesQF(round1, app1Id)
+      expect(appVotes).to.eql(ethers.parseEther("1") / 1000000000n)
+
+      appVotes = await xAllocationVoting.getAppVotesQF(round1, app2Id)
+      expect(appVotes).to.eql(ethers.parseEther("2.6") / 1000000000n)
+
+      appVotes = await xAllocationVoting.getAppVotesQF(round1, app3Id)
+      expect(appVotes).to.eql(ethers.parseEther("1") / 1000000000n)
+    })
+
+    it("If a user votes for an XApp with a vote wieght < 1 we do not get the square of the number ", async function () {
+      const { xAllocationVoting, x2EarnApps, otherAccounts, owner, veBetterPassport } =
+        await getOrDeployContractInstances({
+          forceDeploy: true,
+        })
+
+      // Bootstrap emissions
+      await bootstrapEmissions()
+
+      await veBetterPassport.toggleCheck(4)
+
+      otherAccounts.forEach(async account => {
+        await getVot3Tokens(account, "10000")
+      })
+
+      //Add apps
+
+      const app1Id = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[2].address))
+      const app2Id = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[3].address))
+      await x2EarnApps
+        .connect(owner)
+        .addApp(otherAccounts[2].address, otherAccounts[2].address, otherAccounts[2].address, "metadataURI")
+      await x2EarnApps
+        .connect(owner)
+        .addApp(otherAccounts[3].address, otherAccounts[3].address, otherAccounts[3].address, "metadataURI")
+
+      //Start allocation round
+      const round1 = await startNewAllocationRound()
+      // Vote
+      await xAllocationVoting
+        .connect(otherAccounts[1])
+        .castVote(round1, [app1Id, app2Id], [ethers.parseEther("0.5"), ethers.parseEther("9")])
+
+      await waitForRoundToEnd(round1)
+
+      const app1VotesQF = await xAllocationVoting.getAppVotesQF(round1, app1Id)
+      const app2VotesQF = await xAllocationVoting.getAppVotesQF(round1, app2Id)
+      // sqrt of 10^18 is 10^9 hence we need to divide by 10^9
+      expect(app1VotesQF).to.equal(ethers.parseEther("0.5") / 1000000000n)
+      expect(app2VotesQF).to.equal(ethers.parseEther("3") / 1000000000n)
     })
 
     it("I should not be able to cast vote twice", async function () {

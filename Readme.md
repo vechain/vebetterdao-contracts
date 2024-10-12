@@ -27,6 +27,8 @@ Welcome to the VeBetterDAO Smart Contracts repository! This open-source reposito
 
 The complete documentation for the VeBetterDAO and the contracts can be found [here](https://docs.vebetterdao.org).
 
+Our contracts are upgradeable and versioned. See the [contracts changelog](CONTRACTS_CHANGELOG.md) for more information on the changes introduced in each of new upgraded version.
+
 ## Mainnet contract addresses
 
 ```
@@ -41,7 +43,8 @@ The complete documentation for the VeBetterDAO and the contracts can be found [h
   "X2EarnApps": "0x8392B7CCc763dB03b47afcD8E8f5e24F9cf0554D",
   "X2EarnRewardsPool": "0x6Bee7DDab6c99d5B2Af0554EaEA484CE18F52631",
   "XAllocationPool": "0x4191776F05f4bE4848d3f4d587345078B439C7d3",
-  "XAllocationVoting": "0x89A00Bb0947a30FF95BEeF77a66AEdE3842Fe5B7"
+  "XAllocationVoting": "0x89A00Bb0947a30FF95BEeF77a66AEdE3842Fe5B7",
+  "VeBetterPassport": "0x45d5CA3f295ad8BCa291cC4ecd33382DE40E4FAc"
 ```
 
 ## Testnet contract addresses
@@ -61,6 +64,8 @@ The complete documentation for the VeBetterDAO and the contracts can be found [h
   "XAllocationVoting": "0x5859ff910d8b0c127364c98E24233b0af7443c1c",
   "B3TRFaucet": "0x5e9c1F0f52aC6b5004122059053b00017EAfB561"
 ```
+
+Notice: _VeBetter Passport contract deployed only on mainnet._
 
 ## Audit
 

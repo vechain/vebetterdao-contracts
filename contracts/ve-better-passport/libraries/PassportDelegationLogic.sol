@@ -243,31 +243,8 @@ library PassportDelegationLogic {
       revert InvalidSignature();
     }
 
-    // Cannot delegate passport to owner
-    if (signer == msg.sender) {
-      revert CannotDelegateToSelf(signer);
-    }
-
-    // Cannot delegate enitity attached to passport
-    if (PassportEntityLogic.isEntity(self, delegator)) {
-      revert PassportDelegationFromEntity();
-    }
-
-    // Cannot delegate passport to entity
-    if (PassportEntityLogic.isEntity(self, msg.sender)) {
-      revert PassportDelegationToEntity();
-    }
-
-    // Check if the passport has already delegated
-    if (isDelegator(self, delegator)) {
-      _removeDelegation(self, delegator, _addressFromUint160(self.delegatorToDelegatee[delegator].latest()));
-    }
-
-    // Check if the passport is already pending delegation
-    address pendingDelegatee = self.pendingDelegationsDelegatorToDelegatee[delegator];
-    if (pendingDelegatee != address(0)) {
-      _removePendingDelegation(self, delegator, pendingDelegatee);
-    }
+    // Check delegation rules
+    _checkDelegation(self, delegator, msg.sender);
 
     // Check if the delegatee has already been delegated
     if (isDelegatee(self, msg.sender)) {
@@ -289,29 +266,8 @@ library PassportDelegationLogic {
    * @param delegatee The address of the delegatee.
    */
   function delegatePassport(PassportStorageTypes.PassportStorage storage self, address delegatee) external {
-    // Check if the delegatee is trying to delegate to themselves
-    if (msg.sender == delegatee) {
-      revert CannotDelegateToSelf(msg.sender);
-    }
-
-    // Check if the delegator is an entity linked to a passport
-    if (PassportEntityLogic.isEntity(self, msg.sender)) {
-      revert PassportDelegationFromEntity();
-    }
-
-    if (PassportEntityLogic.isEntity(self, delegatee)) {
-      revert PassportDelegationToEntity();
-    }
-
-    // Check if the passport has already delegated removing the previous delegation
-    if (isDelegator(self, msg.sender)) {
-      _removeDelegation(self, msg.sender, _addressFromUint160(self.delegatorToDelegatee[msg.sender].latest()));
-    }
-
-    // Check if the passport is already pending delegation
-    if (self.pendingDelegationsDelegatorToDelegatee[msg.sender] != address(0)) {
-      _removePendingDelegation(self, msg.sender, self.pendingDelegationsDelegatorToDelegatee[msg.sender]);
-    }
+    // Check delegation rules
+    _checkDelegation(self, msg.sender, delegatee);
 
     // Get the length of the pending delegations
     uint256 length = self.pendingDelegationsDelegateeToDelegators[delegatee].length;
@@ -510,5 +466,36 @@ library PassportDelegationLogic {
     uint256 timepoint
   ) internal view returns (bool) {
     return self.delegatorToDelegatee[user].upperLookupRecent(SafeCast.toUint48(timepoint)) != 0;
+  }
+
+  function _checkDelegation(
+    PassportStorageTypes.PassportStorage storage self,
+    address delegator,
+    address delegatee
+  ) private {
+    // Check if the delegator is trying to delegate to themselves
+    if (delegator == delegatee) {
+      revert CannotDelegateToSelf(delegator);
+    }
+
+    // Check if the delegator is an entity linked to a passport or has a pending link
+    if (PassportEntityLogic.isEntity(self, delegator) || self.pendingLinksEntityToPassport[delegator] != address(0)) {
+      revert PassportDelegationFromEntity();
+    }
+
+    // Check if the delegatee is an entity linked to a passport or has a pending link
+    if (PassportEntityLogic.isEntity(self, delegatee) || self.pendingLinksEntityToPassport[delegatee] != address(0)) {
+      revert PassportDelegationToEntity();
+    }
+
+    // Check if the passport has already been delegated removing the previous delegation
+    if (isDelegator(self, delegator)) {
+      _removeDelegation(self, delegator, _addressFromUint160(self.delegatorToDelegatee[delegator].latest()));
+    }
+
+    // Check if the passport is already pending delegation
+    if (self.pendingDelegationsDelegatorToDelegatee[delegator] != address(0)) {
+      _removePendingDelegation(self, delegator, self.pendingDelegationsDelegatorToDelegatee[delegator]);
+    }
   }
 }

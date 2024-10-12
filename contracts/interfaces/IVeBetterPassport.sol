@@ -146,6 +146,9 @@ interface IVeBetterPassport {
   /// @notice Thrown when a user tries to link a entity to a passport that is already linked to another entity.
   error NotLinked(address user);
 
+  /// @notice Thrown when a user tries to link a entity to a passport that is already delegated.
+  error DelegatedEntity(address entity);
+
   // ---------- Functions ---------- //
   /// @notice Initializes the contract with the required data and roles
   /// @param data The initialization data for the contract

@@ -171,7 +171,7 @@ library PassportPersonhoodLogic {
     }
 
     if (PassportChecksLogic._isCheckEnabled(self, PassportTypes.CheckType.PARTICIPATION_SCORE_CHECK)) {
-      uint256 participationScore = PassportPoPScoreLogic.getCumulativeScoreWithDecay(
+      uint256 participationScore = PassportPoPScoreLogic._cumulativeScoreWithDecay(
         self,
         user,
         self.xAllocationVoting.currentRoundId()

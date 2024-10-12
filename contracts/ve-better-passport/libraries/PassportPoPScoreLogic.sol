@@ -220,8 +220,6 @@ library PassportPoPScoreLogic {
   /// @notice Sets the threshold for a user to be considered a person
   /// @param threshold - the round threshold
   function setThresholdPoPScore(PassportStorageTypes.PassportStorage storage self, uint208 threshold) external {
-    require(threshold > 0, "ProofOfParticipation: threshold is zero");
-
     self.popScoreThreshold.push(PassportClockLogic.clock(), threshold);
   }
 

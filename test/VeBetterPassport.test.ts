@@ -511,6 +511,18 @@ describe("VeBetterPassport - @shard5", function () {
 
       expect(await veBetterPassport.getXAllocationVoting()).to.equal(otherAccount.address)
     })
+
+    it("Can set pop threshold to 0", async function () {
+      const { owner, veBetterPassport } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      await veBetterPassport.connect(owner).setThresholdPoPScore(12)
+      expect(await veBetterPassport.thresholdPoPScore()).to.equal(12n)
+
+      await veBetterPassport.connect(owner).setThresholdPoPScore(0)
+      expect(await veBetterPassport.thresholdPoPScore()).to.equal(0n)
+    })
   })
 
   describe("Passport Signaling", function () {
@@ -949,6 +961,98 @@ describe("VeBetterPassport - @shard5", function () {
   })
 
   describe("Passport Entities", function () {
+    it("Should revert if an entity is trying to become a passport", async function () {
+      const { veBetterPassport, otherAccounts } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      const A = otherAccounts[0]
+      const B = otherAccounts[1]
+      const C = otherAccounts[2]
+
+      await linkEntityToPassportWithSignature(veBetterPassport, A, B, 1000)
+
+      await expect(linkEntityToPassportWithSignature(veBetterPassport, B, C, 1000)).to.be.revertedWithCustomError(
+        veBetterPassport,
+        "AlreadyLinked",
+      )
+    })
+
+    it("Should revert if an entity is trying to become a passport", async function () {
+      const { veBetterPassport, otherAccounts } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      const A = otherAccounts[0]
+      const B = otherAccounts[1]
+      const C = otherAccounts[2]
+
+      await linkEntityToPassportWithSignature(veBetterPassport, A, B, 1000)
+
+      await expect(veBetterPassport.connect(C).linkEntityToPassport(B.address)).to.be.revertedWithCustomError(
+        veBetterPassport,
+        "AlreadyLinked",
+      )
+    })
+
+    it("Should revert if passport is trying to create a pending link to another passport", async function () {
+      const { veBetterPassport, otherAccounts } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      const A = otherAccounts[0]
+      const B = otherAccounts[1]
+      const C = otherAccounts[2]
+
+      await linkEntityToPassportWithSignature(veBetterPassport, A, B, 1000)
+
+      await expect(veBetterPassport.connect(A).linkEntityToPassport(C.address)).to.be.revertedWithCustomError(
+        veBetterPassport,
+        "AlreadyLinked",
+      )
+    })
+
+    it("Entity check should be done also when accepting a link", async function () {
+      const { veBetterPassport, otherAccounts } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      const A = otherAccounts[0]
+      const B = otherAccounts[1]
+      const C = otherAccounts[2]
+
+      // Scenario:
+      // A -> pending linking to B
+      // C -> pending linking to A
+      // B accepts linking
+      // A accepts linking -> should revert
+
+      await veBetterPassport.connect(A).linkEntityToPassport(B.address)
+      await expect(veBetterPassport.connect(C).linkEntityToPassport(A.address)).to.be.revertedWithCustomError(
+        veBetterPassport,
+        "AlreadyLinked",
+      )
+    })
+
+    it("Should revert if passport is trying to link to another passport with signature", async function () {
+      const { veBetterPassport, otherAccounts } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      const A = otherAccounts[0]
+      const B = otherAccounts[1]
+      const C = otherAccounts[2]
+
+      // Enitity B links to passport A
+      await linkEntityToPassportWithSignature(veBetterPassport, A, B, 1000)
+
+      // Passport A tries to link to passport C
+      await expect(linkEntityToPassportWithSignature(veBetterPassport, C, A, 1000)).to.be.revertedWithCustomError(
+        veBetterPassport,
+        "AlreadyLinked",
+      )
+    })
+
     it("Should be able to register an entity by function calls", async function () {
       const {
         veBetterPassport,
@@ -2447,6 +2551,34 @@ describe("VeBetterPassport - @shard5", function () {
         "User's participation score is above the threshold",
       ])
     })
+
+    it("Cannot attach an entity if entity has delegated personhood", async function () {
+      const config = createTestConfig()
+      const { veBetterPassport, otherAccounts } = await getOrDeployContractInstances({
+        forceDeploy: true,
+        config,
+      })
+
+      const enity1 = otherAccounts[0]
+      const enity2 = otherAccounts[1]
+      const passport = otherAccounts[2]
+      const passport2 = otherAccounts[3]
+
+      // Delegate entity 1 personhood to entity 2
+      await delegateWithSignature(veBetterPassport, enity1, passport2, 1000)
+
+      await veBetterPassport.connect(enity2).delegatePassport(passport2.address)
+
+      // Should revert if entity 1 tries to attach to passport
+      await expect(
+        linkEntityToPassportWithSignature(veBetterPassport, passport, enity1, 1000),
+      ).to.be.revertedWithCustomError(veBetterPassport, "DelegatedEntity")
+
+      // Should revert if entity 2 tries to attach to passport
+      await expect(
+        veBetterPassport.connect(enity2).linkEntityToPassport(passport.address),
+      ).to.be.revertedWithCustomError(veBetterPassport, "DelegatedEntity")
+    })
   })
 
   describe("Passport Delegation", function () {
@@ -2867,7 +2999,7 @@ describe("VeBetterPassport - @shard5", function () {
       await expect(veBetterPassport.connect(B).denyIncomingPendingDelegation(A.address)).to.be.reverted
     })
 
-    it("Should revert if a user tries to cancel pending delegation thta does not exist", async function () {
+    it("Should revert if a user tries to cancel pending delegation that does not exist", async function () {
       const { owner: A, veBetterPassport } = await getOrDeployContractInstances({
         forceDeploy: true,
       })
@@ -3747,6 +3879,45 @@ describe("VeBetterPassport - @shard5", function () {
 
       // detach entity
       await veBetterPassport.connect(passport2).removeEntityLink(entity2)
+
+      // Should be able to delegate
+      await expect(delegateWithSignature(veBetterPassport, passport, entity2, 3600)).to.not.be.reverted
+    })
+
+    it("A passport cannot be delegated if a pending entity", async function () {
+      const {
+        veBetterPassport,
+        owner: passport,
+        otherAccount: entity,
+        otherAccounts,
+      } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      const passport2 = otherAccounts[1]
+      const entity2 = otherAccounts[2]
+      const user = otherAccounts[3]
+
+      await veBetterPassport.connect(entity).linkEntityToPassport(passport.address)
+      await veBetterPassport.connect(entity2).linkEntityToPassport(passport2.address)
+
+      // Should be a pending entity
+      expect((await veBetterPassport.getPendingLinkings(entity.address))[1]).to.equal(passport.address)
+
+      // Should not be able to delegate as a pending entity
+      await expect(delegateWithSignature(veBetterPassport, entity, user, 3600)).to.be.revertedWithCustomError(
+        veBetterPassport,
+        "PassportDelegationFromEntity",
+      )
+
+      // Should not be able to delegate a passport
+      await expect(veBetterPassport.connect(passport2).delegatePassport(entity2.address)).to.be.revertedWithCustomError(
+        veBetterPassport,
+        "PassportDelegationToEntity",
+      )
+
+      // detach entity
+      await veBetterPassport.connect(passport2).denyIncomingPendingEntityLink(entity2)
 
       // Should be able to delegate
       await expect(delegateWithSignature(veBetterPassport, passport, entity2, 3600)).to.not.be.reverted

@@ -28,6 +28,7 @@ import { PassportClockLogic } from "./PassportClockLogic.sol";
 import { PassportEIP712SigningLogic } from "./PassportEIP712SigningLogic.sol";
 import { PassportSignalingLogic } from "./PassportSignalingLogic.sol";
 import { PassportWhitelistAndBlacklistLogic } from "./PassportWhitelistAndBlacklistLogic.sol";
+import { PassportDelegationLogic } from "./PassportDelegationLogic.sol";
 import { PassportTypes } from "./PassportTypes.sol";
 import { Checkpoints } from "@openzeppelin/contracts/utils/structs/Checkpoints.sol";
 import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
@@ -106,6 +107,11 @@ library PassportEntityLogic {
    * @notice Thrown when a user tries to link a entity to a passport that has reached the maximum number of entities.
    */
   error MaxEntitiesPerPassportReached();
+
+  /**
+   * @notice Thrown when a user tries to link a entity that has delegated to another passport.
+   */
+  error DelegatedEntity(address entity);
 
   // ---------- Events ---------- //
   /**
@@ -279,15 +285,8 @@ library PassportEntityLogic {
       revert InvalidSignature();
     }
 
-    // Ensure the entity trying to link is not the passport itself
-    if (signer == msg.sender) {
-      revert CannotLinkToSelf(signer);
-    }
-
-    // Check if the entity is already linked, if so revert
-    if (self.entityToPassport[entity].latest() != 0 || self.pendingLinksEntityToPassport[entity] != address(0)) {
-      revert AlreadyLinked(msg.sender);
-    }
+    // Check if the entity is ok to link
+    _checkLink(self, msg.sender, entity);
 
     // Check if the passport has reached the maximum number of entities, if so, revert
     if (self.passportToEntities[msg.sender].length >= self.maxEntitiesPerPassport) {
@@ -303,15 +302,7 @@ library PassportEntityLogic {
    * @param passport The address of the passport to which the entity is being linked.
    */
   function linkEntityToPassport(PassportStorageTypes.PassportStorage storage self, address passport) external {
-    // Check if the entity (msg.sender) is already linked
-    if (self.entityToPassport[msg.sender].latest() != 0 || self.pendingLinksIndexes[msg.sender] != 0) {
-      revert AlreadyLinked(msg.sender);
-    }
-
-    // Prevent self-linking (an entity cannot be its own passport)
-    if (msg.sender == passport) {
-      revert CannotLinkToSelf(msg.sender);
-    }
+    _checkLink(self, passport, msg.sender);
 
     // Add the entity to the list of pending links for the passport
     uint256 length = self.pendingLinksPassportToEntities[passport].length;
@@ -566,5 +557,44 @@ library PassportEntityLogic {
     uint256 timepoint
   ) internal view returns (bool) {
     return self.entityToPassport[entity].upperLookupRecent(SafeCast.toUint48(timepoint)) != 0;
+  }
+
+  /**
+   * @notice Checks if passport and entity are eligible for linking.
+   * @param passport The address of the passport being checked.
+   * @param entity The address of the entity being checked.
+   */
+  function _checkLink(
+    PassportStorageTypes.PassportStorage storage self,
+    address passport,
+    address entity
+  ) private view {
+    // Check if the entity is already an entity, if so revert
+    if (self.entityToPassport[entity].latest() != 0 || self.pendingLinksIndexes[entity] != 0) {
+      revert AlreadyLinked(entity);
+    }
+
+    // Check if the passport is an entity, if so revert
+    if (self.entityToPassport[passport].latest() != 0 || self.pendingLinksEntityToPassport[passport] != address(0)) {
+      revert AlreadyLinked(passport);
+    }
+
+    // Check if the entity is a passport, if so revert
+    if (self.passportToEntities[entity].length != 0) {
+      revert AlreadyLinked(passport);
+    }
+
+    // Check if entity has delegated to another passport or has a pending delegation
+    if (
+      PassportDelegationLogic.isDelegator(self, entity) ||
+      self.pendingDelegationsDelegatorToDelegatee[entity] != address(0)
+    ) {
+      revert DelegatedEntity(entity);
+    }
+
+    // Prevent self-linking (an entity cannot be its own passport)
+    if (entity == passport) {
+      revert CannotLinkToSelf(entity);
+    }
   }
 }

@@ -646,6 +646,15 @@ contract B3TRGovernor is
     return address($.timelock);
   }
 
+  /**
+   * @notice Returns the VeBetterPassport contract.
+   * @return The current VeBetterPassport contract.
+   */
+  function veBetterPassport() external view returns (IVeBetterPassport) {
+    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
+    return $.veBetterPassport;
+  }
+
   // ------------------ SETTERS ------------------ //
 
   /**
@@ -919,6 +928,17 @@ contract B3TRGovernor is
   ) external virtual onlyRoleOrGovernance(DEFAULT_ADMIN_ROLE) {
     GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
     GovernorConfigurator.updateTimelock($, newTimelock);
+  }
+
+  /**
+   * @notice Set the VeBetterPassport contract
+   * @param newVeBetterPassport The new VeBetterPassport contract
+   */
+  function setVeBetterPassport(
+    IVeBetterPassport newVeBetterPassport
+  ) public onlyRoleOrGovernance(CONTRACTS_ADDRESS_MANAGER_ROLE) {
+    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
+    GovernorConfigurator.setVeBetterPassport($, newVeBetterPassport);
   }
 
   // ------------------ Overrides ------------------ //

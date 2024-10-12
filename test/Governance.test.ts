@@ -1771,6 +1771,18 @@ describe("Governor and TimeLock - @shard1", function () {
       expect(updatedQuorum).to.not.eql(newQuorum)
     })
 
+    it("Can get and set veBetterPassport address", async function () {
+      const { governor, owner, otherAccount } = await getOrDeployContractInstances({ forceDeploy: true })
+
+      await governor.connect(owner).setVeBetterPassport(owner.address)
+
+      const updatedVeBetterPassportAddress = await governor.veBetterPassport()
+      expect(updatedVeBetterPassportAddress).to.eql(owner.address)
+
+      // only admin can set the veBetterPassport address
+      await expect(governor.connect(otherAccount).setVeBetterPassport(otherAccount.address)).to.be.reverted
+    })
+
     describe("Pausability", function () {
       it("Admin with PAUSER_ROLE should be able to pause the contract", async function () {
         const { governor, owner } = await getOrDeployContractInstances({

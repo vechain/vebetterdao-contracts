@@ -27,7 +27,7 @@ import { getImplementationAddress } from "@openzeppelin/upgrades-core"
 import { deployAndUpgrade, deployProxy, upgradeProxy } from "../scripts/helpers"
 import { B3TRGovernor, GalaxyMember, VoterRewards, VoterRewardsV1, XAllocationVoting } from "../typechain-types"
 
-describe("VoterRewards - @shard2", () => {
+describe("VoterRewards - @shard7", () => {
   describe("Contract parameters", () => {
     it("Should have correct parameters set on deployment", async () => {
       const { voterRewards, owner, galaxyMember, emissions } = await getOrDeployContractInstances({ forceDeploy: true })

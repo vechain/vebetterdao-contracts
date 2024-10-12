@@ -14,7 +14,7 @@ import { X2EarnRewardsPool, X2EarnRewardsPoolV2 } from "../typechain-types"
 import { X2EarnRewardsPoolV1 } from "../typechain-types/contracts/deprecated/V1"
 import { createLocalConfig } from "../config/contracts/envs/local"
 
-describe("X2EarnRewardsPool - @shard3", function () {
+describe("X2EarnRewardsPool - @shard7", function () {
   // deployment
   describe("Deployment", function () {
     it("Cannot deploy contract with zero address", async function () {
@@ -440,6 +440,18 @@ describe("X2EarnRewardsPool - @shard3", function () {
         value: ethers.parseEther("0"),
         data: "0x1234", // some data
       })
+    })
+
+    it("Can get and set veBetterPassport address", async function () {
+      const { x2EarnRewardsPool, owner, otherAccount } = await getOrDeployContractInstances({ forceDeploy: true })
+
+      await x2EarnRewardsPool.connect(owner).setVeBetterPassport(owner.address)
+
+      const updatedVeBetterPassportAddress = await x2EarnRewardsPool.veBetterPassport()
+      expect(updatedVeBetterPassportAddress).to.eql(owner.address)
+
+      // only admin can set the veBetterPassport address
+      await expect(x2EarnRewardsPool.connect(otherAccount).setVeBetterPassport(otherAccount.address)).to.be.reverted
     })
   })
 

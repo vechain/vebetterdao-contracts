@@ -32,11 +32,7 @@ export async function passportLibraries() {
   await PassportSignalingLogicLib.waitForDeployment()
 
   // Deploy Passport Personhood Logic
-  const PassportPersonhoodLogic = await ethers.getContractFactory("PassportPersonhoodLogic", {
-    libraries: {
-      PassportPoPScoreLogic: await PassportPoPScoreLogicLib.getAddress(),
-    },
-  })
+  const PassportPersonhoodLogic = await ethers.getContractFactory("PassportPersonhoodLogic")
   const PassportPersonhoodLogicLib = await PassportPersonhoodLogic.deploy()
   await PassportPersonhoodLogicLib.waitForDeployment()
 

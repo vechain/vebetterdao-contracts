@@ -62,7 +62,6 @@ abstract contract XAllocationVotingGovernor is
   /// @custom:storage-location erc7201:b3tr.storage.XAllocationVotingGovernor
   struct XAllocationVotingGovernorStorage {
     string _name;
-    IVeBetterPassport _veBetterPassport;
   }
 
   // keccak256(abi.encode(uint256(keccak256("b3tr.storage.XAllocationVotingGovernor")) - 1)) & ~bytes32(uint256(0xff))
@@ -85,11 +84,6 @@ abstract contract XAllocationVotingGovernor is
   function __XAllocationVotingGovernor_init_unchained(string memory name_) internal onlyInitializing {
     XAllocationVotingGovernorStorage storage $ = _getXAllocationVotingGovernorStorage();
     $._name = name_;
-  }
-
-  function __XAllocationVotingGovernor_init_v2(IVeBetterPassport veBetterPassport_) internal onlyInitializing {
-    XAllocationVotingGovernorStorage storage $ = _getXAllocationVotingGovernorStorage();
-    $._veBetterPassport = veBetterPassport_;
   }
 
   // ---------- Setters ---------- //
@@ -121,9 +115,8 @@ abstract contract XAllocationVotingGovernor is
     require(appIds.length > 0, "XAllocationVotingGovernor: no apps to vote for");
 
     uint256 _currentRoundSnapshot = currentRoundSnapshot();
-    XAllocationVotingGovernorStorage storage $ = _getXAllocationVotingGovernorStorage();
 
-    (bool isPerson, string memory explanation) = $._veBetterPassport.isPersonAtTimepoint(
+    (bool isPerson, string memory explanation) = veBetterPassport().isPersonAtTimepoint(
       _msgSender(),
       SafeCast.toUint48(_currentRoundSnapshot)
     );
@@ -328,6 +321,11 @@ abstract contract XAllocationVotingGovernor is
    * @dev Returns the X2EarnApps contract.
    */
   function x2EarnApps() public view virtual returns (IX2EarnApps);
+
+  /**
+   * @dev Returns the VeBetterPassport contract.
+   */
+  function veBetterPassport() public view virtual returns (IVeBetterPassport);
 
   /**
    * @dev Returns the Emissions contract.

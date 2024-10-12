@@ -9,6 +9,7 @@ import { IB3TR } from "./IB3TR.sol";
 import { IVoterRewards } from "../interfaces/IVoterRewards.sol";
 import { IXAllocationVotingGovernor } from "../interfaces/IXAllocationVotingGovernor.sol";
 import { GovernorTypes } from "../governance/libraries/GovernorTypes.sol";
+import { IVeBetterPassport } from "./IVeBetterPassport.sol";
 
 /**
  * @dev Interface of the {B3TRGovernor} core.
@@ -215,6 +216,11 @@ interface IB3TRGovernor is IERC165, IERC6372 {
    * @dev Emitted when a deposit is made to a proposal.
    */
   event ProposalDeposit(address indexed depositor, uint256 indexed proposalId, uint256 amount);
+
+  /**
+   * @dev Emitted when the VeBetterPassport contract is set.
+   */
+  event VeBetterPassportSet(address indexed oldVeBetterPassport, address indexed newVeBetterPassport);
 
   /**
    * @notice module:core
@@ -507,4 +513,16 @@ interface IB3TRGovernor is IERC165, IERC6372 {
    * @dev Getter to retrieve the amount of tokens a specific user has deposited to a proposal
    */
   function getUserDeposit(uint256 proposalId, address user) external view returns (uint256);
+
+  /**
+   * @notice Returns the VeBetterPassport contract.
+   * @return The current VeBetterPassport contract.
+   */
+  function veBetterPassport() external view returns (IVeBetterPassport);
+
+  /**
+   * @notice Set the VeBetterPassport contract
+   * @param newVeBetterPassport The new VeBetterPassport contract
+   */
+  function setVeBetterPassport(IVeBetterPassport newVeBetterPassport) external;
 }

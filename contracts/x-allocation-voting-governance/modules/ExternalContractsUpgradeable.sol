@@ -28,6 +28,7 @@ import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/I
 import { IEmissions } from "../../interfaces/IEmissions.sol";
 import { IX2EarnApps } from "../../interfaces/IX2EarnApps.sol";
 import { IVoterRewards } from "../../interfaces/IVoterRewards.sol";
+import { IVeBetterPassport } from "../../interfaces/IVeBetterPassport.sol";
 
 /**
  * @title ExternalContractsUpgradeable
@@ -39,6 +40,7 @@ abstract contract ExternalContractsUpgradeable is Initializable, XAllocationVoti
     IX2EarnApps _x2EarnApps;
     IEmissions _emissions;
     IVoterRewards _voterRewards;
+    IVeBetterPassport _veBetterPassport;
   }
 
   // keccak256(abi.encode(uint256(keccak256("b3tr.storage.XAllocationVotingGovernor.ExternalContracts")) - 1)) & ~bytes32(uint256(0xff))
@@ -57,6 +59,8 @@ abstract contract ExternalContractsUpgradeable is Initializable, XAllocationVoti
   event X2EarnAppsSet(address oldContractAddress, address newContractAddress);
   // @dev Emit when the voter rewards contract is set
   event VoterRewardsSet(address oldContractAddress, address newContractAddress);
+  // @dev Emit when the VeBetterPassport contract is set
+  event VeBetterPassportSet(address oldContractAddress, address newContractAddress);
 
   /**
    * @dev Initializes the contract
@@ -83,6 +87,11 @@ abstract contract ExternalContractsUpgradeable is Initializable, XAllocationVoti
     $._voterRewards = initialVoterRewards;
   }
 
+  function __ExternalContracts_init_v2(IVeBetterPassport _veBetterPassport) internal onlyInitializing {
+    ExternalContractsStorage storage $ = _getExternalContractsStorage();
+    $._veBetterPassport = _veBetterPassport;
+  }
+
   // ------- Getters ------- //
   /**
    * @dev The X2EarnApps contract.
@@ -106,6 +115,11 @@ abstract contract ExternalContractsUpgradeable is Initializable, XAllocationVoti
   function voterRewards() public view override returns (IVoterRewards) {
     ExternalContractsStorage storage $ = _getExternalContractsStorage();
     return $._voterRewards;
+  }
+
+  function veBetterPassport() public view override returns (IVeBetterPassport) {
+    ExternalContractsStorage storage $ = _getExternalContractsStorage();
+    return $._veBetterPassport;
   }
 
   // ------- Internal Functions ------- //
@@ -149,5 +163,19 @@ abstract contract ExternalContractsUpgradeable is Initializable, XAllocationVoti
 
     emit VoterRewardsSet(address($._voterRewards), address(newVoterRewards));
     $._voterRewards = newVoterRewards;
+  }
+
+  /**
+   * @dev Sets the VeBetterPassport contract
+   * @param newVeBetterPassport The new VeBetterPassport contract address
+   */
+  function _setVeBetterPassport(IVeBetterPassport newVeBetterPassport) internal virtual {
+    require(
+      address(newVeBetterPassport) != address(0),
+      "XAllocationVotingGovernor: new VeBetterPassport is the zero address"
+    );
+
+    ExternalContractsStorage storage $ = _getExternalContractsStorage();
+    $._veBetterPassport = newVeBetterPassport;
   }
 }
