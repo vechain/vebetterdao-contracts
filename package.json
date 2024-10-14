@@ -66,6 +66,7 @@
     "@vechain/sdk-network": "1.0.0-beta.5",
     "@vechain/sdk-wallet": "^1.0.0-beta.3",
     "@vechain/web3-providers-connex": "^1.1.2",
+    "archiver": "^7.0.1",
     "chai": "^4.2.0",
     "dotenv": "^16.3.1",
     "dotenv-cli": "^7.4.2",
@@ -73,6 +74,7 @@
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.1.3",
     "ethers": "^6.9.0",
+    "hardhat": "^2.22.6",
     "hardhat-contract-sizer": "^2.10.0",
     "hardhat-gas-reporter": "^1.0.8",
     "hardhat-ignore-warnings": "^0.2.11",
@@ -81,10 +83,8 @@
     "solidity-docgen": "^0.6.0-beta.36",
     "ts-node": ">=8.0.0",
     "tsup": "^8.1.0",
-    "hardhat": "^2.22.6",
     "typechain": "^8.1.0",
-    "typescript": ">=4.5.0",
-    "archiver": "^7.0.1"
+    "typescript": ">=4.5.0"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^5.0.2",
