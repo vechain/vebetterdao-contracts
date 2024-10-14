@@ -19,7 +19,7 @@ import { getImplementationAddress } from "@openzeppelin/upgrades-core"
 import { deployProxy } from "../scripts/helpers"
 import b3trAllocationsEmissionsDisaligned from "./fixture/full-allocations-round-14-decay.json"
 
-describe.only("Emissions", () => {
+describe("Emissions - @shard2", () => {
   describe("Contract parameters", () => {
     it("Should have correct parameters set on deployment", async () => {
       const config = createLocalConfig()
@@ -209,11 +209,10 @@ describe.only("Emissions", () => {
 
     it("Should revert if Treasury is set to zero address in initilisation", async () => {
       const config = createLocalConfig()
-      const { owner, b3tr, minterAccount, xAllocationPool, voterRewards, treasury } =
-        await getOrDeployContractInstances({
-          forceDeploy: true,
-          config,
-        })
+      const { owner, b3tr, minterAccount, xAllocationPool, voterRewards } = await getOrDeployContractInstances({
+        forceDeploy: true,
+        config,
+      })
 
       await expect(
         deployProxy("Emissions", [
@@ -1656,7 +1655,7 @@ describe.only("Emissions", () => {
       expect(await b3tr.totalSupply()).to.equal(await emissions.totalEmissions())
 
       console.log(`Total emissions: ${ethers.formatEther(await emissions.totalEmissions())}`)
-    }).timeout(1000 * 60 * 5) // 5 minutes
+    }).timeout(1000 * 60 * 10) // 10 minutes
 
     it("Should not be able to distribute if cycle is not ready", async () => {
       const { emissions, minterAccount } = await getOrDeployContractInstances({

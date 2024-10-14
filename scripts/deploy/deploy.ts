@@ -12,14 +12,27 @@ import {
   Treasury,
   X2EarnApps,
   X2EarnRewardsPool,
+  VeBetterPassport,
 } from "../../typechain-types"
-import { ContractsConfig } from "../../config/contracts/type"
+import { ContractsConfig } from "../../config/contracts"
 import { HttpNetworkConfig } from "hardhat/types"
 import { setupLocalEnvironment, setupTestEnvironment } from "./setup"
 import { simulateRounds } from "./simulateRounds"
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers"
-import { deployAndUpgrade, deployProxy, deployLibraries } from "../helpers"
+import { deployAndUpgrade, deployProxy, deployProxyOnly, initializeProxy, saveContractsToFile } from "../helpers"
 import { shouldRunSimulation } from "../../config/contracts"
+import { governanceLibraries, passportLibraries } from "../libraries"
+import {
+  transferAdminRole,
+  transferContractsAddressManagerRole,
+  transferDecaySettingsManagerRole,
+  transferGovernanceRole,
+  transferGovernorFunctionSettingsRole,
+  transferMinterRole,
+  transferSettingsManagerRole,
+  transferUpgraderRole,
+  validateContractRole,
+} from "../helpers/roles"
 
 // GalaxyMember NFT Values
 const name = "VeBetterDAO Galaxy Member"
@@ -29,18 +42,22 @@ export async function deployAll(config: ContractsConfig) {
   const start = performance.now()
   const networkConfig = network.config as HttpNetworkConfig
   console.log(
-    `================  Deploying contracts on ${network.name} (${networkConfig.url}) with ${config.NEXT_PUBLIC_APP_ENV} configurations ================`,
+    `================  Deploying contracts on ${network.name} (${networkConfig.url}) with ${config.NEXT_PUBLIC_APP_ENV} configurations `,
   )
   const [deployer] = await ethers.getSigners()
+  console.log(`================  Address used to deploy: ${deployer.address}`)
 
   // We use a temporary admin to deploy and initialize contracts then transfer role to the real admin
   // Also we have many roles in our contracts but we currently use one wallet for all roles
   const TEMP_ADMIN = network.name === "vechain_solo" ? config.CONTRACTS_ADMIN_ADDRESS : deployer.address
+  console.log("================================================================================")
   console.log("Temporary admin set to ", TEMP_ADMIN)
-
+  console.log("Final admin will be set to ", config.CONTRACTS_ADMIN_ADDRESS)
+  console.log("================================================================================")
   // ---------- Contracts Deployment ---------- //
-
+  console.log(`================  Contracts Deployment Initiated `)
   // ---------------------- Deploy Libraries ----------------------
+  console.log("Deploying Governance Libraries")
   const {
     GovernorClockLogicLibV1,
     GovernorConfiguratorLibV1,
@@ -50,6 +67,14 @@ export async function deployAll(config: ContractsConfig) {
     GovernorQuorumLogicLibV1,
     GovernorVotesLogicLibV1,
     GovernorStateLogicLibV1,
+    GovernorClockLogicLibV3,
+    GovernorConfiguratorLibV3,
+    GovernorFunctionRestrictionsLogicLibV3,
+    GovernorQuorumLogicLibV3,
+    GovernorProposalLogicLibV3,
+    GovernorVotesLogicLibV3,
+    GovernorDepositLogicLibV3,
+    GovernorStateLogicLibV3,
     GovernorClockLogicLib,
     GovernorConfiguratorLib,
     GovernorDepositLogicLib,
@@ -58,61 +83,126 @@ export async function deployAll(config: ContractsConfig) {
     GovernorQuorumLogicLib,
     GovernorVotesLogicLib,
     GovernorStateLogicLib,
-  } = await deployLibraries()
+  } = await governanceLibraries()
+
+  console.log("Deploying VeBetter Passport Libraries")
+  // Deploy Passport Libraries
+  const {
+    PassportChecksLogic,
+    PassportConfigurator,
+    PassportEntityLogic,
+    PassportDelegationLogic,
+    PassportPersonhoodLogic,
+    PassportPoPScoreLogic,
+    PassportSignalingLogic,
+    PassportWhitelistAndBlacklistLogic,
+  } = await passportLibraries()
+
+  let vechainNodesAddress = "0xb81E9C5f9644Dec9e5e3Cac86b4461A222072302" // this is the mainnet address
+  if (network.name !== "vechain_mainnet") {
+    console.log("Deploying Vechain Nodes mock contracts")
+
+    const TokenAuctionLock = await ethers.getContractFactory("TokenAuction")
+    const vechainNodesMock = await TokenAuctionLock.deploy()
+    await vechainNodesMock.waitForDeployment()
+
+    const ClockAuctionLock = await ethers.getContractFactory("ClockAuction")
+    const clockAuctionContract = await ClockAuctionLock.deploy(await vechainNodesMock.getAddress(), TEMP_ADMIN)
+
+    await vechainNodesMock.setSaleAuctionAddress(await clockAuctionContract.getAddress())
+
+    await vechainNodesMock.addOperator(TEMP_ADMIN)
+    vechainNodesAddress = await vechainNodesMock.getAddress()
+
+    console.log("Vechain Nodes Mock deployed at: ", await vechainNodesMock.getAddress())
+  }
 
   // ---------------------- Deploy Contracts ----------------------
+  console.log("Deploying VeBetter DAO contracts")
   const b3tr = await deployB3trToken(
     TEMP_ADMIN,
     TEMP_ADMIN, // Minter
     config.CONTRACTS_ADMIN_ADDRESS, // Pauser
   )
 
-  const vot3 = (await deployProxy("VOT3", [
-    config.CONTRACTS_ADMIN_ADDRESS, // admin
-    config.CONTRACTS_ADMIN_ADDRESS, // pauser
-    config.CONTRACTS_ADMIN_ADDRESS, // upgrader
-    await b3tr.getAddress(),
-  ])) as VOT3
-  console.log(`Vot3 deployed at ${await vot3.getAddress()}`)
+  const vot3 = (await deployProxy(
+    "VOT3",
+    [
+      config.CONTRACTS_ADMIN_ADDRESS, // admin
+      config.CONTRACTS_ADMIN_ADDRESS, // pauser
+      config.CONTRACTS_ADMIN_ADDRESS, // upgrader
+      await b3tr.getAddress(),
+    ],
+    undefined,
+    true,
+  )) as VOT3
 
-  const timelock = (await deployProxy("TimeLock", [
-    config.TIMELOCK_MIN_DELAY,
-    [], // proposers
-    [], // executors
-    TEMP_ADMIN, // admin
-    config.CONTRACTS_ADMIN_ADDRESS, // upgrader
-  ])) as TimeLock
-  console.log(`TimeLock deployed at ${await timelock.getAddress()}`)
+  const timelock = (await deployProxy(
+    "TimeLock",
+    [
+      config.TIMELOCK_MIN_DELAY,
+      [], // proposers
+      [], // executors
+      TEMP_ADMIN, // admin
+      config.CONTRACTS_ADMIN_ADDRESS, // upgrader
+    ],
+    undefined,
+    true,
+  )) as TimeLock
 
-  const treasury = (await deployProxy("Treasury", [
-    await b3tr.getAddress(),
-    await vot3.getAddress(),
-    await timelock.getAddress(),
-    TEMP_ADMIN, // admin
-    config.CONTRACTS_ADMIN_ADDRESS, // upgrader
-    config.CONTRACTS_ADMIN_ADDRESS, //pauser
-    config.TREASURY_TRANSFER_LIMIT_VET,
-    config.TREASURY_TRANSFER_LIMIT_B3TR,
-    config.TREASURY_TRANSFER_LIMIT_VOT3,
-    config.TREASURY_TRANSFER_LIMIT_VTHO,
-  ])) as Treasury
-  console.log(`Treasury deployed at ${await treasury.getAddress()}`)
+  const treasury = (await deployProxy(
+    "Treasury",
+    [
+      await b3tr.getAddress(),
+      await vot3.getAddress(),
+      await timelock.getAddress(),
+      TEMP_ADMIN, // admin
+      config.CONTRACTS_ADMIN_ADDRESS, // upgrader
+      config.CONTRACTS_ADMIN_ADDRESS, //pauser
+      config.TREASURY_TRANSFER_LIMIT_VET,
+      config.TREASURY_TRANSFER_LIMIT_B3TR,
+      config.TREASURY_TRANSFER_LIMIT_VOT3,
+      config.TREASURY_TRANSFER_LIMIT_VTHO,
+    ],
+    undefined,
+    true,
+  )) as Treasury
 
-  const x2EarnApps = (await deployProxy("X2EarnApps", [
-    config.XAPP_BASE_URI,
-    [TEMP_ADMIN], //admins
-    config.CONTRACTS_ADMIN_ADDRESS, // upgrader
-    TEMP_ADMIN, // governance role
-  ])) as X2EarnApps
-  console.log(`X2EarnApps deployed at ${await x2EarnApps.getAddress()}`)
+  const x2EarnApps = (await deployProxy(
+    "X2EarnApps",
+    [
+      config.XAPP_BASE_URI,
+      [TEMP_ADMIN], //admins
+      config.CONTRACTS_ADMIN_ADDRESS, // upgrader
+      TEMP_ADMIN, // governance role
+    ],
+    undefined,
+    true,
+  )) as X2EarnApps
+
+  // Initialization requires the address of the x2EarnRewardsPool, for this reason we will initialize it after
+  const veBetterPassportContractAddress = await deployProxyOnly(
+    "VeBetterPassport",
+    {
+      PassportChecksLogic: await PassportChecksLogic.getAddress(),
+      PassportConfigurator: await PassportConfigurator.getAddress(),
+      PassportEntityLogic: await PassportEntityLogic.getAddress(),
+      PassportDelegationLogic: await PassportDelegationLogic.getAddress(),
+      PassportPersonhoodLogic: await PassportPersonhoodLogic.getAddress(),
+      PassportPoPScoreLogic: await PassportPoPScoreLogic.getAddress(),
+      PassportSignalingLogic: await PassportSignalingLogic.getAddress(),
+      PassportWhitelistAndBlacklistLogic: await PassportWhitelistAndBlacklistLogic.getAddress(),
+    },
+    true,
+  )
 
   const x2EarnRewardsPool = (await deployAndUpgrade(
-    ["X2EarnRewardsPoolV1", "X2EarnRewardsPool"],
+    ["X2EarnRewardsPoolV1", "X2EarnRewardsPoolV2", "X2EarnRewardsPool"],
     [
       [
         config.CONTRACTS_ADMIN_ADDRESS, // admin
         config.CONTRACTS_ADMIN_ADDRESS, // contracts address manager
-        config.CONTRACTS_ADMIN_ADDRESS, // upgrader
+        TEMP_ADMIN, // upgrader //TODO: transferRole
         await b3tr.getAddress(),
         await x2EarnApps.getAddress(),
       ],
@@ -120,20 +210,20 @@ export async function deployAll(config: ContractsConfig) {
         config.CONTRACTS_ADMIN_ADDRESS, // impact admin address
         config.X_2_EARN_INITIAL_IMPACT_KEYS, // impact keys
       ],
+      [veBetterPassportContractAddress],
     ],
     {
-      versions: [undefined, 2],
+      logOutput: true,
+      versions: [undefined, 2, 3],
     },
   )) as X2EarnRewardsPool
-
-  console.log(`X2EarnRewardsPool deployed at ${await x2EarnRewardsPool.getAddress()}`)
 
   const xAllocationPool = (await deployAndUpgrade(
     ["XAllocationPoolV1", "XAllocationPool"],
     [
       [
         TEMP_ADMIN, // admin
-        config.CONTRACTS_ADMIN_ADDRESS, // upgrader
+        TEMP_ADMIN, // upgrader
         TEMP_ADMIN, // contractsAddressManager
         await b3tr.getAddress(),
         await treasury.getAddress(),
@@ -144,65 +234,77 @@ export async function deployAll(config: ContractsConfig) {
     ],
     {
       versions: [undefined, 2],
+      logOutput: true,
     },
   )) as XAllocationPool
 
-  console.log(`XAllocationPool deployed at ${await xAllocationPool.getAddress()}`)
-
   // Deploy the GalaxyMember contract with Max Mintable Level 1
-  const galaxyMember = (await deployProxy("GalaxyMember", [
-    {
-      name: name,
-      symbol: symbol,
-      admin: TEMP_ADMIN,
-      upgrader: config.CONTRACTS_ADMIN_ADDRESS,
-      pauser: config.CONTRACTS_ADMIN_ADDRESS,
-      minter: config.CONTRACTS_ADMIN_ADDRESS,
-      contractsAddressManager: TEMP_ADMIN,
-      maxLevel: 1,
-      baseTokenURI: config.GM_NFT_BASE_URI,
-      b3trToUpgradeToLevel: config.GM_NFT_B3TR_REQUIRED_TO_UPGRADE_TO_LEVEL,
-      b3tr: await b3tr.getAddress(),
-      treasury: await treasury.getAddress(),
-    },
-  ])) as GalaxyMember
-  console.log(`GalaxyMember deployed at ${await galaxyMember.getAddress()}`)
+  const galaxyMember = (await deployProxy(
+    "GalaxyMember",
+    [
+      {
+        name: name,
+        symbol: symbol,
+        admin: TEMP_ADMIN,
+        upgrader: config.CONTRACTS_ADMIN_ADDRESS,
+        pauser: config.CONTRACTS_ADMIN_ADDRESS,
+        minter: config.CONTRACTS_ADMIN_ADDRESS,
+        contractsAddressManager: TEMP_ADMIN,
+        maxLevel: 1,
+        baseTokenURI: config.GM_NFT_BASE_URI,
+        b3trToUpgradeToLevel: config.GM_NFT_B3TR_REQUIRED_TO_UPGRADE_TO_LEVEL,
+        b3tr: await b3tr.getAddress(),
+        treasury: await treasury.getAddress(),
+      },
+    ],
+    undefined,
+    true,
+  )) as GalaxyMember
 
-  const emissions = (await deployProxy("Emissions", [
+  const emissions = (await deployAndUpgrade(
+    ["EmissionsV1", "Emissions"],
+    [
+      [
+        {
+          minter: TEMP_ADMIN,
+          admin: TEMP_ADMIN,
+          upgrader: TEMP_ADMIN,
+          contractsAddressManager: TEMP_ADMIN,
+          decaySettingsManager: TEMP_ADMIN,
+          b3trAddress: await b3tr.getAddress(),
+          destinations: [
+            await xAllocationPool.getAddress(),
+            config.VOTE_2_EARN_POOL_ADDRESS,
+            await treasury.getAddress(),
+            config.MIGRATION_ADDRESS,
+          ],
+          initialXAppAllocation: config.INITIAL_X_ALLOCATION,
+          cycleDuration: config.EMISSIONS_CYCLE_DURATION,
+          decaySettings: [
+            config.EMISSIONS_X_ALLOCATION_DECAY_PERCENTAGE,
+            config.EMISSIONS_VOTE_2_EARN_DECAY_PERCENTAGE,
+            config.EMISSIONS_X_ALLOCATION_DECAY_PERIOD,
+            config.EMISSIONS_VOTE_2_EARN_ALLOCATION_DECAY_PERIOD,
+          ],
+          treasuryPercentage: config.EMISSIONS_TREASURY_PERCENTAGE,
+          maxVote2EarnDecay: config.EMISSIONS_MAX_VOTE_2_EARN_DECAY_PERCENTAGE,
+          migrationAmount: config.MIGRATION_AMOUNT,
+        },
+      ],
+      [config.EMISSIONS_IS_NOT_ALIGNED],
+    ],
     {
-      minter: TEMP_ADMIN,
-      admin: TEMP_ADMIN,
-      upgrader: config.CONTRACTS_ADMIN_ADDRESS,
-      contractsAddressManager: TEMP_ADMIN,
-      decaySettingsManager: TEMP_ADMIN,
-      b3trAddress: await b3tr.getAddress(),
-      destinations: [
-        await xAllocationPool.getAddress(),
-        config.VOTE_2_EARN_POOL_ADDRESS,
-        await treasury.getAddress(),
-        config.MIGRATION_ADDRESS,
-      ],
-      initialXAppAllocation: config.INITIAL_X_ALLOCATION,
-      cycleDuration: config.EMISSIONS_CYCLE_DURATION,
-      decaySettings: [
-        config.EMISSIONS_X_ALLOCATION_DECAY_PERCENTAGE,
-        config.EMISSIONS_VOTE_2_EARN_DECAY_PERCENTAGE,
-        config.EMISSIONS_X_ALLOCATION_DECAY_PERIOD,
-        config.EMISSIONS_VOTE_2_EARN_ALLOCATION_DECAY_PERIOD,
-      ],
-      treasuryPercentage: config.EMISSIONS_TREASURY_PERCENTAGE,
-      maxVote2EarnDecay: config.EMISSIONS_MAX_VOTE_2_EARN_DECAY_PERCENTAGE,
-      migrationAmount: config.MIGRATION_AMOUNT,
+      versions: [undefined, 2],
+      logOutput: true,
     },
-  ])) as Emissions
-  console.log(`Emissions deployed at ${await emissions.getAddress()}`)
+  )) as Emissions
 
   const voterRewards = (await deployAndUpgrade(
     ["VoterRewardsV1", "VoterRewards"],
     [
       [
         TEMP_ADMIN, // admin
-        config.CONTRACTS_ADMIN_ADDRESS, // upgrader
+        TEMP_ADMIN, // upgrader // TODO: transferRole
         config.CONTRACTS_ADMIN_ADDRESS, // contractsAddressManager
         await emissions.getAddress(),
         await galaxyMember.getAddress(),
@@ -214,30 +316,80 @@ export async function deployAll(config: ContractsConfig) {
     ],
     {
       versions: [undefined, 2],
+      logOutput: true,
     },
   )) as VoterRewards
 
-  const xAllocationVoting = (await deployProxy("XAllocationVoting", [
+  const xAllocationVoting = (await deployAndUpgrade(
+    ["XAllocationVotingV1", "XAllocationVoting"],
+    [
+      [
+        {
+          vot3Token: await vot3.getAddress(),
+          quorumPercentage: config.X_ALLOCATION_VOTING_QUORUM_PERCENTAGE,
+          initialVotingPeriod: config.EMISSIONS_CYCLE_DURATION - 1,
+          timeLock: await timelock.getAddress(),
+          voterRewards: await voterRewards.getAddress(),
+          emissions: await emissions.getAddress(),
+          admins: [await timelock.getAddress(), TEMP_ADMIN],
+          upgrader: TEMP_ADMIN,
+          contractsAddressManager: TEMP_ADMIN,
+          x2EarnAppsAddress: await x2EarnApps.getAddress(),
+          baseAllocationPercentage: config.X_ALLOCATION_POOL_BASE_ALLOCATION_PERCENTAGE,
+          appSharesCap: config.X_ALLOCATION_POOL_APP_SHARES_MAX_CAP,
+          votingThreshold: config.X_ALLOCATION_VOTING_VOTING_THRESHOLD,
+        },
+      ],
+      [veBetterPassportContractAddress],
+    ],
     {
-      vot3Token: await vot3.getAddress(),
-      quorumPercentage: config.X_ALLOCATION_VOTING_QUORUM_PERCENTAGE,
-      initialVotingPeriod: config.EMISSIONS_CYCLE_DURATION - 1,
-      timeLock: await timelock.getAddress(),
-      voterRewards: await voterRewards.getAddress(),
-      emissions: await emissions.getAddress(),
-      admins: [await timelock.getAddress(), TEMP_ADMIN],
-      upgrader: config.CONTRACTS_ADMIN_ADDRESS,
-      contractsAddressManager: TEMP_ADMIN,
-      x2EarnAppsAddress: await x2EarnApps.getAddress(),
-      baseAllocationPercentage: config.X_ALLOCATION_POOL_BASE_ALLOCATION_PERCENTAGE,
-      appSharesCap: config.X_ALLOCATION_POOL_APP_SHARES_MAX_CAP,
-      votingThreshold: config.X_ALLOCATION_VOTING_VOTING_THRESHOLD,
+      versions: [undefined, 2],
+      logOutput: true,
     },
-  ])) as XAllocationVoting
-  console.log(`XAllocationVoting deployed at ${await xAllocationVoting.getAddress()}`)
+  )) as XAllocationVoting
+
+  const veBetterPassport = (await initializeProxy(
+    veBetterPassportContractAddress,
+    "VeBetterPassport",
+    [
+      {
+        x2EarnApps: await x2EarnApps.getAddress(),
+        xAllocationVoting: await xAllocationVoting.getAddress(),
+        galaxyMember: await galaxyMember.getAddress(),
+        signalingThreshold: config.VEPASSPORT_BOT_SIGNALING_THRESHOLD, //signalingThreshold
+        roundsForCumulativeScore: config.VEPASSPORT_ROUNDS_FOR_CUMULATIVE_PARTICIPATION_SCORE, //roundsForCumulativeScore
+        minimumGalaxyMemberLevel: config.VEPASSPORT_GALAXY_MEMBER_MINIMUM_LEVEL, //galaxyMemberMinimumLevel
+        blacklistThreshold: config.VEPASSPORT_BLACKLIST_THRESHOLD_PERCENTAGE, //blacklistThreshold
+        whitelistThreshold: config.VEPASSPORT_WHITELIST_THRESHOLD_PERCENTAGE, //whitelistThreshold
+        maxEntitiesPerPassport: config.VEPASSPORT_PASSPORT_MAX_ENTITIES, //maxEntitiesPerPassport
+        decayRate: config.VEPASSPORT_DECAY_RATE, //decayRate
+      },
+      {
+        admin: config.CONTRACTS_ADMIN_ADDRESS, // admins
+        botSignaler: config.CONTRACTS_ADMIN_ADDRESS, // botSignaler
+        upgrader: config.CONTRACTS_ADMIN_ADDRESS, // upgrader
+        settingsManager: TEMP_ADMIN, // settingsManager
+        roleGranter: config.CONTRACTS_ADMIN_ADDRESS, // roleGranter
+        blacklister: config.CONTRACTS_ADMIN_ADDRESS, // blacklister
+        whitelister: config.CONTRACTS_ADMIN_ADDRESS, // whitelistManager
+        actionRegistrar: config.CONTRACTS_ADMIN_ADDRESS, // actionRegistrar
+        actionScoreManager: config.CONTRACTS_ADMIN_ADDRESS, // actionScoreManager
+      },
+    ],
+    {
+      PassportChecksLogic: await PassportChecksLogic.getAddress(),
+      PassportConfigurator: await PassportConfigurator.getAddress(),
+      PassportEntityLogic: await PassportEntityLogic.getAddress(),
+      PassportDelegationLogic: await PassportDelegationLogic.getAddress(),
+      PassportPersonhoodLogic: await PassportPersonhoodLogic.getAddress(),
+      PassportPoPScoreLogic: await PassportPoPScoreLogic.getAddress(),
+      PassportSignalingLogic: await PassportSignalingLogic.getAddress(),
+      PassportWhitelistAndBlacklistLogic: await PassportWhitelistAndBlacklistLogic.getAddress(),
+    },
+  )) as VeBetterPassport
 
   const governor = (await deployAndUpgrade(
-    ["B3TRGovernorV1", "B3TRGovernorV2", "B3TRGovernor"],
+    ["B3TRGovernorV1", "B3TRGovernorV2", "B3TRGovernorV3", "B3TRGovernor"],
     [
       [
         {
@@ -262,9 +414,10 @@ export async function deployAll(config: ContractsConfig) {
       ],
       [],
       [],
+      [veBetterPassportContractAddress],
     ],
     {
-      versions: [undefined, 2, 3],
+      versions: [undefined, 2, 3, 4],
       libraries: [
         {
           GovernorClockLogicV1: await GovernorClockLogicLibV1.getAddress(),
@@ -287,6 +440,16 @@ export async function deployAll(config: ContractsConfig) {
           GovernorVotesLogicV1: await GovernorVotesLogicLibV1.getAddress(),
         },
         {
+          GovernorClockLogicV3: await GovernorClockLogicLibV3.getAddress(),
+          GovernorConfiguratorV3: await GovernorConfiguratorLibV3.getAddress(),
+          GovernorDepositLogicV3: await GovernorDepositLogicLibV3.getAddress(),
+          GovernorFunctionRestrictionsLogicV3: await GovernorFunctionRestrictionsLogicLibV3.getAddress(),
+          GovernorProposalLogicV3: await GovernorProposalLogicLibV3.getAddress(),
+          GovernorQuorumLogicV3: await GovernorQuorumLogicLibV3.getAddress(),
+          GovernorStateLogicV3: await GovernorStateLogicLibV3.getAddress(),
+          GovernorVotesLogicV3: await GovernorVotesLogicLibV3.getAddress(),
+        },
+        {
           GovernorClockLogic: await GovernorClockLogicLib.getAddress(),
           GovernorConfigurator: await GovernorConfiguratorLib.getAddress(),
           GovernorDepositLogic: await GovernorDepositLogicLib.getAddress(),
@@ -297,13 +460,12 @@ export async function deployAll(config: ContractsConfig) {
           GovernorVotesLogic: await GovernorVotesLogicLib.getAddress(),
         },
       ],
+      logOutput: true,
     },
   )) as B3TRGovernor
 
-  console.log(`Governor deployed at ${await governor.getAddress()}`)
-
   const date = new Date(performance.now() - start)
-  console.log(`Contracts deployed in ${date.getMinutes()}m ${date.getSeconds()}s`)
+  console.log(`================  Contracts deployed in ${date.getMinutes()}m ${date.getSeconds()}s `)
 
   const contractAddresses: Record<string, string> = {
     B3TR: await b3tr.getAddress(),
@@ -318,10 +480,12 @@ export async function deployAll(config: ContractsConfig) {
     X2EarnRewardsPool: await x2EarnRewardsPool.getAddress(),
     XAllocationPool: await xAllocationPool.getAddress(),
     XAllocationVoting: await xAllocationVoting.getAddress(),
+    VeBetterPassport: await veBetterPassport.getAddress(),
   }
 
   const libraries: {
     B3TRGovernor: Record<string, string>
+    VeBetterPassport: Record<string, string>
   } = {
     B3TRGovernor: {
       GovernorClockLogic: await GovernorClockLogicLib.getAddress(),
@@ -333,9 +497,31 @@ export async function deployAll(config: ContractsConfig) {
       GovernorStateLogic: await GovernorStateLogicLib.getAddress(),
       GovernorVotesLogic: await GovernorVotesLogicLib.getAddress(),
     },
+    VeBetterPassport: {
+      PassportChecksLogic: await PassportChecksLogic.getAddress(),
+      PassportConfigurator: await PassportConfigurator.getAddress(),
+      PassportEntityLogic: await PassportEntityLogic.getAddress(),
+      PassportDelegationLogic: await PassportDelegationLogic.getAddress(),
+      PassportPersonhoodLogic: await PassportPersonhoodLogic.getAddress(),
+      PassportPoPScoreLogic: await PassportPoPScoreLogic.getAddress(),
+      PassportSignalingLogic: await PassportSignalingLogic.getAddress(),
+      PassportWhitelistAndBlacklistLogic: await PassportWhitelistAndBlacklistLogic.getAddress(),
+    },
   }
 
-  await setWhitelistedFunctions(contractAddresses, config, governor, deployer, libraries) // Set whitelisted functions for governor proposals
+  await setWhitelistedFunctions(contractAddresses, config, governor, deployer, libraries, true) // Set whitelisted functions for governor proposals
+
+  // Enable Participation Score for VeBetterPassport
+  await veBetterPassport
+    .connect(deployer)
+    .toggleCheck(4)
+    .then(async tx => await tx.wait())
+
+  // Assign ACTION_REGISTRAR_ROLE to X2EarnRewardsPool
+  await veBetterPassport
+    .connect(deployer)
+    .grantRole(await veBetterPassport.ACTION_REGISTRAR_ROLE(), await x2EarnRewardsPool.getAddress())
+    .then(async tx => await tx.wait())
 
   // ---------- Configure contract roles for setup ---------- //
 
@@ -460,6 +646,8 @@ export async function deployAll(config: ContractsConfig) {
     await transferAdminRole(galaxyMember, deployer, config.CONTRACTS_ADMIN_ADDRESS)
 
     await transferMinterRole(emissions, deployer, deployer.address, config.CONTRACTS_ADMIN_ADDRESS)
+    await transferContractsAddressManagerRole(emissions, deployer, config.CONTRACTS_ADMIN_ADDRESS)
+    await transferDecaySettingsManagerRole(emissions, deployer, config.CONTRACTS_ADMIN_ADDRESS)
     await transferAdminRole(emissions, deployer, config.CONTRACTS_ADMIN_ADDRESS)
 
     await transferAdminRole(voterRewards, deployer, config.CONTRACTS_ADMIN_ADDRESS)
@@ -486,9 +674,23 @@ export async function deployAll(config: ContractsConfig) {
 
     await transferAdminRole(timelock, deployer, config.CONTRACTS_ADMIN_ADDRESS)
 
+    await transferSettingsManagerRole(veBetterPassport, deployer, config.CONTRACTS_ADMIN_ADDRESS)
+
+    await transferUpgraderRole(xAllocationPool, deployer, config.CONTRACTS_ADMIN_ADDRESS)
+    await transferUpgraderRole(emissions, deployer, config.CONTRACTS_ADMIN_ADDRESS)
+
     console.log("Roles updated successfully!")
 
-    console.log("================ Validating roles ================ ")
+    console.log("================ Validating roles")
+
+    // VeBetterPassport
+    await validateContractRole(
+      veBetterPassport,
+      config.CONTRACTS_ADMIN_ADDRESS,
+      TEMP_ADMIN,
+      await veBetterPassport.SETTINGS_MANAGER_ROLE(),
+    )
+
     // B3TR
     await validateContractRole(b3tr, await emissions.getAddress(), TEMP_ADMIN, await b3tr.MINTER_ROLE())
     await validateContractRole(b3tr, config.CONTRACTS_ADMIN_ADDRESS, TEMP_ADMIN, await b3tr.MINTER_ROLE())
@@ -548,6 +750,18 @@ export async function deployAll(config: ContractsConfig) {
       TEMP_ADMIN,
       await emissions.DEFAULT_ADMIN_ROLE(),
     )
+    await validateContractRole(
+      emissions,
+      config.CONTRACTS_ADMIN_ADDRESS,
+      TEMP_ADMIN,
+      await emissions.CONTRACTS_ADDRESS_MANAGER_ROLE(),
+    )
+    await validateContractRole(
+      emissions,
+      config.CONTRACTS_ADMIN_ADDRESS,
+      TEMP_ADMIN,
+      await emissions.DECAY_SETTINGS_MANAGER_ROLE(),
+    )
     await validateContractRole(emissions, config.CONTRACTS_ADMIN_ADDRESS, TEMP_ADMIN, await emissions.UPGRADER_ROLE())
 
     // VoterRewards
@@ -580,6 +794,28 @@ export async function deployAll(config: ContractsConfig) {
       config.CONTRACTS_ADMIN_ADDRESS,
       TEMP_ADMIN,
       await voterRewards.CONTRACTS_ADDRESS_MANAGER_ROLE(),
+    )
+
+    // X2EarnRewardsPool
+    await validateContractRole(
+      x2EarnRewardsPool,
+      config.CONTRACTS_ADMIN_ADDRESS,
+      TEMP_ADMIN,
+      await x2EarnRewardsPool.DEFAULT_ADMIN_ROLE(),
+    )
+
+    await validateContractRole(
+      x2EarnRewardsPool,
+      config.CONTRACTS_ADMIN_ADDRESS,
+      TEMP_ADMIN,
+      await x2EarnRewardsPool.CONTRACTS_ADDRESS_MANAGER_ROLE(),
+    )
+
+    await validateContractRole(
+      x2EarnRewardsPool,
+      config.CONTRACTS_ADMIN_ADDRESS,
+      TEMP_ADMIN,
+      await x2EarnRewardsPool.UPGRADER_ROLE(),
     )
 
     // XAllocationPool
@@ -701,19 +937,13 @@ export async function deployAll(config: ContractsConfig) {
     console.log("Roles validated successfully!")
   }
 
-  console.log("contracts", {
-    b3trContractAddress: await b3tr.getAddress(),
-    vot3ContractAddress: await vot3.getAddress(),
-    b3trGovernorAddress: await governor.getAddress(),
-    timelockContractAddress: await timelock.getAddress(),
-    xAllocationPoolContractAddress: await xAllocationPool.getAddress(),
-    xAllocationVotingContractAddress: await xAllocationVoting.getAddress(),
-    emissionsContractAddress: await emissions.getAddress(),
-    voterRewardsContractAddress: await voterRewards.getAddress(),
-    galaxyMemberContractAddress: await galaxyMember.getAddress(),
-    treasuryContractAddress: await treasury.getAddress(),
-    x2EarnAppsContractAddress: await x2EarnApps.getAddress(),
-  })
+  console.log("================================================================================")
+  console.log("Deployment completed successfully!")
+  console.log("================================================================================")
+
+  console.log("Libraries", libraries)
+  console.log("Contracts", contractAddresses)
+  await saveContractsToFile(contractAddresses, libraries)
 
   const end = new Date(performance.now() - start)
   console.log(`Total execution time: ${end.getMinutes()}m ${end.getSeconds()}s`)
@@ -731,181 +961,20 @@ export async function deployAll(config: ContractsConfig) {
     treasury: treasury,
     x2EarnApps: x2EarnApps,
     x2EarnRewardsPool: x2EarnRewardsPool,
+    vechainNodesMock: vechainNodesAddress,
+    veBetterPassport: veBetterPassport,
+    libraries: {
+      governorClockLogic: GovernorClockLogicLib,
+      governorConfigurator: GovernorConfiguratorLib,
+      governorDepositLogic: GovernorDepositLogicLib,
+      governorFunctionRestrictionsLogic: GovernorFunctionRestrictionsLogicLib,
+      governorProposalLogic: GovernorProposalLogicLib,
+      governorQuorumLogic: GovernorQuorumLogicLib,
+      governorStateLogic: GovernorStateLogicLib,
+      governorVotesLogic: GovernorVotesLogicLib,
+    },
   }
   // close the script
-}
-
-const transferAdminRole = async (
-  contract:
-    | B3TR
-    | VOT3
-    | GalaxyMember
-    | Emissions
-    | VoterRewards
-    | XAllocationPool
-    | XAllocationVoting
-    | Treasury
-    | B3TRGovernor
-    | X2EarnApps
-    | TimeLock,
-  oldAdmin: HardhatEthersSigner,
-  newAdminAddress: string,
-) => {
-  if (oldAdmin.address === newAdminAddress)
-    throw new Error("Admin role not transferred. New admin is the same as old admin")
-
-  const adminRole = await contract.DEFAULT_ADMIN_ROLE()
-  await contract
-    .connect(oldAdmin)
-    .grantRole(adminRole, newAdminAddress)
-    .then(async tx => await tx.wait())
-  await contract
-    .connect(oldAdmin)
-    .renounceRole(adminRole, oldAdmin.address)
-    .then(async tx => await tx.wait())
-
-  const newAdminSet = await contract.hasRole(adminRole, newAdminAddress)
-  const oldAdminRemoved = !(await contract.hasRole(adminRole, oldAdmin.address))
-  if (!newAdminSet || !oldAdminRemoved)
-    throw new Error("Admin role not set correctly on " + (await contract.getAddress()))
-
-  console.log("Admin role transferred successfully on " + (await contract.getAddress()))
-}
-
-const transferMinterRole = async (
-  contract: Emissions | B3TR,
-  admin: HardhatEthersSigner,
-  oldMinterAddress: string,
-  newMinterAddress?: string,
-) => {
-  if (!newMinterAddress && oldMinterAddress === newMinterAddress)
-    throw new Error("Minter role not transferred. New minter is the same as old minter")
-
-  const minterRole = await contract.MINTER_ROLE()
-
-  // If newMinterAddress is provided, set a new minter before revoking the old one
-  // otherwise just revoke the old one
-  if (newMinterAddress) {
-    await contract
-      .connect(admin)
-      .grantRole(minterRole, newMinterAddress)
-      .then(async tx => await tx.wait())
-    await contract
-      .connect(admin)
-      .revokeRole(minterRole, oldMinterAddress)
-      .then(async tx => await tx.wait())
-
-    const newMinterSet = await contract.hasRole(minterRole, newMinterAddress)
-    const oldMinterRemoved = !(await contract.hasRole(minterRole, oldMinterAddress))
-    if (!newMinterSet || !oldMinterRemoved)
-      throw new Error("Minter role not set correctly on " + (await contract.getAddress()))
-
-    console.log("Minter role transferred successfully on " + (await contract.getAddress()))
-  } else {
-    await contract
-      .connect(admin)
-      .revokeRole(minterRole, oldMinterAddress)
-      .then(async tx => await tx.wait())
-
-    const oldMinterRemoved = !(await contract.hasRole(minterRole, oldMinterAddress))
-    if (!oldMinterRemoved) throw new Error("Minter role not removed correctly on " + (await contract.getAddress()))
-
-    console.log("Minter role revoked (without granting new) successfully on " + (await contract.getAddress()))
-  }
-}
-
-// Transfer governance role to treasury contract admin for intial phases of project
-const transferGovernanceRole = async (
-  contract: Treasury | X2EarnApps,
-  admin: HardhatEthersSigner,
-  oldAddress: string,
-  newAddress?: string,
-) => {
-  if (!newAddress && oldAddress === newAddress)
-    throw new Error("Governance role not transferred. New governance is the same as old governance")
-
-  const governanceRole = await contract.GOVERNANCE_ROLE()
-
-  // If newAddress is provided, set a new admin before revoking the old one
-  // otherwise just revoke the old one
-  if (newAddress) {
-    await contract
-      .connect(admin)
-      .grantRole(governanceRole, newAddress)
-      .then(async tx => await tx.wait())
-    await contract
-      .connect(admin)
-      .revokeRole(governanceRole, oldAddress)
-      .then(async tx => await tx.wait())
-
-    const newGovernanceSet = await contract.hasRole(governanceRole, newAddress)
-    const oldGovernanceRemoved = !(await contract.hasRole(governanceRole, oldAddress))
-    if (!newGovernanceSet || !oldGovernanceRemoved)
-      throw new Error("Minter role not set correctly on " + (await contract.getAddress()))
-
-    console.log("Governance role transferred successfully on " + (await contract.getAddress()))
-  } else {
-    await contract
-      .connect(admin)
-      .revokeRole(governanceRole, oldAddress)
-      .then(async tx => await tx.wait())
-
-    const oldGovernanceRemoved = !(await contract.hasRole(governanceRole, oldAddress))
-    if (!oldGovernanceRemoved)
-      throw new Error("Governance role not removed correctly on " + (await contract.getAddress()))
-
-    console.log("Governance role revoked (without granting new) successfully on " + (await contract.getAddress()))
-  }
-}
-
-const transferContractsAddressManagerRole = async (
-  contract: GalaxyMember | XAllocationPool | XAllocationVoting | Emissions,
-  admin: HardhatEthersSigner,
-  newAddress: string,
-) => {
-  if (admin.address === newAddress) throw new Error("Role not transferred. New address is the same as old address")
-
-  const contractsAddressManagerRole = await contract.CONTRACTS_ADDRESS_MANAGER_ROLE()
-
-  await contract
-    .connect(admin)
-    .grantRole(contractsAddressManagerRole, newAddress)
-    .then(async tx => await tx.wait())
-  await contract
-    .connect(admin)
-    .renounceRole(contractsAddressManagerRole, admin.address)
-    .then(async tx => await tx.wait())
-
-  const newRoleSet = await contract.hasRole(contractsAddressManagerRole, newAddress)
-  const oldRoleRemoved = !(await contract.hasRole(contractsAddressManagerRole, admin.address))
-
-  if (!newRoleSet || !oldRoleRemoved) throw new Error("Role not set correctly on " + (await contract.getAddress()))
-
-  console.log("Contract Address Manager Role transferred successfully on " + (await contract.getAddress()))
-}
-
-const transferGovernorFunctionSettingsRole = async (
-  contract: B3TRGovernor,
-  admin: HardhatEthersSigner,
-  newAddress: string,
-) => {
-  const governorFunctionSettingsRole = await contract.GOVERNOR_FUNCTIONS_SETTINGS_ROLE()
-
-  await contract
-    .connect(admin)
-    .grantRole(governorFunctionSettingsRole, newAddress)
-    .then(async tx => await tx.wait())
-  await contract
-    .connect(admin)
-    .renounceRole(governorFunctionSettingsRole, admin.address)
-    .then(async tx => await tx.wait())
-
-  const newRoleSet = await contract.hasRole(governorFunctionSettingsRole, newAddress)
-  const oldRoleRemoved = !(await contract.hasRole(governorFunctionSettingsRole, admin.address))
-
-  if (!newRoleSet || !oldRoleRemoved) throw new Error("Role not set correctly on " + (await contract.getAddress()))
-
-  console.log("Governor Function Settings Role transferred successfully on " + (await contract.getAddress()))
 }
 
 async function deployB3trToken(admin: string, minter: string, pauser: string): Promise<B3TR> {
@@ -914,7 +983,7 @@ async function deployB3trToken(admin: string, minter: string, pauser: string): P
 
   await contract.waitForDeployment()
 
-  console.log(`B3tr deployed at ${await contract.getAddress()}`)
+  console.log(`B3TR impl.: ${await contract.getAddress()}`)
 
   return contract
 }
@@ -939,7 +1008,10 @@ export const setWhitelistedFunctions = async (
   governor: B3TRGovernor,
   admin: HardhatEthersSigner,
   libraries: Record<string, Record<string, string>>,
+  logOutput = false,
 ) => {
+  if (logOutput) console.log("================ Setting whitelisted functions in B3TRGovernor contract")
+
   const { B3TR_GOVERNOR_WHITELISTED_METHODS } = config
 
   for (const [contract, functions] of Object.entries(B3TR_GOVERNOR_WHITELISTED_METHODS)) {
@@ -964,33 +1036,8 @@ export const setWhitelistedFunctions = async (
         .connect(admin)
         .setWhitelistFunctions(contractAddresses[contract], whitelistFunctionSelectors, true)
         .then(async tx => await tx.wait())
+
+      if (logOutput) console.log(`Whitelisted functions set for ${contract} in B3TRGovernor contract`)
     }
   }
-}
-
-// Function that checks that roles are set correctly on the contracts
-const validateContractRole = async (
-  contract:
-    | B3TR
-    | VOT3
-    | GalaxyMember
-    | Emissions
-    | VoterRewards
-    | XAllocationPool
-    | XAllocationVoting
-    | Treasury
-    | TimeLock
-    | B3TRGovernor
-    | X2EarnRewardsPool
-    | X2EarnApps,
-  expectedAddress: string,
-  tempAdmin: string,
-  role: string,
-) => {
-  const roleSet = await contract.hasRole(role, expectedAddress)
-  // Check that the temporary admin does not have the role
-  const roleRemoved = !(await contract.hasRole(role, tempAdmin))
-
-  if (!roleSet || !roleRemoved)
-    throw new Error("Role " + role + " not set correctly on " + (await contract.getAddress()))
 }

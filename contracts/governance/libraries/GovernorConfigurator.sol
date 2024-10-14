@@ -29,6 +29,7 @@ import { IVoterRewards } from "../../interfaces/IVoterRewards.sol";
 import { IXAllocationVotingGovernor } from "../../interfaces/IXAllocationVotingGovernor.sol";
 import { TimelockControllerUpgradeable } from "@openzeppelin/contracts-upgradeable/governance/TimelockControllerUpgradeable.sol";
 import { IB3TR } from "../../interfaces/IB3TR.sol";
+import { IVeBetterPassport } from "../../interfaces/IVeBetterPassport.sol";
 
 /// @title GovernorConfigurator Library
 /// @notice Library for managing the configuration of a Governor contract.
@@ -52,10 +53,28 @@ library GovernorConfigurator {
   /// @dev Emitted when the timelock controller used for proposal execution is modified.
   event TimelockChange(address oldTimelock, address newTimelock);
 
+  /// @dev Emitted when the VeBetterPassport contract is set.
+  event VeBetterPassportSet(address oldVeBetterPassport, address newVeBetterPassport);
+
   /// @dev The deposit threshold is not in the valid range for a percentage - 0 to 100.
   error GovernorDepositThresholdNotInRange(uint256 depositThreshold);
 
   /**------------------ SETTERS ------------------**/
+
+  /**
+   * @notice Sets the VeBetterPassport contract.
+   * @dev Sets a new VeBetterPassport contract and emits a {VeBetterPassportSet} event.
+   * @param self The storage reference for the GovernorStorage.
+   * @param newVeBetterPassport The new VeBetterPassport contract.
+   */
+  function setVeBetterPassport(
+    GovernorStorageTypes.GovernorStorage storage self,
+    IVeBetterPassport newVeBetterPassport
+  ) external {
+    emit VeBetterPassportSet(address(self.veBetterPassport), address(newVeBetterPassport));
+    self.veBetterPassport = newVeBetterPassport;
+  }
+
   /**
    * @notice Sets the voting threshold.
    * @dev Sets a new voting threshold and emits a {VotingThresholdSet} event.
@@ -169,5 +188,16 @@ library GovernorConfigurator {
     GovernorStorageTypes.GovernorStorage storage self
   ) internal view returns (uint256) {
     return self.depositThresholdPercentage;
+  }
+
+  /**
+   * @notice Returns the VeBetterPassport contract.
+   * @param self The storage reference for the GovernorStorage.
+   * @return The current VeBetterPassport contract.
+   */
+  function veBetterPassport(
+    GovernorStorageTypes.GovernorStorage storage self
+  ) internal view returns (IVeBetterPassport) {
+    return self.veBetterPassport;
   }
 }

@@ -27,10 +27,10 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers"
 import { describe, it } from "mocha"
 import { createLocalConfig } from "../config/contracts/envs/local"
 import { getImplementationAddress } from "@openzeppelin/upgrades-core"
-import { B3TRGovernor, B3TRGovernor__factory } from "../typechain-types"
-import { deployProxy } from "../scripts/helpers"
+import { B3TRGovernor, B3TRGovernorV1, B3TRGovernorV3, B3TRGovernor__factory } from "../typechain-types"
+import { deployAndUpgrade, deployProxy, getInitializerData } from "../scripts/helpers"
 
-describe("Governor and TimeLock", function () {
+describe("Governor and TimeLock - @shard1", function () {
   describe("Governor deployment", function () {
     it("Should set constructors correctly", async function () {
       const config = createLocalConfig()
@@ -77,7 +77,7 @@ describe("Governor and TimeLock", function () {
 
       // check version
       const version = await governor.version()
-      expect(version).to.eql("3")
+      expect(version).to.eql("4")
 
       // deposit threshold is set correctly
       const depositThreshold = await governor.depositThresholdPercentage()
@@ -113,6 +113,7 @@ describe("Governor and TimeLock", function () {
         governorQuorumLogicLibV1,
         governorStateLogicLibV1,
         governorVotesLogicLibV1,
+        veBetterPassport,
       } = await getOrDeployContractInstances({
         forceDeploy: true,
       })
@@ -135,6 +136,9 @@ describe("Governor and TimeLock", function () {
       })
       const implementation = await Contract.deploy()
       await implementation.waitForDeployment()
+
+      await veBetterPassport.whitelist(otherAccount.address)
+      await veBetterPassport.toggleCheck(1)
 
       // V1 Contract
       const V1Contract = await ethers.getContractAt("B3TRGovernor", await governor.getAddress())
@@ -239,9 +243,13 @@ describe("Governor and TimeLock", function () {
         forceDeploy: false,
       })
 
-      const { governor, owner, otherAccount, xAllocationVoting, vot3 } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
+      const { governor, owner, otherAccount, xAllocationVoting, vot3, veBetterPassport } =
+        await getOrDeployContractInstances({
+          forceDeploy: true,
+        })
+
+      await veBetterPassport.whitelist(otherAccount.address)
+      await veBetterPassport.toggleCheck(1)
 
       // Start emissions
       await bootstrapAndStartEmissions()
@@ -793,7 +801,7 @@ describe("Governor and TimeLock", function () {
       expect(await governor.depositThresholdPercentage()).to.eql(2n)
     })
 
-    it("Should not have state conflict after upgrading to V2 and V3", async () => {
+    it("Should not have state conflict after upgrading to V3 and V4", async () => {
       const config = createLocalConfig()
       const {
         owner,
@@ -820,56 +828,94 @@ describe("Governor and TimeLock", function () {
         governorQuorumLogicLibV1,
         governorStateLogicLibV1,
         governorVotesLogicLibV1,
+        governorClockLogicLibV3,
+        governorConfiguratorLibV3,
+        governorDepositLogicLibV3,
+        governorFunctionRestrictionsLogicLibV3,
+        governorProposalLogicLibV3,
+        governorQuorumLogicLibV3,
+        governorStateLogicLibV3,
+        governorVotesLogicLibV3,
+        veBetterPassport,
       } = await getOrDeployContractInstances({
         forceDeploy: true,
       })
 
       // Deploy Governor
-      const governorV1 = (await deployProxy(
-        "B3TRGovernorV1",
+      const governorV1 = (await deployAndUpgrade(
+        ["B3TRGovernorV1", "B3TRGovernorV2", "B3TRGovernorV3"],
         [
-          {
-            vot3Token: await vot3.getAddress(),
-            timelock: await timeLock.getAddress(),
-            xAllocationVoting: await xAllocationVoting.getAddress(),
-            b3tr: await b3tr.getAddress(),
-            quorumPercentage: config.B3TR_GOVERNOR_QUORUM_PERCENTAGE, // quorum percentage
-            initialDepositThreshold: config.B3TR_GOVERNOR_DEPOSIT_THRESHOLD, // deposit threshold
-            initialMinVotingDelay: config.B3TR_GOVERNOR_MIN_VOTING_DELAY, // delay before vote starts
-            initialVotingThreshold: config.B3TR_GOVERNOR_VOTING_THRESHOLD, // voting threshold
-            voterRewards: await voterRewards.getAddress(),
-            isFunctionRestrictionEnabled: true,
-          },
-          {
-            governorAdmin: owner.address,
-            pauser: owner.address,
-            contractsAddressManager: owner.address,
-            proposalExecutor: owner.address,
-            governorFunctionSettingsRoleAddress: owner.address,
-          },
+          [
+            {
+              vot3Token: await vot3.getAddress(),
+              timelock: await timeLock.getAddress(),
+              xAllocationVoting: await xAllocationVoting.getAddress(),
+              b3tr: await b3tr.getAddress(),
+              quorumPercentage: config.B3TR_GOVERNOR_QUORUM_PERCENTAGE,
+              initialDepositThreshold: config.B3TR_GOVERNOR_DEPOSIT_THRESHOLD,
+              initialMinVotingDelay: config.B3TR_GOVERNOR_MIN_VOTING_DELAY,
+              initialVotingThreshold: config.B3TR_GOVERNOR_VOTING_THRESHOLD,
+              voterRewards: await voterRewards.getAddress(),
+              isFunctionRestrictionEnabled: true,
+            },
+            {
+              governorAdmin: owner.address,
+              pauser: owner.address,
+              contractsAddressManager: owner.address,
+              proposalExecutor: owner.address,
+              governorFunctionSettingsRoleAddress: owner.address,
+            },
+          ],
+          [],
+          [],
         ],
         {
-          GovernorClockLogicV1: await governorClockLogicLibV1.getAddress(),
-          GovernorConfiguratorV1: await governorConfiguratorLibV1.getAddress(),
-          GovernorDepositLogicV1: await governorDepositLogicLibV1.getAddress(),
-          GovernorFunctionRestrictionsLogicV1: await governorFunctionRestrictionsLogicLibV1.getAddress(),
-          GovernorProposalLogicV1: await governorProposalLogicLibV1.getAddress(),
-          GovernorQuorumLogicV1: await governorQuorumLogicLibV1.getAddress(),
-          GovernorStateLogicV1: await governorStateLogicLibV1.getAddress(),
-          GovernorVotesLogicV1: await governorVotesLogicLibV1.getAddress(),
+          versions: [undefined, 2, 3],
+          libraries: [
+            {
+              GovernorClockLogicV1: await governorClockLogicLibV1.getAddress(),
+              GovernorConfiguratorV1: await governorConfiguratorLibV1.getAddress(),
+              GovernorDepositLogicV1: await governorDepositLogicLibV1.getAddress(),
+              GovernorFunctionRestrictionsLogicV1: await governorFunctionRestrictionsLogicLibV1.getAddress(),
+              GovernorProposalLogicV1: await governorProposalLogicLibV1.getAddress(),
+              GovernorQuorumLogicV1: await governorQuorumLogicLibV1.getAddress(),
+              GovernorStateLogicV1: await governorStateLogicLibV1.getAddress(),
+              GovernorVotesLogicV1: await governorVotesLogicLibV1.getAddress(),
+            },
+            {
+              GovernorClockLogicV1: await governorClockLogicLibV1.getAddress(),
+              GovernorConfiguratorV1: await governorConfiguratorLibV1.getAddress(),
+              GovernorDepositLogicV1: await governorDepositLogicLibV1.getAddress(),
+              GovernorFunctionRestrictionsLogicV1: await governorFunctionRestrictionsLogicLibV1.getAddress(),
+              GovernorProposalLogicV1: await governorProposalLogicLibV1.getAddress(),
+              GovernorQuorumLogicV1: await governorQuorumLogicLibV1.getAddress(),
+              GovernorStateLogicV1: await governorStateLogicLibV1.getAddress(),
+              GovernorVotesLogicV1: await governorVotesLogicLibV1.getAddress(),
+            },
+            {
+              GovernorClockLogicV3: await governorClockLogicLibV3.getAddress(),
+              GovernorConfiguratorV3: await governorConfiguratorLibV3.getAddress(),
+              GovernorDepositLogicV3: await governorDepositLogicLibV3.getAddress(),
+              GovernorFunctionRestrictionsLogicV3: await governorFunctionRestrictionsLogicLibV3.getAddress(),
+              GovernorProposalLogicV3: await governorProposalLogicLibV3.getAddress(),
+              GovernorQuorumLogicV3: await governorQuorumLogicLibV3.getAddress(),
+              GovernorStateLogicV3: await governorStateLogicLibV3.getAddress(),
+              GovernorVotesLogicV3: await governorVotesLogicLibV3.getAddress(),
+            },
+          ],
         },
-      )) as B3TRGovernor
+      )) as B3TRGovernorV3
 
-      const b3trGovernorFactory = await ethers.getContractFactory("B3TRGovernorV1", {
+      const b3trGovernorFactory = await ethers.getContractFactory("B3TRGovernorV3", {
         libraries: {
-          GovernorClockLogicV1: await governorClockLogicLibV1.getAddress(),
-          GovernorConfiguratorV1: await governorConfiguratorLibV1.getAddress(),
-          GovernorDepositLogicV1: await governorDepositLogicLibV1.getAddress(),
-          GovernorFunctionRestrictionsLogicV1: await governorFunctionRestrictionsLogicLibV1.getAddress(),
-          GovernorProposalLogicV1: await governorProposalLogicLibV1.getAddress(),
-          GovernorQuorumLogicV1: await governorQuorumLogicLibV1.getAddress(),
-          GovernorStateLogicV1: await governorStateLogicLibV1.getAddress(),
-          GovernorVotesLogicV1: await governorVotesLogicLibV1.getAddress(),
+          GovernorClockLogicV3: await governorClockLogicLibV3.getAddress(),
+          GovernorConfiguratorV3: await governorConfiguratorLibV3.getAddress(),
+          GovernorDepositLogicV3: await governorDepositLogicLibV3.getAddress(),
+          GovernorFunctionRestrictionsLogicV3: await governorFunctionRestrictionsLogicLibV3.getAddress(),
+          GovernorProposalLogicV3: await governorProposalLogicLibV3.getAddress(),
+          GovernorQuorumLogicV3: await governorQuorumLogicLibV3.getAddress(),
+          GovernorStateLogicV3: await governorStateLogicLibV3.getAddress(),
+          GovernorVotesLogicV3: await governorVotesLogicLibV3.getAddress(),
         },
       })
 
@@ -968,16 +1014,16 @@ describe("Governor and TimeLock", function () {
       ) // removing empty slots and slots that track governance proposals getting executed on the governor
 
       // Upgrade to V2 via governance
-      const Contract = await ethers.getContractFactory("B3TRGovernorV2", {
+      const Contract = await ethers.getContractFactory("B3TRGovernor", {
         libraries: {
-          GovernorClockLogicV1: await governorClockLogicLibV1.getAddress(),
-          GovernorConfiguratorV1: await governorConfiguratorLibV1.getAddress(),
-          GovernorDepositLogicV1: await governorDepositLogicLibV1.getAddress(),
-          GovernorFunctionRestrictionsLogicV1: await governorFunctionRestrictionsLogicLibV1.getAddress(),
-          GovernorProposalLogicV1: await governorProposalLogicLibV1.getAddress(),
-          GovernorQuorumLogicV1: await governorQuorumLogicLibV1.getAddress(),
-          GovernorStateLogicV1: await governorStateLogicLibV1.getAddress(),
-          GovernorVotesLogicV1: await governorVotesLogicLibV1.getAddress(),
+          GovernorClockLogic: await governorClockLogicLib.getAddress(),
+          GovernorConfigurator: await governorConfiguratorLib.getAddress(),
+          GovernorDepositLogic: await governorDepositLogicLib.getAddress(),
+          GovernorFunctionRestrictionsLogic: await governorFunctionRestrictionsLogicLib.getAddress(),
+          GovernorProposalLogic: await governorProposalLogicLib.getAddress(),
+          GovernorQuorumLogic: await governorQuorumLogicLib.getAddress(),
+          GovernorStateLogic: await governorStateLogicLib.getAddress(),
+          GovernorVotesLogic: await governorVotesLogicLib.getAddress(),
         },
       })
       const implementation = await Contract.deploy()
@@ -986,7 +1032,7 @@ describe("Governor and TimeLock", function () {
       // Now we can create a proposal
       const encodedFunctionCall2 = b3trGovernorFactory.interface.encodeFunctionData("upgradeToAndCall", [
         await implementation.getAddress(),
-        "0x",
+        getInitializerData(Contract.interface, [await veBetterPassport.getAddress()], 4),
       ])
       const description = "Upgrading Governance contracts"
       const descriptionHash2 = ethers.keccak256(ethers.toUtf8Bytes(description))
@@ -1067,35 +1113,6 @@ describe("Governor and TimeLock", function () {
       expect(proposalVotesPostUpgrade).to.eql(proposalVotesPreUpgrade)
       expect(quorumDenominatorPostUpgrade).to.eql(quorumDenominatorPreUpgrade)
       expect(quorumDepositThresholdPostUpgrade).to.eql(quorumDepositThresholdPreUpgrade)
-
-      let storageSlotsV2 = []
-
-      for (let i = initialSlot; i < initialSlot + BigInt(50); i++) {
-        storageSlotsV2.push(await ethers.provider.getStorage(await governorV1.getAddress(), i))
-      }
-
-      storageSlots = storageSlotsV2.filter(
-        slot =>
-          slot !== "0x0000000000000000000000000000000000000000000000000000000000000000" &&
-          slot !== "0x0000000000000000000000000000000200000000000000000000000000000002",
-      ) // removing empty slots and slots that track governance proposals getting executed on the governor
-
-      // Upgrade to V3 via admin
-      const ContractV3 = await ethers.getContractFactory("B3TRGovernor", {
-        libraries: {
-          GovernorClockLogic: await governorClockLogicLib.getAddress(),
-          GovernorConfigurator: await governorConfiguratorLib.getAddress(),
-          GovernorDepositLogic: await governorDepositLogicLib.getAddress(),
-          GovernorFunctionRestrictionsLogic: await governorFunctionRestrictionsLogicLib.getAddress(),
-          GovernorProposalLogic: await governorProposalLogicLib.getAddress(),
-          GovernorQuorumLogic: await governorQuorumLogicLib.getAddress(),
-          GovernorStateLogic: await governorStateLogicLib.getAddress(),
-          GovernorVotesLogic: await governorVotesLogicLib.getAddress(),
-        },
-      })
-
-      const implementationV3 = await ContractV3.deploy()
-      await implementationV3.waitForDeployment()
     })
   })
 
@@ -1754,6 +1771,18 @@ describe("Governor and TimeLock", function () {
       expect(updatedQuorum).to.not.eql(newQuorum)
     })
 
+    it("Can get and set veBetterPassport address", async function () {
+      const { governor, owner, otherAccount } = await getOrDeployContractInstances({ forceDeploy: true })
+
+      await governor.connect(owner).setVeBetterPassport(owner.address)
+
+      const updatedVeBetterPassportAddress = await governor.veBetterPassport()
+      expect(updatedVeBetterPassportAddress).to.eql(owner.address)
+
+      // only admin can set the veBetterPassport address
+      await expect(governor.connect(otherAccount).setVeBetterPassport(otherAccount.address)).to.be.reverted
+    })
+
     describe("Pausability", function () {
       it("Admin with PAUSER_ROLE should be able to pause the contract", async function () {
         const { governor, owner } = await getOrDeployContractInstances({
@@ -1826,6 +1855,7 @@ describe("Governor and TimeLock", function () {
           otherAccount: proposer,
           otherAccounts,
           owner,
+          veBetterPassport,
         } = await getOrDeployContractInstances({ forceDeploy: true })
         const functionToCall = "tokenDetails"
         const description = "Get token details"
@@ -1837,6 +1867,9 @@ describe("Governor and TimeLock", function () {
         const voter = otherAccounts[0]
         await getVot3Tokens(voter, "30000")
         await waitForNextBlock()
+
+        await veBetterPassport.whitelist(voter.address)
+        await veBetterPassport.toggleCheck(1)
 
         // create a new proposal
         const tx = await createProposal(
@@ -1892,6 +1925,7 @@ describe("Governor and TimeLock", function () {
           B3trContract,
           otherAccount: proposer,
           otherAccounts,
+          veBetterPassport,
           owner,
         } = await getOrDeployContractInstances({ forceDeploy: true })
         const functionToCall = "tokenDetails"
@@ -1904,6 +1938,9 @@ describe("Governor and TimeLock", function () {
         const voter = otherAccounts[0]
         await getVot3Tokens(voter, "30000")
         await waitForNextBlock()
+
+        await veBetterPassport.whitelist(voter.address)
+        await veBetterPassport.toggleCheck(1)
 
         // create a new proposal
         const tx = await createProposal(
@@ -2179,7 +2216,7 @@ describe("Governor and TimeLock", function () {
       const config = createLocalConfig()
       config.B3TR_GOVERNOR_DEPOSIT_THRESHOLD = 1
       config.EMISSIONS_CYCLE_DURATION = 5
-      const { b3tr, otherAccounts, governor, B3trContract, xAllocationVoting, emissions, vot3 } =
+      const { b3tr, otherAccounts, governor, B3trContract, xAllocationVoting, emissions, vot3, veBetterPassport } =
         await getOrDeployContractInstances({
           forceDeploy: true,
           config,
@@ -2200,6 +2237,9 @@ describe("Governor and TimeLock", function () {
       const voteStartsInRoundId = (await xAllocationVoting.currentRoundId()) + 2n // starts 2 rounds from now
 
       const depositThreshold = await governor.depositThreshold()
+
+      await veBetterPassport.whitelist(proposer.address)
+      await veBetterPassport.toggleCheck(1)
 
       const tx = await governor
         .connect(proposer)
@@ -2526,15 +2566,20 @@ describe("Governor and TimeLock", function () {
       const config = createLocalConfig()
       config.B3TR_GOVERNOR_DEPOSIT_THRESHOLD = 1
       config.EMISSIONS_CYCLE_DURATION = 7
-      const { otherAccounts, governor, xAllocationVoting, vot3 } = await getOrDeployContractInstances({
-        forceDeploy: true,
-        config,
-      })
+      const { otherAccounts, governor, xAllocationVoting, vot3, veBetterPassport } = await getOrDeployContractInstances(
+        {
+          forceDeploy: true,
+          config,
+        },
+      )
 
       const proposer = otherAccounts[0]
 
       const voter = otherAccounts[1]
       await getVot3Tokens(voter, "30000")
+
+      await veBetterPassport.whitelist(voter.address)
+      await veBetterPassport.toggleCheck(1)
 
       // Start emissions
       await bootstrapAndStartEmissions()
@@ -3243,7 +3288,7 @@ describe("Governor and TimeLock", function () {
       const config = createLocalConfig()
       config.B3TR_GOVERNOR_DEPOSIT_THRESHOLD = 1
       config.EMISSIONS_CYCLE_DURATION = 15
-      const { vot3, b3tr, otherAccounts, minterAccount, B3trContract, otherAccount } =
+      const { vot3, b3tr, otherAccounts, minterAccount, B3trContract, otherAccount, veBetterPassport } =
         await getOrDeployContractInstances({
           forceDeploy: true,
           config,
@@ -3256,6 +3301,15 @@ describe("Governor and TimeLock", function () {
       voter5 = otherAccounts[4] // with VOT3 and delegation
       voter6 = otherAccounts[5] // with VOT3 and delegation
       voter7 = otherAccounts[6] // with VOT3 and delegation
+
+      await veBetterPassport.whitelist(voter1.address)
+      await veBetterPassport.whitelist(voter2.address)
+      await veBetterPassport.whitelist(voter3.address)
+      await veBetterPassport.whitelist(voter4.address)
+      await veBetterPassport.whitelist(voter5.address)
+      await veBetterPassport.whitelist(voter6.address)
+      await veBetterPassport.whitelist(voter7.address)
+      await veBetterPassport.toggleCheck(1)
 
       // Before trying to vote we need to mint some VOT3 tokens to the voter2
       await b3tr.connect(minterAccount).mint(voter2, ethers.parseEther("30000"))
@@ -3510,12 +3564,16 @@ describe("Governor and TimeLock", function () {
     }).timeout(1800000)
 
     it("Stores that a user voted at least once", async function () {
-      const { otherAccount, owner, governor, b3tr, B3trContract } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
+      const { otherAccount, owner, governor, b3tr, B3trContract, veBetterPassport } =
+        await getOrDeployContractInstances({
+          forceDeploy: true,
+        })
 
       // Start emissions
       await bootstrapAndStartEmissions()
+
+      await veBetterPassport.whitelist(otherAccount.address)
+      await veBetterPassport.toggleCheck(1)
 
       // Should be able to free mint after participating in allocation voting
       await participateInGovernanceVoting(
@@ -3535,7 +3593,7 @@ describe("Governor and TimeLock", function () {
     })
 
     it("Quorum is calculated correctly", async function () {
-      const { governor, otherAccounts, b3tr, B3trContract } = await getOrDeployContractInstances({
+      const { governor, otherAccounts, b3tr, B3trContract, veBetterPassport } = await getOrDeployContractInstances({
         forceDeploy: true,
       })
 
@@ -3551,6 +3609,12 @@ describe("Governor and TimeLock", function () {
       await getVot3Tokens(voter3, "30000")
       await getVot3Tokens(proposer, "30000")
       await waitForNextBlock()
+
+      await veBetterPassport.whitelist(voter.address)
+      await veBetterPassport.whitelist(voter2.address)
+      await veBetterPassport.whitelist(voter3.address)
+
+      await veBetterPassport.toggleCheck(1)
 
       // Create a proposal
       const tx = await createProposal(
@@ -3592,7 +3656,7 @@ describe("Governor and TimeLock", function () {
     })
 
     it("[Quadratic] Against votes are counted correctly for quorum", async function () {
-      const { governor, otherAccounts, b3tr, B3trContract } = await getOrDeployContractInstances({
+      const { governor, otherAccounts, b3tr, B3trContract, veBetterPassport } = await getOrDeployContractInstances({
         forceDeploy: true,
       })
 
@@ -3606,6 +3670,12 @@ describe("Governor and TimeLock", function () {
       await getVot3Tokens(voter2, "30000")
       await getVot3Tokens(voter3, "30000")
       await waitForNextBlock()
+
+      await veBetterPassport.whitelist(voter.address)
+      await veBetterPassport.whitelist(voter2.address)
+      await veBetterPassport.whitelist(voter3.address)
+
+      await veBetterPassport.toggleCheck(1)
 
       // Create a proposal
       const tx = await createProposal(
@@ -3642,7 +3712,7 @@ describe("Governor and TimeLock", function () {
     })
 
     it("[Linear] Against votes are counted correctly for quorum", async function () {
-      const { governor, otherAccounts, b3tr, B3trContract } = await getOrDeployContractInstances({
+      const { governor, otherAccounts, b3tr, B3trContract, veBetterPassport } = await getOrDeployContractInstances({
         forceDeploy: true,
       })
 
@@ -3659,6 +3729,12 @@ describe("Governor and TimeLock", function () {
       await getVot3Tokens(voter2, "30000")
       await getVot3Tokens(voter3, "30000")
       await waitForNextBlock()
+
+      await veBetterPassport.whitelist(voter.address)
+      await veBetterPassport.whitelist(voter2.address)
+      await veBetterPassport.whitelist(voter3.address)
+
+      await veBetterPassport.toggleCheck(1)
 
       // Create a proposal
       const tx = await createProposal(
@@ -3699,7 +3775,7 @@ describe("Governor and TimeLock", function () {
     })
 
     it("[Quadratic] Abstain votes are counted correctly for quorum", async function () {
-      const { governor, otherAccounts, b3tr, B3trContract } = await getOrDeployContractInstances({
+      const { governor, otherAccounts, b3tr, B3trContract, veBetterPassport } = await getOrDeployContractInstances({
         forceDeploy: true,
       })
 
@@ -3713,6 +3789,12 @@ describe("Governor and TimeLock", function () {
       await getVot3Tokens(voter2, "30000")
       await getVot3Tokens(voter3, "30000")
       await waitForNextBlock()
+
+      await veBetterPassport.whitelist(voter.address)
+      await veBetterPassport.whitelist(voter2.address)
+      await veBetterPassport.whitelist(voter3.address)
+
+      await veBetterPassport.toggleCheck(1)
 
       // Create a proposal
       const tx = await createProposal(
@@ -3749,7 +3831,7 @@ describe("Governor and TimeLock", function () {
     })
 
     it("[Linear] Abstain votes are counted correctly for quorum", async function () {
-      const { governor, otherAccounts, b3tr, B3trContract } = await getOrDeployContractInstances({
+      const { governor, otherAccounts, b3tr, B3trContract, veBetterPassport } = await getOrDeployContractInstances({
         forceDeploy: true,
       })
 
@@ -3766,6 +3848,12 @@ describe("Governor and TimeLock", function () {
       await getVot3Tokens(voter2, "30000")
       await getVot3Tokens(voter3, "30000")
       await waitForNextBlock()
+
+      await veBetterPassport.whitelist(voter.address)
+      await veBetterPassport.whitelist(voter2.address)
+      await veBetterPassport.whitelist(voter3.address)
+
+      await veBetterPassport.toggleCheck(1)
 
       // Create a proposal
       const tx = await createProposal(
@@ -3806,7 +3894,7 @@ describe("Governor and TimeLock", function () {
     })
 
     it("[Quadratic] Yes votes are counted correctly for quorum", async function () {
-      const { governor, otherAccounts, b3tr, B3trContract } = await getOrDeployContractInstances({
+      const { governor, otherAccounts, b3tr, B3trContract, veBetterPassport } = await getOrDeployContractInstances({
         forceDeploy: true,
       })
 
@@ -3820,6 +3908,12 @@ describe("Governor and TimeLock", function () {
       await getVot3Tokens(voter2, "30000")
       await getVot3Tokens(voter3, "30000")
       await waitForNextBlock()
+
+      await veBetterPassport.whitelist(voter.address)
+      await veBetterPassport.whitelist(voter2.address)
+      await veBetterPassport.whitelist(voter3.address)
+
+      await veBetterPassport.toggleCheck(1)
 
       // Create a proposal
       const tx = await createProposal(
@@ -3857,7 +3951,7 @@ describe("Governor and TimeLock", function () {
     })
 
     it("[Linear] Yes votes are counted correctly for quorum", async function () {
-      const { governor, otherAccounts, b3tr, B3trContract } = await getOrDeployContractInstances({
+      const { governor, otherAccounts, b3tr, B3trContract, veBetterPassport } = await getOrDeployContractInstances({
         forceDeploy: true,
       })
 
@@ -3874,6 +3968,12 @@ describe("Governor and TimeLock", function () {
       await getVot3Tokens(voter2, "30000")
       await getVot3Tokens(voter3, "30000")
       await waitForNextBlock()
+
+      await veBetterPassport.whitelist(voter.address)
+      await veBetterPassport.whitelist(voter2.address)
+      await veBetterPassport.whitelist(voter3.address)
+
+      await veBetterPassport.toggleCheck(1)
 
       // Create a proposal
       const tx = await createProposal(
@@ -3915,7 +4015,7 @@ describe("Governor and TimeLock", function () {
     })
 
     it("[Quadratic] Can get correct quadratic voting power", async function () {
-      const { governor, otherAccounts, b3tr, B3trContract } = await getOrDeployContractInstances({
+      const { governor, otherAccounts, b3tr, B3trContract, veBetterPassport } = await getOrDeployContractInstances({
         forceDeploy: true,
       })
 
@@ -3929,6 +4029,12 @@ describe("Governor and TimeLock", function () {
       await getVot3Tokens(voter2, "30000")
       await getVot3Tokens(voter3, "30000")
       await waitForNextBlock()
+
+      await veBetterPassport.whitelist(voter.address)
+      await veBetterPassport.whitelist(voter2.address)
+      await veBetterPassport.whitelist(voter3.address)
+
+      await veBetterPassport.toggleCheck(1)
 
       // Create a proposal
       const tx = await createProposal(
@@ -3972,7 +4078,7 @@ describe("Governor and TimeLock", function () {
     })
 
     it("[Linear] Can get correct voting power", async function () {
-      const { governor, otherAccounts, b3tr, B3trContract } = await getOrDeployContractInstances({
+      const { governor, otherAccounts, b3tr, B3trContract, veBetterPassport } = await getOrDeployContractInstances({
         forceDeploy: true,
       })
 
@@ -3993,6 +4099,12 @@ describe("Governor and TimeLock", function () {
       await getVot3Tokens(voter2, "30000")
       await getVot3Tokens(voter3, "30000")
       await waitForNextBlock()
+
+      await veBetterPassport.whitelist(voter.address)
+      await veBetterPassport.whitelist(voter2.address)
+      await veBetterPassport.whitelist(voter3.address)
+
+      await veBetterPassport.toggleCheck(1)
 
       // Create a proposal
       const tx = await createProposal(
@@ -4031,12 +4143,17 @@ describe("Governor and TimeLock", function () {
     })
 
     it("Can correctly cast vote with reason", async () => {
-      const { governor, otherAccounts, b3tr, B3trContract, otherAccount } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
+      const { governor, otherAccounts, b3tr, B3trContract, otherAccount, veBetterPassport } =
+        await getOrDeployContractInstances({
+          forceDeploy: true,
+        })
 
       const voter = otherAccounts[0]
       await getVot3Tokens(voter, "30000")
+
+      await veBetterPassport.whitelist(voter.address)
+
+      await veBetterPassport.toggleCheck(1)
 
       // Start emissions
       await bootstrapAndStartEmissions()
@@ -4073,12 +4190,17 @@ describe("Governor and TimeLock", function () {
     })
 
     it("Can abstain", async () => {
-      const { governor, otherAccounts, b3tr, B3trContract, otherAccount } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
+      const { governor, otherAccounts, b3tr, B3trContract, otherAccount, veBetterPassport } =
+        await getOrDeployContractInstances({
+          forceDeploy: true,
+        })
 
       const voter = otherAccounts[0]
       await getVot3Tokens(voter, "30000")
+
+      await veBetterPassport.whitelist(voter.address)
+
+      await veBetterPassport.toggleCheck(1)
 
       // Start emissions
       await bootstrapAndStartEmissions()
@@ -4118,16 +4240,30 @@ describe("Governor and TimeLock", function () {
       const config = createLocalConfig()
       // set deposit threshold to 0 so we can avoid depositing for proposals
       config.B3TR_GOVERNOR_DEPOSIT_THRESHOLD = 0
-      const { governor, otherAccounts, b3tr, B3trContract, otherAccount, vot3, voterRewards, emissions } =
-        await getOrDeployContractInstances({
-          forceDeploy: true,
-          config,
-        })
+      const {
+        governor,
+        otherAccounts,
+        b3tr,
+        B3trContract,
+        otherAccount,
+        vot3,
+        voterRewards,
+        veBetterPassport,
+        emissions,
+      } = await getOrDeployContractInstances({
+        forceDeploy: true,
+        config,
+      })
 
       const voter = otherAccounts[0]
       const voter2 = otherAccounts[1]
       await getVot3Tokens(voter, "1000")
       await getVot3Tokens(voter2, "1")
+
+      await veBetterPassport.whitelist(voter.address)
+      await veBetterPassport.whitelist(voter2.address)
+
+      await veBetterPassport.toggleCheck(1)
 
       // Start emissions
       await bootstrapAndStartEmissions()
@@ -4190,15 +4326,21 @@ describe("Governor and TimeLock", function () {
       const config = createLocalConfig()
       // set deposit threshold to 0 so we can avoid depositing for proposals
       config.B3TR_GOVERNOR_DEPOSIT_THRESHOLD = 0
-      const { governor, otherAccounts, b3tr, B3trContract, otherAccount, vot3 } = await getOrDeployContractInstances({
-        forceDeploy: true,
-        config,
-      })
+      const { governor, otherAccounts, b3tr, B3trContract, otherAccount, vot3, veBetterPassport } =
+        await getOrDeployContractInstances({
+          forceDeploy: true,
+          config,
+        })
 
       const voter = otherAccounts[0]
       const voter2 = otherAccounts[1]
       await getVot3Tokens(voter, "1000")
       await getVot3Tokens(voter2, "1")
+
+      await veBetterPassport.whitelist(voter.address)
+      await veBetterPassport.whitelist(voter2.address)
+
+      await veBetterPassport.toggleCheck(1)
 
       // Start emissions
       await bootstrapAndStartEmissions()
@@ -4241,6 +4383,7 @@ describe("Governor and TimeLock", function () {
         governorQuorumLogicLib,
         governorStateLogicLib,
         governorVotesLogicLib,
+        veBetterPassport,
       } = await getOrDeployContractInstances({
         forceDeploy: true,
       })
@@ -4251,6 +4394,11 @@ describe("Governor and TimeLock", function () {
       await getVot3Tokens(voter, "30000")
       await getVot3Tokens(voter2, "30000")
       await waitForNextBlock()
+
+      await veBetterPassport.whitelist(voter.address)
+      await veBetterPassport.whitelist(voter2.address)
+
+      await veBetterPassport.toggleCheck(1)
 
       // Only admin or governance can toggle quadratic voting
       await catchRevert(governor.connect(otherAccounts[0]).toggleQuadraticVoting())
@@ -4342,7 +4490,7 @@ describe("Governor and TimeLock", function () {
       const config = createLocalConfig()
       config.B3TR_GOVERNOR_DEPOSIT_THRESHOLD = 1
       config.EMISSIONS_CYCLE_DURATION = 10
-      const { otherAccounts } = await getOrDeployContractInstances({
+      const { otherAccounts, veBetterPassport } = await getOrDeployContractInstances({
         forceDeploy: true,
         config,
       })
@@ -4354,6 +4502,9 @@ describe("Governor and TimeLock", function () {
       voter = otherAccounts[0]
       await getVot3Tokens(voter, "30000")
       await waitForNextBlock()
+
+      await veBetterPassport.whitelist(voter.address)
+      await veBetterPassport.toggleCheck(1)
     })
 
     it("cannot queue a proposal if not in succeeded state", async function () {
@@ -4617,7 +4768,11 @@ describe("Governor and TimeLock", function () {
         b3tr,
         B3trContract,
         otherAccount: proposer,
+        veBetterPassport,
       } = await getOrDeployContractInstances({ forceDeploy: true, config })
+
+      await veBetterPassport.whitelist(voter.address)
+      await veBetterPassport.toggleCheck(1)
 
       await getVot3Tokens(voter, "30000")
 
@@ -4685,10 +4840,15 @@ describe("Governor and TimeLock", function () {
         governor,
         b3tr,
         B3trContract,
+        veBetterPassport,
         otherAccount: proposer,
       } = await getOrDeployContractInstances({ forceDeploy: true, config })
 
       await getVot3Tokens(voter, "30000")
+
+      await veBetterPassport.whitelist(voter.address)
+
+      await veBetterPassport.toggleCheck(1)
 
       // create a new proposal
       const tx = await createProposal(
@@ -4756,6 +4916,7 @@ describe("Governor and TimeLock", function () {
         B3trContract,
         otherAccount: proposer,
         otherAccounts,
+        veBetterPassport,
         timeLock,
         owner,
       } = await getOrDeployContractInstances({ forceDeploy: true, config })
@@ -4767,6 +4928,10 @@ describe("Governor and TimeLock", function () {
       voter = otherAccounts[0]
       await getVot3Tokens(voter, "30000")
       await waitForNextBlock()
+
+      await veBetterPassport.whitelist(voter.address)
+
+      await veBetterPassport.toggleCheck(1)
 
       // create a new proposal
       const tx = await createProposal(
@@ -4834,6 +4999,7 @@ describe("Governor and TimeLock", function () {
         governor,
         b3tr,
         B3trContract,
+        veBetterPassport,
         otherAccount: proposer,
         otherAccounts,
         owner,
@@ -4846,6 +5012,10 @@ describe("Governor and TimeLock", function () {
       voter = otherAccounts[0]
       await getVot3Tokens(voter, "30000")
       await waitForNextBlock()
+
+      await veBetterPassport.whitelist(voter.address)
+
+      await veBetterPassport.toggleCheck(1)
 
       // create a new proposal
       const tx = await createProposal(
@@ -6012,6 +6182,7 @@ describe("Governor and TimeLock", function () {
           b3tr,
           B3trContract,
           otherAccount: proposer,
+          veBetterPassport,
           otherAccounts,
         } = await getOrDeployContractInstances({ forceDeploy: false })
 
@@ -6023,6 +6194,8 @@ describe("Governor and TimeLock", function () {
         const voter = otherAccounts[0]
         await getVot3Tokens(voter, "150000")
         await waitForNextBlock()
+
+        await veBetterPassport.whitelist(voter.address)
 
         // create a new proposal
         const tx = await createProposal(

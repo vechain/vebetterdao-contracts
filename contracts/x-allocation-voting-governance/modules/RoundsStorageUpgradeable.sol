@@ -129,7 +129,7 @@ abstract contract RoundsStorageUpgradeable is Initializable, XAllocationVotingGo
   /**
    * @dev Get the current round start block
    */
-  function currentRoundSnapshot() public view virtual returns (uint256) {
+  function currentRoundSnapshot() public view virtual override returns (uint256) {
     return roundSnapshot(currentRoundId());
   }
 

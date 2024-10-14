@@ -175,8 +175,8 @@ abstract contract RoundVotesCountingUpgradeable is Initializable, XAllocationVot
       // Get the current sum of the square roots of individual votes for the given project
       uint256 qfAppVotesPreVote = $._roundVotes[roundId].votesReceivedQF[apps[i]]; // ∑(sqrt(votes)) -> sqrt(votes1) + sqrt(votes2) + ... + sqrt(votesN)
 
-      // Calculate the new sum of the square roots of individual votes for the given project
-      uint256 newQFVotes = Math.sqrt(weights[i]); // sqrt(votes)
+      // Calculate the new sum of the square roots of individual votes for the given project -> If the weight is greater than 1, calculate the square root of the weight, otherwise use the weight and divide it by 1e9 ((sqrt(1e18)) = 1e9)
+      uint256 newQFVotes = weights[i] > 1e18 ? Math.sqrt(weights[i]) : weights[i] / 1e9; // sqrt(votes)
       uint256 qfAppVotesPostVote = qfAppVotesPreVote + newQFVotes; // ∑(sqrt(votes)) -> sqrt(votes1) + sqrt(votes2) + ... + sqrt(votesN) + sqrt(votesN+1)
 
       // Calculate the adjustment to the quadratic funding value for the given app

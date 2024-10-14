@@ -19,7 +19,7 @@ import { createLocalConfig } from "../config/contracts/envs/local"
 import { deployProxy, upgradeProxy } from "../scripts/helpers"
 import { XAllocationPool, XAllocationPoolV1 } from "../typechain-types"
 
-describe("X-Allocation Pool", async function () {
+describe("X-Allocation Pool - @shard3", async function () {
   describe("Deployment", async function () {
     it("Contract is correctly initialized", async function () {
       const { xAllocationPool, owner, x2EarnApps, emissions, b3tr, treasury } = await getOrDeployContractInstances({
@@ -218,11 +218,20 @@ describe("X-Allocation Pool", async function () {
       config.X_ALLOCATION_POOL_BASE_ALLOCATION_PERCENTAGE = 0
       config.INITIAL_X_ALLOCATION = 10000n
       config.X_ALLOCATION_VOTING_QUORUM_PERCENTAGE = 0
-      const { otherAccounts, owner, b3tr, x2EarnRewardsPool, emissions, x2EarnApps, xAllocationVoting, treasury } =
-        await getOrDeployContractInstances({
-          forceDeploy: true,
-          config,
-        })
+      const {
+        otherAccounts,
+        owner,
+        b3tr,
+        x2EarnRewardsPool,
+        emissions,
+        x2EarnApps,
+        xAllocationVoting,
+        treasury,
+        veBetterPassport,
+      } = await getOrDeployContractInstances({
+        forceDeploy: true,
+        config,
+      })
 
       // Deploy XAllocationPool
       const xAllocationPoolV1 = (await deployProxy("XAllocationPoolV1", [
@@ -242,8 +251,11 @@ describe("X-Allocation Pool", async function () {
       await bootstrapEmissions()
 
       otherAccounts.forEach(async account => {
+        await veBetterPassport.whitelist(account.address)
         await getVot3Tokens(account, "10000")
       })
+
+      await veBetterPassport.toggleCheck(1)
 
       //Add apps
       const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
@@ -265,39 +277,19 @@ describe("X-Allocation Pool", async function () {
       // Vote
       await xAllocationVoting
         .connect(otherAccounts[1])
-        .castVote(
-          round1,
-          [app1Id, app2Id, app3Id],
-          [ethers.parseEther("0"), ethers.parseEther("900"), ethers.parseEther("100")],
-        )
+        .castVote(round1, [app2Id, app3Id], [ethers.parseEther("900"), ethers.parseEther("100")])
       await xAllocationVoting
         .connect(otherAccounts[2])
-        .castVote(
-          round1,
-          [app1Id, app2Id, app3Id],
-          [ethers.parseEther("0"), ethers.parseEther("500"), ethers.parseEther("100")],
-        )
+        .castVote(round1, [app2Id, app3Id], [ethers.parseEther("500"), ethers.parseEther("100")])
       await xAllocationVoting
         .connect(otherAccounts[3])
-        .castVote(
-          round1,
-          [app1Id, app2Id, app3Id],
-          [ethers.parseEther("0"), ethers.parseEther("100"), ethers.parseEther("100")],
-        )
+        .castVote(round1, [app2Id, app3Id], [ethers.parseEther("100"), ethers.parseEther("100")])
       await xAllocationVoting
         .connect(otherAccounts[4])
-        .castVote(
-          round1,
-          [app1Id, app2Id, app3Id],
-          [ethers.parseEther("0"), ethers.parseEther("100"), ethers.parseEther("100")],
-        )
+        .castVote(round1, [app2Id, app3Id], [ethers.parseEther("100"), ethers.parseEther("100")])
       await xAllocationVoting
         .connect(otherAccounts[5])
-        .castVote(
-          round1,
-          [app1Id, app2Id, app3Id],
-          [ethers.parseEther("1000"), ethers.parseEther("0"), ethers.parseEther("100")],
-        )
+        .castVote(round1, [app1Id, app3Id], [ethers.parseEther("1000"), ethers.parseEther("100")])
 
       await waitForRoundToEnd(round1)
 
@@ -315,39 +307,19 @@ describe("X-Allocation Pool", async function () {
       // Vote
       await xAllocationVoting
         .connect(otherAccounts[1])
-        .castVote(
-          round2,
-          [app1Id, app2Id, app3Id],
-          [ethers.parseEther("0"), ethers.parseEther("900"), ethers.parseEther("100")],
-        )
+        .castVote(round2, [app2Id, app3Id], [ethers.parseEther("900"), ethers.parseEther("100")])
       await xAllocationVoting
         .connect(otherAccounts[2])
-        .castVote(
-          round2,
-          [app1Id, app2Id, app3Id],
-          [ethers.parseEther("0"), ethers.parseEther("500"), ethers.parseEther("100")],
-        )
+        .castVote(round2, [app2Id, app3Id], [ethers.parseEther("500"), ethers.parseEther("100")])
       await xAllocationVoting
         .connect(otherAccounts[3])
-        .castVote(
-          round2,
-          [app1Id, app2Id, app3Id],
-          [ethers.parseEther("0"), ethers.parseEther("100"), ethers.parseEther("100")],
-        )
+        .castVote(round2, [app2Id, app3Id], [ethers.parseEther("100"), ethers.parseEther("100")])
       await xAllocationVoting
         .connect(otherAccounts[4])
-        .castVote(
-          round2,
-          [app1Id, app2Id, app3Id],
-          [ethers.parseEther("0"), ethers.parseEther("100"), ethers.parseEther("100")],
-        )
+        .castVote(round2, [app2Id, app3Id], [ethers.parseEther("100"), ethers.parseEther("100")])
       await xAllocationVoting
         .connect(otherAccounts[5])
-        .castVote(
-          round2,
-          [app1Id, app2Id, app3Id],
-          [ethers.parseEther("1000"), ethers.parseEther("0"), ethers.parseEther("100")],
-        )
+        .castVote(round2, [app1Id, app3Id], [ethers.parseEther("1000"), ethers.parseEther("100")])
 
       await waitForRoundToEnd(round2)
 
@@ -406,43 +378,23 @@ describe("X-Allocation Pool", async function () {
       // Vote
       await xAllocationVoting
         .connect(otherAccounts[1])
-        .castVote(
-          round3,
-          [app1Id, app2Id, app3Id],
-          [ethers.parseEther("0"), ethers.parseEther("900"), ethers.parseEther("100")],
-        )
+        .castVote(round3, [app2Id, app3Id], [ethers.parseEther("900"), ethers.parseEther("100")])
       await xAllocationVoting
         .connect(otherAccounts[2])
-        .castVote(
-          round3,
-          [app1Id, app2Id, app3Id],
-          [ethers.parseEther("0"), ethers.parseEther("500"), ethers.parseEther("100")],
-        )
+        .castVote(round3, [app2Id, app3Id], [ethers.parseEther("500"), ethers.parseEther("100")])
       await xAllocationVoting
         .connect(otherAccounts[3])
-        .castVote(
-          round3,
-          [app1Id, app2Id, app3Id],
-          [ethers.parseEther("0"), ethers.parseEther("100"), ethers.parseEther("100")],
-        )
+        .castVote(round3, [app2Id, app3Id], [ethers.parseEther("100"), ethers.parseEther("100")])
       await xAllocationVoting
         .connect(otherAccounts[4])
-        .castVote(
-          round3,
-          [app1Id, app2Id, app3Id],
-          [ethers.parseEther("0"), ethers.parseEther("100"), ethers.parseEther("100")],
-        )
+        .castVote(round3, [app2Id, app3Id], [ethers.parseEther("100"), ethers.parseEther("100")])
 
       // Turn off quadratic funding mid round
       await xAllocationPool.connect(owner).toggleQuadraticFunding()
 
       await xAllocationVoting
         .connect(otherAccounts[5])
-        .castVote(
-          round3,
-          [app1Id, app2Id, app3Id],
-          [ethers.parseEther("1000"), ethers.parseEther("0"), ethers.parseEther("100")],
-        )
+        .castVote(round3, [app1Id, app3Id], [ethers.parseEther("1000"), ethers.parseEther("100")])
 
       await waitForRoundToEnd(round3)
 
@@ -465,39 +417,19 @@ describe("X-Allocation Pool", async function () {
       // Vote
       await xAllocationVoting
         .connect(otherAccounts[1])
-        .castVote(
-          round4,
-          [app1Id, app2Id, app3Id],
-          [ethers.parseEther("0"), ethers.parseEther("900"), ethers.parseEther("100")],
-        )
+        .castVote(round4, [app2Id, app3Id], [ethers.parseEther("900"), ethers.parseEther("100")])
       await xAllocationVoting
         .connect(otherAccounts[2])
-        .castVote(
-          round4,
-          [app1Id, app2Id, app3Id],
-          [ethers.parseEther("0"), ethers.parseEther("500"), ethers.parseEther("100")],
-        )
+        .castVote(round4, [app2Id, app3Id], [ethers.parseEther("500"), ethers.parseEther("100")])
       await xAllocationVoting
         .connect(otherAccounts[3])
-        .castVote(
-          round4,
-          [app1Id, app2Id, app3Id],
-          [ethers.parseEther("0"), ethers.parseEther("100"), ethers.parseEther("100")],
-        )
+        .castVote(round4, [app2Id, app3Id], [ethers.parseEther("100"), ethers.parseEther("100")])
       await xAllocationVoting
         .connect(otherAccounts[4])
-        .castVote(
-          round4,
-          [app1Id, app2Id, app3Id],
-          [ethers.parseEther("0"), ethers.parseEther("100"), ethers.parseEther("100")],
-        )
+        .castVote(round4, [app2Id, app3Id], [ethers.parseEther("100"), ethers.parseEther("100")])
       await xAllocationVoting
         .connect(otherAccounts[5])
-        .castVote(
-          round4,
-          [app1Id, app2Id, app3Id],
-          [ethers.parseEther("1000"), ethers.parseEther("0"), ethers.parseEther("100")],
-        )
+        .castVote(round4, [app1Id, app3Id], [ethers.parseEther("1000"), ethers.parseEther("100")])
 
       await waitForRoundToEnd(round4)
 
@@ -756,7 +688,7 @@ describe("X-Allocation Pool", async function () {
   describe("Allocation rewards for x-apps", async function () {
     describe("App shares and base allocation", async function () {
       it("App can receive a max amount of allocation share and unallocated amount gets sent to treasury", async function () {
-        const { xAllocationVoting, otherAccounts, owner, xAllocationPool, x2EarnApps } =
+        const { xAllocationVoting, otherAccounts, owner, xAllocationPool, x2EarnApps, veBetterPassport } =
           await getOrDeployContractInstances({
             forceDeploy: true,
           })
@@ -766,6 +698,9 @@ describe("X-Allocation Pool", async function () {
 
         const voter1 = otherAccounts[1]
         await getVot3Tokens(voter1, "1000")
+
+        await veBetterPassport.whitelist(voter1.address)
+        await veBetterPassport.toggleCheck(1)
 
         //Add apps
         const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
@@ -859,10 +794,19 @@ describe("X-Allocation Pool", async function () {
       })
 
       it("New app of failed round receives a base allocation even if it was not eligible in previous round", async function () {
-        const { xAllocationVoting, otherAccounts, owner, xAllocationPool, b3tr, emissions, minterAccount, x2EarnApps } =
-          await getOrDeployContractInstances({
-            forceDeploy: true,
-          })
+        const {
+          xAllocationVoting,
+          otherAccounts,
+          owner,
+          veBetterPassport,
+          xAllocationPool,
+          b3tr,
+          emissions,
+          minterAccount,
+          x2EarnApps,
+        } = await getOrDeployContractInstances({
+          forceDeploy: true,
+        })
 
         // SEED DATA
 
@@ -881,6 +825,9 @@ describe("X-Allocation Pool", async function () {
         await bootstrapEmissions()
 
         await emissions.connect(minterAccount).start()
+
+        await veBetterPassport.whitelist(voter1.address)
+        await veBetterPassport.toggleCheck(1)
 
         //Start allocation round
         const round1 = parseInt((await xAllocationVoting.currentRoundId()).toString())
@@ -933,10 +880,18 @@ describe("X-Allocation Pool", async function () {
       })
 
       it("App shares cap and unallocated share of a past round should be checkpointed", async function () {
-        const { xAllocationVoting, otherAccounts, owner, xAllocationPool, emissions, minterAccount, x2EarnApps } =
-          await getOrDeployContractInstances({
-            forceDeploy: true,
-          })
+        const {
+          xAllocationVoting,
+          otherAccounts,
+          owner,
+          xAllocationPool,
+          emissions,
+          minterAccount,
+          x2EarnApps,
+          veBetterPassport,
+        } = await getOrDeployContractInstances({
+          forceDeploy: true,
+        })
 
         const voter1 = otherAccounts[1]
         await getVot3Tokens(voter1, "2000")
@@ -956,12 +911,13 @@ describe("X-Allocation Pool", async function () {
 
         await emissions.connect(minterAccount).start()
 
+        await veBetterPassport.whitelist(voter1.address)
+        await veBetterPassport.toggleCheck(1)
+
         const round1 = await xAllocationVoting.currentRoundId()
 
         // Vote
-        await xAllocationVoting
-          .connect(voter1)
-          .castVote(round1, [app1Id, app2Id], [ethers.parseEther("1000"), ethers.parseEther("0")])
+        await xAllocationVoting.connect(voter1).castVote(round1, [app1Id], [ethers.parseEther("1000")])
 
         await waitForRoundToEnd(Number(round1))
         let state = await xAllocationVoting.state(round1)
@@ -977,9 +933,7 @@ describe("X-Allocation Pool", async function () {
         const round2 = await xAllocationVoting.currentRoundId()
 
         // Vote
-        await xAllocationVoting
-          .connect(voter1)
-          .castVote(round2, [app1Id, app2Id], [ethers.parseEther("1000"), ethers.parseEther("0")])
+        await xAllocationVoting.connect(voter1).castVote(round2, [app1Id], [ethers.parseEther("1000")])
 
         await waitForRoundToEnd(Number(round2))
 
@@ -1021,10 +975,18 @@ describe("X-Allocation Pool", async function () {
       })
 
       it("Base allocation of a past round should remain the same even if value has been updated", async function () {
-        const { xAllocationVoting, otherAccounts, owner, xAllocationPool, emissions, minterAccount, x2EarnApps } =
-          await getOrDeployContractInstances({
-            forceDeploy: true,
-          })
+        const {
+          xAllocationVoting,
+          otherAccounts,
+          owner,
+          xAllocationPool,
+          emissions,
+          minterAccount,
+          x2EarnApps,
+          veBetterPassport,
+        } = await getOrDeployContractInstances({
+          forceDeploy: true,
+        })
 
         const voter1 = otherAccounts[1]
         await getVot3Tokens(voter1, "2000")
@@ -1046,10 +1008,11 @@ describe("X-Allocation Pool", async function () {
 
         const round1 = await xAllocationVoting.currentRoundId()
 
+        await veBetterPassport.whitelist(voter1.address)
+        await veBetterPassport.toggleCheck(1)
+
         // Vote
-        await xAllocationVoting
-          .connect(voter1)
-          .castVote(round1, [app1Id, app2Id], [ethers.parseEther("1000"), ethers.parseEther("0")])
+        await xAllocationVoting.connect(voter1).castVote(round1, [app1Id], [ethers.parseEther("1000")])
 
         await waitForRoundToEnd(Number(round1))
         let state = await xAllocationVoting.state(round1)
@@ -1065,9 +1028,7 @@ describe("X-Allocation Pool", async function () {
         const round2 = await xAllocationVoting.currentRoundId()
 
         // Vote
-        await xAllocationVoting
-          .connect(voter1)
-          .castVote(round2, [app1Id, app2Id], [ethers.parseEther("1000"), ethers.parseEther("0")])
+        await xAllocationVoting.connect(voter1).castVote(round2, [app1Id], [ethers.parseEther("1000")])
 
         await waitForRoundToEnd(Number(round2))
 
@@ -1086,7 +1047,7 @@ describe("X-Allocation Pool", async function () {
 
       it("Cannot calculate base allocation amount and app shares if xAllocationVoting is not set", async function () {
         const config = createLocalConfig()
-        const { xAllocationVoting, otherAccounts, owner, xAllocationPool, x2EarnApps } =
+        const { xAllocationVoting, otherAccounts, owner, xAllocationPool, x2EarnApps, veBetterPassport } =
           await getOrDeployContractInstances({
             forceDeploy: true,
           })
@@ -1096,6 +1057,9 @@ describe("X-Allocation Pool", async function () {
 
         const voter1 = otherAccounts[1]
         await getVot3Tokens(voter1, "1000")
+
+        await veBetterPassport.whitelist(voter1.address)
+        await veBetterPassport.toggleCheck(1)
 
         //Add apps
         const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
@@ -1140,10 +1104,18 @@ describe("X-Allocation Pool", async function () {
 
     describe("App earnings", async function () {
       it("Allocation rewards are calculated correctly", async function () {
-        const { xAllocationVoting, otherAccounts, owner, xAllocationPool, emissions, minterAccount, x2EarnApps } =
-          await getOrDeployContractInstances({
-            forceDeploy: true,
-          })
+        const {
+          xAllocationVoting,
+          otherAccounts,
+          owner,
+          xAllocationPool,
+          emissions,
+          minterAccount,
+          x2EarnApps,
+          veBetterPassport,
+        } = await getOrDeployContractInstances({
+          forceDeploy: true,
+        })
 
         const voter1 = otherAccounts[1]
         await getVot3Tokens(voter1, "1000")
@@ -1164,6 +1136,9 @@ describe("X-Allocation Pool", async function () {
         await emissions.connect(minterAccount).start()
 
         const round1 = await xAllocationVoting.currentRoundId()
+
+        await veBetterPassport.whitelist(voter1.address)
+        await veBetterPassport.toggleCheck(1)
 
         // Vote
         await xAllocationVoting
@@ -1205,10 +1180,18 @@ describe("X-Allocation Pool", async function () {
       })
 
       it("Should correctly count live earnings when current round failed (round > 1 )", async function () {
-        const { xAllocationVoting, otherAccounts, owner, xAllocationPool, emissions, minterAccount, x2EarnApps } =
-          await getOrDeployContractInstances({
-            forceDeploy: true,
-          })
+        const {
+          xAllocationVoting,
+          otherAccounts,
+          owner,
+          xAllocationPool,
+          emissions,
+          minterAccount,
+          x2EarnApps,
+          veBetterPassport,
+        } = await getOrDeployContractInstances({
+          forceDeploy: true,
+        })
 
         const voter1 = otherAccounts[1]
         await getVot3Tokens(voter1, "1000")
@@ -1229,6 +1212,9 @@ describe("X-Allocation Pool", async function () {
         await emissions.connect(minterAccount).start()
 
         const round1 = await xAllocationVoting.currentRoundId()
+
+        await veBetterPassport.whitelist(voter1.address)
+        await veBetterPassport.toggleCheck(1)
 
         // Vote
         await xAllocationVoting
@@ -1267,10 +1253,18 @@ describe("X-Allocation Pool", async function () {
       })
 
       it("When adding new app previous allocations should remain the same", async function () {
-        const { xAllocationVoting, otherAccounts, owner, xAllocationPool, emissions, minterAccount, x2EarnApps } =
-          await getOrDeployContractInstances({
-            forceDeploy: true,
-          })
+        const {
+          xAllocationVoting,
+          otherAccounts,
+          owner,
+          xAllocationPool,
+          emissions,
+          minterAccount,
+          x2EarnApps,
+          veBetterPassport,
+        } = await getOrDeployContractInstances({
+          forceDeploy: true,
+        })
 
         const voter1 = otherAccounts[1]
         await getVot3Tokens(voter1, "1000")
@@ -1289,6 +1283,9 @@ describe("X-Allocation Pool", async function () {
         // Bootstrap emissions
         await bootstrapEmissions()
         await emissions.connect(minterAccount).start()
+
+        await veBetterPassport.whitelist(voter1.address)
+        await veBetterPassport.toggleCheck(1)
 
         const round1 = await xAllocationVoting.currentRoundId()
 
@@ -1373,13 +1370,24 @@ describe("X-Allocation Pool", async function () {
       })
 
       it("Earnings should be calculated correctly when round failed", async function () {
-        const { xAllocationVoting, otherAccounts, owner, xAllocationPool, emissions, minterAccount, x2EarnApps } =
-          await getOrDeployContractInstances({
-            forceDeploy: true,
-          })
+        const {
+          xAllocationVoting,
+          otherAccounts,
+          owner,
+          xAllocationPool,
+          emissions,
+          minterAccount,
+          x2EarnApps,
+          veBetterPassport,
+        } = await getOrDeployContractInstances({
+          forceDeploy: true,
+        })
 
         const voter1 = otherAccounts[1]
         await getVot3Tokens(voter1, "1000")
+
+        await veBetterPassport.whitelist(voter1.address)
+        await veBetterPassport.toggleCheck(1)
 
         //Add apps
         const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
@@ -1428,10 +1436,19 @@ describe("X-Allocation Pool", async function () {
     })
     describe("App claiming", async function () {
       it("Allocation rewards are claimed correctly", async function () {
-        const { xAllocationVoting, otherAccounts, owner, xAllocationPool, b3tr, emissions, minterAccount, x2EarnApps } =
-          await getOrDeployContractInstances({
-            forceDeploy: true,
-          })
+        const {
+          xAllocationVoting,
+          otherAccounts,
+          owner,
+          xAllocationPool,
+          b3tr,
+          emissions,
+          minterAccount,
+          x2EarnApps,
+          veBetterPassport,
+        } = await getOrDeployContractInstances({
+          forceDeploy: true,
+        })
 
         // SEED DATA
 
@@ -1454,6 +1471,9 @@ describe("X-Allocation Pool", async function () {
         await bootstrapEmissions()
 
         await emissions.connect(minterAccount).start()
+
+        await veBetterPassport.whitelist(voter1.address)
+        await veBetterPassport.toggleCheck(1)
 
         //Start allocation round
         const round1 = parseInt((await xAllocationVoting.currentRoundId()).toString())
@@ -1493,15 +1513,26 @@ describe("X-Allocation Pool", async function () {
       })
 
       it("App cannot claim two times in the same round", async function () {
-        const { xAllocationVoting, otherAccounts, owner, xAllocationPool, emissions, minterAccount, x2EarnApps } =
-          await getOrDeployContractInstances({
-            forceDeploy: true,
-          })
+        const {
+          xAllocationVoting,
+          otherAccounts,
+          owner,
+          xAllocationPool,
+          emissions,
+          minterAccount,
+          x2EarnApps,
+          veBetterPassport,
+        } = await getOrDeployContractInstances({
+          forceDeploy: true,
+        })
 
         // SEED DATA
 
         const voter1 = otherAccounts[1]
         await getVot3Tokens(voter1, "1000")
+
+        await veBetterPassport.whitelist(voter1.address)
+        await veBetterPassport.toggleCheck(1)
 
         //Add apps
         const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
@@ -1538,10 +1569,19 @@ describe("X-Allocation Pool", async function () {
       })
 
       it("Anyone can trigger claiming of allocation to app", async function () {
-        const { xAllocationVoting, otherAccounts, owner, xAllocationPool, b3tr, emissions, minterAccount, x2EarnApps } =
-          await getOrDeployContractInstances({
-            forceDeploy: true,
-          })
+        const {
+          xAllocationVoting,
+          otherAccounts,
+          owner,
+          xAllocationPool,
+          b3tr,
+          emissions,
+          minterAccount,
+          x2EarnApps,
+          veBetterPassport,
+        } = await getOrDeployContractInstances({
+          forceDeploy: true,
+        })
 
         // SEED DATA
 
@@ -1559,6 +1599,9 @@ describe("X-Allocation Pool", async function () {
         // Set allocation percentage for the team to 100%
         await x2EarnApps.connect(otherAccounts[3]).setTeamAllocationPercentage(app1Id, 100)
         await x2EarnApps.connect(otherAccounts[4]).setTeamAllocationPercentage(app2Id, 100)
+
+        await veBetterPassport.whitelist(voter1.address)
+        await veBetterPassport.toggleCheck(1)
 
         // Bootstrap emissions
         await bootstrapEmissions()
@@ -1590,15 +1633,26 @@ describe("X-Allocation Pool", async function () {
       })
 
       it("Can claim first round even if it's not finalized", async function () {
-        const { xAllocationVoting, otherAccounts, owner, xAllocationPool, emissions, minterAccount, x2EarnApps } =
-          await getOrDeployContractInstances({
-            forceDeploy: true,
-          })
+        const {
+          xAllocationVoting,
+          otherAccounts,
+          owner,
+          xAllocationPool,
+          emissions,
+          minterAccount,
+          x2EarnApps,
+          veBetterPassport,
+        } = await getOrDeployContractInstances({
+          forceDeploy: true,
+        })
 
         // SEED DATA
 
         const voter1 = otherAccounts[1]
         await getVot3Tokens(voter1, "1000")
+
+        await veBetterPassport.whitelist(voter1.address)
+        await veBetterPassport.toggleCheck(1)
 
         //Add apps
         const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
@@ -1632,13 +1686,24 @@ describe("X-Allocation Pool", async function () {
       })
 
       it("Can claim failed not finalized round [ROUND > 1]", async function () {
-        const { xAllocationVoting, otherAccounts, owner, xAllocationPool, emissions, minterAccount, x2EarnApps } =
-          await getOrDeployContractInstances({
-            forceDeploy: true,
-          })
+        const {
+          xAllocationVoting,
+          otherAccounts,
+          owner,
+          xAllocationPool,
+          emissions,
+          minterAccount,
+          x2EarnApps,
+          veBetterPassport,
+        } = await getOrDeployContractInstances({
+          forceDeploy: true,
+        })
 
         const voter1 = otherAccounts[1]
         await getVot3Tokens(voter1, "1000")
+
+        await veBetterPassport.whitelist(voter1.address)
+        await veBetterPassport.toggleCheck(1)
 
         //Add apps
         const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
@@ -1687,15 +1752,26 @@ describe("X-Allocation Pool", async function () {
       })
 
       it("Can claim failed round after it's finalized", async function () {
-        const { xAllocationVoting, otherAccounts, owner, xAllocationPool, emissions, minterAccount, x2EarnApps } =
-          await getOrDeployContractInstances({
-            forceDeploy: true,
-          })
+        const {
+          xAllocationVoting,
+          otherAccounts,
+          owner,
+          xAllocationPool,
+          emissions,
+          minterAccount,
+          x2EarnApps,
+          veBetterPassport,
+        } = await getOrDeployContractInstances({
+          forceDeploy: true,
+        })
 
         // SEED DATA
 
         const voter1 = otherAccounts[1]
         await getVot3Tokens(voter1, "1000")
+
+        await veBetterPassport.whitelist(voter1.address)
+        await veBetterPassport.toggleCheck(1)
 
         //Add apps
         const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
@@ -1772,12 +1848,16 @@ describe("X-Allocation Pool", async function () {
           minterAccount,
           x2EarnApps,
           x2EarnRewardsPool,
+          veBetterPassport,
         } = await getOrDeployContractInstances({
           forceDeploy: true,
         })
 
         const voter1 = otherAccounts[1]
         await getVot3Tokens(voter1, "1000")
+
+        await veBetterPassport.whitelist(voter1.address)
+        await veBetterPassport.toggleCheck(1)
 
         //Add apps
         const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
@@ -1846,13 +1926,24 @@ describe("X-Allocation Pool", async function () {
       })
 
       it("Claimable amount for an active round should be 0", async function () {
-        const { xAllocationVoting, otherAccounts, owner, xAllocationPool, emissions, minterAccount, x2EarnApps } =
-          await getOrDeployContractInstances({
-            forceDeploy: true,
-          })
+        const {
+          xAllocationVoting,
+          otherAccounts,
+          owner,
+          xAllocationPool,
+          emissions,
+          minterAccount,
+          x2EarnApps,
+          veBetterPassport,
+        } = await getOrDeployContractInstances({
+          forceDeploy: true,
+        })
 
         const voter1 = otherAccounts[1]
         await getVot3Tokens(voter1, "1000")
+
+        await veBetterPassport.whitelist(voter1.address)
+        await veBetterPassport.toggleCheck(1)
 
         //Add apps
         const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
@@ -1884,13 +1975,24 @@ describe("X-Allocation Pool", async function () {
       })
 
       it("Cannot claim 0 rewards", async function () {
-        const { xAllocationVoting, otherAccounts, owner, xAllocationPool, emissions, minterAccount, x2EarnApps } =
-          await getOrDeployContractInstances({
-            forceDeploy: true,
-          })
+        const {
+          xAllocationVoting,
+          otherAccounts,
+          owner,
+          xAllocationPool,
+          emissions,
+          minterAccount,
+          x2EarnApps,
+          veBetterPassport,
+        } = await getOrDeployContractInstances({
+          forceDeploy: true,
+        })
 
         const voter1 = otherAccounts[1]
         await getVot3Tokens(voter1, "1000")
+
+        await veBetterPassport.whitelist(voter1.address)
+        await veBetterPassport.toggleCheck(1)
 
         const GOVERNANCE_ROLE = await xAllocationVoting.GOVERNANCE_ROLE()
         await xAllocationVoting.grantRole(GOVERNANCE_ROLE, owner.address)
@@ -1915,9 +2017,7 @@ describe("X-Allocation Pool", async function () {
         const round1 = await xAllocationVoting.currentRoundId()
 
         // Vote
-        await xAllocationVoting
-          .connect(voter1)
-          .castVote(round1, [app1Id, app2Id], [ethers.parseEther("0"), ethers.parseEther("1000")])
+        await xAllocationVoting.connect(voter1).castVote(round1, [app2Id], [ethers.parseEther("1000")])
 
         await waitForRoundToEnd(Number(round1))
         let state = await xAllocationVoting.state(round1)
@@ -1930,13 +2030,25 @@ describe("X-Allocation Pool", async function () {
       })
 
       it("Cannot claim if b3tr token is paused", async function () {
-        const { xAllocationVoting, otherAccounts, owner, xAllocationPool, emissions, minterAccount, b3tr, x2EarnApps } =
-          await getOrDeployContractInstances({
-            forceDeploy: true,
-          })
+        const {
+          xAllocationVoting,
+          otherAccounts,
+          owner,
+          xAllocationPool,
+          emissions,
+          minterAccount,
+          b3tr,
+          x2EarnApps,
+          veBetterPassport,
+        } = await getOrDeployContractInstances({
+          forceDeploy: true,
+        })
 
         const voter1 = otherAccounts[1]
         await getVot3Tokens(voter1, "1000")
+
+        await veBetterPassport.whitelist(voter1.address)
+        await veBetterPassport.toggleCheck(1)
 
         //Add apps
         const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
@@ -1955,9 +2067,7 @@ describe("X-Allocation Pool", async function () {
         const round1 = await xAllocationVoting.currentRoundId()
 
         // Vote
-        await xAllocationVoting
-          .connect(voter1)
-          .castVote(round1, [app1Id, app2Id], [ethers.parseEther("0"), ethers.parseEther("1000")])
+        await xAllocationVoting.connect(voter1).castVote(round1, [app2Id], [ethers.parseEther("1000")])
 
         await waitForRoundToEnd(Number(round1))
 
@@ -1968,13 +2078,24 @@ describe("X-Allocation Pool", async function () {
       })
 
       it("Cannot claim for app that does not exist", async function () {
-        const { xAllocationVoting, otherAccounts, owner, xAllocationPool, emissions, minterAccount, x2EarnApps } =
-          await getOrDeployContractInstances({
-            forceDeploy: true,
-          })
+        const {
+          xAllocationVoting,
+          otherAccounts,
+          owner,
+          xAllocationPool,
+          emissions,
+          minterAccount,
+          x2EarnApps,
+          veBetterPassport,
+        } = await getOrDeployContractInstances({
+          forceDeploy: true,
+        })
 
         const voter1 = otherAccounts[1]
         await getVot3Tokens(voter1, "1000")
+
+        await veBetterPassport.whitelist(voter1.address)
+        await veBetterPassport.toggleCheck(1)
 
         //Add apps
         const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
@@ -1999,15 +2120,27 @@ describe("X-Allocation Pool", async function () {
       })
 
       it("Should fail if not enough balance on contract", async function () {
-        const { xAllocationPool, otherAccounts, x2EarnApps, xAllocationVoting, b3tr, emissions, owner, minterAccount } =
-          await getOrDeployContractInstances({
-            forceDeploy: true,
-          })
+        const {
+          xAllocationPool,
+          otherAccounts,
+          x2EarnApps,
+          xAllocationVoting,
+          b3tr,
+          emissions,
+          owner,
+          minterAccount,
+          veBetterPassport,
+        } = await getOrDeployContractInstances({
+          forceDeploy: true,
+        })
 
         // Bootstrap emissions
         await bootstrapEmissions()
 
         await getVot3Tokens(otherAccounts[3], "10000")
+
+        await veBetterPassport.whitelist(otherAccounts[3].address)
+        await veBetterPassport.toggleCheck(1)
 
         //Add apps
         const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
@@ -2056,6 +2189,7 @@ describe("X-Allocation Pool", async function () {
           minterAccount,
           treasury,
           x2EarnApps,
+          veBetterPassport,
         } = await getOrDeployContractInstances({
           forceDeploy: true,
         })
@@ -2064,6 +2198,9 @@ describe("X-Allocation Pool", async function () {
 
         const voter1 = otherAccounts[1]
         await getVot3Tokens(voter1, "1000")
+
+        await veBetterPassport.whitelist(voter1.address)
+        await veBetterPassport.toggleCheck(1)
 
         //Add apps
         const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
@@ -2116,12 +2253,16 @@ describe("X-Allocation Pool", async function () {
           b3tr,
           treasury,
           x2EarnApps,
+          veBetterPassport,
         } = await getOrDeployContractInstances({
           forceDeploy: true,
         })
 
         const voter1 = otherAccounts[1]
         await getVot3Tokens(voter1, "1000")
+
+        await veBetterPassport.whitelist(voter1.address)
+        await veBetterPassport.toggleCheck(1)
 
         //Add apps
         const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
@@ -2140,9 +2281,7 @@ describe("X-Allocation Pool", async function () {
         const round1 = await xAllocationVoting.currentRoundId()
 
         // Vote
-        await xAllocationVoting
-          .connect(voter1)
-          .castVote(round1, [app1Id, app2Id], [ethers.parseEther("0"), ethers.parseEther("1000")])
+        await xAllocationVoting.connect(voter1).castVote(round1, [app2Id], [ethers.parseEther("1000")])
 
         await waitForRoundToEnd(Number(round1))
         expect(await xAllocationVoting.state(round1)).to.eql(2n) // succeeded
@@ -2168,7 +2307,7 @@ describe("X-Allocation Pool", async function () {
 
     describe("Quadratic funding & Linear Funding", async function () {
       it("[Quadratic] Should calculate correct app shares with Quadratic funding distrubiton with max cap at 20%", async function () {
-        const { xAllocationVoting, otherAccounts, owner, xAllocationPool, x2EarnApps } =
+        const { xAllocationVoting, otherAccounts, owner, xAllocationPool, x2EarnApps, veBetterPassport } =
           await getOrDeployContractInstances({
             forceDeploy: true,
           })
@@ -2177,8 +2316,11 @@ describe("X-Allocation Pool", async function () {
         await bootstrapEmissions()
 
         otherAccounts.forEach(async account => {
+          await veBetterPassport.whitelist(account.address)
           await getVot3Tokens(account, "10000")
         })
+
+        await veBetterPassport.toggleCheck(1)
 
         //Add apps
         await x2EarnApps
@@ -2199,39 +2341,19 @@ describe("X-Allocation Pool", async function () {
         // Vote
         await xAllocationVoting
           .connect(otherAccounts[1])
-          .castVote(
-            round1,
-            [app1Id, app2Id, app3Id],
-            [ethers.parseEther("0"), ethers.parseEther("900"), ethers.parseEther("100")],
-          )
+          .castVote(round1, [app2Id, app3Id], [ethers.parseEther("900"), ethers.parseEther("100")])
         await xAllocationVoting
           .connect(otherAccounts[2])
-          .castVote(
-            round1,
-            [app1Id, app2Id, app3Id],
-            [ethers.parseEther("0"), ethers.parseEther("500"), ethers.parseEther("100")],
-          )
+          .castVote(round1, [app2Id, app3Id], [ethers.parseEther("500"), ethers.parseEther("100")])
         await xAllocationVoting
           .connect(otherAccounts[3])
-          .castVote(
-            round1,
-            [app1Id, app2Id, app3Id],
-            [ethers.parseEther("0"), ethers.parseEther("100"), ethers.parseEther("100")],
-          )
+          .castVote(round1, [app2Id, app3Id], [ethers.parseEther("100"), ethers.parseEther("100")])
         await xAllocationVoting
           .connect(otherAccounts[4])
-          .castVote(
-            round1,
-            [app1Id, app2Id, app3Id],
-            [ethers.parseEther("0"), ethers.parseEther("100"), ethers.parseEther("100")],
-          )
+          .castVote(round1, [app2Id, app3Id], [ethers.parseEther("100"), ethers.parseEther("100")])
         await xAllocationVoting
           .connect(otherAccounts[5])
-          .castVote(
-            round1,
-            [app1Id, app2Id, app3Id],
-            [ethers.parseEther("1000"), ethers.parseEther("0"), ethers.parseEther("100")],
-          )
+          .castVote(round1, [app1Id, app3Id], [ethers.parseEther("1000"), ethers.parseEther("100")])
 
         await waitForRoundToEnd(round1)
 
@@ -2245,7 +2367,7 @@ describe("X-Allocation Pool", async function () {
       })
 
       it("[Linear] Should calculate correct app shares with Linear funding distrubiton with max cap at 20%", async function () {
-        const { xAllocationVoting, otherAccounts, owner, xAllocationPool, x2EarnApps } =
+        const { xAllocationVoting, otherAccounts, owner, xAllocationPool, x2EarnApps, veBetterPassport } =
           await getOrDeployContractInstances({
             forceDeploy: true,
           })
@@ -2254,8 +2376,11 @@ describe("X-Allocation Pool", async function () {
         await bootstrapEmissions()
 
         otherAccounts.forEach(async account => {
+          await veBetterPassport.whitelist(account.address)
           await getVot3Tokens(account, "10000")
         })
+
+        await veBetterPassport.toggleCheck(1)
 
         // Turn off quadratic funding
         await xAllocationPool.connect(owner).toggleQuadraticFunding()
@@ -2283,39 +2408,19 @@ describe("X-Allocation Pool", async function () {
         // Vote
         await xAllocationVoting
           .connect(otherAccounts[1])
-          .castVote(
-            round1,
-            [app1Id, app2Id, app3Id],
-            [ethers.parseEther("0"), ethers.parseEther("900"), ethers.parseEther("100")],
-          )
+          .castVote(round1, [app2Id, app3Id], [ethers.parseEther("900"), ethers.parseEther("100")])
         await xAllocationVoting
           .connect(otherAccounts[2])
-          .castVote(
-            round1,
-            [app1Id, app2Id, app3Id],
-            [ethers.parseEther("0"), ethers.parseEther("500"), ethers.parseEther("100")],
-          )
+          .castVote(round1, [app2Id, app3Id], [ethers.parseEther("500"), ethers.parseEther("100")])
         await xAllocationVoting
           .connect(otherAccounts[3])
-          .castVote(
-            round1,
-            [app1Id, app2Id, app3Id],
-            [ethers.parseEther("0"), ethers.parseEther("100"), ethers.parseEther("100")],
-          )
+          .castVote(round1, [app2Id, app3Id], [ethers.parseEther("100"), ethers.parseEther("100")])
         await xAllocationVoting
           .connect(otherAccounts[4])
-          .castVote(
-            round1,
-            [app1Id, app2Id, app3Id],
-            [ethers.parseEther("0"), ethers.parseEther("100"), ethers.parseEther("100")],
-          )
+          .castVote(round1, [app2Id, app3Id], [ethers.parseEther("100"), ethers.parseEther("100")])
         await xAllocationVoting
           .connect(otherAccounts[5])
-          .castVote(
-            round1,
-            [app1Id, app2Id, app3Id],
-            [ethers.parseEther("1000"), ethers.parseEther("0"), ethers.parseEther("100")],
-          )
+          .castVote(round1, [app1Id, app3Id], [ethers.parseEther("1000"), ethers.parseEther("100")])
 
         /*
             app1: 1000 votes
@@ -2344,7 +2449,7 @@ describe("X-Allocation Pool", async function () {
       it("[Quadratic] Should calculate correct app shares with Quadratic funding distrubiton with no max cap", async function () {
         const config = createLocalConfig()
         config.X_ALLOCATION_POOL_APP_SHARES_MAX_CAP = 100
-        const { xAllocationVoting, otherAccounts, owner, xAllocationPool, x2EarnApps } =
+        const { xAllocationVoting, otherAccounts, owner, xAllocationPool, x2EarnApps, veBetterPassport } =
           await getOrDeployContractInstances({
             forceDeploy: true,
             config,
@@ -2354,8 +2459,11 @@ describe("X-Allocation Pool", async function () {
         await bootstrapEmissions()
 
         otherAccounts.forEach(async account => {
+          await veBetterPassport.whitelist(account.address)
           await getVot3Tokens(account, "10000")
         })
+
+        await veBetterPassport.toggleCheck(1)
 
         //Add apps
         const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
@@ -2374,39 +2482,19 @@ describe("X-Allocation Pool", async function () {
         // Vote
         await xAllocationVoting
           .connect(otherAccounts[1])
-          .castVote(
-            round1,
-            [app1Id, app2Id, app3Id],
-            [ethers.parseEther("0"), ethers.parseEther("900"), ethers.parseEther("100")],
-          )
+          .castVote(round1, [app2Id, app3Id], [ethers.parseEther("900"), ethers.parseEther("100")])
         await xAllocationVoting
           .connect(otherAccounts[2])
-          .castVote(
-            round1,
-            [app1Id, app2Id, app3Id],
-            [ethers.parseEther("0"), ethers.parseEther("500"), ethers.parseEther("100")],
-          )
+          .castVote(round1, [app2Id, app3Id], [ethers.parseEther("500"), ethers.parseEther("100")])
         await xAllocationVoting
           .connect(otherAccounts[3])
-          .castVote(
-            round1,
-            [app1Id, app2Id, app3Id],
-            [ethers.parseEther("0"), ethers.parseEther("100"), ethers.parseEther("100")],
-          )
+          .castVote(round1, [app2Id, app3Id], [ethers.parseEther("100"), ethers.parseEther("100")])
         await xAllocationVoting
           .connect(otherAccounts[4])
-          .castVote(
-            round1,
-            [app1Id, app2Id, app3Id],
-            [ethers.parseEther("0"), ethers.parseEther("100"), ethers.parseEther("100")],
-          )
+          .castVote(round1, [app2Id, app3Id], [ethers.parseEther("100"), ethers.parseEther("100")])
         await xAllocationVoting
           .connect(otherAccounts[5])
-          .castVote(
-            round1,
-            [app1Id, app2Id, app3Id],
-            [ethers.parseEther("1000"), ethers.parseEther("0"), ethers.parseEther("100")],
-          )
+          .castVote(round1, [app1Id, app3Id], [ethers.parseEther("1000"), ethers.parseEther("100")])
 
         await waitForRoundToEnd(round1)
 
@@ -2422,7 +2510,7 @@ describe("X-Allocation Pool", async function () {
       it("[Linear] Should calculate correct app shares with Linear funding distrubiton with no max cap", async function () {
         const config = createLocalConfig()
         config.X_ALLOCATION_POOL_APP_SHARES_MAX_CAP = 100
-        const { xAllocationVoting, otherAccounts, owner, xAllocationPool, x2EarnApps } =
+        const { xAllocationVoting, otherAccounts, owner, xAllocationPool, x2EarnApps, veBetterPassport } =
           await getOrDeployContractInstances({
             forceDeploy: true,
             config,
@@ -2435,8 +2523,11 @@ describe("X-Allocation Pool", async function () {
         await bootstrapEmissions()
 
         otherAccounts.forEach(async account => {
+          await veBetterPassport.whitelist(account.address)
           await getVot3Tokens(account, "10000")
         })
+
+        await veBetterPassport.toggleCheck(1)
 
         //Add apps
         const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
@@ -2459,39 +2550,19 @@ describe("X-Allocation Pool", async function () {
         // Vote
         await xAllocationVoting
           .connect(otherAccounts[1])
-          .castVote(
-            round1,
-            [app1Id, app2Id, app3Id],
-            [ethers.parseEther("0"), ethers.parseEther("900"), ethers.parseEther("100")],
-          )
+          .castVote(round1, [app2Id, app3Id], [ethers.parseEther("900"), ethers.parseEther("100")])
         await xAllocationVoting
           .connect(otherAccounts[2])
-          .castVote(
-            round1,
-            [app1Id, app2Id, app3Id],
-            [ethers.parseEther("0"), ethers.parseEther("500"), ethers.parseEther("100")],
-          )
+          .castVote(round1, [app2Id, app3Id], [ethers.parseEther("500"), ethers.parseEther("100")])
         await xAllocationVoting
           .connect(otherAccounts[3])
-          .castVote(
-            round1,
-            [app1Id, app2Id, app3Id],
-            [ethers.parseEther("0"), ethers.parseEther("100"), ethers.parseEther("100")],
-          )
+          .castVote(round1, [app2Id, app3Id], [ethers.parseEther("100"), ethers.parseEther("100")])
         await xAllocationVoting
           .connect(otherAccounts[4])
-          .castVote(
-            round1,
-            [app1Id, app2Id, app3Id],
-            [ethers.parseEther("0"), ethers.parseEther("100"), ethers.parseEther("100")],
-          )
+          .castVote(round1, [app2Id, app3Id], [ethers.parseEther("100"), ethers.parseEther("100")])
         await xAllocationVoting
           .connect(otherAccounts[5])
-          .castVote(
-            round1,
-            [app1Id, app2Id, app3Id],
-            [ethers.parseEther("1000"), ethers.parseEther("0"), ethers.parseEther("100")],
-          )
+          .castVote(round1, [app1Id, app3Id], [ethers.parseEther("1000"), ethers.parseEther("100")])
 
         /*
             app1: 1000 votes
@@ -2520,7 +2591,7 @@ describe("X-Allocation Pool", async function () {
         config.X_ALLOCATION_POOL_APP_SHARES_MAX_CAP = 100
         config.X_ALLOCATION_POOL_BASE_ALLOCATION_PERCENTAGE = 0
         config.INITIAL_X_ALLOCATION = 10000n
-        const { xAllocationVoting, otherAccounts, owner, xAllocationPool, x2EarnApps } =
+        const { xAllocationVoting, otherAccounts, owner, xAllocationPool, x2EarnApps, veBetterPassport } =
           await getOrDeployContractInstances({
             forceDeploy: true,
             config,
@@ -2530,8 +2601,11 @@ describe("X-Allocation Pool", async function () {
         await bootstrapEmissions()
 
         otherAccounts.forEach(async account => {
+          await veBetterPassport.whitelist(account.address)
           await getVot3Tokens(account, "10000")
         })
+
+        await veBetterPassport.toggleCheck(1)
 
         //Add apps
         const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
@@ -2552,39 +2626,19 @@ describe("X-Allocation Pool", async function () {
         // Vote
         await xAllocationVoting
           .connect(otherAccounts[1])
-          .castVote(
-            round1,
-            [app1Id, app2Id, app3Id],
-            [ethers.parseEther("0"), ethers.parseEther("900"), ethers.parseEther("100")],
-          )
+          .castVote(round1, [app2Id, app3Id], [ethers.parseEther("900"), ethers.parseEther("100")])
         await xAllocationVoting
           .connect(otherAccounts[2])
-          .castVote(
-            round1,
-            [app1Id, app2Id, app3Id],
-            [ethers.parseEther("0"), ethers.parseEther("500"), ethers.parseEther("100")],
-          )
+          .castVote(round1, [app2Id, app3Id], [ethers.parseEther("500"), ethers.parseEther("100")])
         await xAllocationVoting
           .connect(otherAccounts[3])
-          .castVote(
-            round1,
-            [app1Id, app2Id, app3Id],
-            [ethers.parseEther("0"), ethers.parseEther("100"), ethers.parseEther("100")],
-          )
+          .castVote(round1, [app2Id, app3Id], [ethers.parseEther("100"), ethers.parseEther("100")])
         await xAllocationVoting
           .connect(otherAccounts[4])
-          .castVote(
-            round1,
-            [app1Id, app2Id, app3Id],
-            [ethers.parseEther("0"), ethers.parseEther("100"), ethers.parseEther("100")],
-          )
+          .castVote(round1, [app2Id, app3Id], [ethers.parseEther("100"), ethers.parseEther("100")])
         await xAllocationVoting
           .connect(otherAccounts[5])
-          .castVote(
-            round1,
-            [app1Id, app2Id, app3Id],
-            [ethers.parseEther("1000"), ethers.parseEther("0"), ethers.parseEther("100")],
-          )
+          .castVote(round1, [app1Id, app3Id], [ethers.parseEther("1000"), ethers.parseEther("100")])
 
         await waitForRoundToEnd(round1)
 
@@ -2602,7 +2656,7 @@ describe("X-Allocation Pool", async function () {
         config.X_ALLOCATION_POOL_APP_SHARES_MAX_CAP = 100
         config.X_ALLOCATION_POOL_BASE_ALLOCATION_PERCENTAGE = 0
         config.INITIAL_X_ALLOCATION = 10000n
-        const { xAllocationVoting, otherAccounts, owner, xAllocationPool, x2EarnApps } =
+        const { xAllocationVoting, otherAccounts, owner, xAllocationPool, x2EarnApps, veBetterPassport } =
           await getOrDeployContractInstances({
             forceDeploy: true,
             config,
@@ -2612,8 +2666,11 @@ describe("X-Allocation Pool", async function () {
         await bootstrapEmissions()
 
         otherAccounts.forEach(async account => {
+          await veBetterPassport.whitelist(account.address)
           await getVot3Tokens(account, "10000")
         })
+
+        await veBetterPassport.toggleCheck(1)
 
         // Turn off quadratic funding
         await xAllocationPool.connect(owner).toggleQuadraticFunding()
@@ -2641,39 +2698,19 @@ describe("X-Allocation Pool", async function () {
         // Vote
         await xAllocationVoting
           .connect(otherAccounts[1])
-          .castVote(
-            round1,
-            [app1Id, app2Id, app3Id],
-            [ethers.parseEther("0"), ethers.parseEther("900"), ethers.parseEther("100")],
-          )
+          .castVote(round1, [app2Id, app3Id], [ethers.parseEther("900"), ethers.parseEther("100")])
         await xAllocationVoting
           .connect(otherAccounts[2])
-          .castVote(
-            round1,
-            [app1Id, app2Id, app3Id],
-            [ethers.parseEther("0"), ethers.parseEther("500"), ethers.parseEther("100")],
-          )
+          .castVote(round1, [app2Id, app3Id], [ethers.parseEther("500"), ethers.parseEther("100")])
         await xAllocationVoting
           .connect(otherAccounts[3])
-          .castVote(
-            round1,
-            [app1Id, app2Id, app3Id],
-            [ethers.parseEther("0"), ethers.parseEther("100"), ethers.parseEther("100")],
-          )
+          .castVote(round1, [app2Id, app3Id], [ethers.parseEther("100"), ethers.parseEther("100")])
         await xAllocationVoting
           .connect(otherAccounts[4])
-          .castVote(
-            round1,
-            [app1Id, app2Id, app3Id],
-            [ethers.parseEther("0"), ethers.parseEther("100"), ethers.parseEther("100")],
-          )
+          .castVote(round1, [app2Id, app3Id], [ethers.parseEther("100"), ethers.parseEther("100")])
         await xAllocationVoting
           .connect(otherAccounts[5])
-          .castVote(
-            round1,
-            [app1Id, app2Id, app3Id],
-            [ethers.parseEther("1000"), ethers.parseEther("0"), ethers.parseEther("100")],
-          )
+          .castVote(round1, [app1Id, app3Id], [ethers.parseEther("1000"), ethers.parseEther("100")])
 
         /*
           app1: 1000 votes
@@ -2702,7 +2739,7 @@ describe("X-Allocation Pool", async function () {
         config.X_ALLOCATION_POOL_BASE_ALLOCATION_PERCENTAGE = 0
         config.INITIAL_X_ALLOCATION = 10000n
         config.X_ALLOCATION_VOTING_QUORUM_PERCENTAGE = 0
-        const { xAllocationVoting, otherAccounts, owner, xAllocationPool, x2EarnApps } =
+        const { xAllocationVoting, otherAccounts, owner, xAllocationPool, x2EarnApps, veBetterPassport } =
           await getOrDeployContractInstances({
             forceDeploy: true,
             config,
@@ -2712,8 +2749,11 @@ describe("X-Allocation Pool", async function () {
         await bootstrapEmissions()
 
         otherAccounts.forEach(async account => {
+          await veBetterPassport.whitelist(account.address)
           await getVot3Tokens(account, "10000")
         })
+
+        await veBetterPassport.toggleCheck(1)
 
         //Add apps
         const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
@@ -2738,39 +2778,19 @@ describe("X-Allocation Pool", async function () {
         // Vote
         await xAllocationVoting
           .connect(otherAccounts[1])
-          .castVote(
-            round1,
-            [app1Id, app2Id, app3Id],
-            [ethers.parseEther("0"), ethers.parseEther("900"), ethers.parseEther("100")],
-          )
+          .castVote(round1, [app2Id, app3Id], [ethers.parseEther("900"), ethers.parseEther("100")])
         await xAllocationVoting
           .connect(otherAccounts[2])
-          .castVote(
-            round1,
-            [app1Id, app2Id, app3Id],
-            [ethers.parseEther("0"), ethers.parseEther("500"), ethers.parseEther("100")],
-          )
+          .castVote(round1, [app2Id, app3Id], [ethers.parseEther("500"), ethers.parseEther("100")])
         await xAllocationVoting
           .connect(otherAccounts[3])
-          .castVote(
-            round1,
-            [app1Id, app2Id, app3Id],
-            [ethers.parseEther("0"), ethers.parseEther("100"), ethers.parseEther("100")],
-          )
+          .castVote(round1, [app2Id, app3Id], [ethers.parseEther("100"), ethers.parseEther("100")])
         await xAllocationVoting
           .connect(otherAccounts[4])
-          .castVote(
-            round1,
-            [app1Id, app2Id, app3Id],
-            [ethers.parseEther("0"), ethers.parseEther("100"), ethers.parseEther("100")],
-          )
+          .castVote(round1, [app2Id, app3Id], [ethers.parseEther("100"), ethers.parseEther("100")])
         await xAllocationVoting
           .connect(otherAccounts[5])
-          .castVote(
-            round1,
-            [app1Id, app2Id, app3Id],
-            [ethers.parseEther("1000"), ethers.parseEther("0"), ethers.parseEther("100")],
-          )
+          .castVote(round1, [app1Id, app3Id], [ethers.parseEther("1000"), ethers.parseEther("100")])
 
         // Turn off quadratic funding
         await xAllocationPool.connect(owner).toggleQuadraticFunding()
@@ -2796,39 +2816,19 @@ describe("X-Allocation Pool", async function () {
         // Vote
         await xAllocationVoting
           .connect(otherAccounts[1])
-          .castVote(
-            round2,
-            [app1Id, app2Id, app3Id],
-            [ethers.parseEther("0"), ethers.parseEther("900"), ethers.parseEther("100")],
-          )
+          .castVote(round2, [app2Id, app3Id], [ethers.parseEther("900"), ethers.parseEther("100")])
         await xAllocationVoting
           .connect(otherAccounts[2])
-          .castVote(
-            round2,
-            [app1Id, app2Id, app3Id],
-            [ethers.parseEther("0"), ethers.parseEther("500"), ethers.parseEther("100")],
-          )
+          .castVote(round2, [app2Id, app3Id], [ethers.parseEther("500"), ethers.parseEther("100")])
         await xAllocationVoting
           .connect(otherAccounts[3])
-          .castVote(
-            round2,
-            [app1Id, app2Id, app3Id],
-            [ethers.parseEther("0"), ethers.parseEther("100"), ethers.parseEther("100")],
-          )
+          .castVote(round2, [app2Id, app3Id], [ethers.parseEther("100"), ethers.parseEther("100")])
         await xAllocationVoting
           .connect(otherAccounts[4])
-          .castVote(
-            round2,
-            [app1Id, app2Id, app3Id],
-            [ethers.parseEther("0"), ethers.parseEther("100"), ethers.parseEther("100")],
-          )
+          .castVote(round2, [app2Id, app3Id], [ethers.parseEther("100"), ethers.parseEther("100")])
         await xAllocationVoting
           .connect(otherAccounts[5])
-          .castVote(
-            round2,
-            [app1Id, app2Id, app3Id],
-            [ethers.parseEther("1000"), ethers.parseEther("0"), ethers.parseEther("100")],
-          )
+          .castVote(round2, [app1Id, app3Id], [ethers.parseEther("1000"), ethers.parseEther("100")])
 
         await waitForRoundToEnd(round2)
 

@@ -26,6 +26,7 @@ pragma solidity 0.8.20;
 import { GovernorStorageTypes } from "./libraries/GovernorStorageTypes.sol";
 import { GovernorTypes } from "./libraries/GovernorTypes.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { IVeBetterPassport } from "../interfaces/IVeBetterPassport.sol";
 
 /// @title GovernorStorage
 /// @notice Contract used as storage of the B3TRGovernor contract.
@@ -88,5 +89,10 @@ contract GovernorStorage is Initializable {
 
     // Set the governor votes storage
     governorStorage.votingThreshold = initializationData.initialVotingThreshold;
+  }
+
+  function __GovernorStorage_init_v4(IVeBetterPassport veBetterPassport) internal onlyInitializing {
+    GovernorStorageTypes.GovernorStorage storage governorStorage = getGovernorStorage();
+    governorStorage.veBetterPassport = veBetterPassport;
   }
 }

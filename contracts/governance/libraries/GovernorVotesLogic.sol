@@ -50,6 +50,11 @@ library GovernorVotesLogic {
   /// @param votes The actual votes received.
   error GovernorVotingThresholdNotMet(uint256 threshold, uint256 votes);
 
+  /// @dev Thrown when the personhood verification fails.
+  /// @param voter The address of the voter.
+  /// @param explanation The reason for the failure.
+  error GovernorPersonhoodVerificationFailed(address voter, string explanation);
+
   /// @notice Emitted when a vote is cast without parameters.
   /// @param voter The address of the voter.
   /// @param proposalId The ID of the proposal being voted on.
@@ -230,12 +235,21 @@ library GovernorVotesLogic {
     );
 
     uint256 proposalSnapshot = GovernorProposalLogic._proposalSnapshot(self, proposalId);
+
+    (bool isPerson, string memory explanation) = self.veBetterPassport.isPersonAtTimepoint(
+      voter,
+      SafeCast.toUint48(proposalSnapshot)
+    );
+
+    // Check if the voter or the delegator of personhood to the voter is a person and returning error with the reason
+    if (!isPerson) {
+      revert GovernorPersonhoodVerificationFailed(voter, explanation);
+    }
+
     uint256 weight = self.vot3.getPastVotes(voter, proposalSnapshot);
     uint256 power = Math.sqrt(weight) * 1e9;
 
-    if (weight < GovernorConfigurator.getVotingThreshold(self)) {
-      revert GovernorVotingThresholdNotMet(weight, GovernorConfigurator.getVotingThreshold(self));
-    }
+    _checkVotingThreshold(self, weight);
 
     _countVote(self, proposalId, voter, support, weight, power);
 
@@ -247,13 +261,24 @@ library GovernorVotesLogic {
   }
 
   /**
+   * @notice Checks if the voting threshold is met.
+   * @param self - GovernorStorage
+   * @param weight - The weight of the vote.
+   */
+  function _checkVotingThreshold(GovernorStorageTypes.GovernorStorage storage self, uint256 weight) private view {
+    uint256 threshold = GovernorConfigurator.getVotingThreshold(self);
+    if (weight < threshold) {
+      revert GovernorVotingThresholdNotMet(threshold, weight);
+    }
+  }
+  /**
    * @notice Toggle quadratic voting for a specific cycle.
    * @dev This function toggles the state of quadratic voting for a specific cycle.
    * @param self - The storage reference for the GovernorStorage.
    * The state will flip between enabled and disabled each time the function is called.
    */
   function toggleQuadraticVoting(GovernorStorageTypes.GovernorStorage storage self) external {
-    bool isQuadraticDisabled =  self.quadraticVotingDisabled.upperLookupRecent(GovernorClockLogic.clock(self)) == 1; // 0: enabled, 1: disabled
+    bool isQuadraticDisabled = self.quadraticVotingDisabled.upperLookupRecent(GovernorClockLogic.clock(self)) == 1; // 0: enabled, 1: disabled
 
     // If quadratic voting is disabled, set the new status to enabled, otherwise set it to disabled.
     uint208 newStatus = isQuadraticDisabled ? 0 : 1;

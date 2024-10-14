@@ -21,7 +21,7 @@ import { IERC6372 } from "@openzeppelin/contracts/interfaces/IERC6372.sol";
  * where shares should be calculated. Anyone can finalize the failed round,
  * but it will be automatically done when a new round starts.
  */
-interface IXAllocationVotingGovernor is IERC165, IERC6372 {
+interface IXAllocationVotingGovernorV1 is IERC165, IERC6372 {
   enum RoundState {
     Active,
     Failed,

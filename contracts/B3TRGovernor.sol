@@ -48,6 +48,7 @@ import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import { IVeBetterPassport } from "./interfaces/IVeBetterPassport.sol";
 
 /**
  * @title B3TRGovernor
@@ -67,11 +68,13 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
  *
  * The contract is upgradeable and uses the UUPS pattern.
  * @dev The contract is upgradeable and uses the UUPS pattern. All logic is stored in libraries.
- * 
+ *
  * ------------------ VERSION 2 ------------------
  * - Replaced onlyGovernance modifier with onlyRoleOrGovernance which checks if the caller has the DEFAULT_ADMIN_ROLE role or if the function is called through a governance proposal
  * ------------------ VERSION 3 ------------------
  * - Added the ability to toggle the quadratic voting mechanism on and off
+ * ------------------ VERSION 4 ------------------
+ * - Integrated VeBetterPassport contract
  */
 contract B3TRGovernor is
   IB3TRGovernor,
@@ -160,6 +163,10 @@ contract B3TRGovernor is
     _grantRole(PROPOSAL_EXECUTOR_ROLE, rolesData.proposalExecutor);
   }
 
+  function initializeV4(IVeBetterPassport _veBetterPassport) public reinitializer(4) {
+    __GovernorStorage_init_v4(_veBetterPassport);
+  }
+
   /**
    * @dev Function to receive VET that will be handled by the governor (disabled if executor is a third party contract)
    */
@@ -179,7 +186,11 @@ contract B3TRGovernor is
    * @param value The amount of ether to send
    * @param data The data to call the target with
    */
-  function relay(address target, uint256 value, bytes calldata data) external payable virtual onlyRoleOrGovernance(DEFAULT_ADMIN_ROLE) {
+  function relay(
+    address target,
+    uint256 value,
+    bytes calldata data
+  ) external payable virtual onlyRoleOrGovernance(DEFAULT_ADMIN_ROLE) {
     (bool success, bytes memory returndata) = target.call{ value: value }(data);
     Address.verifyCallResult(success, returndata);
   }
@@ -562,7 +573,7 @@ contract B3TRGovernor is
    * @return string The version of the governor
    */
   function version() external pure returns (string memory) {
-    return "3";
+    return "4";
   }
 
   /**
@@ -633,6 +644,15 @@ contract B3TRGovernor is
   function timelock() external view virtual returns (address) {
     GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
     return address($.timelock);
+  }
+
+  /**
+   * @notice Returns the VeBetterPassport contract.
+   * @return The current VeBetterPassport contract.
+   */
+  function veBetterPassport() external view returns (IVeBetterPassport) {
+    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
+    return $.veBetterPassport;
   }
 
   // ------------------ SETTERS ------------------ //
@@ -903,9 +923,22 @@ contract B3TRGovernor is
    * CAUTION: It is not recommended to change the timelock while there are other queued governance proposals.
    * @param newTimelock The new timelock controller
    */
-  function updateTimelock(TimelockControllerUpgradeable newTimelock) external virtual onlyRoleOrGovernance(DEFAULT_ADMIN_ROLE) {
+  function updateTimelock(
+    TimelockControllerUpgradeable newTimelock
+  ) external virtual onlyRoleOrGovernance(DEFAULT_ADMIN_ROLE) {
     GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
     GovernorConfigurator.updateTimelock($, newTimelock);
+  }
+
+  /**
+   * @notice Set the VeBetterPassport contract
+   * @param newVeBetterPassport The new VeBetterPassport contract
+   */
+  function setVeBetterPassport(
+    IVeBetterPassport newVeBetterPassport
+  ) public onlyRoleOrGovernance(CONTRACTS_ADDRESS_MANAGER_ROLE) {
+    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
+    GovernorConfigurator.setVeBetterPassport($, newVeBetterPassport);
   }
 
   // ------------------ Overrides ------------------ //

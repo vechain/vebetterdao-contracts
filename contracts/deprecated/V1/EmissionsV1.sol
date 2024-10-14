@@ -100,7 +100,7 @@ contract EmissionsV1 is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UU
   /// @custom:storage-location erc7201:b3tr.storage.Emissions
   struct EmissionsStorage {
     IB3TR b3tr; // B3TR token contract
-    IXAllocationVotingGovernor xAllocationsGovernor; // XAllocationVotingGovernor contract
+    IXAllocationVotingGovernorV1 xAllocationsGovernor; // XAllocationVotingGovernor contract
     // Destinations for emissions
     address _xAllocations;
     address _vote2Earn;
@@ -497,7 +497,7 @@ contract EmissionsV1 is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UU
   }
 
   /// @notice Returns the XAllocations Governance contract
-  function xAllocationsGovernor() public view returns (IXAllocationVotingGovernor) {
+  function xAllocationsGovernor() public view returns (IXAllocationVotingGovernorV1) {
     return _getEmissionsStorage().xAllocationsGovernor;
   }
 
@@ -619,7 +619,7 @@ contract EmissionsV1 is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UU
     require(_cycleDuration > 0, "Emissions: Cycle duration must be greater than 0");
     EmissionsStorage storage $ = _getEmissionsStorage();
     require(
-      IXAllocationVotingGovernor($.xAllocationsGovernor).votingPeriod() < _cycleDuration,
+      IXAllocationVotingGovernorV1($.xAllocationsGovernor).votingPeriod() < _cycleDuration,
       "Emissions: Voting period must be less than cycle duration"
     );
     emit EmissionCycleDurationUpdated(_cycleDuration, $.cycleDuration);
@@ -696,12 +696,12 @@ contract EmissionsV1 is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UU
   ) public onlyRole(CONTRACTS_ADDRESS_MANAGER_ROLE) {
     require(_xAllocationsGovernor != address(0), "Emissions: _xAllocationsGovernor cannot be the zero address");
     require(
-      IXAllocationVotingGovernor(_xAllocationsGovernor).votingPeriod() < cycleDuration(),
+      IXAllocationVotingGovernorV1(_xAllocationsGovernor).votingPeriod() < cycleDuration(),
       "Emissions: Voting period must be less than cycle duration"
     );
 
     EmissionsStorage storage $ = _getEmissionsStorage();
     emit XAllocationsGovernorAddressUpdated(_xAllocationsGovernor, address($.xAllocationsGovernor));
-    $.xAllocationsGovernor = IXAllocationVotingGovernor(_xAllocationsGovernor);
+    $.xAllocationsGovernor = IXAllocationVotingGovernorV1(_xAllocationsGovernor);
   }
 }

@@ -32,6 +32,8 @@ import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/I
 import { IX2EarnApps } from "../interfaces/IX2EarnApps.sol";
 import { IEmissions } from "../interfaces/IEmissions.sol";
 import { IVoterRewards } from "../interfaces/IVoterRewards.sol";
+import { IVeBetterPassport } from "../interfaces/IVeBetterPassport.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /**
  * @title XAllocationVotingGovernor
@@ -45,6 +47,9 @@ import { IVoterRewards } from "../interfaces/IVoterRewards.sol";
  * - A rounds storage module must implement {_startNewRound}, {roundSnapshot}, {roundDeadline}, and {currentRoundId}
  * - A rounds finalization module must implement {finalize}
  * - A earnings settings module must implement {_snapshotRoundEarningsCap}
+ *
+ * ----- Version 2 -----
+ * - Integrated VeBetterPassport
  */
 abstract contract XAllocationVotingGovernor is
   Initializable,
@@ -101,12 +106,25 @@ abstract contract XAllocationVotingGovernor is
 
   /**
    * @dev Cast a vote for a set of x-2-earn applications.
+   * @notice Only addresses with a valid passport can vote.
    */
   function castVote(uint256 roundId, bytes32[] memory appIds, uint256[] memory voteWeights) public virtual {
     _validateStateBitmap(roundId, _encodeStateBitmap(RoundState.Active));
 
     require(appIds.length == voteWeights.length, "XAllocationVotingGovernor: apps and weights length mismatch");
     require(appIds.length > 0, "XAllocationVotingGovernor: no apps to vote for");
+
+    uint256 _currentRoundSnapshot = currentRoundSnapshot();
+
+    (bool isPerson, string memory explanation) = veBetterPassport().isPersonAtTimepoint(
+      _msgSender(),
+      SafeCast.toUint48(_currentRoundSnapshot)
+    );
+
+    // Check if the voter or the delegator of personhood to the voter is a person and returning error with the reason
+    if (!isPerson) {
+      revert GovernorPersonhoodVerificationFailed(_msgSender(), explanation);
+    }
 
     address voter = _msgSender();
 
@@ -149,7 +167,7 @@ abstract contract XAllocationVotingGovernor is
    * @dev Returns the version of the governor.
    */
   function version() public view virtual returns (string memory) {
-    return "1";
+    return "2";
   }
 
   /**
@@ -297,7 +315,17 @@ abstract contract XAllocationVotingGovernor is
   /**
    * @dev Returns the X2EarnApps contract.
    */
+  function currentRoundSnapshot() public view virtual returns (uint256);
+
+  /**
+   * @dev Returns the X2EarnApps contract.
+   */
   function x2EarnApps() public view virtual returns (IX2EarnApps);
+
+  /**
+   * @dev Returns the VeBetterPassport contract.
+   */
+  function veBetterPassport() public view virtual returns (IVeBetterPassport);
 
   /**
    * @dev Returns the Emissions contract.
