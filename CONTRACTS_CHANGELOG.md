@@ -6,6 +6,7 @@ This document provides a detailed log of upgrades to the smart contract suite, e
 
 | Date                | Contract(s)                                               | Summary                                                     |
 | ------------------- | --------------------------------------------------------- | ----------------------------------------------------------- |
+| 21th October 2024   | `VeBetterPassport` version `2`                            | Check if the entity is a delegatee when request is created  |
 | 11th October 2024   | `XAllocationVoting` version `2`                           | Check isPerson when casting vote & fixed weight during vote |
 | 11th October 2024   | `B3TRGovernor` version `4`                                | Check isPerson when casting vote                            |
 | 11th October 2024   | `X2EarnRewardsPool` version `3`                           | Register action in VeBetter Passport contract               |
@@ -14,6 +15,30 @@ This document provides a detailed log of upgrades to the smart contract suite, e
 | 4th September 2024  | `X2EarnRewardsPool` version `2`                           | Added impact key management and proof building              |
 | 31st August 2024    | `VoterRewards` version `2`                                | Added quadratic rewarding features                          |
 | 29th August 2024    | `B3TRGovernor` version `2`                                | Updated access control modifiers                            |
+
+---
+
+## Upgrade `VeBetterPassport` to Version 2
+
+Added check to ensure entity is not a delegatee or pending delegatee when making entity link request.
+
+### Changes 🚀
+
+- **Upgraded Contract(s):**
+  - `VeBetterPassport.sol` to version `2`
+
+### Storage Changes 📦
+
+- None.
+
+### New Features 🚀
+
+- None.
+
+### Bug Fixes 🐛
+
+- **`VeBetterPassport.sol`**:
+  - Added check to ensure entity is not a delegatee or pending delegatee when making entity link request.
 
 ---
 
