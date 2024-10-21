@@ -58,6 +58,15 @@ import {
   PassportPersonhoodLogic,
   PassportDelegationLogic,
   X2EarnRewardsPoolV2,
+  PassportChecksLogicV1,
+  PassportDelegationLogicV1,
+  PassportEntityLogicV1,
+  PassportPersonhoodLogicV1,
+  PassportPoPScoreLogicV1,
+  PassportSignalingLogicV1,
+  PassportWhitelistAndBlacklistLogicV1,
+  VeBetterPassportV1,
+  PassportConfiguratorV1,
 } from "../../typechain-types"
 import { createLocalConfig } from "../../config/contracts/envs/local"
 import { deployProxy, deployProxyOnly, initializeProxy, upgradeProxy } from "../../scripts/helpers"
@@ -122,6 +131,14 @@ interface DeployInstance {
   passportPoPScoreLogic: PassportPoPScoreLogic
   passportSignalingLogic: PassportSignalingLogic
   passportWhitelistBlacklistLogic: PassportWhitelistAndBlacklistLogic
+  passportChecksLogicV1: PassportChecksLogicV1
+  passportDelegationLogicV1: PassportDelegationLogicV1
+  passportEntityLogicV1: PassportEntityLogicV1
+  passportPersonhoodLogicV1: PassportPersonhoodLogicV1
+  passportPoPScoreLogicV1: PassportPoPScoreLogicV1
+  passportSignalingLogicV1: PassportSignalingLogicV1
+  passportWhitelistBlacklistLogicV1: PassportWhitelistAndBlacklistLogicV1
+  passportConfiguratorV1: PassportConfiguratorV1
   passportConfigurator: any // no abi for this library, which means a typechain is not generated
   myErc721: MyERC721 | undefined
   myErc1155: MyERC1155 | undefined
@@ -181,6 +198,14 @@ export const getOrDeployContractInstances = async ({
 
   // Deploy Passport Libraries
   const {
+    PassportChecksLogicV1,
+    PassportConfiguratorV1,
+    PassportEntityLogicV1,
+    PassportDelegationLogicV1,
+    PassportPersonhoodLogicV1,
+    PassportPoPScoreLogicV1,
+    PassportSignalingLogicV1,
+    PassportWhitelistAndBlacklistLogicV1,
     PassportChecksLogic,
     PassportConfigurator,
     PassportEntityLogic,
@@ -270,15 +295,15 @@ export const getOrDeployContractInstances = async ({
   ])) as X2EarnApps
 
   // Initialization requires the address of the x2EarnRewardsPool, for this reason we will initialize it after
-  const veBetterPassportContractAddress = await deployProxyOnly("VeBetterPassport", {
-    PassportChecksLogic: await PassportChecksLogic.getAddress(),
-    PassportConfigurator: await PassportConfigurator.getAddress(),
-    PassportEntityLogic: await PassportEntityLogic.getAddress(),
-    PassportDelegationLogic: await PassportDelegationLogic.getAddress(),
-    PassportPersonhoodLogic: await PassportPersonhoodLogic.getAddress(),
-    PassportPoPScoreLogic: await PassportPoPScoreLogic.getAddress(),
-    PassportSignalingLogic: await PassportSignalingLogic.getAddress(),
-    PassportWhitelistAndBlacklistLogic: await PassportWhitelistAndBlacklistLogic.getAddress(),
+  const veBetterPassportContractAddress = await deployProxyOnly("VeBetterPassportV1", {
+    PassportChecksLogicV1: await PassportChecksLogicV1.getAddress(),
+    PassportConfiguratorV1: await PassportConfiguratorV1.getAddress(),
+    PassportEntityLogicV1: await PassportEntityLogicV1.getAddress(),
+    PassportDelegationLogicV1: await PassportDelegationLogicV1.getAddress(),
+    PassportPersonhoodLogicV1: await PassportPersonhoodLogicV1.getAddress(),
+    PassportPoPScoreLogicV1: await PassportPoPScoreLogicV1.getAddress(),
+    PassportSignalingLogicV1: await PassportSignalingLogicV1.getAddress(),
+    PassportWhitelistAndBlacklistLogicV1: await PassportWhitelistAndBlacklistLogicV1.getAddress(),
   })
 
   const x2EarnRewardsPoolV1 = (await deployProxy("X2EarnRewardsPoolV1", [
@@ -413,9 +438,9 @@ export const getOrDeployContractInstances = async ({
     },
   )) as XAllocationVoting
 
-  const veBetterPassport = (await initializeProxy(
+  const veBetterPassportV1 = (await initializeProxy(
     veBetterPassportContractAddress,
-    "VeBetterPassport",
+    "VeBetterPassportV1",
     [
       {
         x2EarnApps: await x2EarnApps.getAddress(),
@@ -442,14 +467,34 @@ export const getOrDeployContractInstances = async ({
       },
     ],
     {
-      PassportChecksLogic: await PassportChecksLogic.getAddress(),
-      PassportConfigurator: await PassportConfigurator.getAddress(),
-      PassportEntityLogic: await PassportEntityLogic.getAddress(),
-      PassportDelegationLogic: await PassportDelegationLogic.getAddress(),
-      PassportPersonhoodLogic: await PassportPersonhoodLogic.getAddress(),
-      PassportPoPScoreLogic: await PassportPoPScoreLogic.getAddress(),
-      PassportSignalingLogic: await PassportSignalingLogic.getAddress(),
-      PassportWhitelistAndBlacklistLogic: await PassportWhitelistAndBlacklistLogic.getAddress(),
+      PassportChecksLogicV1: await PassportChecksLogicV1.getAddress(),
+      PassportConfiguratorV1: await PassportConfiguratorV1.getAddress(),
+      PassportEntityLogicV1: await PassportEntityLogicV1.getAddress(),
+      PassportDelegationLogicV1: await PassportDelegationLogicV1.getAddress(),
+      PassportPersonhoodLogicV1: await PassportPersonhoodLogicV1.getAddress(),
+      PassportPoPScoreLogicV1: await PassportPoPScoreLogicV1.getAddress(),
+      PassportSignalingLogicV1: await PassportSignalingLogicV1.getAddress(),
+      PassportWhitelistAndBlacklistLogicV1: await PassportWhitelistAndBlacklistLogicV1.getAddress(),
+    },
+  )) as VeBetterPassportV1
+
+  const veBetterPassport = (await upgradeProxy(
+    "VeBetterPassportV1",
+    "VeBetterPassport",
+    await veBetterPassportV1.getAddress(),
+    [],
+    {
+      version: 2,
+      libraries: {
+        PassportChecksLogic: await PassportChecksLogic.getAddress(),
+        PassportConfigurator: await PassportConfigurator.getAddress(),
+        PassportEntityLogic: await PassportEntityLogic.getAddress(),
+        PassportDelegationLogic: await PassportDelegationLogic.getAddress(),
+        PassportPersonhoodLogic: await PassportPersonhoodLogic.getAddress(),
+        PassportPoPScoreLogic: await PassportPoPScoreLogic.getAddress(),
+        PassportSignalingLogic: await PassportSignalingLogic.getAddress(),
+        PassportWhitelistAndBlacklistLogic: await PassportWhitelistAndBlacklistLogic.getAddress(),
+      },
     },
   )) as VeBetterPassport
 
@@ -687,6 +732,14 @@ export const getOrDeployContractInstances = async ({
     passportSignalingLogic: PassportSignalingLogic,
     passportWhitelistBlacklistLogic: PassportWhitelistAndBlacklistLogic,
     passportConfigurator: PassportConfigurator,
+    passportChecksLogicV1: PassportChecksLogicV1,
+    passportDelegationLogicV1: PassportDelegationLogicV1,
+    passportEntityLogicV1: PassportEntityLogicV1,
+    passportConfiguratorV1: PassportConfiguratorV1,
+    passportPersonhoodLogicV1: PassportPersonhoodLogicV1,
+    passportPoPScoreLogicV1: PassportPoPScoreLogicV1,
+    passportSignalingLogicV1: PassportSignalingLogicV1,
+    passportWhitelistBlacklistLogicV1: PassportWhitelistAndBlacklistLogicV1,
     myErc721: myErc721,
     myErc1155: myErc1155,
     vechainNodesMock,

@@ -16,11 +16,24 @@ import {
   moveToCycle,
   waitForCurrentRoundToEnd,
   moveBlocks,
+  waitForBlock,
+  waitForNextBlock,
 } from "./helpers"
 import { describe, it } from "mocha"
 import { getImplementationAddress } from "@openzeppelin/upgrades-core"
 import { ZeroAddress } from "ethers"
 import { createTestConfig } from "./helpers/config"
+import { deployAndUpgrade, deployProxyOnly, initializeProxy, upgradeProxy } from "../scripts/helpers"
+import {
+  B3TRGovernor,
+  Emissions,
+  VeBetterPassport,
+  VeBetterPassportV1,
+  VoterRewards,
+  X2EarnRewardsPool,
+  XAllocationPool,
+  XAllocationVoting,
+} from "../typechain-types"
 
 describe("VeBetterPassport - @shard5", function () {
   describe("Contract parameters", function () {
@@ -118,7 +131,7 @@ describe("VeBetterPassport - @shard5", function () {
         forceDeploy: true,
       })
 
-      expect(await veBetterPassport.version()).to.equal("1")
+      expect(await veBetterPassport.version()).to.equal("2")
     })
     it("Should not be able to initialize twice", async function () {
       const config = createTestConfig()
@@ -298,12 +311,667 @@ describe("VeBetterPassport - @shard5", function () {
       expect(newImplAddress.toUpperCase()).to.eql((await implementation.getAddress()).toUpperCase())
     })
 
-    /*
-     Note that when VeBetterPassport is upgraded to a version > 1, we should test also:
-      - that the new contract is initialized correctly
-      - that the new contract's version is returned correctly
-      - that there is no storage conflict between the old and new contract
-    */
+    it("Should not have any state conflicts after upgrading to V2", async function () {
+      const config = createTestConfig()
+      config.VEPASSPORT_DECAY_RATE = 20
+      config.EMISSIONS_CYCLE_DURATION = 20
+      const {
+        owner,
+        otherAccount,
+        treasury,
+        galaxyMember,
+        b3tr,
+        timeLock: timelock,
+        minterAccount,
+        vot3,
+        x2EarnApps,
+        otherAccounts,
+        passportChecksLogicV1,
+        passportConfiguratorV1,
+        passportDelegationLogicV1,
+        passportPersonhoodLogicV1,
+        passportPoPScoreLogicV1,
+        passportSignalingLogicV1,
+        passportEntityLogicV1,
+        passportWhitelistBlacklistLogicV1,
+        passportChecksLogic,
+        passportConfigurator,
+        passportDelegationLogic,
+        passportPersonhoodLogic,
+        passportPoPScoreLogic,
+        passportSignalingLogic,
+        passportWhitelistBlacklistLogic,
+        passportEntityLogic,
+        governorClockLogicLibV1,
+        governorConfiguratorLibV1,
+        governorDepositLogicLibV1,
+        governorFunctionRestrictionsLogicLibV1,
+        governorProposalLogicLibV1,
+        governorQuorumLogicLibV1,
+        governorStateLogicLibV1,
+        governorVotesLogicLibV1,
+        governorClockLogicLibV3,
+        governorConfiguratorLibV3,
+        governorDepositLogicLibV3,
+        governorFunctionRestrictionsLogicLibV3,
+        governorProposalLogicLibV3,
+        governorQuorumLogicLibV3,
+        governorStateLogicLibV3,
+        governorVotesLogicLibV3,
+        governorClockLogicLib,
+        governorConfiguratorLib,
+        governorDepositLogicLib,
+        governorFunctionRestrictionsLogicLib,
+        governorProposalLogicLib,
+        governorQuorumLogicLib,
+        governorStateLogicLib,
+        governorVotesLogicLib,
+        B3trContract,
+      } = await getOrDeployContractInstances({
+        forceDeploy: true,
+        config,
+      })
+
+      const veBetterPassportContractAddress = await deployProxyOnly("VeBetterPassportV1", {
+        PassportChecksLogicV1: await passportChecksLogicV1.getAddress(),
+        PassportConfiguratorV1: await passportConfiguratorV1.getAddress(),
+        PassportEntityLogicV1: await passportEntityLogicV1.getAddress(),
+        PassportDelegationLogicV1: await passportDelegationLogicV1.getAddress(),
+        PassportPersonhoodLogicV1: await passportPersonhoodLogicV1.getAddress(),
+        PassportPoPScoreLogicV1: await passportPoPScoreLogicV1.getAddress(),
+        PassportSignalingLogicV1: await passportSignalingLogicV1.getAddress(),
+        PassportWhitelistAndBlacklistLogicV1: await passportWhitelistBlacklistLogicV1.getAddress(),
+      })
+
+      const x2EarnRewardsPool = (await deployAndUpgrade(
+        ["X2EarnRewardsPoolV1", "X2EarnRewardsPoolV2", "X2EarnRewardsPool"],
+        [
+          [
+            owner.address, // admin
+            owner.address, // contracts address manager
+            owner.address, // upgrader //TODO: transferRole
+            await b3tr.getAddress(),
+            await x2EarnApps.getAddress(),
+          ],
+          [
+            owner.address, // impact admin address
+            config.X_2_EARN_INITIAL_IMPACT_KEYS, // impact keys
+          ],
+          [veBetterPassportContractAddress],
+        ],
+        {
+          versions: [undefined, 2, 3],
+        },
+      )) as X2EarnRewardsPool
+
+      const xAllocationPool = (await deployAndUpgrade(
+        ["XAllocationPoolV1", "XAllocationPool"],
+        [
+          [
+            owner.address, // admin
+            owner.address, // upgrader
+            owner.address, // contractsAddressManager
+            await b3tr.getAddress(),
+            await treasury.getAddress(),
+            await x2EarnApps.getAddress(),
+            await x2EarnRewardsPool.getAddress(),
+          ],
+          [],
+        ],
+        {
+          versions: [undefined, 2],
+        },
+      )) as XAllocationPool
+
+      const emissions = (await deployAndUpgrade(
+        ["EmissionsV1", "Emissions"],
+        [
+          [
+            {
+              minter: minterAccount.address,
+              admin: owner.address,
+              upgrader: owner.address,
+              contractsAddressManager: owner.address,
+              decaySettingsManager: owner.address,
+              b3trAddress: await b3tr.getAddress(),
+              destinations: [
+                await xAllocationPool.getAddress(),
+                config.VOTE_2_EARN_POOL_ADDRESS,
+                await treasury.getAddress(),
+                config.MIGRATION_ADDRESS,
+              ],
+              initialXAppAllocation: config.INITIAL_X_ALLOCATION,
+              cycleDuration: config.EMISSIONS_CYCLE_DURATION,
+              decaySettings: [
+                config.EMISSIONS_X_ALLOCATION_DECAY_PERCENTAGE,
+                config.EMISSIONS_VOTE_2_EARN_DECAY_PERCENTAGE,
+                config.EMISSIONS_X_ALLOCATION_DECAY_PERIOD,
+                config.EMISSIONS_VOTE_2_EARN_ALLOCATION_DECAY_PERIOD,
+              ],
+              treasuryPercentage: config.EMISSIONS_TREASURY_PERCENTAGE,
+              maxVote2EarnDecay: config.EMISSIONS_MAX_VOTE_2_EARN_DECAY_PERCENTAGE,
+              migrationAmount: config.MIGRATION_AMOUNT,
+            },
+          ],
+          [config.EMISSIONS_IS_NOT_ALIGNED],
+        ],
+        {
+          versions: [undefined, 2],
+        },
+      )) as Emissions
+
+      const voterRewards = (await deployAndUpgrade(
+        ["VoterRewardsV1", "VoterRewards"],
+        [
+          [
+            owner.address, // admin
+            owner.address, // upgrader // TODO: transferRole
+            owner.address, // contractsAddressManager
+            await emissions.getAddress(),
+            await galaxyMember.getAddress(),
+            await b3tr.getAddress(),
+            config.VOTER_REWARDS_LEVELS,
+            config.VOTER_REWARDS_MULTIPLIER,
+          ],
+          [],
+        ],
+        {
+          versions: [undefined, 2],
+        },
+      )) as VoterRewards
+
+      const xAllocationVoting = (await deployAndUpgrade(
+        ["XAllocationVotingV1", "XAllocationVoting"],
+        [
+          [
+            {
+              vot3Token: await vot3.getAddress(),
+              quorumPercentage: config.X_ALLOCATION_VOTING_QUORUM_PERCENTAGE,
+              initialVotingPeriod: config.EMISSIONS_CYCLE_DURATION - 1,
+              timeLock: await timelock.getAddress(),
+              voterRewards: await voterRewards.getAddress(),
+              emissions: await emissions.getAddress(),
+              admins: [await timelock.getAddress(), owner.address],
+              upgrader: owner.address,
+              contractsAddressManager: owner.address,
+              x2EarnAppsAddress: await x2EarnApps.getAddress(),
+              baseAllocationPercentage: config.X_ALLOCATION_POOL_BASE_ALLOCATION_PERCENTAGE,
+              appSharesCap: config.X_ALLOCATION_POOL_APP_SHARES_MAX_CAP,
+              votingThreshold: config.X_ALLOCATION_VOTING_VOTING_THRESHOLD,
+            },
+          ],
+          [veBetterPassportContractAddress],
+        ],
+        {
+          versions: [undefined, 2],
+        },
+      )) as XAllocationVoting
+
+      const veBetterPassportV1 = (await initializeProxy(
+        veBetterPassportContractAddress,
+        "VeBetterPassportV1",
+        [
+          {
+            x2EarnApps: await x2EarnApps.getAddress(),
+            xAllocationVoting: await xAllocationVoting.getAddress(),
+            galaxyMember: await galaxyMember.getAddress(),
+            signalingThreshold: config.VEPASSPORT_BOT_SIGNALING_THRESHOLD, //signalingThreshold
+            roundsForCumulativeScore: config.VEPASSPORT_ROUNDS_FOR_CUMULATIVE_PARTICIPATION_SCORE, //roundsForCumulativeScore
+            minimumGalaxyMemberLevel: config.VEPASSPORT_GALAXY_MEMBER_MINIMUM_LEVEL, //galaxyMemberMinimumLevel
+            blacklistThreshold: config.VEPASSPORT_BLACKLIST_THRESHOLD_PERCENTAGE, //blacklistThreshold
+            whitelistThreshold: config.VEPASSPORT_WHITELIST_THRESHOLD_PERCENTAGE, //whitelistThreshold
+            maxEntitiesPerPassport: config.VEPASSPORT_PASSPORT_MAX_ENTITIES, //maxEntitiesPerPassport
+            decayRate: config.VEPASSPORT_DECAY_RATE, //decayRate
+          },
+          {
+            admin: owner.address, // admins
+            botSignaler: owner.address, // botSignaler
+            upgrader: owner.address, // upgrader
+            settingsManager: owner.address, // settingsManager
+            roleGranter: owner.address, // roleGranter
+            blacklister: owner.address, // blacklister
+            whitelister: owner.address, // whitelistManager
+            actionRegistrar: owner.address, // actionRegistrar
+            actionScoreManager: owner.address, // actionScoreManager
+          },
+        ],
+        {
+          PassportChecksLogicV1: await passportChecksLogicV1.getAddress(),
+          PassportConfiguratorV1: await passportConfiguratorV1.getAddress(),
+          PassportEntityLogicV1: await passportEntityLogicV1.getAddress(),
+          PassportDelegationLogicV1: await passportDelegationLogicV1.getAddress(),
+          PassportPersonhoodLogicV1: await passportPersonhoodLogicV1.getAddress(),
+          PassportPoPScoreLogicV1: await passportPoPScoreLogicV1.getAddress(),
+          PassportSignalingLogicV1: await passportSignalingLogicV1.getAddress(),
+          PassportWhitelistAndBlacklistLogicV1: await passportWhitelistBlacklistLogicV1.getAddress(),
+        },
+      )) as VeBetterPassportV1
+
+      const governor = (await deployAndUpgrade(
+        ["B3TRGovernorV1", "B3TRGovernorV2", "B3TRGovernorV3", "B3TRGovernor"],
+        [
+          [
+            {
+              vot3Token: await vot3.getAddress(),
+              timelock: await timelock.getAddress(),
+              xAllocationVoting: await xAllocationVoting.getAddress(),
+              b3tr: await b3tr.getAddress(),
+              quorumPercentage: config.B3TR_GOVERNOR_QUORUM_PERCENTAGE,
+              initialDepositThreshold: config.B3TR_GOVERNOR_DEPOSIT_THRESHOLD,
+              initialMinVotingDelay: config.B3TR_GOVERNOR_MIN_VOTING_DELAY,
+              initialVotingThreshold: config.B3TR_GOVERNOR_VOTING_THRESHOLD,
+              voterRewards: await voterRewards.getAddress(),
+              isFunctionRestrictionEnabled: true,
+            },
+            {
+              governorAdmin: owner.address,
+              pauser: owner.address,
+              contractsAddressManager: owner.address,
+              proposalExecutor: owner.address,
+              governorFunctionSettingsRoleAddress: owner.address,
+            },
+          ],
+          [],
+          [],
+          [veBetterPassportContractAddress],
+        ],
+        {
+          versions: [undefined, 2, 3, 4],
+          libraries: [
+            {
+              GovernorClockLogicV1: await governorClockLogicLibV1.getAddress(),
+              GovernorConfiguratorV1: await governorConfiguratorLibV1.getAddress(),
+              GovernorDepositLogicV1: await governorDepositLogicLibV1.getAddress(),
+              GovernorFunctionRestrictionsLogicV1: await governorFunctionRestrictionsLogicLibV1.getAddress(),
+              GovernorProposalLogicV1: await governorProposalLogicLibV1.getAddress(),
+              GovernorQuorumLogicV1: await governorQuorumLogicLibV1.getAddress(),
+              GovernorStateLogicV1: await governorStateLogicLibV1.getAddress(),
+              GovernorVotesLogicV1: await governorVotesLogicLibV1.getAddress(),
+            },
+            {
+              GovernorClockLogicV1: await governorClockLogicLibV1.getAddress(),
+              GovernorConfiguratorV1: await governorConfiguratorLibV1.getAddress(),
+              GovernorDepositLogicV1: await governorDepositLogicLibV1.getAddress(),
+              GovernorFunctionRestrictionsLogicV1: await governorFunctionRestrictionsLogicLibV1.getAddress(),
+              GovernorProposalLogicV1: await governorProposalLogicLibV1.getAddress(),
+              GovernorQuorumLogicV1: await governorQuorumLogicLibV1.getAddress(),
+              GovernorStateLogicV1: await governorStateLogicLibV1.getAddress(),
+              GovernorVotesLogicV1: await governorVotesLogicLibV1.getAddress(),
+            },
+            {
+              GovernorClockLogicV3: await governorClockLogicLibV3.getAddress(),
+              GovernorConfiguratorV3: await governorConfiguratorLibV3.getAddress(),
+              GovernorDepositLogicV3: await governorDepositLogicLibV3.getAddress(),
+              GovernorFunctionRestrictionsLogicV3: await governorFunctionRestrictionsLogicLibV3.getAddress(),
+              GovernorProposalLogicV3: await governorProposalLogicLibV3.getAddress(),
+              GovernorQuorumLogicV3: await governorQuorumLogicLibV3.getAddress(),
+              GovernorStateLogicV3: await governorStateLogicLibV3.getAddress(),
+              GovernorVotesLogicV3: await governorVotesLogicLibV3.getAddress(),
+            },
+            {
+              GovernorClockLogic: await governorClockLogicLib.getAddress(),
+              GovernorConfigurator: await governorConfiguratorLib.getAddress(),
+              GovernorDepositLogic: await governorDepositLogicLib.getAddress(),
+              GovernorFunctionRestrictionsLogic: await governorFunctionRestrictionsLogicLib.getAddress(),
+              GovernorProposalLogic: await governorProposalLogicLib.getAddress(),
+              GovernorQuorumLogic: await governorQuorumLogicLib.getAddress(),
+              GovernorStateLogic: await governorStateLogicLib.getAddress(),
+              GovernorVotesLogic: await governorVotesLogicLib.getAddress(),
+            },
+          ],
+        },
+      )) as B3TRGovernor
+
+      await veBetterPassportV1
+        .connect(owner)
+        .grantRole(await veBetterPassportV1.ACTION_REGISTRAR_ROLE(), await x2EarnRewardsPool.getAddress())
+
+      // Grant admin role to voter rewards for registering x allocation voting
+      await xAllocationVoting
+        .connect(owner)
+        .grantRole(await xAllocationVoting.DEFAULT_ADMIN_ROLE(), emissions.getAddress())
+
+      await voterRewards
+        .connect(owner)
+        .grantRole(await voterRewards.VOTE_REGISTRAR_ROLE(), await xAllocationVoting.getAddress())
+
+      await voterRewards.connect(owner).grantRole(await voterRewards.VOTE_REGISTRAR_ROLE(), await governor.getAddress())
+
+      await xAllocationPool.connect(owner).setXAllocationVotingAddress(await xAllocationVoting.getAddress())
+      await xAllocationPool.connect(owner).setEmissionsAddress(await emissions.getAddress())
+
+      // Set xAllocationGovernor in emissions
+      await emissions.connect(owner).setXAllocationsGovernorAddress(await xAllocationVoting.getAddress())
+
+      const roundStarterRole = await xAllocationVoting.ROUND_STARTER_ROLE()
+      await xAllocationVoting
+        .connect(owner)
+        .grantRole(roundStarterRole, await emissions.getAddress())
+        .then(async tx => await tx.wait())
+      await xAllocationVoting
+        .connect(owner)
+        .grantRole(roundStarterRole, owner.address)
+        .then(async tx => await tx.wait())
+
+      await getVot3Tokens(otherAccount, "10000")
+      await getVot3Tokens(owner, "10000")
+
+      //Add apps
+      const app1Id = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[2].address))
+      const app2Id = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[3].address))
+      const app3Id = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[4].address))
+      await x2EarnApps
+        .connect(owner)
+        .addApp(otherAccounts[2].address, otherAccounts[2].address, otherAccounts[2].address, "metadataURI")
+      await x2EarnApps
+        .connect(owner)
+        .addApp(otherAccounts[3].address, otherAccounts[3].address, otherAccounts[3].address, "metadataURI")
+      await x2EarnApps
+        .connect(owner)
+        .addApp(otherAccounts[4].address, otherAccounts[4].address, otherAccounts[4].address, "metadataURI")
+
+      await emissions.connect(owner).setVote2EarnAddress(await voterRewards.getAddress())
+
+      // Set app security levels
+      await veBetterPassportV1.connect(owner).setAppSecurity(app1Id, 1)
+      await veBetterPassportV1.connect(owner).setAppSecurity(app2Id, 2)
+      await veBetterPassportV1.connect(owner).setAppSecurity(app3Id, 3)
+
+      // Grant action registrar role
+      await veBetterPassportV1.grantRole(await veBetterPassportV1.ACTION_REGISTRAR_ROLE(), owner)
+      expect(await veBetterPassportV1.hasRole(await veBetterPassportV1.ACTION_REGISTRAR_ROLE(), owner.address)).to.be
+        .true
+
+      // Bootstrap emissions
+      // Grant minter role to emissions contract
+      await b3tr.connect(owner).grantRole(await b3tr.MINTER_ROLE(), await emissions.getAddress())
+      // Bootstrap emissions
+      await emissions.connect(minterAccount).bootstrap()
+      await emissions.connect(minterAccount).start()
+
+      // Whitelist function
+      const funcSig = B3trContract.interface.getFunction("tokenDetails")?.selector
+      await governor.connect(owner).setWhitelistFunction(await b3tr.getAddress(), funcSig, true)
+
+      // Create a proposal for next round
+      // create a new proposal active from round 2
+      const address = await b3tr.getAddress()
+      const encodedFunctionCall = B3trContract.interface.encodeFunctionData("tokenDetails", [])
+      const tx = await governor.connect(owner).propose([address], [0], [encodedFunctionCall], "test", "2", 0, {
+        gasLimit: 10_000_000,
+      })
+
+      const proposalId = await getProposalIdFromTx(tx)
+
+      // pay deposit
+      const proposalThreshold = await governor.proposalDepositThreshold(proposalId)
+      await getVot3Tokens(owner, ethers.formatEther(proposalThreshold))
+      // We also need to wait a block to update the proposer's votes snapshot
+      await waitForNextBlock()
+
+      await vot3.connect(owner).approve(await governor.getAddress(), proposalThreshold)
+      await governor.connect(owner).deposit(proposalThreshold, proposalId)
+
+      // First round, participation score check is disabled
+
+      // Register actions for round 1
+      await veBetterPassportV1.connect(owner).registerAction(otherAccount.address, app1Id)
+      await veBetterPassportV1.connect(owner).registerAction(otherAccount.address, app2Id)
+
+      // User's cumulative score = 100 (app1) + 200 (app2) = 300
+      expect(await veBetterPassportV1.userRoundScore(otherAccount.address, 1)).to.equal(300)
+      expect(await veBetterPassportV1.getCumulativeScoreWithDecay(otherAccount, 1)).to.equal(300)
+
+      await veBetterPassportV1.toggleCheck(4)
+
+      // Vote
+      // Note that `otherAccount` can vote because the participation score threshold is set to 0
+      await xAllocationVoting
+        .connect(otherAccount)
+        .castVote(
+          1,
+          [app1Id, app2Id, app3Id],
+          [ethers.parseEther("0"), ethers.parseEther("900"), ethers.parseEther("100")],
+        )
+
+      // Set minimum participation score to 500
+      await veBetterPassportV1.setThresholdPoPScore(500)
+
+      let blockNextCycle = await emissions.getNextCycleBlock()
+      await waitForBlock(Number(blockNextCycle))
+      await emissions.connect(minterAccount).distribute()
+
+      expect(await xAllocationVoting.currentRoundId()).to.equal(2)
+
+      expect(await governor.state(proposalId)).to.equal(1)
+
+      // User tries to vote both governance and x allocation voting but reverts due to not meeting the participation score threshold
+      await expect(
+        xAllocationVoting
+          .connect(otherAccount)
+          .castVote(
+            2,
+            [app1Id, app2Id, app3Id],
+            [ethers.parseEther("0"), ethers.parseEther("900"), ethers.parseEther("100")],
+          ),
+      ).to.be.revertedWithCustomError(xAllocationVoting, "GovernorPersonhoodVerificationFailed")
+
+      await expect(governor.connect(otherAccount).castVote(proposalId, 2)).to.be.revertedWithCustomError(
+        xAllocationVoting,
+        "GovernorPersonhoodVerificationFailed",
+      )
+
+      // Register actions for round 2
+      await veBetterPassportV1.connect(owner).registerAction(otherAccount, app2Id)
+      await veBetterPassportV1.connect(owner).registerAction(otherAccount, app3Id)
+
+      /*
+        User's cumulative score:
+        round 1 = 300
+        round 2 = 600 + (300 * 0.8) = 840
+      */
+      expect(await veBetterPassportV1.getCumulativeScoreWithDecay(otherAccount, 2)).to.equal(840)
+
+      // User now meets the participation score threshold and can vote
+      await xAllocationVoting
+        .connect(otherAccount)
+        .castVote(
+          2,
+          [app1Id, app2Id, app3Id],
+          [ethers.parseEther("0"), ethers.parseEther("900"), ethers.parseEther("100")],
+        )
+
+      await governor.connect(otherAccount).castVote(proposalId, 2)
+
+      // Increase participation score threshold to 1000
+      await veBetterPassportV1.setThresholdPoPScore(1000)
+
+      blockNextCycle = await emissions.getNextCycleBlock()
+      await waitForBlock(Number(blockNextCycle))
+
+      // Increase participation score threshold to 1000
+      await veBetterPassportV1.setThresholdPoPScore(1000)
+
+      await emissions.distribute()
+
+      expect(await xAllocationVoting.currentRoundId()).to.equal(3)
+
+      // User tries to vote x allocation voting but reverts due to not meeting the participation score threshold
+      await expect(
+        xAllocationVoting
+          .connect(otherAccount)
+          .castVote(
+            3,
+            [app1Id, app2Id, app3Id],
+            [ethers.parseEther("0"), ethers.parseEther("900"), ethers.parseEther("100")],
+          ),
+      ).to.be.revertedWithCustomError(xAllocationVoting, "GovernorPersonhoodVerificationFailed")
+
+      // Register action for round 3
+      await veBetterPassportV1.connect(owner).registerAction(otherAccount, app1Id)
+
+      /*
+        User's cumulative score:
+        round 1 = 300
+        round 2 = 600 + (300 * 0.8) = 840
+        round 3 = 100 + (840 * 0.8) = 772
+        */
+      expect(await veBetterPassportV1.getCumulativeScoreWithDecay(otherAccount, 3)).to.equal(772)
+
+      // User still doesn't meet the participation score threshold and can't vote
+      await expect(
+        xAllocationVoting
+          .connect(otherAccount)
+          .castVote(
+            3,
+            [app1Id, app2Id, app3Id],
+            [ethers.parseEther("0"), ethers.parseEther("900"), ethers.parseEther("100")],
+          ),
+      ).to.be.revertedWithCustomError(xAllocationVoting, "GovernorPersonhoodVerificationFailed")
+
+      // register more actions for round 3
+      await veBetterPassportV1.connect(owner).registerAction(otherAccount, app2Id)
+      await veBetterPassportV1.connect(owner).registerAction(otherAccount, app3Id)
+
+      /*
+        User's cumulative score:
+        round 1 = 300
+        round 2 = 600 + (300 * 0.8) = 840
+        round 3 = 700 + (840 * 0.8) = 1072
+        */
+      expect(await veBetterPassportV1.getCumulativeScoreWithDecay(otherAccount, 3)).to.equal(1372)
+
+      // User now meets the participation score threshold and can vote
+      await xAllocationVoting
+        .connect(otherAccount)
+        .castVote(
+          3,
+          [app1Id, app2Id, app3Id],
+          [ethers.parseEther("0"), ethers.parseEther("900"), ethers.parseEther("100")],
+        )
+
+      // "Before linking passport should have 0"
+      expect(await veBetterPassportV1.getCumulativeScoreWithDecay(owner, 3)).to.equal(0)
+
+      // Before linking passport should not be considered person
+      expect(
+        (await veBetterPassportV1.isPersonAtTimepoint(owner.address, await xAllocationVoting.roundSnapshot(3)))[0],
+      ).to.be.equal(false)
+
+      // Delegate passport to owner and try to vote
+      await linkEntityToPassportWithSignature(veBetterPassportV1, owner, otherAccount, 3600)
+      // After linking "other account" should be entity
+      expect(await veBetterPassportV1.isEntity(otherAccount.address)).to.be.true
+
+      // After linking owner should be passport
+      expect(await veBetterPassportV1.isPassport(owner.address)).to.be.true
+
+      // After linking passport should not be considered person at the beginning of the round
+      expect(
+        (await veBetterPassportV1.isPersonAtTimepoint(owner.address, await xAllocationVoting.roundSnapshot(3)))[0],
+      ).to.be.equal(false)
+
+      expect(await veBetterPassportV1.isPassport(owner.address)).to.be.true
+
+      // Owner can't vote yet because the delegation is checkpointed and is active from the next round
+      await expect(
+        xAllocationVoting
+          .connect(owner)
+          .castVote(
+            3,
+            [app1Id, app2Id, app3Id],
+            [ethers.parseEther("0"), ethers.parseEther("900"), ethers.parseEther("100")],
+          ),
+      ).to.be.revertedWithCustomError(xAllocationVoting, "GovernorPersonhoodVerificationFailed")
+
+      blockNextCycle = await emissions.getNextCycleBlock()
+      await waitForBlock(Number(blockNextCycle))
+
+      // Record contract storage state at this point
+      let storageSlots = []
+
+      const initialSlot = BigInt("0x273c9387b78d9b22e6f3371bb3aa3a918f53507e8cacc54e4831933cbb844100") // Slot 0 of VoterRewards
+
+      for (let i = initialSlot; i < initialSlot + BigInt(50); i++) {
+        storageSlots.push(await ethers.provider.getStorage(await veBetterPassportV1.getAddress(), i))
+      }
+
+      storageSlots = storageSlots.filter(
+        slot => slot !== "0x0000000000000000000000000000000000000000000000000000000000000000",
+      )
+
+      // Upgrade to V2
+      const veBetterPassport = (await upgradeProxy(
+        "VeBetterPassportV1",
+        "VeBetterPassport",
+        await veBetterPassportV1.getAddress(),
+        [],
+        {
+          version: 2,
+          libraries: {
+            PassportChecksLogic: await passportChecksLogic.getAddress(),
+            PassportConfigurator: await passportConfigurator.getAddress(),
+            PassportEntityLogic: await passportEntityLogic.getAddress(),
+            PassportDelegationLogic: await passportDelegationLogic.getAddress(),
+            PassportPersonhoodLogic: await passportPersonhoodLogic.getAddress(),
+            PassportPoPScoreLogic: await passportPoPScoreLogic.getAddress(),
+            PassportSignalingLogic: await passportSignalingLogic.getAddress(),
+            PassportWhitelistAndBlacklistLogic: await passportWhitelistBlacklistLogic.getAddress(),
+          },
+        },
+      )) as VeBetterPassport
+
+      // Check that the storage slots are the same
+      let storageSlotsAfter = []
+
+      for (let i = initialSlot; i < initialSlot + BigInt(100); i++) {
+        storageSlotsAfter.push(await ethers.provider.getStorage(await veBetterPassport.getAddress(), i))
+      }
+
+      storageSlotsAfter = storageSlotsAfter.filter(
+        slot => slot !== "0x0000000000000000000000000000000000000000000000000000000000000000",
+      )
+
+      // Check if storage slots are the same after upgrade
+      for (let i = 0; i < storageSlots.length; i++) {
+        expect(storageSlots[i]).to.equal(storageSlotsAfter[i])
+      }
+
+      await emissions.connect(minterAccount).distribute()
+
+      expect(await xAllocationVoting.currentRoundId()).to.equal(4)
+
+      // During linking points are not brought over, so we need to register some actions
+      // on both the entity and the passport to see that they are grouped together and can vote
+      expect(await veBetterPassportV1.getCumulativeScoreWithDecay(otherAccount, 4)).to.equal(1097)
+
+      // register more actions for round 4 (mixing entity and passport)
+      await veBetterPassport.connect(owner).registerAction(otherAccount, app2Id)
+      await veBetterPassport.connect(owner).registerAction(owner, app3Id)
+      await veBetterPassport.connect(owner).registerAction(owner, app3Id)
+
+      // new points should be added to the passport, entity should not have any new points added
+      expect(await veBetterPassport.getCumulativeScoreWithDecay(otherAccount, 4)).to.equal(1097)
+      /*
+        Passport's cumulative score:
+        round 4 = 200 + 400 + 400
+        */
+      expect(await veBetterPassport.getCumulativeScoreWithDecay(owner, 4)).to.equal(1000)
+
+      // Now that we reached threshold passport should be considered person
+      expect(
+        (await veBetterPassport.isPersonAtTimepoint(owner.address, await xAllocationVoting.roundSnapshot(4)))[0],
+      ).to.be.equal(true)
+
+      // Owner can vote now
+      await xAllocationVoting
+        .connect(owner)
+        .castVote(
+          4,
+          [app1Id, app2Id, app3Id],
+          [ethers.parseEther("0"), ethers.parseEther("900"), ethers.parseEther("100")],
+        )
+    })
   })
 
   describe("Passport Checks", function () {
@@ -1012,7 +1680,153 @@ describe("VeBetterPassport - @shard5", function () {
       )
     })
 
+    it("Should revert if passport has max entities and tries to link another entity via signature", async function () {
+      const config = createTestConfig()
+      config.VEPASSPORT_PASSPORT_MAX_ENTITIES = 2
+      const {
+        veBetterPassport,
+        owner: passport,
+        otherAccounts,
+      } = await getOrDeployContractInstances({
+        forceDeploy: true,
+        config,
+      })
+
+      const entity1 = otherAccounts[0]
+      const entity2 = otherAccounts[1]
+      const entity3 = otherAccounts[2]
+
+      // Link two entities to the passport
+      await linkEntityToPassportWithSignature(veBetterPassport, passport, entity1, 1000)
+      await linkEntityToPassportWithSignature(veBetterPassport, passport, entity2, 1000)
+
+      // Attempt to link a third entity, which should fail
+      await expect(
+        linkEntityToPassportWithSignature(veBetterPassport, passport, entity3, 1000),
+      ).to.be.revertedWithCustomError(veBetterPassport, "MaxEntitiesPerPassportReached")
+    })
+
+    it("Should revert if entity is pending delegation and attempts to link to a passport", async function () {
+      const { veBetterPassport, otherAccounts } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      const entity1 = otherAccounts[0]
+      const passport1 = otherAccounts[1]
+      const passport2 = otherAccounts[2]
+
+      // Entity1 starts a pending delegation to passport2
+      await veBetterPassport.connect(entity1).delegatePassport(passport2.address)
+
+      // Entity1 tries to link to passport1, but should revert due to pending delegation
+      await expect(
+        linkEntityToPassportWithSignature(veBetterPassport, passport1, entity1, 1000),
+      ).to.be.revertedWithCustomError(veBetterPassport, "DelegatedEntity")
+    })
+
+    it("Should not change the state if entity linking fails", async function () {
+      const { veBetterPassport, otherAccounts } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      const entity1 = otherAccounts[0]
+      const passport1 = otherAccounts[1]
+      const passport2 = otherAccounts[2]
+
+      // Link entity1 to passport1
+      await linkEntityToPassportWithSignature(veBetterPassport, passport1, entity1, 1000)
+
+      // Attempt to link entity1 to passport2, which should fail
+      await expect(
+        linkEntityToPassportWithSignature(veBetterPassport, passport2, entity1, 1000),
+      ).to.be.revertedWithCustomError(veBetterPassport, "AlreadyLinked")
+
+      // Ensure entity1 is still only linked to passport1
+      expect(await veBetterPassport.getPassportForEntity(entity1.address)).to.equal(passport1.address)
+    })
+
     it("Entity check should be done also when accepting a link", async function () {
+      const { veBetterPassport, otherAccounts } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      const A = otherAccounts[0]
+      const B = otherAccounts[1]
+      const C = otherAccounts[2]
+
+      // Scenario:
+      // Entity A -> pending linking to Passport B
+      // Entity C -> tries to link to Entity A -> should revert
+
+      await veBetterPassport.connect(A).linkEntityToPassport(B.address)
+      await expect(veBetterPassport.connect(C).linkEntityToPassport(A.address)).to.be.revertedWithCustomError(
+        veBetterPassport,
+        "AlreadyLinked",
+      )
+    })
+
+    it("Entity check should check that user is not a delegatee", async function () {
+      const { veBetterPassport, otherAccounts } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      const A = otherAccounts[0]
+      const B = otherAccounts[1]
+      const C = otherAccounts[2]
+
+      // Scenario:
+      // Passport A Delegates to Passport B
+      // B tries to link to C -> should revert
+
+      await delegateWithSignature(veBetterPassport, A, B, 1000)
+      await expect(veBetterPassport.connect(B).linkEntityToPassport(C.address)).to.be.revertedWithCustomError(
+        veBetterPassport,
+        "DelegatedEntity",
+      )
+    })
+
+    it("Entity check should check that user is not a pending delegatee", async function () {
+      const { veBetterPassport, otherAccounts } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      const A = otherAccounts[0]
+      const B = otherAccounts[1]
+      const C = otherAccounts[2]
+
+      // Scenario:
+      // Passport A Delegates to Passport B
+      // Passport B tries to link to Passport C -> should revert
+
+      await veBetterPassport.connect(A).delegatePassport(B.address)
+      await expect(veBetterPassport.connect(B).linkEntityToPassport(C.address)).to.be.revertedWithCustomError(
+        veBetterPassport,
+        "DelegatedEntity",
+      )
+    })
+
+    it("Entity check should check that entity is not a pending passport", async function () {
+      const { veBetterPassport, otherAccounts } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      const A = otherAccounts[0]
+      const B = otherAccounts[1]
+      const C = otherAccounts[2]
+
+      // Scenario:
+      // Passport A has a pending link to entity B
+      // Passport A tries to link to passport C -> should revert
+
+      await veBetterPassport.connect(B).linkEntityToPassport(A.address)
+
+      await expect(veBetterPassport.connect(A).linkEntityToPassport(C.address)).to.be.revertedWithCustomError(
+        veBetterPassport,
+        "AlreadyLinked",
+      )
+    })
+
+    it("Entity check should be done also when accepting a delegation link", async function () {
       const { veBetterPassport, otherAccounts } = await getOrDeployContractInstances({
         forceDeploy: true,
       })
@@ -1026,6 +1840,8 @@ describe("VeBetterPassport - @shard5", function () {
       // C -> pending linking to A
       // B accepts linking
       // A accepts linking -> should revert
+
+      await veBetterPassport.connect(A).delegatePassport
 
       await veBetterPassport.connect(A).linkEntityToPassport(B.address)
       await expect(veBetterPassport.connect(C).linkEntityToPassport(A.address)).to.be.revertedWithCustomError(
@@ -4181,6 +4997,291 @@ describe("VeBetterPassport - @shard5", function () {
 
       await expect(xAllocationVoting.connect(owner).castVote(2, [app1Id], [ethers.parseEther("100")])).to.not.be
         .reverted
+    })
+  })
+
+  describe("Delegation and Link checks", function () {
+    // A is a Passport
+    // B is an Entity
+    // C is a Passport
+    // D is an Entity
+    it("Should Revert if Entity B is already an Entity", async function () {
+      const { veBetterPassport, otherAccounts } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      const A = otherAccounts[1]
+      const B = otherAccounts[0]
+      const C = otherAccounts[2]
+
+      // Link B to A
+      await linkEntityToPassportWithSignature(veBetterPassport, A, B, 1000)
+
+      // Should revert if B tries to link to C
+      await expect(veBetterPassport.connect(B).linkEntityToPassport(C.address)).to.be.revertedWithCustomError(
+        veBetterPassport,
+        "AlreadyLinked",
+      )
+    })
+    it("Should Revert if Entity B is already a Pending Entity", async function () {
+      const { veBetterPassport, otherAccounts } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      const A = otherAccounts[1]
+      const B = otherAccounts[0]
+      const C = otherAccounts[2]
+
+      // B creates pending link to A
+      await veBetterPassport.connect(B).linkEntityToPassport(A.address)
+
+      // Should revert if B tries to link to C
+      await expect(veBetterPassport.connect(B).linkEntityToPassport(C.address)).to.be.revertedWithCustomError(
+        veBetterPassport,
+        "AlreadyLinked",
+      )
+    })
+    it("Should revert if Passport A is already an entity and not a passport", async function () {
+      const { veBetterPassport, otherAccounts } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      const A = otherAccounts[0]
+      const B = otherAccounts[1]
+      const C = otherAccounts[2]
+
+      // Passport A is an entity to Passport C
+      await linkEntityToPassportWithSignature(veBetterPassport, C, A, 1000)
+
+      // Should revert if Entity B tries to link to A as it is already an entity
+      await expect(veBetterPassport.connect(B).linkEntityToPassport(A.address)).to.be.revertedWithCustomError(
+        veBetterPassport,
+        "AlreadyLinked",
+      )
+    })
+    it("Should revert if Passport A is already a Pending Entity and not a passport", async function () {
+      const { veBetterPassport, otherAccounts } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      const A = otherAccounts[0]
+      const B = otherAccounts[1]
+      const C = otherAccounts[2]
+
+      // A creates pending link to C
+      await veBetterPassport.connect(A).linkEntityToPassport(C.address)
+
+      // Should revert if Entity B tries to link to A as it is already a pending entity
+      await expect(veBetterPassport.connect(B).linkEntityToPassport(A.address)).to.be.revertedWithCustomError(
+        veBetterPassport,
+        "AlreadyLinked",
+      )
+    })
+    it("Should revert if Entity B is already a Passport", async function () {
+      const { veBetterPassport, otherAccounts } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      const A = otherAccounts[1]
+      const B = otherAccounts[0]
+      const D = otherAccounts[2]
+
+      // B is a passport
+      await linkEntityToPassportWithSignature(veBetterPassport, B, D, 1000)
+
+      // Should revert if B tries to link to A
+      await expect(veBetterPassport.connect(B).linkEntityToPassport(A.address)).to.be.revertedWithCustomError(
+        veBetterPassport,
+        "AlreadyLinked",
+      )
+    })
+    it("Should revert if Entity B is already a Pending Passport", async function () {
+      const { veBetterPassport, otherAccounts } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      const A = otherAccounts[1]
+      const B = otherAccounts[0]
+      const D = otherAccounts[2]
+
+      // B creates pending link to D
+      await veBetterPassport.connect(B).linkEntityToPassport(D.address)
+
+      // Should revert if B tries to link to A
+      await expect(veBetterPassport.connect(B).linkEntityToPassport(A.address)).to.be.revertedWithCustomError(
+        veBetterPassport,
+        "AlreadyLinked",
+      )
+    })
+    it("Should revert if Entity B is a delegator", async function () {
+      const { veBetterPassport, otherAccounts } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      const A = otherAccounts[1]
+      const B = otherAccounts[0]
+      const C = otherAccounts[2]
+
+      // B is a delegator
+      await delegateWithSignature(veBetterPassport, B, C, 1000)
+
+      // Should revert if B tries to link to A
+      await expect(veBetterPassport.connect(B).linkEntityToPassport(A.address)).to.be.revertedWithCustomError(
+        veBetterPassport,
+        "DelegatedEntity",
+      )
+    })
+    it("Should revert if Entity B is a pending delegator", async function () {
+      const { veBetterPassport, otherAccounts } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      const A = otherAccounts[1]
+      const B = otherAccounts[0]
+      const C = otherAccounts[2]
+
+      // B is a pending delegator
+      await veBetterPassport.connect(B).delegatePassport(C.address)
+
+      // Should revert if B tries to link to A
+      await expect(veBetterPassport.connect(B).linkEntityToPassport(A.address)).to.be.revertedWithCustomError(
+        veBetterPassport,
+        "DelegatedEntity",
+      )
+    })
+    it("Should revert if Entity B is a delegatee", async function () {
+      const { veBetterPassport, otherAccounts } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      const A = otherAccounts[1]
+      const B = otherAccounts[0]
+      const C = otherAccounts[2]
+
+      // B is a delegatee
+      await delegateWithSignature(veBetterPassport, C, B, 1000)
+
+      // Should revert if B tries to link to A
+      await expect(veBetterPassport.connect(B).linkEntityToPassport(A.address)).to.be.revertedWithCustomError(
+        veBetterPassport,
+        "DelegatedEntity",
+      )
+    })
+    it("Should revert if Entity B is a pending delegatee", async function () {
+      const { veBetterPassport, otherAccounts } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      const A = otherAccounts[1]
+      const B = otherAccounts[0]
+      const C = otherAccounts[2]
+
+      // B is a pending delegatee
+      await veBetterPassport.connect(C).delegatePassport(B.address)
+
+      // Should revert if B tries to link to A
+      await expect(veBetterPassport.connect(B).linkEntityToPassport(A.address)).to.be.revertedWithCustomError(
+        veBetterPassport,
+        "DelegatedEntity",
+      )
+    })
+    it("Should revert if Entity B is trying to link to itself", async function () {
+      const { veBetterPassport, otherAccounts } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      const B = otherAccounts[0]
+
+      // Should revert if B tries to link to itself
+      await expect(veBetterPassport.connect(B).linkEntityToPassport(B.address)).to.be.revertedWithCustomError(
+        veBetterPassport,
+        "CannotLinkToSelf",
+      )
+    })
+    it("Should revert if Passport A is trying to delegate to itself", async function () {
+      const { veBetterPassport, otherAccounts } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      const A = otherAccounts[0]
+
+      // Should revert if A tries to delegate to itself
+      await expect(veBetterPassport.connect(A).delegatePassport(A.address)).to.be.revertedWithCustomError(
+        veBetterPassport,
+        "CannotDelegateToSelf",
+      )
+    })
+    it("Should revert if Entity B tries to delegate to Passport A", async function () {
+      const { veBetterPassport, otherAccounts } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      const A = otherAccounts[0]
+      const B = otherAccounts[1]
+      const C = otherAccounts[2]
+
+      // B is an entity of C
+      await linkEntityToPassportWithSignature(veBetterPassport, C, B, 1000)
+
+      // Should revert if B tries to delegate to C
+      await expect(veBetterPassport.connect(B).delegatePassport(A.address)).to.be.revertedWithCustomError(
+        veBetterPassport,
+        "PassportDelegationFromEntity",
+      )
+    })
+    it("Should revert if Pending Entity B tries to delegate to Passport A", async function () {
+      const { veBetterPassport, otherAccounts } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      const A = otherAccounts[0]
+      const B = otherAccounts[1]
+      const C = otherAccounts[2]
+
+      // B is a pending entity of C
+      await veBetterPassport.connect(B).linkEntityToPassport(C.address)
+
+      // Should revert if B tries to delegate to A
+      await expect(veBetterPassport.connect(B).delegatePassport(A.address)).to.be.revertedWithCustomError(
+        veBetterPassport,
+        "PassportDelegationFromEntity",
+      )
+    })
+    it("Should revert if Passport A tries to delegate to Entity B", async function () {
+      const { veBetterPassport, otherAccounts } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      const A = otherAccounts[0]
+      const B = otherAccounts[1]
+      const C = otherAccounts[2]
+
+      // B is an entity of C
+      await linkEntityToPassportWithSignature(veBetterPassport, C, B, 1000)
+
+      // Should revert if A tries to delegate to B
+      await expect(veBetterPassport.connect(A).delegatePassport(B.address)).to.be.revertedWithCustomError(
+        veBetterPassport,
+        "PassportDelegationToEntity",
+      )
+    })
+    it("Should revert if Passport A tries to delegate to Pending Entity B", async function () {
+      const { veBetterPassport, otherAccounts } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      const A = otherAccounts[0]
+      const B = otherAccounts[1]
+      const C = otherAccounts[2]
+
+      // B is a pending entity of C
+      await veBetterPassport.connect(B).linkEntityToPassport(C.address)
+
+      // Should revert if A tries to delegate to B
+      await expect(veBetterPassport.connect(A).delegatePassport(B.address)).to.be.revertedWithCustomError(
+        veBetterPassport,
+        "PassportDelegationToEntity",
+      )
     })
   })
 
