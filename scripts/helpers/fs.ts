@@ -110,7 +110,9 @@ async function saveContractsToFile(
  * @param contracts - The deployed contracts
  * @param libraries - The deployed libraries
  */
-async function saveLibrariesToFile(libraries: { B3TRGovernor: Record<string, string> }): Promise<void> {
+async function saveLibrariesToFile(
+  libraries: { B3TRGovernor?: Record<string, string> } | { VeBetterPassport?: Record<string, string> },
+): Promise<void> {
   const OUTPUT_PATH = path.join(__dirname, `../../deploy_output`)
   const LIBRARY_FILE_PATH = path.join(OUTPUT_PATH, "libraries.txt")
 

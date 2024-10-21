@@ -13,13 +13,21 @@ import {
   X2EarnApps,
   X2EarnRewardsPool,
   VeBetterPassport,
+  VeBetterPassportV1,
 } from "../../typechain-types"
 import { ContractsConfig } from "../../config/contracts"
 import { HttpNetworkConfig } from "hardhat/types"
 import { setupLocalEnvironment, setupTestEnvironment } from "./setup"
 import { simulateRounds } from "./simulateRounds"
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers"
-import { deployAndUpgrade, deployProxy, deployProxyOnly, initializeProxy, saveContractsToFile } from "../helpers"
+import {
+  deployAndUpgrade,
+  deployProxy,
+  deployProxyOnly,
+  initializeProxy,
+  saveContractsToFile,
+  upgradeProxy,
+} from "../helpers"
 import { shouldRunSimulation } from "../../config/contracts"
 import { governanceLibraries, passportLibraries } from "../libraries"
 import {
@@ -88,6 +96,14 @@ export async function deployAll(config: ContractsConfig) {
   console.log("Deploying VeBetter Passport Libraries")
   // Deploy Passport Libraries
   const {
+    PassportChecksLogicV1,
+    PassportConfiguratorV1,
+    PassportEntityLogicV1,
+    PassportDelegationLogicV1,
+    PassportPersonhoodLogicV1,
+    PassportPoPScoreLogicV1,
+    PassportSignalingLogicV1,
+    PassportWhitelistAndBlacklistLogicV1,
     PassportChecksLogic,
     PassportConfigurator,
     PassportEntityLogic,
@@ -182,16 +198,16 @@ export async function deployAll(config: ContractsConfig) {
 
   // Initialization requires the address of the x2EarnRewardsPool, for this reason we will initialize it after
   const veBetterPassportContractAddress = await deployProxyOnly(
-    "VeBetterPassport",
+    "VeBetterPassportV1",
     {
-      PassportChecksLogic: await PassportChecksLogic.getAddress(),
-      PassportConfigurator: await PassportConfigurator.getAddress(),
-      PassportEntityLogic: await PassportEntityLogic.getAddress(),
-      PassportDelegationLogic: await PassportDelegationLogic.getAddress(),
-      PassportPersonhoodLogic: await PassportPersonhoodLogic.getAddress(),
-      PassportPoPScoreLogic: await PassportPoPScoreLogic.getAddress(),
-      PassportSignalingLogic: await PassportSignalingLogic.getAddress(),
-      PassportWhitelistAndBlacklistLogic: await PassportWhitelistAndBlacklistLogic.getAddress(),
+      PassportChecksLogicV1: await PassportChecksLogicV1.getAddress(),
+      PassportConfiguratorV1: await PassportConfiguratorV1.getAddress(),
+      PassportEntityLogicV1: await PassportEntityLogicV1.getAddress(),
+      PassportDelegationLogicV1: await PassportDelegationLogicV1.getAddress(),
+      PassportPersonhoodLogicV1: await PassportPersonhoodLogicV1.getAddress(),
+      PassportPoPScoreLogicV1: await PassportPoPScoreLogicV1.getAddress(),
+      PassportSignalingLogicV1: await PassportSignalingLogicV1.getAddress(),
+      PassportWhitelistAndBlacklistLogicV1: await PassportWhitelistAndBlacklistLogicV1.getAddress(),
     },
     true,
   )
@@ -348,9 +364,9 @@ export async function deployAll(config: ContractsConfig) {
     },
   )) as XAllocationVoting
 
-  const veBetterPassport = (await initializeProxy(
+  const veBetterPassportV1 = (await initializeProxy(
     veBetterPassportContractAddress,
-    "VeBetterPassport",
+    "VeBetterPassportV1",
     [
       {
         x2EarnApps: await x2EarnApps.getAddress(),
@@ -377,14 +393,34 @@ export async function deployAll(config: ContractsConfig) {
       },
     ],
     {
-      PassportChecksLogic: await PassportChecksLogic.getAddress(),
-      PassportConfigurator: await PassportConfigurator.getAddress(),
-      PassportEntityLogic: await PassportEntityLogic.getAddress(),
-      PassportDelegationLogic: await PassportDelegationLogic.getAddress(),
-      PassportPersonhoodLogic: await PassportPersonhoodLogic.getAddress(),
-      PassportPoPScoreLogic: await PassportPoPScoreLogic.getAddress(),
-      PassportSignalingLogic: await PassportSignalingLogic.getAddress(),
-      PassportWhitelistAndBlacklistLogic: await PassportWhitelistAndBlacklistLogic.getAddress(),
+      PassportChecksLogicV1: await PassportChecksLogicV1.getAddress(),
+      PassportConfiguratorV1: await PassportConfiguratorV1.getAddress(),
+      PassportEntityLogicV1: await PassportEntityLogicV1.getAddress(),
+      PassportDelegationLogicV1: await PassportDelegationLogicV1.getAddress(),
+      PassportPersonhoodLogicV1: await PassportPersonhoodLogicV1.getAddress(),
+      PassportPoPScoreLogicV1: await PassportPoPScoreLogicV1.getAddress(),
+      PassportSignalingLogicV1: await PassportSignalingLogicV1.getAddress(),
+      PassportWhitelistAndBlacklistLogicV1: await PassportWhitelistAndBlacklistLogicV1.getAddress(),
+    },
+  )) as VeBetterPassportV1
+
+  const veBetterPassport = (await upgradeProxy(
+    "VeBetterPassportV1",
+    "VeBetterPassport",
+    await veBetterPassportV1.getAddress(),
+    [],
+    {
+      version: 2,
+      libraries: {
+        PassportChecksLogic: await PassportChecksLogic.getAddress(),
+        PassportConfigurator: await PassportConfigurator.getAddress(),
+        PassportEntityLogic: await PassportEntityLogic.getAddress(),
+        PassportDelegationLogic: await PassportDelegationLogic.getAddress(),
+        PassportPersonhoodLogic: await PassportPersonhoodLogic.getAddress(),
+        PassportPoPScoreLogic: await PassportPoPScoreLogic.getAddress(),
+        PassportSignalingLogic: await PassportSignalingLogic.getAddress(),
+        PassportWhitelistAndBlacklistLogic: await PassportWhitelistAndBlacklistLogic.getAddress(),
+      },
     },
   )) as VeBetterPassport
 
