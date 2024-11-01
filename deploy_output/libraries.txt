@@ -1,22 +1,22 @@
 {
   "B3TRGovernor": {
-    "GovernorClockLogic": "0x68B1D87F95878fE05B998F19b66F4baba5De1aed",
-    "GovernorConfigurator": "0x3Aa5ebB10DC797CAC828524e59A333d0A371443c",
-    "GovernorDepositLogic": "0x4A679253410272dd5232B3Ff7cF5dbB88f295319",
-    "GovernorFunctionRestrictionsLogic": "0xc6e7DF5E7b4f2A278906862b61205850344D4e7d",
-    "GovernorProposalLogic": "0x322813Fd9A801c5507c9de605d63CEA4f2CE6c44",
-    "GovernorQuorumLogic": "0x4ed7c70F96B99c776995fB64377f0d4aB3B0e1C1",
-    "GovernorStateLogic": "0x7a2088a1bFc9d81c55368AE168C2C02570cB814F",
-    "GovernorVotesLogic": "0xa85233C63b9Ee964Add6F2cffe00Fd84eb32338f"
+    "GovernorClockLogic": "0xF8746E74334218d79e951313A87D82954b3dF5Ea",
+    "GovernorConfigurator": "0x8E4B5503DbBBCD7A4407b3B3cFE9306F758AFBe9",
+    "GovernorDepositLogic": "0x9cb90470CC69b6C0b8709e237efC38410F4AC5F8",
+    "GovernorFunctionRestrictionsLogic": "0x6a9331336c33F750E3eb562Fe2F4ffa339793d35",
+    "GovernorProposalLogic": "0x1B7E1DB94Fd6De974138b59F41d87EB78be92ba1",
+    "GovernorQuorumLogic": "0x21d7Be787b92C1d4E760dE2f9bBf88F69678eddB",
+    "GovernorStateLogic": "0x8Ff6e6926D583FEE68B4092e7cc4F4446bFDCB97",
+    "GovernorVotesLogic": "0xFdD2F1D4fb6d6660FAe38596ba8fd501623ffDa8"
   },
   "VeBetterPassport": {
-    "PassportChecksLogic": "0x09635F643e140090A9A8Dcd712eD6285858ceBef",
-    "PassportConfigurator": "0xc5a5C42992dECbae36851359345FE25997F5C42d",
-    "PassportEntityLogic": "0x67d269191c92Caf3cD7723F116c85e6E9bf55933",
-    "PassportDelegationLogic": "0xE6E340D132b5f46d1e472DebcD681B2aBc16e57E",
-    "PassportPersonhoodLogic": "0x9E545E3C0baAB3E08CdfD552C960A1050f373042",
-    "PassportPoPScoreLogic": "0xc3e53F4d16Ae77Db1c982e75a937B9f60FE63690",
-    "PassportSignalingLogic": "0x84eA74d481Ee0A5332c457a4d796187F6Ba67fEB",
-    "PassportWhitelistAndBlacklistLogic": "0xa82fF9aFd8f496c3d6ac40E2a0F282E47488CFc9"
+    "PassportChecksLogic": "0xDB5b259E4BfbfD8353cfcea695bbB583eE58F77a",
+    "PassportConfigurator": "0xCb35e190BecE6ED3BE22Ad911C511Ae2a751e3AC",
+    "PassportEntityLogic": "0x04f3a1e567dCC2a53eB9Fd07f6E42f69e4Ac372a",
+    "PassportDelegationLogic": "0x1dB402a8DDf4b804aF183340C93E3CD32D97546d",
+    "PassportPersonhoodLogic": "0xF631c28c10530f2C6CD67b3Fe0ae349D55afF4F3",
+    "PassportPoPScoreLogic": "0x92bccB35f911C89350e4D67fBBA8381290961981",
+    "PassportSignalingLogic": "0x5EcD3ec6fe7105Cc51FECa599862C318Cd276aa6",
+    "PassportWhitelistAndBlacklistLogic": "0x2D326f99e4251436F03eaab8b1af6875D984fD84"
   }
 }
