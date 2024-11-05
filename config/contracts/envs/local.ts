@@ -25,7 +25,7 @@ export function createLocalConfig() {
         "setDepositThresholdPercentage",
         "setVotingThreshold",
       ],
-      Treasury: ["transferVET"],
+      Treasury: ["transferVET", "transferB3TR"],
       XAllocationVoting: [
         "upgradeToAndCall",
         "updateQuorumNumerator",
@@ -33,7 +33,7 @@ export function createLocalConfig() {
         "setEmissions",
         "setVotingThreshold",
       ],
-      X2EarnApps: ["addApp", "setVotingEligibility"],
+      X2EarnApps: ["setVotingEligibility"],
     },
 
     EMISSIONS_CYCLE_DURATION: 24, // 24 blocks - 4 minutes.
@@ -114,6 +114,9 @@ export function createLocalConfig() {
     MIGRATION_ADDRESS: "0x865306084235Bf804c8Bba8a8d56890940ca8F0b", // 10th account from mnemonic of solo network
     MIGRATION_AMOUNT: BigInt("3750000000000000000000000"), // 3.75 million B3TR tokens from pilot show
 
+    // Version 2
+    VECHAIN_NODES_CONTRACT_ADDRESS: "0xb81E9C5f9644Dec9e5e3Cac86b4461A222072302", // The contract address of the VeChainNodes contract on mainnet
+    XAPP_GRACE_PERIOD: 48, // 2 cycles - 8 minutes
     // X 2 Earn Rewards Pool
     X_2_EARN_INITIAL_IMPACT_KEYS: [
       "carbon",
@@ -134,5 +137,7 @@ export function createLocalConfig() {
     VEPASSPORT_WHITELIST_THRESHOLD_PERCENTAGE: 20,
     VEPASSPORT_PASSPORT_MAX_ENTITIES: 5,
     VEPASSPORT_DECAY_RATE: 0,
+
+    CREATOR_NFT_URI: "ipfs://BASE_URI",
   })
 }

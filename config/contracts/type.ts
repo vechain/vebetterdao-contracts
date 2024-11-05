@@ -49,6 +49,10 @@ export type ContractsConfig = {
   // X 2 Earn Rewards Pool
   X_2_EARN_INITIAL_IMPACT_KEYS: string[]
 
+  // Endorsement
+  VECHAIN_NODES_CONTRACT_ADDRESS: string
+  XAPP_GRACE_PERIOD: number
+
   // VeBetterPassport
   VEPASSPORT_BOT_SIGNALING_THRESHOLD: number
   VEPASSPORT_ROUNDS_FOR_CUMULATIVE_PARTICIPATION_SCORE: number
@@ -57,4 +61,6 @@ export type ContractsConfig = {
   VEPASSPORT_WHITELIST_THRESHOLD_PERCENTAGE: number
   VEPASSPORT_PASSPORT_MAX_ENTITIES: number
   VEPASSPORT_DECAY_RATE: number
+
+  CREATOR_NFT_URI: string
 }

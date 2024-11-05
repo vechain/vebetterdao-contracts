@@ -6,7 +6,7 @@ import { airdropB3trFromTreasury } from "../helpers/airdrop"
 
 const accounts = getTestKeys(13)
 
-const APPS = [
+export const APPS = [
   {
     address: accounts[6].address,
     name: "Vyvo",

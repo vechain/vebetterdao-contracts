@@ -10,6 +10,8 @@ import {
   VOT3,
   VoterRewards,
   X2EarnApps,
+  X2EarnCreator,
+  X2EarnCreator__factory,
   X2EarnRewardsPool,
   XAllocationPool,
   XAllocationVoting,
@@ -229,7 +231,8 @@ export const validateContractRole = async (
     | B3TRGovernor
     | X2EarnRewardsPool
     | X2EarnApps
-    | VeBetterPassport,
+    | VeBetterPassport
+    | X2EarnCreator,
   expectedAddress: string,
   tempAdmin: string,
   role: string,
