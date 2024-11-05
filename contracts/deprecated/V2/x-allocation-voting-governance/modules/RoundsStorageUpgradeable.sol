@@ -23,30 +23,30 @@
 
 pragma solidity 0.8.20;
 
-import { XAllocationVotingGovernorV1 } from "../XAllocationVotingGovernorV1.sol";
+import { XAllocationVotingGovernor } from "../XAllocationVotingGovernor.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { X2EarnAppsDataTypes } from "../../../../libraries/X2EarnAppsDataTypes.sol";
 
 /**
  * @title RoundsStorageUpgradeable
- * @dev Extension of {XAllocationVotingGovernorV1} for storing rounds data and managing the rounds lifecycle.
+ * @dev Extension of {XAllocationVotingGovernor} for storing rounds data and managing the rounds lifecycle.
  */
-abstract contract RoundsStorageUpgradeableV1 is Initializable, XAllocationVotingGovernorV1 {
+abstract contract RoundsStorageUpgradeable is Initializable, XAllocationVotingGovernor {
   struct RoundCore {
     address proposer;
     uint48 voteStart;
     uint32 voteDuration;
   }
 
-  /// @custom:storage-location erc7201:b3tr.storage.XAllocationVotingGovernorV1.RoundsStorage
+  /// @custom:storage-location erc7201:b3tr.storage.XAllocationVotingGovernor.RoundsStorage
   struct RoundsStorageStorage {
     uint256 _roundCount; // counter to count the number of proposals and also used to create the id
     mapping(uint256 roundId => RoundCore) _rounds; // mapping to store the round data
     mapping(uint256 roundId => bytes32[]) _appsEligibleForVoting; // mapping to store the apps eligible for voting in each round
   }
 
-  // keccak256(abi.encode(uint256(keccak256("b3tr.storage.XAllocationVotingGovernorV1.RoundsStorage")) - 1)) & ~bytes32(uint256(0xff))
+  // keccak256(abi.encode(uint256(keccak256("b3tr.storage.XAllocationVotingGovernor.RoundsStorage")) - 1)) & ~bytes32(uint256(0xff))
   bytes32 private constant RoundsStorageStorageLocation =
     0x0f5210c47c3bb73c471770a1cbb5b7ddc03c0ec886694cc17ae21d1f595f1900;
 
