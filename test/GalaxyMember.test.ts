@@ -7,6 +7,7 @@ import {
   bootstrapEmissions,
   catchRevert,
   createProposal,
+  endorseApp,
   getEventName,
   getOrDeployContractInstances,
   getProposalIdFromTx,

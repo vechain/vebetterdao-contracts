@@ -9,6 +9,7 @@ import { type TransactionClause, type TransactionBody } from "@vechain/sdk-core"
 import { ZERO_ADDRESS } from "./const"
 import { buildTxBody, signAndSendTx } from "../../scripts/helpers/txHelper"
 import { getTestKeys } from "../../scripts/helpers/seedAccounts"
+import { endorseApp } from "."
 
 export const waitForNextBlock = async () => {
   if (network.name === "hardhat") {
@@ -374,26 +375,6 @@ export const createProposalWithMultipleFunctionsAndExecuteIt = async (
   )
 }
 
-export const addAppThroughGovernance = async (
-  proposer: HardhatEthersSigner,
-  voter: HardhatEthersSigner,
-  appName: string = "Bike 4 Life" + Math.random(),
-  appAddress: string,
-  metadataURI: string = "metadataURI",
-) => {
-  const { xAllocationVoting } = await getOrDeployContractInstances({})
-
-  await createProposalAndExecuteIt(
-    proposer,
-    voter,
-    xAllocationVoting,
-    await ethers.getContractFactory("XAllocationVoting"),
-    "Add app to the list",
-    "addApp",
-    [appAddress, appAddress, appName, metadataURI],
-  )
-}
-
 export const waitForBlock = async (blockNumber: number) => {
   const currentBlock = await ethers.provider.getBlock(await ethers.provider.getBlockNumber())
 
@@ -471,8 +452,10 @@ export const addAppsToAllocationVoting = async (apps: string[], owner: HardhatEt
 
   let appIds: string[] = []
   for (const app of apps) {
-    await x2EarnApps.connect(owner).addApp(app, app, app, "metadataURI")
-    appIds.push(ethers.keccak256(ethers.toUtf8Bytes(app)))
+    await x2EarnApps.connect(owner).submitApp(app, app, app, "metadataURI")
+    const appId = ethers.keccak256(ethers.toUtf8Bytes(app))
+    await endorseApp(appId, owner)
+    appIds.push(appId)
   }
 
   return appIds
@@ -543,7 +526,7 @@ export const calculateUnallocatedAppAllocationOffChain = async (roundId: number,
 }
 
 export const participateInAllocationVoting = async (user: HardhatEthersSigner, waitRoundToEnd: boolean = false) => {
-  const { xAllocationVoting, x2EarnApps, owner, veBetterPassport } = await getOrDeployContractInstances({})
+  const { xAllocationVoting, x2EarnApps, owner, veBetterPassport, otherAccounts } = await getOrDeployContractInstances({})
 
   await getVot3Tokens(user, "1")
   await getVot3Tokens(owner, "1000")
@@ -552,14 +535,16 @@ export const participateInAllocationVoting = async (user: HardhatEthersSigner, w
   if ((await veBetterPassport.isCheckEnabled(1)) === false) await veBetterPassport.toggleCheck(1)
 
   const appName = "App" + Math.random()
+  const appId = await x2EarnApps.hashAppName(appName)
 
-  await x2EarnApps.connect(owner).addApp(user.address, user.address, appName, "metadataURI")
+  await x2EarnApps.connect(owner).submitApp(user.address, user.address, appName, "metadataURI")
+  await endorseApp(appId, user)
   const roundId = await startNewAllocationRound()
 
   // Vote
   await xAllocationVoting
     .connect(user)
-    .castVote(roundId, [await x2EarnApps.hashAppName(appName)], [ethers.parseEther("1")])
+    .castVote(roundId, [appId], [ethers.parseEther("1")])
 
   if (waitRoundToEnd) {
     await waitForRoundToEnd(roundId)
@@ -733,3 +718,31 @@ export const linkEntityToPassportWithSignature = async (
   // Perform the delegation using the signature
   await veBetterPassport.connect(passport).linkEntityToPassportWithSignature(entity.address, deadline, signature)
 }
+
+/**
+ * Helper function to get storage slots.
+ * @param contractAddress The address of the contract.
+ * @param initialSlots The initial storage slots.
+ * @returns Array of storage slots.
+ */
+export const getStorageSlots = async (contractAddress: AddressLike, ...initialSlots: bigint[]) => {
+  const slots = []
+
+  for (const initialSlot of initialSlots) {
+    for (let i = initialSlot; i < initialSlot + BigInt(100); i++) {
+      slots.push(await ethers.provider.getStorage(contractAddress, i))
+    }
+  }
+
+  return slots.filter(slot => slot !== "0x0000000000000000000000000000000000000000000000000000000000000000") // Removing empty slots
+}
+
+export const getTwoUniqueRandomIndices = (max: number) => {
+  const firstIndex = Math.floor(Math.random() * max)
+  let secondIndex
+  do {
+    secondIndex = Math.floor(Math.random() * max)
+  } while (secondIndex === firstIndex)
+  return [firstIndex, secondIndex]
+}
+

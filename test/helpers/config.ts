@@ -58,7 +58,7 @@ export function createTestConfig() {
       25000000000000000000000000n,
     ],
 
-    GM_NFT_BASE_URI: "ipfs://test/", // IPFS base URI for the Galaxy Member contract
+    GM_NFT_BASE_URI: "ipfs://test/", // IPFS base URI for the Galaxy Member contract,
 
     VOTER_REWARDS_LEVELS: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
 
@@ -91,6 +91,9 @@ export function createTestConfig() {
     MIGRATION_ADDRESS: "0x865306084235Bf804c8Bba8a8d56890940ca8F0b", // 10th account from mnemonic of solo network
     MIGRATION_AMOUNT: BigInt("3750000000000000000000000"), // 3.75 million B3TR tokens from pilot show
 
+    // version 2
+    XAPP_GRACE_PERIOD: 120960, // 120960 blocks = 2 weeks
+    VECHAIN_NODES_CONTRACT_ADDRESS: "0xb81E9C5f9644Dec9e5e3Cac86b4461A222072302", // The contract address of the VeChainNodes contract on mainnet
     // X 2 Earn Rewards Pool
     X_2_EARN_INITIAL_IMPACT_KEYS: [
       "carbon",
@@ -111,5 +114,7 @@ export function createTestConfig() {
     VEPASSPORT_WHITELIST_THRESHOLD_PERCENTAGE: 2,
     VEPASSPORT_PASSPORT_MAX_ENTITIES: 5,
     VEPASSPORT_DECAY_RATE: 0,
+
+    CREATOR_NFT_URI: "ipfs://BASE_URI",
   })
 }

@@ -15,8 +15,11 @@ import {
   createProposal,
   getProposalIdFromTx,
   waitForProposalToBeActive,
-  bootstrapAndStartEmissions,
   ZERO_ADDRESS,
+  participateInAllocationVoting,
+  startNewAllocationRound,
+  addNodeToken,
+  bootstrapAndStartEmissions,
   payDeposit,
 } from "./helpers"
 import { expect } from "chai"
@@ -25,7 +28,15 @@ import { createLocalConfig } from "../config/contracts/envs/local"
 import { createTestConfig } from "./helpers/config"
 import { getImplementationAddress } from "@openzeppelin/upgrades-core"
 import { deployAndUpgrade, deployProxy, upgradeProxy } from "../scripts/helpers"
-import { B3TRGovernor, GalaxyMember, VoterRewards, VoterRewardsV1, XAllocationVoting } from "../typechain-types"
+import {
+  B3TRGovernor,
+  GalaxyMember,
+  VoterRewards,
+  VoterRewardsV1,
+  XAllocationVoting,
+} from "../typechain-types"
+import { time } from "@nomicfoundation/hardhat-network-helpers"
+import { endorseApp } from "./helpers/xnodes"
 
 describe("VoterRewards - @shard7", () => {
   describe("Contract parameters", () => {
@@ -175,7 +186,7 @@ describe("VoterRewards - @shard7", () => {
       await voterRewards.connect(owner).grantRole(await voterRewards.VOTE_REGISTRAR_ROLE(), otherAccount.address)
     })
 
-    it("Only admin should be able to set vote registrar role address", async () => {
+    it(" admin should be able to set vote registrar role address", async () => {
       const { voterRewards, otherAccount } = await getOrDeployContractInstances({ forceDeploy: true })
 
       expect(await voterRewards.hasRole(await voterRewards.VOTE_REGISTRAR_ROLE(), otherAccount.address)).to.eql(false)
@@ -258,7 +269,7 @@ describe("VoterRewards - @shard7", () => {
       expect(newImplAddress.toUpperCase()).to.eql((await implementation.getAddress()).toUpperCase())
     })
 
-    it("Only admin should be able to upgrade the contract", async function () {
+    it(" admin should be able to upgrade the contract", async function () {
       const { voterRewards, otherAccount } = await getOrDeployContractInstances({
         forceDeploy: true,
       })
@@ -442,6 +453,7 @@ describe("VoterRewards - @shard7", () => {
         timeLock,
         galaxyMember,
         vot3,
+        treasury,
         x2EarnApps,
         xAllocationPool,
         governorClockLogicLib,
@@ -625,12 +637,14 @@ describe("VoterRewards - @shard7", () => {
 
       await x2EarnApps
         .connect(owner)
-        .addApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
+        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
       const app1 = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[0].address))
+      await endorseApp(app1, otherAccounts[0])
       await x2EarnApps
         .connect(owner)
-        .addApp(otherAccounts[1].address, otherAccounts[1].address, otherAccounts[1].address, "metadataURI")
+        .submitApp(otherAccounts[1].address, otherAccounts[1].address, otherAccounts[1].address, "metadataURI")
       const app2 = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[1].address))
+      await endorseApp(app2, otherAccounts[1])
       const voter2 = otherAccounts[3]
       const voter3 = otherAccounts[4]
 
@@ -714,7 +728,7 @@ describe("VoterRewards - @shard7", () => {
         },
       )) as VoterRewards
 
-      const storageSlotsAfter = []
+      let storageSlotsAfter = []
 
       for (let i = initialSlot; i < initialSlot + BigInt(100); i++) {
         storageSlotsAfter.push(await ethers.provider.getStorage(await voterRewardsV2.getAddress(), i))
@@ -872,12 +886,14 @@ describe("VoterRewards - @shard7", () => {
 
       await x2EarnApps
         .connect(owner)
-        .addApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
+        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
       const app1 = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[0].address))
+      await endorseApp(app1, otherAccounts[0])
       await x2EarnApps
         .connect(owner)
-        .addApp(otherAccounts[1].address, otherAccounts[1].address, otherAccounts[1].address, "metadataURI")
+        .submitApp(otherAccounts[1].address, otherAccounts[1].address, otherAccounts[1].address, "metadataURI")
       const app2 = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[1].address))
+      await endorseApp(app2, otherAccounts[1])
       const voter2 = otherAccounts[3]
       const voter3 = otherAccounts[4]
 
@@ -1069,12 +1085,14 @@ describe("VoterRewards - @shard7", () => {
 
       await x2EarnApps
         .connect(owner)
-        .addApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
+        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
       const app1 = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[0].address))
+      await endorseApp(app1, otherAccounts[0])
       await x2EarnApps
         .connect(owner)
-        .addApp(otherAccounts[1].address, otherAccounts[1].address, otherAccounts[1].address, "metadataURI")
+        .submitApp(otherAccounts[1].address, otherAccounts[1].address, otherAccounts[1].address, "metadataURI")
       const app2 = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[1].address))
+      await endorseApp(app2, otherAccounts[1])
       const voter2 = otherAccounts[3]
       const voter3 = otherAccounts[4]
 
@@ -1259,12 +1277,15 @@ describe("VoterRewards - @shard7", () => {
 
       await x2EarnApps
         .connect(owner)
-        .addApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
+        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
       const app1 = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[0].address))
+      await endorseApp(app1, otherAccounts[0])
       await x2EarnApps
         .connect(owner)
-        .addApp(otherAccounts[1].address, otherAccounts[1].address, otherAccounts[1].address, "metadataURI")
+        .submitApp(otherAccounts[1].address, otherAccounts[1].address, otherAccounts[1].address, "metadataURI")
       const app2 = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[1].address))
+      await endorseApp(app2, otherAccounts[1])
+
       const voter2 = otherAccounts[3]
       const voter3 = otherAccounts[4]
 
@@ -1508,12 +1529,14 @@ describe("VoterRewards - @shard7", () => {
 
       await x2EarnApps
         .connect(owner)
-        .addApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
+        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
       const app1 = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[0].address))
+      await endorseApp(app1, otherAccounts[0])
       await x2EarnApps
         .connect(owner)
-        .addApp(otherAccounts[1].address, otherAccounts[1].address, otherAccounts[1].address, "metadataURI")
+        .submitApp(otherAccounts[1].address, otherAccounts[1].address, otherAccounts[1].address, "metadataURI")
       const app2 = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[1].address))
+      await endorseApp(app2, otherAccounts[1])
       const voter2 = otherAccounts[3]
       const voter3 = otherAccounts[4]
 
@@ -1593,12 +1616,16 @@ describe("VoterRewards - @shard7", () => {
       )
 
       // Rewards to be claimed are now NOT the same for all voters because voter1 has a higher level NFT:
+
+      /*
+
+      */
       expect(await voterRewards.getReward(2, voter1.address)).to.equal(1000000000000000000000000n) // Double voting rewards multiplier so it's like he voted 2000 (out of 4000 total votes) => 50% of the rewards
       expect(await voterRewards.getReward(2, voter2.address)).to.equal(500000000000000000000000n)
       expect(await voterRewards.getReward(2, voter3.address)).to.equal(500000000000000000000000n)
     })
 
-    it("Should not increase voting rewards if user upgrades after x allocation round snapshot", async () => {
+    it("Should change voting rewards if user upgrades after x allocation round snapshot", async () => {
       const config = createTestConfig()
       const {
         xAllocationVoting,
@@ -1642,12 +1669,14 @@ describe("VoterRewards - @shard7", () => {
 
       await x2EarnApps
         .connect(owner)
-        .addApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
+        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
       const app1 = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[0].address))
+      await endorseApp(app1, otherAccounts[0])
       await x2EarnApps
         .connect(owner)
-        .addApp(otherAccounts[1].address, otherAccounts[1].address, otherAccounts[1].address, "metadataURI")
+        .submitApp(otherAccounts[1].address, otherAccounts[1].address, otherAccounts[1].address, "metadataURI")
       const app2 = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[1].address))
+      await endorseApp(app2, otherAccounts[1])
       const voter2 = otherAccounts[3]
       const voter3 = otherAccounts[4]
 
@@ -1696,6 +1725,7 @@ describe("VoterRewards - @shard7", () => {
       await emissions.connect(voter1).distribute() // Anyone can distribute the cycle
 
       // GM NFT token mint and upgrade
+
       await galaxyMember.connect(voter1).freeMint()
 
       await upgradeNFTtoLevel(0, 2, galaxyMember, b3tr, voter1, minterAccount) // Upgrading to level 2
@@ -1775,12 +1805,14 @@ describe("VoterRewards - @shard7", () => {
 
       await x2EarnApps
         .connect(owner)
-        .addApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
+        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
       const app1 = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[0].address))
+      await endorseApp(app1, otherAccounts[0])
       await x2EarnApps
         .connect(owner)
-        .addApp(otherAccounts[1].address, otherAccounts[1].address, otherAccounts[1].address, "metadataURI")
+        .submitApp(otherAccounts[1].address, otherAccounts[1].address, otherAccounts[1].address, "metadataURI")
       const app2 = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[1].address))
+      await endorseApp(app2, otherAccounts[1])
       const voter2 = otherAccounts[3]
       const voter3 = otherAccounts[4]
 
@@ -1941,12 +1973,14 @@ describe("VoterRewards - @shard7", () => {
 
       await x2EarnApps
         .connect(owner)
-        .addApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
+        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
       const app1 = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[0].address))
+      await endorseApp(app1, otherAccounts[0])
       await x2EarnApps
         .connect(owner)
-        .addApp(otherAccounts[1].address, otherAccounts[1].address, otherAccounts[1].address, "metadataURI")
+        .submitApp(otherAccounts[1].address, otherAccounts[1].address, otherAccounts[1].address, "metadataURI")
       const app2 = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[1].address))
+      await endorseApp(app2, otherAccounts[1])
       const voter2 = otherAccounts[3]
       const voter3 = otherAccounts[4]
 
@@ -1992,6 +2026,7 @@ describe("VoterRewards - @shard7", () => {
       await waitForNextCycle()
 
       // GM NFT token mint and upgrade
+
       await galaxyMember.connect(voter1).freeMint()
 
       await upgradeNFTtoLevel(0, 5, galaxyMember, b3tr, voter1, minterAccount) // Upgrading to level 5
@@ -2076,12 +2111,15 @@ describe("VoterRewards - @shard7", () => {
 
       await x2EarnApps
         .connect(owner)
-        .addApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
+        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
       const app1 = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[0].address))
+      await endorseApp(app1, otherAccounts[0])
       await x2EarnApps
         .connect(owner)
-        .addApp(otherAccounts[1].address, otherAccounts[1].address, otherAccounts[1].address, "metadataURI")
+        .submitApp(otherAccounts[1].address, otherAccounts[1].address, otherAccounts[1].address, "metadataURI")
       const app2 = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[1].address))
+      await endorseApp(app2, otherAccounts[1])
+
       const voter2 = otherAccounts[3]
       const voter3 = otherAccounts[4]
 
@@ -2127,6 +2165,7 @@ describe("VoterRewards - @shard7", () => {
       await waitForNextCycle()
 
       // GM NFT token mint and upgrade
+
       await galaxyMember.connect(voter1).freeMint()
 
       await upgradeNFTtoLevel(0, 5, galaxyMember, b3tr, voter1, minterAccount) // Upgrading to level 5
@@ -2366,10 +2405,10 @@ describe("VoterRewards - @shard7", () => {
         otherAccounts,
         otherAccount: voter1,
         b3tr,
-        governor,
         B3trContract,
         veBetterPassport,
         voterRewards,
+        governor,
       } = await getOrDeployContractInstances({
         forceDeploy: true,
         config,
@@ -2571,12 +2610,14 @@ describe("VoterRewards - @shard7", () => {
 
       await x2EarnApps
         .connect(owner)
-        .addApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
+        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
       const app1 = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[0].address))
+      await endorseApp(app1, otherAccounts[0])
       await x2EarnApps
         .connect(owner)
-        .addApp(otherAccounts[1].address, otherAccounts[1].address, otherAccounts[1].address, "metadataURI")
+        .submitApp(otherAccounts[1].address, otherAccounts[1].address, otherAccounts[1].address, "metadataURI")
       const app2 = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[1].address))
+      await endorseApp(app2, otherAccounts[1])
 
       const voter2 = otherAccounts[1]
       const voter3 = otherAccounts[2]
@@ -2702,7 +2743,9 @@ describe("VoterRewards - @shard7", () => {
         emissions,
         minterAccount,
         owner,
+        vechainNodesMock,
         voterRewards,
+        vot3,
         xAllocationVoting,
         veBetterPassport,
         treasury,
@@ -2746,12 +2789,14 @@ describe("VoterRewards - @shard7", () => {
 
       await x2EarnApps
         .connect(owner)
-        .addApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
+        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
       const app1 = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[0].address))
+      await endorseApp(app1, otherAccounts[5])
       await x2EarnApps
         .connect(owner)
-        .addApp(otherAccounts[1].address, otherAccounts[1].address, otherAccounts[1].address, "metadataURI")
+        .submitApp(otherAccounts[1].address, otherAccounts[1].address, otherAccounts[1].address, "metadataURI")
       const app2 = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[1].address))
+      await endorseApp(app2, otherAccounts[6])
 
       const voter2 = otherAccounts[1]
       const voter3 = otherAccounts[2]
@@ -2877,6 +2922,7 @@ describe("VoterRewards - @shard7", () => {
         minterAccount,
         owner,
         voterRewards,
+        vechainNodesMock,
         xAllocationVoting,
         treasury,
         x2EarnApps,
@@ -2915,12 +2961,14 @@ describe("VoterRewards - @shard7", () => {
 
       await x2EarnApps
         .connect(owner)
-        .addApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
+        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
       const app1 = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[0].address))
+      await endorseApp(app1, otherAccounts[0])
       await x2EarnApps
         .connect(owner)
-        .addApp(otherAccounts[1].address, otherAccounts[1].address, otherAccounts[1].address, "metadataURI")
+        .submitApp(otherAccounts[1].address, otherAccounts[1].address, otherAccounts[1].address, "metadataURI")
       const app2 = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[1].address))
+      await endorseApp(app2, otherAccounts[1])
 
       const voter2 = otherAccounts[1]
       const voter3 = otherAccounts[2]
@@ -3050,6 +3098,7 @@ describe("VoterRewards - @shard7", () => {
         B3trContract,
         emissions,
         minterAccount,
+        vechainNodesMock,
         owner,
         voterRewards,
         veBetterPassport,
@@ -3092,12 +3141,14 @@ describe("VoterRewards - @shard7", () => {
 
       await x2EarnApps
         .connect(owner)
-        .addApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
+        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
       const app1 = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[0].address))
+      await endorseApp(app1, otherAccounts[0])
       await x2EarnApps
         .connect(owner)
-        .addApp(otherAccounts[1].address, otherAccounts[1].address, otherAccounts[1].address, "metadataURI")
+        .submitApp(otherAccounts[1].address, otherAccounts[1].address, otherAccounts[1].address, "metadataURI")
       const app2 = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[1].address))
+      await endorseApp(app2, otherAccounts[1])
 
       const voter2 = otherAccounts[1]
       const voter3 = otherAccounts[2]
