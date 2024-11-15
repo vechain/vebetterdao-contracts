@@ -1,7 +1,7 @@
 import fs from "fs/promises"
 import { ethers } from "hardhat"
 import { calculateNextXAllocation, calculateTreasuryAllocation, calculateVote2Earn } from "./allocations"
-import { ContractsConfig } from "@repo/config/contracts"
+import { ContractsConfig } from "../../config/contracts"
 
 /**
  * Interface for the token allocations.

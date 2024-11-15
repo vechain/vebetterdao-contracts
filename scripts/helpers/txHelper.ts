@@ -1,4 +1,4 @@
-import { getConfig } from "@repo/config"
+import { getConfig } from "../../config"
 import { TransactionHandler, type TransactionClause, type TransactionBody } from "@vechain/sdk-core"
 import { HttpClient, ThorClient } from "@vechain/sdk-network"
 

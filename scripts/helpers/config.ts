@@ -1,4 +1,4 @@
-import { AppConfig } from "@repo/config"
+import { AppConfig } from "../../config"
 import path from "path"
 import fs from "fs"
 

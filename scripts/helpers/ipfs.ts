@@ -1,5 +1,5 @@
 import { formData, readFilesFromDirectory, getFolderName } from "./fs"
-import { getConfig } from "@repo/config"
+import { getConfig } from "../../config"
 import axios from "axios"
 
 async function uploadDirectoryToIPFS(pathToUpload: string, path: string): Promise<[string, File[], string]> {
