@@ -18,11 +18,19 @@ export enum SeedStrategy {
   LINEAR,
 }
 
-const PHRASE = (process.env.MNEMONIC || VECHAIN_DEFAULT_MNEMONIC).split(" ")
+const isStagingEnv = process.env.NEXT_PUBLIC_APP_ENV === "testnet-staging"
+
+const PHRASE = (
+  isStagingEnv ? process.env.TESTNET_STAGING_MNEMONIC : process.env.MNEMONIC || VECHAIN_DEFAULT_MNEMONIC
+)?.split(" ")
 
 export const TEST_DERIVATION_PATH = "m"
 
 export const getTestKey = (index: number, derivationPath: string = TEST_DERIVATION_PATH): TestPk => {
+  if (!PHRASE) {
+    throw new Error("Mnemonic not found")
+  }
+
   const pk = mnemonic.derivePrivateKey(PHRASE, `${derivationPath}/${index}`)
   const buffer = Buffer.from(pk)
   const pkHex = buffer.toString("hex")

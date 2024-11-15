@@ -1,4 +1,4 @@
-import { B3TR, Treasury__factory } from "../../typechain-types"
+import { Treasury__factory } from "../../typechain-types"
 import {
   clauseBuilder,
   type TransactionClause,
@@ -21,7 +21,7 @@ export const airdropVTHO = async (accounts: SeedAccount[], signingAcct: TestPk) 
     const clauses: TransactionClause[] = []
 
     accountChunk.map(account => {
-      clauses.push(clauseBuilder.transferToken(VTHO_ADDRESS, account.key.address, unitsUtils.parseVET("200000")))
+      clauses.push(clauseBuilder.transferToken(VTHO_ADDRESS, account.key.address, unitsUtils.parseVET("50")))
     })
 
     const body: TransactionBody = await buildTxBody(clauses, signingAcct.address, 32)

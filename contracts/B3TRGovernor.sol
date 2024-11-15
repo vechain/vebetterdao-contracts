@@ -75,6 +75,8 @@ import { IVeBetterPassport } from "./interfaces/IVeBetterPassport.sol";
  * - Added the ability to toggle the quadratic voting mechanism on and off
  * ------------------ VERSION 4 ------------------
  * - Integrated VeBetterPassport contract
+ * ------------------ VERSION 5 ------------------
+ * - Difference from V4: Updated all libraries to use new version of IVoterRewards that supports GM Upgrades.
  */
 contract B3TRGovernor is
   IB3TRGovernor,
@@ -573,7 +575,7 @@ contract B3TRGovernor is
    * @return string The version of the governor
    */
   function version() external pure returns (string memory) {
-    return "4";
+    return "5";
   }
 
   /**
@@ -612,7 +614,7 @@ contract B3TRGovernor is
 
   /**
    * @notice The voter rewards contract.
-   * @return IVoterRewards The voter rewards contract
+   * @return IVoterRewardsV2 The voter rewards contract
    */
   function voterRewards() external view returns (IVoterRewards) {
     GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();

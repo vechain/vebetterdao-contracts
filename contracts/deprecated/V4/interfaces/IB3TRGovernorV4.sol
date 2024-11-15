@@ -6,9 +6,10 @@ pragma solidity 0.8.20;
 import { IERC165 } from "@openzeppelin/contracts/interfaces/IERC165.sol";
 import { IERC6372 } from "@openzeppelin/contracts/interfaces/IERC6372.sol";
 import { IB3TR } from "../../../interfaces/IB3TR.sol";
-import { IVoterRewards } from "../../../interfaces/IVoterRewards.sol";
-import { IXAllocationVotingGovernor } from "../../../interfaces/IXAllocationVotingGovernor.sol";
-import { GovernorTypesV3 } from "../governance/libraries/GovernorTypesV3.sol";
+import { IVoterRewardsV2 } from "../../V2/interfaces/IVoterRewardsV2.sol";
+import { IXAllocationVotingGovernorV2 } from "../../V2/interfaces/IXAllocationVotingGovernorV2.sol";
+import { GovernorTypesV4 } from "../governance/libraries/GovernorTypesV4.sol";
+import { IVeBetterPassport } from "../../../interfaces/IVeBetterPassport.sol";
 
 /**
  * @dev Interface of the {B3TRGovernor} core.
@@ -22,7 +23,7 @@ import { GovernorTypesV3 } from "../governance/libraries/GovernorTypesV3.sol";
  * - Added new state `DepositNotMet` to ProposalState enum
  * - Added depositThreshold() to get the minimum required deposit for a proposal and removed proposalThreshold
  */
-interface IB3TRGovernor is IERC165, IERC6372 {
+interface IB3TRGovernorV4 is IERC165, IERC6372 {
   /**
    * @dev Empty proposal or a mismatch between the parameters length for a proposal call.
    */
@@ -64,6 +65,13 @@ interface IB3TRGovernor is IERC165, IERC6372 {
   error GovernorInvalidQuorumFraction(uint256 quorumNumerator, uint256 quorumDenominator);
 
   /**
+   * @dev Thrown when the personhood verification fails.
+   * @param voter The address of the voter.
+   * @param explanation The reason for the failure.
+   */
+  error GovernorPersonhoodVerificationFailed(address voter, string explanation);
+
+  /**
    * @dev The current state of a proposal is not the required for performing an operation.
    * The `expectedStates` is a bitmap with the bits enabled for each ProposalState enum position
    * counting from right to left.
@@ -75,7 +83,7 @@ interface IB3TRGovernor is IERC165, IERC6372 {
    */
   error GovernorUnexpectedProposalState(
     uint256 proposalId,
-    GovernorTypesV3.ProposalState current,
+    GovernorTypesV4.ProposalState current,
     bytes32 expectedStates
   );
 
@@ -210,6 +218,11 @@ interface IB3TRGovernor is IERC165, IERC6372 {
   event ProposalDeposit(address indexed depositor, uint256 indexed proposalId, uint256 amount);
 
   /**
+   * @dev Emitted when the VeBetterPassport contract is set.
+   */
+  event VeBetterPassportSet(address indexed oldVeBetterPassport, address indexed newVeBetterPassport);
+
+  /**
    * @notice module:core
    * @dev Name of the governor instance (used in building the ERC712 domain separator).
    */
@@ -261,7 +274,7 @@ interface IB3TRGovernor is IERC165, IERC6372 {
    * @notice module:core
    * @dev Current state of a proposal, following Compound's convention
    */
-  function state(uint256 proposalId) external view returns (GovernorTypesV3.ProposalState);
+  function state(uint256 proposalId) external view returns (GovernorTypesV4.ProposalState);
 
   /**
    * @notice module:core
@@ -279,13 +292,13 @@ interface IB3TRGovernor is IERC165, IERC6372 {
    * @notice module:core
    * @dev Getter for the VoterRewards contract
    */
-  function voterRewards() external view returns (IVoterRewards);
+  function voterRewards() external view returns (IVoterRewardsV2);
 
   /**
    * @notice module:core
    * @dev Getter for the XAllocationVoting contract
    */
-  function xAllocationVoting() external view returns (IXAllocationVotingGovernor);
+  function xAllocationVoting() external view returns (IXAllocationVotingGovernorV2);
 
   /**
    * @notice module:core
@@ -500,4 +513,16 @@ interface IB3TRGovernor is IERC165, IERC6372 {
    * @dev Getter to retrieve the amount of tokens a specific user has deposited to a proposal
    */
   function getUserDeposit(uint256 proposalId, address user) external view returns (uint256);
+
+  /**
+   * @notice Returns the VeBetterPassport contract.
+   * @return The current VeBetterPassport contract.
+   */
+  function veBetterPassport() external view returns (IVeBetterPassport);
+
+  /**
+   * @notice Set the VeBetterPassport contract
+   * @param newVeBetterPassport The new VeBetterPassport contract
+   */
+  function setVeBetterPassport(IVeBetterPassport newVeBetterPassport) external;
 }

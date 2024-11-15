@@ -35,6 +35,7 @@ import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /// @title GovernorVotesLogic
 /// @notice Library for handling voting logic in the Governor contract.
+/// @dev Difference from V1: `proposalId` is passed as an argument to `registerVote` function instead of `proposalSnapshot`.
 library GovernorVotesLogic {
   using Checkpoints for Checkpoints.Trace208;
 
@@ -253,7 +254,7 @@ library GovernorVotesLogic {
 
     _countVote(self, proposalId, voter, support, weight, power);
 
-    self.voterRewards.registerVote(proposalSnapshot, voter, weight, Math.sqrt(weight));
+    self.voterRewards.registerVote(proposalId, voter, weight, Math.sqrt(weight));
 
     emit VoteCast(voter, proposalId, support, weight, power, reason);
 
