@@ -23,8 +23,8 @@
 
 pragma solidity 0.8.20;
 
-import { IVoterRewards } from "../../../../interfaces/IVoterRewards.sol";
-import { IXAllocationVotingGovernor } from "../../../../interfaces/IXAllocationVotingGovernor.sol";
+import { IVoterRewardsV2 } from "../../../V2/interfaces/IVoterRewardsV2.sol";
+import { IXAllocationVotingGovernorV2 } from "../../../V2/interfaces/IXAllocationVotingGovernorV2.sol";
 import { IB3TR } from "../../../../interfaces/IB3TR.sol";
 import { IVOT3 } from "../../../../interfaces/IVOT3.sol";
 import { TimelockControllerUpgradeable } from "@openzeppelin/contracts-upgradeable/governance/TimelockControllerUpgradeable.sol";
@@ -45,13 +45,13 @@ library GovernorTypesV3 {
   struct InitializationData {
     IVOT3 vot3Token;
     TimelockControllerUpgradeable timelock;
-    IXAllocationVotingGovernor xAllocationVoting;
+    IXAllocationVotingGovernorV2 xAllocationVoting;
     IB3TR b3tr;
     uint256 quorumPercentage;
     uint256 initialDepositThreshold;
     uint256 initialMinVotingDelay;
     uint256 initialVotingThreshold;
-    IVoterRewards voterRewards;
+    IVoterRewardsV2 voterRewards;
     bool isFunctionRestrictionEnabled;
   }
 

@@ -2,6 +2,8 @@
 
 pragma solidity 0.8.20;
 
+import "@openzeppelin/contracts/utils/structs/Checkpoints.sol";
+
 interface IVOT3 {
   error AccessControlBadConfirmation();
 
@@ -171,9 +173,3 @@ interface IVOT3 {
   function version() external view returns (string memory);
 }
 
-interface Checkpoints {
-  struct Checkpoint208 {
-    uint48 _key;
-    uint208 _value;
-  }
-}

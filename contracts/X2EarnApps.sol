@@ -27,7 +27,9 @@ import { X2EarnAppsUpgradeable } from "./x-2-earn-apps/X2EarnAppsUpgradeable.sol
 import { AdministrationUpgradeable } from "./x-2-earn-apps/modules/AdministrationUpgradeable.sol";
 import { AppsStorageUpgradeable } from "./x-2-earn-apps/modules/AppsStorageUpgradeable.sol";
 import { ContractSettingsUpgradeable } from "./x-2-earn-apps/modules/ContractSettingsUpgradeable.sol";
-import { VoteEligibilityUpgradeable } from "./x-2-earn-apps/modules/VoteEligibilityUpgradeable.sol";
+import { VoteEligibilityUpgradeable } from "./x-2-earn-apps/modules//VoteEligibilityUpgradeable.sol";
+import { EndorsementUpgradeable } from "./x-2-earn-apps/modules/EndorsementUpgradeable.sol";
+import { VechainNodesDataTypes } from "./libraries/VechainNodesDataTypes.sol";
 import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
@@ -46,6 +48,7 @@ contract X2EarnApps is
   ContractSettingsUpgradeable,
   VoteEligibilityUpgradeable,
   AppsStorageUpgradeable,
+  EndorsementUpgradeable,
   AccessControlUpgradeable,
   UUPSUpgradeable
 {
@@ -60,35 +63,24 @@ contract X2EarnApps is
   }
 
   /**
-   * @notice Initialize the contract
-   * @param _baseURI the base URI for the contract
-   * @param _admins the addresses of the admins
-   * @param _upgrader the address of the upgrader
-   * @param _governor the address that will be granted the governance role
+   * @notice Initialize the version 2 contract
+   * @param _gracePeriod the grace period to be reendorsed
+   * @param _nodeManagementContract the address of the vechain node management contract
+   * @param _veBetterPassportContract the address of the VeBetterPassport contract
    *
    * @dev This function is called only once during the contract deployment
    */
-  function initialize(
-    string memory _baseURI,
-    address[] memory _admins,
-    address _upgrader,
-    address _governor
-  ) external initializer {
-    __X2EarnApps_init();
-    __Administration_init();
-    __AppsStorage_init();
-    __ContractSettings_init(_baseURI);
-    __VoteEligibility_init();
-    __UUPSUpgradeable_init();
-    __AccessControl_init();
-
-    for (uint256 i; i < _admins.length; i++) {
-      require(_admins[i] != address(0), "X2EarnApps: admin address cannot be zero");
-      _grantRole(DEFAULT_ADMIN_ROLE, _admins[i]);
-    }
-
-    _grantRole(UPGRADER_ROLE, _upgrader);
-    _grantRole(GOVERNANCE_ROLE, _governor);
+  function initializeV2(
+    uint48 _gracePeriod,
+    address _nodeManagementContract,
+    address _veBetterPassportContract,
+    address _x2EarnCreatorContract
+  ) public reinitializer(2) {
+    require(_nodeManagementContract != address(0), "X2EarnApps: Invalid Node Managementcontract address");
+    require(_veBetterPassportContract != address(0), "X2EarnApps: Invalid VeBetterPassport contract address");
+    require(_x2EarnCreatorContract != address(0), "X2EarnApps: Invalid X2EarnCreator contract address");
+    __Endorsement_init(_gracePeriod, _nodeManagementContract, _veBetterPassportContract);
+    __Administration_init_v2(_x2EarnCreatorContract);
   }
 
   // ---------- Modifiers ------------ //
@@ -130,7 +122,7 @@ contract X2EarnApps is
    * @return sting The version of the contract
    */
   function version() public pure virtual returns (string memory) {
-    return "1";
+    return "2";
   }
 
   // ---------- Overrides ------------ //
@@ -149,20 +141,37 @@ contract X2EarnApps is
   /**
    * @dev See {IX2EarnApps-setVotingEligibility}.
    */
-  function setVotingEligibility(bytes32 _appId, bool _isEligible) public onlyRole(GOVERNANCE_ROLE) {
-    _setVotingEligibility(_appId, _isEligible);
+  function setVotingEligibility(bytes32 _appId, bool _isEligible) public virtual onlyRole(GOVERNANCE_ROLE) {
+    if (!_appSubmitted(_appId)) {
+      revert X2EarnNonexistentApp(_appId);
+    }
+
+    if (appExists(_appId)) {
+      _setVotingEligibility(_appId, _isEligible);
+    }
+
+    // If the app is pending endorsement and the app is getting blacklisted remove it from the pending endorsement list
+    if (isAppUnendorsed(_appId) && !_isEligible) {
+      _updateAppsPendingEndorsement(_appId, true);
+    }
+
+    // Validate the app creators if the app is eligible and if not revoke the creators and burn their creator tokens
+    _isEligible ? _validateAppCreators(_appId) : _revokeAppCreators(_appId);
+
+    // Set the app in the blacklist if not eligible and called by governance
+    _setBlacklist(_appId, !_isEligible);
   }
 
   /**
-   * @dev See {IX2EarnApps-addApp}.
+   * @dev See {IX2EarnApps-submitApp}.
    */
-  function addApp(
+  function submitApp(
     address _teamWalletAddress,
     address _admin,
     string memory _appName,
     string memory _appMetadataURI
-  ) public onlyRole(GOVERNANCE_ROLE) {
-    _addApp(_teamWalletAddress, _admin, _appName, _appMetadataURI);
+  ) public virtual {
+    _registerApp(_teamWalletAddress, _admin, _appName, _appMetadataURI);
   }
 
   /**
@@ -210,6 +219,13 @@ contract X2EarnApps is
   }
 
   /**
+   * @dev See {IX2EarnApps-removeAppCreator}.
+   */
+  function removeAppCreator(bytes32 _appId, address _creator) public onlyRoleAndAppAdmin(DEFAULT_ADMIN_ROLE, _appId) {
+    _removeAppCreator(_appId, _creator);
+  }
+
+  /**
    * @dev See {IX2EarnApps-addRewardDistributor}.
    */
   function addRewardDistributor(
@@ -217,6 +233,13 @@ contract X2EarnApps is
     address _distributor
   ) public onlyRoleAndAppAdmin(DEFAULT_ADMIN_ROLE, _appId) {
     _addRewardDistributor(_appId, _distributor);
+  }
+
+  /**
+   * @dev See {IX2EarnApps-addCreator}.
+   */
+  function addCreator(bytes32 _appId, address _creator) public onlyRoleAndAppAdmin(DEFAULT_ADMIN_ROLE, _appId) {
+    _addCreator(_appId, _creator);
   }
 
   /**
@@ -237,5 +260,73 @@ contract X2EarnApps is
     string memory _newMetadataURI
   ) public onlyRoleAndAppAdminOrModerator(DEFAULT_ADMIN_ROLE, _appId) {
     _updateAppMetadata(_appId, _newMetadataURI);
+  }
+
+  /**
+   * @dev See {IX2EarnApps-updateGracePeriod}.
+   */
+  function updateGracePeriod(uint48 _newGracePeriod) public virtual onlyRole(GOVERNANCE_ROLE) {
+    _setGracePeriod(_newGracePeriod);
+  }
+
+  /**
+   * @dev See {IX2EarnApps-updateNodeEndorsementScores}.
+   */
+  function updateNodeEndorsementScores(
+    VechainNodesDataTypes.NodeStrengthScores calldata _nodeStrengthScores
+  ) external onlyRole(GOVERNANCE_ROLE) {
+    _updateNodeEndorsementScores(_nodeStrengthScores);
+  }
+
+  /**
+   * @dev See {IX2EarnApps-updateEndorsementScoreThreshold}.
+   */
+  function updateEndorsementScoreThreshold(uint256 _scoreThreshold) external onlyRole(GOVERNANCE_ROLE) {
+    _updateEndorsementScoreThreshold(_scoreThreshold);
+  }
+
+  /**
+   * @dev See {IX2EarnApps-endorsementScoreThreshold}.
+   */
+  function endorsementScoreThreshold() external view returns (uint256) {
+    return _endorsementScoreThreshold();
+  }
+
+  /**
+   * @dev See {IX2EarnApps-removeNodeEndorsement}.
+   */
+  function removeNodeEndorsement(
+    bytes32 _appId,
+    uint256 _nodeId
+  ) public virtual onlyRoleAndAppAdmin(DEFAULT_ADMIN_ROLE, _appId) {
+    _removeNodeEndorsement(_appId, _nodeId);
+  }
+
+  /**
+   * @dev See {IX2EarnApps-removeXAppSubmission}.
+   */
+  function removeXAppSubmission(bytes32 _appId) public virtual onlyRoleAndAppAdmin(DEFAULT_ADMIN_ROLE, _appId) {
+    _removeXAppSubmission(_appId);
+  }
+
+  /**
+   * @dev See {IX2EarnApps-setNodeManagementContract}.
+   */
+  function setNodeManagementContract(address _nodeManagementContract) public virtual onlyRole(DEFAULT_ADMIN_ROLE) {
+    _setNodeManagementContract(_nodeManagementContract);
+  }
+
+  /**
+   * @dev See {IX2EarnApps-setVeBetterPassportContract}.
+   */
+  function setVeBetterPassportContract(address _veBetterPassportContract) public virtual onlyRole(DEFAULT_ADMIN_ROLE) {
+    _setVeBetterPassportContract(_veBetterPassportContract);
+  }
+
+  /**
+   * @dev See {IX2EarnApps-setX2EarnCreatorContract}.
+   */
+  function setX2EarnCreatorContract(address _x2EarnCreatorContract) public onlyRole(DEFAULT_ADMIN_ROLE) {
+    _setX2EarnCreatorContract(_x2EarnCreatorContract);
   }
 }

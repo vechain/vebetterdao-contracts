@@ -44,6 +44,11 @@ import { IX2EarnRewardsPool } from "./interfaces/IX2EarnRewardsPool.sol";
  * @dev Interacts with the Emissions contract to get the amount of B3TR available for distribution in each round,
  * and the x2EarnApps contract to check app existence and the app's team wallet address.
  * The contract is using AccessControl to handle roles for upgrading the contract and external contract addresses.
+ * ----------------------------------------------------------------------------
+ * ---------------------- Version 2 ----------------------------------------
+ * - Added the abilty to toggle quadratic funding on and off.
+ * ---------------------- Version 3 ----------------------------------------
+ * - Use new interface IX2EarnApps that supports endorsement.
  */
 contract XAllocationPool is IXAllocationPool, AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPSUpgradeable {
   using Checkpoints for Checkpoints.Trace208; // Checkpoints library for managing the voting mechanism used in the XAllocationVoting contract
@@ -637,7 +642,7 @@ contract XAllocationPool is IXAllocationPool, AccessControlUpgradeable, Reentran
    * @return string The version of the contract
    */
   function version() external pure virtual returns (string memory) {
-    return "2";
+    return "3";
   }
 
   /**
