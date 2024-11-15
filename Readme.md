@@ -45,8 +45,8 @@ Our contracts are upgradeable and versioned. See the [contracts changelog](CONTR
   "XAllocationPool": "0x4191776F05f4bE4848d3f4d587345078B439C7d3",
   "XAllocationVoting": "0x89A00Bb0947a30FF95BEeF77a66AEdE3842Fe5B7",
   "VeBetterPassport": "0x35a267671d8EDD607B2056A9a13E7ba7CF53c8b3",
-  "X2EarnCreator": "0xA91590fdb5b6d978aFB55B7B158845924E1bd8aC",
-  "NodeManagement": "0x7728537EFb2842C3baBa40f03DF043B1006e5F46"
+  "X2EarnCreator": "0xe8e96a768ffd00417d4bd985bec9EcfC6F732a7f",
+  "NodeManagement": "0xB0EF9D89C6b49CbA6BBF86Bf2FDf0Eee4968c6AB"
 ```
 
 ## Testnet contract addresses
