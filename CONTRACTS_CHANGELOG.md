@@ -6,15 +6,60 @@ This document provides a detailed log of upgrades to the smart contract suite, e
 
 | Date                | Contract(s)                                               | Summary                                                     |
 | ------------------- | --------------------------------------------------------- | ----------------------------------------------------------- |
+| 15th November 2024  | `X2EarnApps` version `2`                                  | Added X2Earn Apps Vechain Node Endorsement feature          |
 | 21th October 2024   | `VeBetterPassport` version `2`                            | Check if the entity is a delegatee when request is created  |
 | 11th October 2024   | `XAllocationVoting` version `2`                           | Check isPerson when casting vote & fixed weight during vote |
 | 11th October 2024   | `B3TRGovernor` version `4`                                | Check isPerson when casting vote                            |
 | 11th October 2024   | `X2EarnRewardsPool` version `3`                           | Register action in VeBetter Passport contract               |
 | 27th September 2024 | `Emissions` version `2`                                   | Aligned emissions with the expected schedule                |
-| 13th September 2024 | `B3TRGovernor` version `3`, `XAllocationPool` version `2` | Added toggling of quadratic voting and funding              |
-| 4th September 2024  | `X2EarnRewardsPool` version `2`                           | Added impact key management and proof building              |
-| 31st August 2024    | `VoterRewards` version `2`                                | Added quadratic rewarding features                          |
+| 13th September 2024 | `B3TRGovernor` version `3`, `XAllocationPool` version `2` | - Added toggling of quadratic voting and funding            |
+| 4th September 2024  | `X2EarnRewardsPool` version `2`                           | - Added impact key management and proof building            |
+| 31st August 2024    | `VoterRewards` version `2`                                | - Added quadratic rewarding features                        |
 | 29th August 2024    | `B3TRGovernor` version `2`                                | Updated access control modifiers                            |
+
+---
+
+## Upgrade `X2EarnApps` to Version 2
+
+Added Vechain Node XApp Endorsement feature.
+
+### Changes 🚀
+
+- **Upgraded Contract(s):**
+  - `X2EarnApps.sol` to version `2`
+
+### Storage Changes 📦
+
+- **`EndorsementUpgradeable.sol`**:
+  - Added `_unendorsedApps` to store the list of apps pending endorsement.
+  - Added `_unendorsedAppsIndex` to store mapping from app ID to index in the \_unendorsedApps array.
+  - Added `_appEndorsers` to store the mapping of each app ID to an array of node IDs that have endorsed it.
+  - Added `_nodeEnodorsmentScore` to score the endorsement score for each node level.
+  - Added `_appGracePeriodStart` to store the grace period elapsed by the app since endorsed.
+  - Added `_nodeToEndorsedApp` to store the mapping of a node ID to the app it currently endorses.
+  - Added `_gracePeriodDuration` to store the grace period threshold for no endorsement in blocks.
+  - Added `_endorsementScoreThreshold` to store the endorsement score threshold for an app to be eligible for voting.
+  - Added `_appScores` to store the score of each app.
+  - Added `_appSecurity` to store the security score of each app.
+  - Added `_nodeManagementContract` to store the node management contract address.
+  - Added `_veBetterPassport` to store the VeBetterPassport contract address.
+- **`EndorsementUpgradeable.sol`**:
+  - Added `_creators` to store a mapping of addresses that have a creators NFT and can manage interactions with Node holders for a specifc XApp.
+  - Added `_creatorApps` to store the number of apps created by a creator.
+  - Added `_x2EarnCreatorContract` to store the address of the X2Earn Creators contract.
+- **`VoteEligibilityUpgradeable.sol`**:
+  - Added `_blackList` to store a record blacklisted X2Earn appIds.
+
+### New Features 🚀
+
+- Added `EndorsementUpgradeable.sol` module which makes up all X2EarnApps endorsement logic and functions (see docs for more info).
+- Replaced `appApp()` with `submitApp()`.
+- Added getter `isBlacklisted()` to check if XApp is blacklisted.
+- Added `removeAppCreator()`, `appCreators()`, `isAppCreator()` and `creatorApps()` to manage and get info on X2Earn app creators.
+
+### Bug Fixes 🐛
+
+- - Added libraries `AdministrationUtils.sol`, `EndorsementUtils.sol`, `AppStorageUtils.sol` and `VoteEligibilityUtils.sol` to store some of the logic for the X2EarnApps contracts modules to reduce contract size.
 
 ---
 
