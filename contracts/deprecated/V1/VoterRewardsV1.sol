@@ -25,7 +25,7 @@ pragma solidity 0.8.20;
 
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
-import "./interfaces/IGalaxyMemberV1.sol";
+import "../../interfaces/IGalaxyMember.sol";
 import "../../interfaces/IB3TRGovernor.sol";
 import "../../interfaces/IXAllocationVotingGovernor.sol";
 import "../../interfaces/IEmissions.sol";
@@ -66,7 +66,7 @@ contract VoterRewardsV1 is AccessControlUpgradeable, ReentrancyGuardUpgradeable,
 
   /// @custom:storage-location erc7201:b3tr.storage.VoterRewards
   struct VoterRewardsStorage {
-    IGalaxyMemberV1 galaxyMember;
+    IGalaxyMember galaxyMember;
     IB3TR b3tr;
     IEmissions emissions;
     // level => percentage multiplier for the level of the GM NFT
@@ -153,7 +153,7 @@ contract VoterRewardsV1 is AccessControlUpgradeable, ReentrancyGuardUpgradeable,
 
     VoterRewardsStorage storage $ = _getVoterRewardsStorage();
 
-    $.galaxyMember = IGalaxyMemberV1(_galaxyMember);
+    $.galaxyMember = IGalaxyMember(_galaxyMember);
     $.b3tr = IB3TR(_b3tr);
     $.emissions = IEmissions(_emissions);
 
@@ -299,7 +299,7 @@ contract VoterRewardsV1 is AccessControlUpgradeable, ReentrancyGuardUpgradeable,
   }
 
   /// @notice Get the Galaxy Member contract.
-  function galaxyMember() external view returns (IGalaxyMemberV1) {
+  function galaxyMember() external view returns (IGalaxyMember) {
     VoterRewardsStorage storage $ = _getVoterRewardsStorage();
     return $.galaxyMember;
   }
@@ -327,7 +327,7 @@ contract VoterRewardsV1 is AccessControlUpgradeable, ReentrancyGuardUpgradeable,
 
     emit GalaxyMemberAddressUpdated(_galaxyMember, address($.galaxyMember));
 
-    $.galaxyMember = IGalaxyMemberV1(_galaxyMember);
+    $.galaxyMember = IGalaxyMember(_galaxyMember);
   }
 
   /// @notice Set the Galaxy Member level to multiplier mapping.

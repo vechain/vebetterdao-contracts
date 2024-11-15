@@ -492,7 +492,7 @@ contract X2EarnRewardsPool is
    * @dev See {IX2EarnRewardsPool-version}
    */
   function version() external pure virtual returns (string memory) {
-    return "4";
+    return "3";
   }
 
   /**

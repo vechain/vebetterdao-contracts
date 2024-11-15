@@ -24,8 +24,8 @@
 pragma solidity 0.8.20;
 
 import { GovernorTypesV3 } from "./GovernorTypesV3.sol";
-import { IVoterRewardsV2 } from "../../../V2/interfaces/IVoterRewardsV2.sol";
-import { IXAllocationVotingGovernorV2 } from "../../../V2/interfaces/IXAllocationVotingGovernorV2.sol";
+import { IVoterRewards } from "../../../../interfaces/IVoterRewards.sol";
+import { IXAllocationVotingGovernor } from "../../../../interfaces/IXAllocationVotingGovernor.sol";
 import { IB3TR } from "../../../../interfaces/IB3TR.sol";
 import { IVOT3 } from "../../../../interfaces/IVOT3.sol";
 import { DoubleEndedQueue } from "@openzeppelin/contracts/utils/structs/DoubleEndedQueue.sol";
@@ -63,9 +63,9 @@ library GovernorStorageTypesV3 {
     bool isFunctionRestrictionEnabled;
     // ------------------------------- External Contracts Storage -------------------------------
     // Voter Rewards contract
-    IVoterRewardsV2 voterRewards;
+    IVoterRewards voterRewards;
     // XAllocationVotingGovernor contract
-    IXAllocationVotingGovernorV2 xAllocationVoting;
+    IXAllocationVotingGovernor xAllocationVoting;
     // B3TR contract
     IB3TR b3tr;
     // VOT3 contract

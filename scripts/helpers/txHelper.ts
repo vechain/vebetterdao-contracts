@@ -1,5 +1,5 @@
-import { getConfig } from "@repo/config"
-import { TransactionHandler, type TransactionClause, type TransactionBody } from "@vechain/sdk-core"
+import { getConfig } from "../../config"
+import { TransactionHandler, networkInfo, type TransactionClause, type TransactionBody } from "@vechain/sdk-core"
 import { HttpClient, ThorClient } from "@vechain/sdk-network"
 
 const thorNetwork = new HttpClient(getConfig().nodeUrl)
@@ -42,7 +42,7 @@ export const buildTxBody = async (
     const gasResult = await thorClient.gas.estimateGas(clauses, senderAddress)
 
     if (gasResult.reverted) {
-      throw new Error(`Gas estimation failed: ${gasResult.revertReasons} - ${gasResult.vmErrors}`)
+      throw new Error(`Gas estimation failed: ${gasResult.revertReasons}`)
     }
 
     gas = gasResult.totalGas + 200_000

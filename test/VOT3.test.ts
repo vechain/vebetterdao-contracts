@@ -5,7 +5,7 @@ import { describe, it } from "mocha"
 import { getImplementationAddress } from "@openzeppelin/upgrades-core"
 import { deployProxy } from "../scripts/helpers"
 
-describe("VOT3 - @shard6", function () {
+describe("VOT3 - @shard2", function () {
   describe("Deployment", function () {
     it("should deploy the contract", async function () {
       const { vot3 } = await getOrDeployContractInstances({ forceDeploy: false })

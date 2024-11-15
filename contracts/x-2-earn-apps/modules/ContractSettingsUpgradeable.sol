@@ -47,6 +47,18 @@ abstract contract ContractSettingsUpgradeable is Initializable, X2EarnAppsUpgrad
     }
   }
 
+  /**
+   * @dev Sets the value for {baseURI}
+   */
+  function __ContractSettings_init(string memory baseURI_) internal onlyInitializing {
+    __ContractSettings_init_unchained(baseURI_);
+  }
+
+  function __ContractSettings_init_unchained(string memory baseURI_) internal onlyInitializing {
+    ContractSettingsStorage storage $ = _getContractSettingsStorage();
+    $._baseURI = baseURI_;
+  }
+
   // ---------- Internal ---------- //
 
   /**

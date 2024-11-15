@@ -35,11 +35,11 @@ import { GovernorClockLogicV3 } from "./governance/libraries/GovernorClockLogicV
 import { GovernorConfiguratorV3 } from "./governance/libraries/GovernorConfiguratorV3.sol";
 import { GovernorTypesV3 } from "./governance/libraries/GovernorTypesV3.sol";
 import { GovernorStorageV3 } from "./governance/GovernorStorageV3.sol";
-import { IVoterRewardsV2 } from "../V2/interfaces/IVoterRewardsV2.sol";
+import { IVoterRewards } from "../../interfaces/IVoterRewards.sol";
 import { IVOT3 } from "../../interfaces/IVOT3.sol";
 import { IB3TR } from "../../interfaces/IB3TR.sol";
-import { IB3TRGovernorV3 } from "./interfaces/IB3TRGovernorV3.sol";
-import { IXAllocationVotingGovernorV2 } from "../V2/interfaces/IXAllocationVotingGovernorV2.sol";
+import { IB3TRGovernor } from "./interfaces/IB3TRGovernor.sol";
+import { IXAllocationVotingGovernor } from "../../interfaces/IXAllocationVotingGovernor.sol";
 import { TimelockControllerUpgradeable } from "@openzeppelin/contracts-upgradeable/governance/TimelockControllerUpgradeable.sol";
 import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import { IERC1155Receiver } from "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
@@ -74,7 +74,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
  * - Added the ability to toggle the quadratic voting mechanism on and off
  */
 contract B3TRGovernorV3 is
-  IB3TRGovernorV3,
+  IB3TRGovernor,
   GovernorStorageV3,
   AccessControlUpgradeable,
   UUPSUpgradeable,
@@ -219,7 +219,7 @@ contract B3TRGovernorV3 is
   }
 
   /**
-   * @notice See {IB3TRGovernorV3-proposalProposer}.
+   * @notice See {IB3TRGovernor-proposalProposer}.
    * @param proposalId The id of the proposal
    * @return address The address of the proposer
    */
@@ -229,7 +229,7 @@ contract B3TRGovernorV3 is
   }
 
   /**
-   * @notice See {IB3TRGovernorV3-proposalEta}.
+   * @notice See {IB3TRGovernor-proposalEta}.
    * @param proposalId The id of the proposal
    * @return uint256 The ETA of the proposal
    */
@@ -239,7 +239,7 @@ contract B3TRGovernorV3 is
   }
 
   /**
-   * @notice See {IB3TRGovernorV3-proposalStartRound}
+   * @notice See {IB3TRGovernor-proposalStartRound}
    * @param proposalId The id of the proposal
    * @return uint256 The start round of the proposal
    */
@@ -249,7 +249,7 @@ contract B3TRGovernorV3 is
   }
 
   /**
-   * @notice See {IB3TRGovernorV3-proposalSnapshot}.
+   * @notice See {IB3TRGovernor-proposalSnapshot}.
    * We take for granted that the round starts the block after it ends. But it can happen that the round is not started yet for whatever reason.
    * Knowing this, if the proposal starts 4 rounds in the future we need to consider also those extra blocks used to start the rounds.
    * @param proposalId The id of the proposal
@@ -261,7 +261,7 @@ contract B3TRGovernorV3 is
   }
 
   /**
-   * @notice See {IB3TRGovernorV3-proposalDeadline}.
+   * @notice See {IB3TRGovernor-proposalDeadline}.
    * @param proposalId The id of the proposal
    * @return uint256 The deadline of the proposal
    */
@@ -298,7 +298,7 @@ contract B3TRGovernorV3 is
   }
 
   /**
-   * @notice See {IB3TRGovernorV3-getVotes}.
+   * @notice See {IB3TRGovernor-getVotes}.
    * @param account The address of the account
    * @param timepoint The timepoint to get the votes at
    * @return uint256 The number of votes
@@ -309,7 +309,7 @@ contract B3TRGovernorV3 is
   }
 
   /**
-   * @notice Returns the quadratic voting power that `account` has.  See {IB3TRGovernorV3-getQuadraticVotingPower}.
+   * @notice Returns the quadratic voting power that `account` has.  See {IB3TRGovernor-getQuadraticVotingPower}.
    * @param account The address of the account
    * @param timepoint The timepoint to get the voting power at
    * @return uint256 The quadratic voting power
@@ -406,7 +406,7 @@ contract B3TRGovernorV3 is
   }
 
   /**
-   * @notice See {IB3TRGovernorV3-votingPeriod}.
+   * @notice See {IB3TRGovernor-votingPeriod}.
    * @return uint256 The voting period
    */
   function votingPeriod() external view returns (uint256) {
@@ -468,7 +468,7 @@ contract B3TRGovernorV3 is
   }
 
   /**
-   * @notice See {IB3TRGovernorV3-hasVoted}.
+   * @notice See {IB3TRGovernor-hasVoted}.
    * @param proposalId The id of the proposal
    * @param account The address of the account
    * @return bool True if the account has voted, false otherwise
@@ -530,7 +530,7 @@ contract B3TRGovernorV3 is
   }
 
   /**
-   * @notice See {IB3TRGovernorV3-name}.
+   * @notice See {IB3TRGovernor-name}.
    * @return string The name of the governor
    */
   function name() external view returns (string memory) {
@@ -558,7 +558,7 @@ contract B3TRGovernorV3 is
   }
 
   /**
-   * @notice See {IB3TRGovernorV3-version}.
+   * @notice See {IB3TRGovernor-version}.
    * @return string The version of the governor
    */
   function version() external pure returns (string memory) {
@@ -566,7 +566,7 @@ contract B3TRGovernorV3 is
   }
 
   /**
-   * @notice See {IB3TRGovernorV3-hashProposal}.
+   * @notice See {IB3TRGovernor-hashProposal}.
    * The proposal id is produced by hashing the ABI encoded `targets` array, the `values` array, the `calldatas` array
    * and the descriptionHash (bytes32 which itself is the keccak256 hash of the description string). This proposal id
    * can be produced from the proposal data which is part of the {ProposalCreated} event. It can even be computed in
@@ -601,18 +601,18 @@ contract B3TRGovernorV3 is
 
   /**
    * @notice The voter rewards contract.
-   * @return IVoterRewardsV2 The voter rewards contract
+   * @return IVoterRewards The voter rewards contract
    */
-  function voterRewards() external view returns (IVoterRewardsV2) {
+  function voterRewards() external view returns (IVoterRewards) {
     GovernorStorageTypesV3.GovernorStorage storage $ = getGovernorStorage();
     return $.voterRewards;
   }
 
   /**
    * @notice The XAllocationVotingGovernor contract.
-   * @return IXAllocationVotingGovernorV2 The XAllocationVotingGovernor contract
+   * @return IXAllocationVotingGovernor The XAllocationVotingGovernor contract
    */
-  function xAllocationVoting() external view returns (IXAllocationVotingGovernorV2) {
+  function xAllocationVoting() external view returns (IXAllocationVotingGovernor) {
     GovernorStorageTypesV3.GovernorStorage storage $ = getGovernorStorage();
     return $.xAllocationVoting;
   }
@@ -652,7 +652,7 @@ contract B3TRGovernorV3 is
   }
 
   /**
-   * @notice See {IB3TRGovernorV3-propose}.
+   * @notice See {IB3TRGovernor-propose}.
    * Callable only when contract is not paused.
    * @param targets The list of target addresses
    * @param values The list of values to send
@@ -675,7 +675,7 @@ contract B3TRGovernorV3 is
   }
 
   /**
-   * @notice See {IB3TRGovernorV3-queue}.
+   * @notice See {IB3TRGovernor-queue}.
    * Callable only when contract is not paused.
    * @param targets The list of target addresses
    * @param values The list of values to send
@@ -694,7 +694,7 @@ contract B3TRGovernorV3 is
   }
 
   /**
-   * @notice See {IB3TRGovernorV3-execute}.
+   * @notice See {IB3TRGovernor-execute}.
    * Callable only when contract is not paused.
    * @param targets The list of target addresses
    * @param values The list of values to send
@@ -740,7 +740,7 @@ contract B3TRGovernorV3 is
   }
 
   /**
-   * @notice See {IB3TRGovernorV3-castVote}.
+   * @notice See {IB3TRGovernor-castVote}.
    * @param proposalId The id of the proposal
    * @param support The support value (0 = against, 1 = for, 2 = abstain)
    * @return uint256 The voting power
@@ -751,7 +751,7 @@ contract B3TRGovernorV3 is
   }
 
   /**
-   * @notice See {IB3TRGovernorV3-castVoteWithReason}.
+   * @notice See {IB3TRGovernor-castVoteWithReason}.
    * @param proposalId The id of the proposal
    * @param support The support value (0 = against, 1 = for, 2 = abstain)
    * @param reason The reason for the vote
@@ -880,7 +880,7 @@ contract B3TRGovernorV3 is
    * This function is only callable through governance proposals or by the CONTRACTS_ADDRESS_MANAGER_ROLE
    * @param newVoterRewards The new voter rewards contract
    */
-  function setVoterRewards(IVoterRewardsV2 newVoterRewards) public onlyRoleOrGovernance(CONTRACTS_ADDRESS_MANAGER_ROLE) {
+  function setVoterRewards(IVoterRewards newVoterRewards) public onlyRoleOrGovernance(CONTRACTS_ADDRESS_MANAGER_ROLE) {
     GovernorStorageTypesV3.GovernorStorage storage $ = getGovernorStorage();
     GovernorConfiguratorV3.setVoterRewards($, newVoterRewards);
   }
@@ -891,7 +891,7 @@ contract B3TRGovernorV3 is
    * @param newXAllocationVoting The new xAllocationVoting contract
    */
   function setXAllocationVoting(
-    IXAllocationVotingGovernorV2 newXAllocationVoting
+    IXAllocationVotingGovernor newXAllocationVoting
   ) public onlyRoleOrGovernance(CONTRACTS_ADDRESS_MANAGER_ROLE) {
     GovernorStorageTypesV3.GovernorStorage storage $ = getGovernorStorage();
     GovernorConfiguratorV3.setXAllocationVoting($, newXAllocationVoting);
@@ -925,7 +925,7 @@ contract B3TRGovernorV3 is
     bytes4 interfaceId
   ) public pure override(IERC165, AccessControlUpgradeable) returns (bool) {
     return
-      interfaceId == type(IB3TRGovernorV3).interfaceId ||
+      interfaceId == type(IB3TRGovernor).interfaceId ||
       interfaceId == type(IERC1155Receiver).interfaceId ||
       interfaceId == type(IERC165).interfaceId;
   }

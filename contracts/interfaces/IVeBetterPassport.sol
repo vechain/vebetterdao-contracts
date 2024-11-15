@@ -387,18 +387,16 @@ interface IVeBetterPassport {
   /// @param xAllocationVoting The xAllocationVoting contract address
   function setXAllocationVoting(IXAllocationVotingGovernor xAllocationVoting) external;
 
-  /// @notice Link an account (which will become an entity) to a passport (an address that is not an enitity)
-  /// After linking, the scores of the enitity will be stored to the linked account (passport)
-  /// Balance is not transferred and the entity will not be able to vote after linking.
+  /// @notice Delegate personhood to another address
   /// @param entity The entity's address
   /// @param deadline The deadline for the signature
   /// @param signature The signature of the delegation
   function linkEntityToPassportWithSignature(address entity, uint256 deadline, bytes memory signature) external;
 
-  /// @notice Link an account (which will become an entity) to a passport (an address that is not an enitity)
-  /// After linking, the scores of the enitity will be stored to the linked account (passport)
-  /// Balance is not transferred and the entity will not be able to vote after linking.
+  /// @notice Delegate the personhood to another address
   /// @dev The passport must accept the delegation
+  /// Eg: Alice has a personhood where she is not considered a person, she delegates her personhood to Bob, which
+  /// is considered a person. Bob now cannot vote because he is not considered a person anymore.
   function linkEntityToPassport(address passport) external;
 
   /// @notice Allow the passport to accept the delegation

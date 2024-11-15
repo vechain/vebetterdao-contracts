@@ -1,4 +1,4 @@
-import { ethers, network } from "hardhat"
+import { ethers } from "hardhat"
 import { expect } from "chai"
 import {
   ZERO_ADDRESS,
@@ -8,39 +8,14 @@ import {
   createProposalAndExecuteIt,
   filterEventsByName,
   getOrDeployContractInstances,
-  getStorageSlots,
-  getTwoUniqueRandomIndices,
   getVot3Tokens,
   parseAppAddedEvent,
   startNewAllocationRound,
-  waitForBlock,
   waitForCurrentRoundToEnd,
   waitForRoundToEnd,
 } from "./helpers"
 import { describe, it } from "mocha"
 import { getImplementationAddress } from "@openzeppelin/upgrades-core"
-import { createLocalConfig } from "../config/contracts/envs/local"
-import { createNodeHolder, endorseApp } from "./helpers/xnodes"
-import { time } from "@nomicfoundation/hardhat-network-helpers"
-import { deployAndUpgrade, deployProxy, deployProxyOnly, initializeProxy, upgradeProxy } from "../scripts/helpers"
-import {
-  B3TRGovernor,
-  Emissions,
-  GalaxyMember,
-  VeBetterPassport,
-  VeBetterPassportV1,
-  VoterRewards,
-  X2EarnApps,
-  X2EarnAppsV1,
-  X2EarnApps__factory,
-  X2EarnRewardsPool,
-  XAllocationPool,
-  XAllocationVoting,
-} from "../typechain-types"
-import { SeedAccount, getTestKeys } from "../scripts/helpers/seedAccounts"
-import { buildTxBody, signAndSendTx } from "../scripts/helpers/txHelper"
-import { APPS } from "../scripts/deploy/setup"
-import { clauseBuilder, unitsUtils, type TransactionBody, coder, FunctionFragment } from "@vechain/sdk-core"
 
 describe("X-Apps - @shard3", function () {
   describe("Deployment", function () {
@@ -52,35 +27,17 @@ describe("X-Apps - @shard3", function () {
 
   describe("Contract upgradeablity", () => {
     it("Cannot initialize twice", async function () {
-      const config = createLocalConfig()
-      const { x2EarnApps, vechainNodesMock, veBetterPassport, x2EarnCreator } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-      await catchRevert(
-        x2EarnApps.initializeV2(
-          config.XAPP_GRACE_PERIOD,
-          await vechainNodesMock.getAddress(),
-          await veBetterPassport.getAddress(),
-          await x2EarnCreator.getAddress(),
-        ),
-      )
+      const { x2EarnApps, owner } = await getOrDeployContractInstances({ forceDeploy: true })
+      await catchRevert(x2EarnApps.initialize("ipfs://", [owner.address], owner.address, owner.address))
     })
 
     it("User with UPGRADER_ROLE should be able to upgrade the contract", async function () {
-      const { x2EarnApps, owner, administrationUtils, endorsementUtils, voteEligibilityUtils } =
-        await getOrDeployContractInstances({
-          forceDeploy: true,
-        })
-
-      // Deploy the implementation contract
-      const Contract = await ethers.getContractFactory("X2EarnApps", {
-        libraries: {
-          AdministrationUtils: await administrationUtils.getAddress(),
-          EndorsementUtils: await endorsementUtils.getAddress(),
-          VoteEligibilityUtils: await voteEligibilityUtils.getAddress(),
-        },
+      const { x2EarnApps, owner } = await getOrDeployContractInstances({
+        forceDeploy: true,
       })
 
+      // Deploy the implementation contract
+      const Contract = await ethers.getContractFactory("X2EarnApps")
       const implementation = await Contract.deploy()
       await implementation.waitForDeployment()
 
@@ -99,19 +56,12 @@ describe("X-Apps - @shard3", function () {
     })
 
     it("Only user with UPGRADER_ROLE should be able to upgrade the contract", async function () {
-      const { x2EarnApps, otherAccount, administrationUtils, endorsementUtils, voteEligibilityUtils } =
-        await getOrDeployContractInstances({
-          forceDeploy: true,
-        })
+      const { x2EarnApps, otherAccount } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
 
       // Deploy the implementation contract
-      const Contract = await ethers.getContractFactory("X2EarnApps", {
-        libraries: {
-          AdministrationUtils: await administrationUtils.getAddress(),
-          EndorsementUtils: await endorsementUtils.getAddress(),
-          VoteEligibilityUtils: await voteEligibilityUtils.getAddress(),
-        },
-      })
+      const Contract = await ethers.getContractFactory("X2EarnApps")
       const implementation = await Contract.deploy()
       await implementation.waitForDeployment()
 
@@ -134,1047 +84,7 @@ describe("X-Apps - @shard3", function () {
         forceDeploy: true,
       })
 
-      expect(await x2EarnApps.version()).to.equal("2")
-    })
-
-    it("X2Earn Apps Info added pre contract upgrade should should be same after upgrade", async () => {
-      const config = createLocalConfig()
-      config.EMISSIONS_CYCLE_DURATION = 24
-      const {
-        timeLock,
-        owner,
-        otherAccounts,
-        vechainNodesMock,
-        veBetterPassport,
-        administrationUtils,
-        endorsementUtils,
-        voteEligibilityUtils,
-        x2EarnCreator,
-      } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      // Deploy X2EarnApps
-      const x2EarnAppsV1 = (await deployProxy("X2EarnAppsV1", [
-        "ipfs://",
-        [await timeLock.getAddress(), owner.address],
-        owner.address,
-        owner.address,
-      ])) as X2EarnAppsV1
-
-      // Add app 1
-      await x2EarnAppsV1
-        .connect(owner)
-        .addApp(otherAccounts[2].address, otherAccounts[2].address, "My app", "metadataURI")
-      // Add app 2
-      await x2EarnAppsV1
-        .connect(owner)
-        .addApp(otherAccounts[3].address, otherAccounts[3].address, "My app #2", "metadataURI")
-
-      // start round using V1 contract
-      await startNewAllocationRound()
-
-      // Add app 3 during first round
-      await x2EarnAppsV1
-        .connect(owner)
-        .addApp(otherAccounts[4].address, otherAccounts[4].address, "My app #3", "metadataURI")
-
-      const appsV1 = await x2EarnAppsV1.apps()
-
-      // wait for round to end
-      await waitForCurrentRoundToEnd()
-
-      // Upgrade X2EarnAppsV1 to X2EarnApps
-      const x2EarnApps = (await upgradeProxy(
-        "X2EarnAppsV1",
-        "X2EarnApps",
-        await x2EarnAppsV1.getAddress(),
-        [
-          config.XAPP_GRACE_PERIOD,
-          await vechainNodesMock.getAddress(),
-          await veBetterPassport.getAddress(),
-          await x2EarnCreator.getAddress(),
-        ],
-        {
-          version: 2,
-          libraries: {
-            AdministrationUtils: await administrationUtils.getAddress(),
-            EndorsementUtils: await endorsementUtils.getAddress(),
-            VoteEligibilityUtils: await voteEligibilityUtils.getAddress(),
-          },
-        },
-      )) as X2EarnApps
-
-      // start new round
-      await startNewAllocationRound()
-
-      const appsV2 = await x2EarnApps.apps()
-
-      expect(appsV1).to.eql(appsV2)
-    })
-    it("X2Earn Apps added pre contract upgrade should need endorsement after upgrade and should be in grace period", async () => {
-      const config = createLocalConfig()
-      config.EMISSIONS_CYCLE_DURATION = 24
-      const {
-        xAllocationVoting,
-        x2EarnRewardsPool,
-        xAllocationPool,
-        timeLock,
-        x2EarnCreator,
-        owner,
-        nodeManagement,
-        otherAccounts,
-        veBetterPassport,
-        administrationUtils,
-        endorsementUtils,
-        voteEligibilityUtils,
-      } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      // Deploy X2EarnApps
-      const x2EarnAppsV1 = (await deployProxy("X2EarnAppsV1", [
-        "ipfs://",
-        [await timeLock.getAddress(), owner.address],
-        owner.address,
-        owner.address,
-      ])) as X2EarnAppsV1
-
-      await x2EarnRewardsPool.setX2EarnApps(await x2EarnAppsV1.getAddress())
-      await xAllocationPool.setX2EarnAppsAddress(await x2EarnAppsV1.getAddress())
-      await xAllocationVoting.setX2EarnAppsAddress(await x2EarnAppsV1.getAddress())
-
-      const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
-      const app2Id = ethers.keccak256(ethers.toUtf8Bytes("My app #2"))
-      const app3Id = ethers.keccak256(ethers.toUtf8Bytes("My app #3"))
-
-      // Create two MjolnirX node holder with an endorsement score of 100
-      await createNodeHolder(7, otherAccounts[1]) // Node strength level 7 corresponds (MjolnirX) to an endorsement score of 100
-      await createNodeHolder(7, otherAccounts[2]) // Node strength level 7 corresponds (MjolnirX) to an endorsement score of 100
-
-      // Add apps -> should be eligble for next round
-      await x2EarnAppsV1
-        .connect(owner)
-        .addApp(otherAccounts[2].address, otherAccounts[2].address, "My app", "metadataURI")
-      await x2EarnAppsV1
-        .connect(owner)
-        .addApp(otherAccounts[3].address, otherAccounts[3].address, "My app #2", "metadataURI")
-
-      // start round using V1 contract
-      const round1 = await startNewAllocationRound()
-
-      // Add app -> should be eligble for next round
-      await x2EarnAppsV1
-        .connect(owner)
-        .addApp(otherAccounts[4].address, otherAccounts[4].address, "My app #3", "metadataURI")
-
-      // check eligibilty
-      expect(await x2EarnAppsV1.isEligibleNow(app1Id)).to.eql(true)
-      expect(await x2EarnAppsV1.isEligibleNow(app2Id)).to.eql(true)
-      expect(await x2EarnAppsV1.isEligibleNow(app3Id)).to.eql(true)
-
-      expect(await xAllocationVoting.isEligibleForVote(app1Id, round1)).to.eql(true)
-      expect(await xAllocationVoting.isEligibleForVote(app2Id, round1)).to.eql(true)
-      expect(await xAllocationVoting.isEligibleForVote(app3Id, round1)).to.eql(false)
-
-      // wait for round to end
-      await waitForCurrentRoundToEnd()
-
-      // Upgrade X2EarnAppsV1 to X2EarnApps
-      const x2EarnAppsV2 = (await upgradeProxy(
-        "X2EarnAppsV1",
-        "X2EarnApps",
-        await x2EarnAppsV1.getAddress(),
-        [
-          config.XAPP_GRACE_PERIOD,
-          await nodeManagement.getAddress(),
-          await veBetterPassport.getAddress(),
-          await x2EarnCreator.getAddress(),
-        ],
-        {
-          version: 2,
-          libraries: {
-            AdministrationUtils: await administrationUtils.getAddress(),
-            EndorsementUtils: await endorsementUtils.getAddress(),
-            VoteEligibilityUtils: await voteEligibilityUtils.getAddress(),
-          },
-        },
-      )) as X2EarnApps
-
-      await veBetterPassport
-        .connect(owner)
-        .grantRole(await veBetterPassport.ACTION_SCORE_MANAGER_ROLE(), await x2EarnAppsV2.getAddress())
-
-      // start new round
-      const round2 = await startNewAllocationRound()
-
-      // check eligibilty
-      expect(await x2EarnAppsV2.isEligibleNow(app1Id)).to.eql(true)
-      expect(await x2EarnAppsV2.isEligibleNow(app2Id)).to.eql(true)
-      expect(await x2EarnAppsV2.isEligibleNow(app3Id)).to.eql(true)
-
-      // All apps should be eligible now
-      expect(await xAllocationVoting.isEligibleForVote(app1Id, round2)).to.eql(true)
-      expect(await xAllocationVoting.isEligibleForVote(app2Id, round2)).to.eql(true)
-      expect(await xAllocationVoting.isEligibleForVote(app3Id, round2)).to.eql(true)
-
-      // Need to check the status of the apps so that they SC will reconise apps are unendrosed
-      await x2EarnAppsV2.checkEndorsement(app1Id)
-      await x2EarnAppsV2.checkEndorsement(app2Id)
-      await x2EarnAppsV2.checkEndorsement(app3Id)
-
-      // All apps should be seeking endorsement
-      expect(await x2EarnAppsV2.isAppUnendorsed(app1Id)).to.eql(true)
-      expect(await x2EarnAppsV2.isAppUnendorsed(app2Id)).to.eql(true)
-      expect(await x2EarnAppsV2.isAppUnendorsed(app3Id)).to.eql(true)
-
-      // 2 out of the three apps get endorsed
-      await x2EarnAppsV2.connect(otherAccounts[1]).endorseApp(app1Id, 1) // Node holder endorsement score is 100
-      await x2EarnAppsV2.connect(otherAccounts[2]).endorseApp(app2Id, 2) // Node holder endorsement score is 100
-
-      // wait for round to end
-      await waitForCurrentRoundToEnd()
-
-      // Need to check the status of the apps so that they SC will reconise apps are unendrosed ans track grace period
-      await x2EarnAppsV2.checkEndorsement(app1Id)
-      await x2EarnAppsV2.checkEndorsement(app2Id)
-      await x2EarnAppsV2.checkEndorsement(app3Id)
-
-      // start new round
-      const round3 = await startNewAllocationRound()
-
-      // All apps should be eligible now
-      expect(await xAllocationVoting.isEligibleForVote(app1Id, round3)).to.eql(true)
-      expect(await xAllocationVoting.isEligibleForVote(app2Id, round3)).to.eql(true)
-      expect(await xAllocationVoting.isEligibleForVote(app3Id, round3)).to.eql(true)
-
-      // Only 1 app should be seeking endorsement
-      expect(await x2EarnAppsV2.isAppUnendorsed(app1Id)).to.eql(false)
-      expect(await x2EarnAppsV2.isAppUnendorsed(app2Id)).to.eql(false)
-      expect(await x2EarnAppsV2.isAppUnendorsed(app3Id)).to.eql(true)
-
-      // wait for round to end
-      await waitForCurrentRoundToEnd()
-
-      // Need to check the status of the apps so that they SC will reconise apps are unendrosed and track grace period
-      await x2EarnAppsV2.checkEndorsement(app1Id)
-      await x2EarnAppsV2.checkEndorsement(app2Id)
-      await x2EarnAppsV2.checkEndorsement(app3Id)
-
-      // start new round -> app3Id has had two rounds unendorsed so it is no longer in grace period an dnot eligeble for voting
-      const round4 = await startNewAllocationRound()
-
-      // All apps should be eligible now
-      expect(await xAllocationVoting.isEligibleForVote(app1Id, round4)).to.eql(true)
-      expect(await xAllocationVoting.isEligibleForVote(app2Id, round4)).to.eql(true)
-      expect(await xAllocationVoting.isEligibleForVote(app3Id, round4)).to.eql(false)
-
-      // Only 1 app should be seeking endorsement
-      expect(await x2EarnAppsV2.isAppUnendorsed(app1Id)).to.eql(false)
-      expect(await x2EarnAppsV2.isAppUnendorsed(app2Id)).to.eql(false)
-      expect(await x2EarnAppsV2.isAppUnendorsed(app3Id)).to.eql(true)
-    })
-
-    it("Should not have state conflict after upgrading to V2", async () => {
-      const config = createLocalConfig()
-      config.EMISSIONS_CYCLE_DURATION = 24
-
-      const {
-        xAllocationVoting,
-        x2EarnRewardsPool,
-        xAllocationPool,
-        timeLock,
-        owner,
-        vechainNodesMock,
-        otherAccounts,
-        veBetterPassport,
-        endorsementUtils,
-        administrationUtils,
-        voteEligibilityUtils,
-        x2EarnCreator,
-      } = await getOrDeployContractInstances({ forceDeploy: true })
-
-      // Deploy X2EarnAppsV1
-      const x2EarnAppsV1 = (await deployProxy("X2EarnAppsV1", [
-        "ipfs://",
-        [await timeLock.getAddress(), owner.address],
-        owner.address,
-        owner.address,
-      ])) as X2EarnAppsV1
-
-      await x2EarnRewardsPool.setX2EarnApps(await x2EarnAppsV1.getAddress())
-      await xAllocationPool.setX2EarnAppsAddress(await x2EarnAppsV1.getAddress())
-      await xAllocationVoting.setX2EarnAppsAddress(await x2EarnAppsV1.getAddress())
-
-      const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
-      const app2Id = ethers.keccak256(ethers.toUtf8Bytes("My app #2"))
-      const app3Id = ethers.keccak256(ethers.toUtf8Bytes("My app #3"))
-
-      // Create two MjolnirX node holders with an endorsement score of 100
-      await createNodeHolder(7, otherAccounts[1]) // Node strength level 7 corresponds (MjolnirX) to an endorsement score of 100
-      await createNodeHolder(7, otherAccounts[2]) // Node strength level 7 corresponds (MjolnirX) to an endorsement score of 100
-
-      // Add apps -> should be eligible for the next round
-      await x2EarnAppsV1
-        .connect(owner)
-        .addApp(otherAccounts[2].address, otherAccounts[2].address, "My app", "metadataURI")
-      await x2EarnAppsV1
-        .connect(owner)
-        .addApp(otherAccounts[3].address, otherAccounts[3].address, "My app #2", "metadataURI")
-
-      // Start round using V1 contract
-      const round1 = await startNewAllocationRound()
-
-      // Add app -> should be eligible for the next round
-      await x2EarnAppsV1
-        .connect(owner)
-        .addApp(otherAccounts[4].address, otherAccounts[4].address, "My app #3", "metadataURI")
-
-      // Check eligibility
-      expect(await x2EarnAppsV1.isEligibleNow(app1Id)).to.eql(true)
-      expect(await x2EarnAppsV1.isEligibleNow(app2Id)).to.eql(true)
-      expect(await x2EarnAppsV1.isEligibleNow(app3Id)).to.eql(true)
-
-      expect(await xAllocationVoting.isEligibleForVote(app1Id, round1)).to.eql(true)
-      expect(await xAllocationVoting.isEligibleForVote(app2Id, round1)).to.eql(true)
-      expect(await xAllocationVoting.isEligibleForVote(app3Id, round1)).to.eql(false)
-
-      // Wait for round to end
-      await waitForCurrentRoundToEnd()
-
-      const initialSlotVoteEligibility = BigInt("0xb5b8d618af1ffb8d5bcc4bd23f445ba34ed08d7a16d1e1b5411cfbe7913e5900")
-      const initialSlotSettings = BigInt("0x83b9a7e51f394efa93107c3888716138908bbbe611dfc86afa3639a826441100")
-      const initialSlotAppsStorage = BigInt("0xb6909058bd527140b8d55a44344c5e42f1f148f1b3b16df7641882df8dd72900")
-      const initialSlotAdministration = BigInt("0x5830f0e95c01712d916c34d9e2fa42e9f749b325b67bce7382d70bb99c623500")
-
-      const storageSlots = await getStorageSlots(
-        x2EarnAppsV1.getAddress(),
-        initialSlotVoteEligibility,
-        initialSlotSettings,
-        initialSlotAppsStorage,
-        initialSlotAdministration,
-      )
-
-      // Upgrade X2EarnAppsV1 to X2EarnAppsV2
-      const x2EarnAppsV2 = await upgradeProxy(
-        "X2EarnAppsV1",
-        "X2EarnApps",
-        await x2EarnAppsV1.getAddress(),
-        [
-          config.XAPP_GRACE_PERIOD,
-          await vechainNodesMock.getAddress(),
-          await veBetterPassport.getAddress(),
-          await x2EarnCreator.getAddress(),
-        ],
-        {
-          version: 2,
-          libraries: {
-            AdministrationUtils: await administrationUtils.getAddress(),
-            EndorsementUtils: await endorsementUtils.getAddress(),
-            VoteEligibilityUtils: await voteEligibilityUtils.getAddress(),
-          },
-        },
-      )
-
-      const storageSlotsAfter = await getStorageSlots(
-        x2EarnAppsV2.getAddress(),
-        initialSlotVoteEligibility,
-        initialSlotSettings,
-        initialSlotAppsStorage,
-        initialSlotAdministration,
-      )
-
-      // Check if storage slots are the same after upgrade
-      for (let i = 0; i < storageSlots.length; i++) {
-        expect(storageSlots[i]).to.equal(storageSlotsAfter[i])
-      }
-    })
-
-    it.skip("Check no issues upgrading to V2 with addition of libraries", async function () {
-      const config = createLocalConfig()
-      config.EMISSIONS_CYCLE_DURATION = 50
-      const {
-        otherAccounts,
-        otherAccount,
-        owner,
-        vechainNodesMock,
-        timeLock,
-        b3tr,
-        vot3,
-        treasury,
-        x2EarnCreator,
-        nodeManagement,
-        passportChecksLogicV1,
-        passportConfiguratorV1,
-        passportDelegationLogicV1,
-        passportPersonhoodLogicV1,
-        passportPoPScoreLogicV1,
-        passportSignalingLogicV1,
-        passportEntityLogicV1,
-        passportWhitelistBlacklistLogicV1,
-        passportChecksLogic,
-        passportConfigurator,
-        passportDelegationLogic,
-        passportPersonhoodLogic,
-        passportPoPScoreLogic,
-        passportSignalingLogic,
-        passportWhitelistBlacklistLogic,
-        passportEntityLogic,
-        governorClockLogicLibV1,
-        governorConfiguratorLibV1,
-        governorDepositLogicLibV1,
-        governorFunctionRestrictionsLogicLibV1,
-        governorProposalLogicLibV1,
-        governorQuorumLogicLibV1,
-        governorStateLogicLibV1,
-        governorVotesLogicLibV1,
-        governorClockLogicLibV3,
-        governorConfiguratorLibV3,
-        governorDepositLogicLibV3,
-        governorFunctionRestrictionsLogicLibV3,
-        governorProposalLogicLibV3,
-        governorQuorumLogicLibV3,
-        governorStateLogicLibV3,
-        governorVotesLogicLibV3,
-        governorClockLogicLibV4,
-        governorConfiguratorLibV4,
-        governorDepositLogicLibV4,
-        governorFunctionRestrictionsLogicLibV4,
-        governorProposalLogicLibV4,
-        governorQuorumLogicLibV4,
-        governorStateLogicLibV4,
-        governorVotesLogicLibV4,
-        governorClockLogicLib,
-        governorConfiguratorLib,
-        governorDepositLogicLib,
-        governorFunctionRestrictionsLogicLib,
-        governorProposalLogicLib,
-        governorQuorumLogicLib,
-        governorStateLogicLib,
-        governorVotesLogicLib,
-        administrationUtils,
-        endorsementUtils,
-        voteEligibilityUtils,
-      } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      // Deploy X2EarnApps V1 and all the other contracts
-      const x2EarnAppsV1 = (await deployProxy("X2EarnAppsV1", [
-        "ipfs://",
-        [await timeLock.getAddress(), owner.address],
-        owner.address,
-        owner.address,
-      ])) as X2EarnAppsV1
-
-      const veBetterPassportContractAddress = await deployProxyOnly("VeBetterPassportV1", {
-        PassportChecksLogicV1: await passportChecksLogicV1.getAddress(),
-        PassportConfiguratorV1: await passportConfiguratorV1.getAddress(),
-        PassportEntityLogicV1: await passportEntityLogicV1.getAddress(),
-        PassportDelegationLogicV1: await passportDelegationLogicV1.getAddress(),
-        PassportPersonhoodLogicV1: await passportPersonhoodLogicV1.getAddress(),
-        PassportPoPScoreLogicV1: await passportPoPScoreLogicV1.getAddress(),
-        PassportSignalingLogicV1: await passportSignalingLogicV1.getAddress(),
-        PassportWhitelistAndBlacklistLogicV1: await passportWhitelistBlacklistLogicV1.getAddress(),
-      })
-
-      const x2EarnRewardsPool = (await deployAndUpgrade(
-        ["X2EarnRewardsPoolV1", "X2EarnRewardsPoolV2", "X2EarnRewardsPoolV3", "X2EarnRewardsPool"],
-        [
-          [
-            owner.address, // admin
-            owner.address, // contracts address manager
-            owner.address, // upgrader //TODO: transferRole
-            await b3tr.getAddress(),
-            await x2EarnAppsV1.getAddress(),
-          ],
-          [
-            owner.address, // impact admin address
-            config.X_2_EARN_INITIAL_IMPACT_KEYS, // impact keys
-          ],
-          [veBetterPassportContractAddress],
-          [],
-        ],
-        {
-          versions: [undefined, 2, 3, 4],
-        },
-      )) as X2EarnRewardsPool
-
-      const xAllocationPool = (await deployAndUpgrade(
-        ["XAllocationPoolV1", "XAllocationPoolV2", "XAllocationPool"],
-        [
-          [
-            owner.address, // admin
-            owner.address, // upgrader
-            owner.address, // contractsAddressManager
-            await b3tr.getAddress(),
-            await treasury.getAddress(),
-            await x2EarnAppsV1.getAddress(),
-            await x2EarnRewardsPool.getAddress(),
-          ],
-          [],
-          [],
-        ],
-        {
-          versions: [undefined, 2, 3],
-        },
-      )) as XAllocationPool
-
-      const galaxyMember = (await deployAndUpgrade(
-        ["GalaxyMemberV1", "GalaxyMember"],
-        [
-          [
-            {
-              name: "VeBetterDAO Galaxy Member",
-              symbol: "GM",
-              admin: owner.address,
-              upgrader: owner.address,
-              pauser: owner.address,
-              minter: owner.address,
-              contractsAddressManager: owner.address,
-              maxLevel: 5,
-              baseTokenURI: config.GM_NFT_BASE_URI,
-              b3trToUpgradeToLevel: config.GM_NFT_B3TR_REQUIRED_TO_UPGRADE_TO_LEVEL,
-              b3tr: await b3tr.getAddress(),
-              treasury: await treasury.getAddress(),
-            },
-          ],
-          [await vechainNodesMock.getAddress(), owner.address, config.GM_NFT_NODE_TO_FREE_LEVEL],
-        ],
-        {
-          versions: [undefined, 2],
-        },
-      )) as GalaxyMember
-
-      const emissions = (await deployAndUpgrade(
-        ["EmissionsV1", "Emissions"],
-        [
-          [
-            {
-              minter: owner.address,
-              admin: owner.address,
-              upgrader: owner.address,
-              contractsAddressManager: owner.address,
-              decaySettingsManager: owner.address,
-              b3trAddress: await b3tr.getAddress(),
-              destinations: [
-                await xAllocationPool.getAddress(),
-                config.VOTE_2_EARN_POOL_ADDRESS,
-                await treasury.getAddress(),
-                config.MIGRATION_ADDRESS,
-              ],
-              initialXAppAllocation: config.INITIAL_X_ALLOCATION,
-              cycleDuration: config.EMISSIONS_CYCLE_DURATION,
-              decaySettings: [
-                config.EMISSIONS_X_ALLOCATION_DECAY_PERCENTAGE,
-                config.EMISSIONS_VOTE_2_EARN_DECAY_PERCENTAGE,
-                config.EMISSIONS_X_ALLOCATION_DECAY_PERIOD,
-                config.EMISSIONS_VOTE_2_EARN_ALLOCATION_DECAY_PERIOD,
-              ],
-              treasuryPercentage: config.EMISSIONS_TREASURY_PERCENTAGE,
-              maxVote2EarnDecay: config.EMISSIONS_MAX_VOTE_2_EARN_DECAY_PERCENTAGE,
-              migrationAmount: config.MIGRATION_AMOUNT,
-            },
-          ],
-          [config.EMISSIONS_IS_NOT_ALIGNED],
-        ],
-        {
-          versions: [undefined, 2],
-        },
-      )) as Emissions
-
-      const voterRewards = (await deployAndUpgrade(
-        ["VoterRewardsV1", "VoterRewardsV2", "VoterRewards"],
-        [
-          [
-            owner.address, // admin
-            owner.address, // upgrader // TODO: transferRole
-            owner.address, // contractsAddressManager
-            await emissions.getAddress(),
-            await galaxyMember.getAddress(),
-            await b3tr.getAddress(),
-            config.VOTER_REWARDS_LEVELS,
-            config.VOTER_REWARDS_MULTIPLIER,
-          ],
-          [],
-          [],
-        ],
-        {
-          versions: [undefined, 2, 3],
-        },
-      )) as VoterRewards
-
-      const xAllocationVoting = (await deployAndUpgrade(
-        ["XAllocationVotingV1", "XAllocationVotingV2", "XAllocationVoting"],
-        [
-          [
-            {
-              vot3Token: await vot3.getAddress(),
-              quorumPercentage: config.X_ALLOCATION_VOTING_QUORUM_PERCENTAGE,
-              initialVotingPeriod: config.EMISSIONS_CYCLE_DURATION - 1,
-              timeLock: await timeLock.getAddress(),
-              voterRewards: await voterRewards.getAddress(),
-              emissions: await emissions.getAddress(),
-              admins: [await timeLock.getAddress(), owner.address],
-              upgrader: owner.address,
-              contractsAddressManager: owner.address,
-              x2EarnAppsAddress: await x2EarnAppsV1.getAddress(),
-              baseAllocationPercentage: config.X_ALLOCATION_POOL_BASE_ALLOCATION_PERCENTAGE,
-              appSharesCap: config.X_ALLOCATION_POOL_APP_SHARES_MAX_CAP,
-              votingThreshold: config.X_ALLOCATION_VOTING_VOTING_THRESHOLD,
-            },
-          ],
-          [veBetterPassportContractAddress],
-          [],
-        ],
-        {
-          versions: [undefined, 2, 3],
-        },
-      )) as XAllocationVoting
-
-      const veBetterPassportV1 = (await initializeProxy(
-        veBetterPassportContractAddress,
-        "VeBetterPassportV1",
-        [
-          {
-            x2EarnApps: await x2EarnAppsV1.getAddress(),
-            xAllocationVoting: await xAllocationVoting.getAddress(),
-            galaxyMember: await galaxyMember.getAddress(),
-            signalingThreshold: config.VEPASSPORT_BOT_SIGNALING_THRESHOLD, //signalingThreshold
-            roundsForCumulativeScore: config.VEPASSPORT_ROUNDS_FOR_CUMULATIVE_PARTICIPATION_SCORE, //roundsForCumulativeScore
-            minimumGalaxyMemberLevel: config.VEPASSPORT_GALAXY_MEMBER_MINIMUM_LEVEL, //galaxyMemberMinimumLevel
-            blacklistThreshold: config.VEPASSPORT_BLACKLIST_THRESHOLD_PERCENTAGE, //blacklistThreshold
-            whitelistThreshold: config.VEPASSPORT_WHITELIST_THRESHOLD_PERCENTAGE, //whitelistThreshold
-            maxEntitiesPerPassport: config.VEPASSPORT_PASSPORT_MAX_ENTITIES, //maxEntitiesPerPassport
-            decayRate: config.VEPASSPORT_DECAY_RATE, //decayRate
-          },
-          {
-            admin: owner.address, // admins
-            botSignaler: owner.address, // botSignaler
-            upgrader: owner.address, // upgrader
-            settingsManager: owner.address, // settingsManager
-            roleGranter: owner.address, // roleGranter
-            blacklister: owner.address, // blacklister
-            whitelister: owner.address, // whitelistManager
-            actionRegistrar: owner.address, // actionRegistrar
-            actionScoreManager: owner.address, // actionScoreManager
-          },
-        ],
-        {
-          PassportChecksLogicV1: await passportChecksLogicV1.getAddress(),
-          PassportConfiguratorV1: await passportConfiguratorV1.getAddress(),
-          PassportEntityLogicV1: await passportEntityLogicV1.getAddress(),
-          PassportDelegationLogicV1: await passportDelegationLogicV1.getAddress(),
-          PassportPersonhoodLogicV1: await passportPersonhoodLogicV1.getAddress(),
-          PassportPoPScoreLogicV1: await passportPoPScoreLogicV1.getAddress(),
-          PassportSignalingLogicV1: await passportSignalingLogicV1.getAddress(),
-          PassportWhitelistAndBlacklistLogicV1: await passportWhitelistBlacklistLogicV1.getAddress(),
-        },
-      )) as VeBetterPassportV1
-
-      const veBetterPassport = (await upgradeProxy(
-        "VeBetterPassportV1",
-        "VeBetterPassport",
-        await veBetterPassportV1.getAddress(),
-        [],
-        {
-          version: 2,
-          libraries: {
-            PassportChecksLogic: await passportChecksLogic.getAddress(),
-            PassportConfigurator: await passportConfigurator.getAddress(),
-            PassportEntityLogic: await passportEntityLogic.getAddress(),
-            PassportDelegationLogic: await passportDelegationLogic.getAddress(),
-            PassportPersonhoodLogic: await passportPersonhoodLogic.getAddress(),
-            PassportPoPScoreLogic: await passportPoPScoreLogic.getAddress(),
-            PassportSignalingLogic: await passportSignalingLogic.getAddress(),
-            PassportWhitelistAndBlacklistLogic: await passportWhitelistBlacklistLogic.getAddress(),
-          },
-        },
-      )) as VeBetterPassport
-
-      const governor = (await deployAndUpgrade(
-        ["B3TRGovernorV1", "B3TRGovernorV2", "B3TRGovernorV3", "B3TRGovernorV4", "B3TRGovernor"],
-        [
-          [
-            {
-              vot3Token: await vot3.getAddress(),
-              timelock: await timeLock.getAddress(),
-              xAllocationVoting: await xAllocationVoting.getAddress(),
-              b3tr: await b3tr.getAddress(),
-              quorumPercentage: config.B3TR_GOVERNOR_QUORUM_PERCENTAGE,
-              initialDepositThreshold: config.B3TR_GOVERNOR_DEPOSIT_THRESHOLD,
-              initialMinVotingDelay: config.B3TR_GOVERNOR_MIN_VOTING_DELAY,
-              initialVotingThreshold: config.B3TR_GOVERNOR_VOTING_THRESHOLD,
-              voterRewards: await voterRewards.getAddress(),
-              isFunctionRestrictionEnabled: true,
-            },
-            {
-              governorAdmin: owner.address,
-              pauser: owner.address,
-              contractsAddressManager: owner.address,
-              proposalExecutor: owner.address,
-              governorFunctionSettingsRoleAddress: owner.address,
-            },
-          ],
-          [],
-          [],
-          [veBetterPassportContractAddress],
-          [],
-        ],
-        {
-          versions: [undefined, 2, 3, 4, 5],
-          libraries: [
-            {
-              GovernorClockLogicV1: await governorClockLogicLibV1.getAddress(),
-              GovernorConfiguratorV1: await governorConfiguratorLibV1.getAddress(),
-              GovernorDepositLogicV1: await governorDepositLogicLibV1.getAddress(),
-              GovernorFunctionRestrictionsLogicV1: await governorFunctionRestrictionsLogicLibV1.getAddress(),
-              GovernorProposalLogicV1: await governorProposalLogicLibV1.getAddress(),
-              GovernorQuorumLogicV1: await governorQuorumLogicLibV1.getAddress(),
-              GovernorStateLogicV1: await governorStateLogicLibV1.getAddress(),
-              GovernorVotesLogicV1: await governorVotesLogicLibV1.getAddress(),
-            },
-            {
-              GovernorClockLogicV1: await governorClockLogicLibV1.getAddress(),
-              GovernorConfiguratorV1: await governorConfiguratorLibV1.getAddress(),
-              GovernorDepositLogicV1: await governorDepositLogicLibV1.getAddress(),
-              GovernorFunctionRestrictionsLogicV1: await governorFunctionRestrictionsLogicLibV1.getAddress(),
-              GovernorProposalLogicV1: await governorProposalLogicLibV1.getAddress(),
-              GovernorQuorumLogicV1: await governorQuorumLogicLibV1.getAddress(),
-              GovernorStateLogicV1: await governorStateLogicLibV1.getAddress(),
-              GovernorVotesLogicV1: await governorVotesLogicLibV1.getAddress(),
-            },
-            {
-              GovernorClockLogicV3: await governorClockLogicLibV3.getAddress(),
-              GovernorConfiguratorV3: await governorConfiguratorLibV3.getAddress(),
-              GovernorDepositLogicV3: await governorDepositLogicLibV3.getAddress(),
-              GovernorFunctionRestrictionsLogicV3: await governorFunctionRestrictionsLogicLibV3.getAddress(),
-              GovernorProposalLogicV3: await governorProposalLogicLibV3.getAddress(),
-              GovernorQuorumLogicV3: await governorQuorumLogicLibV3.getAddress(),
-              GovernorStateLogicV3: await governorStateLogicLibV3.getAddress(),
-              GovernorVotesLogicV3: await governorVotesLogicLibV3.getAddress(),
-            },
-            {
-              GovernorClockLogicV4: await governorClockLogicLibV4.getAddress(),
-              GovernorConfiguratorV4: await governorConfiguratorLibV4.getAddress(),
-              GovernorDepositLogicV4: await governorDepositLogicLibV4.getAddress(),
-              GovernorFunctionRestrictionsLogicV4: await governorFunctionRestrictionsLogicLibV4.getAddress(),
-              GovernorProposalLogicV4: await governorProposalLogicLibV4.getAddress(),
-              GovernorQuorumLogicV4: await governorQuorumLogicLibV4.getAddress(),
-              GovernorStateLogicV4: await governorStateLogicLibV4.getAddress(),
-              GovernorVotesLogicV4: await governorVotesLogicLibV4.getAddress(),
-            },
-            {
-              GovernorClockLogic: await governorClockLogicLib.getAddress(),
-              GovernorConfigurator: await governorConfiguratorLib.getAddress(),
-              GovernorDepositLogic: await governorDepositLogicLib.getAddress(),
-              GovernorFunctionRestrictionsLogic: await governorFunctionRestrictionsLogicLib.getAddress(),
-              GovernorProposalLogic: await governorProposalLogicLib.getAddress(),
-              GovernorQuorumLogic: await governorQuorumLogicLib.getAddress(),
-              GovernorStateLogic: await governorStateLogicLib.getAddress(),
-              GovernorVotesLogic: await governorVotesLogicLib.getAddress(),
-            },
-          ],
-        },
-      )) as B3TRGovernor
-
-      // ------------------ Set up contracts ------------------
-      await veBetterPassportV1
-        .connect(owner)
-        .grantRole(await veBetterPassportV1.ACTION_REGISTRAR_ROLE(), await x2EarnRewardsPool.getAddress())
-
-      // Grant admin role to voter rewards for registering x allocation voting
-      await xAllocationVoting
-        .connect(owner)
-        .grantRole(await xAllocationVoting.DEFAULT_ADMIN_ROLE(), emissions.getAddress())
-
-      await voterRewards
-        .connect(owner)
-        .grantRole(await voterRewards.VOTE_REGISTRAR_ROLE(), await xAllocationVoting.getAddress())
-
-      await voterRewards.connect(owner).grantRole(await voterRewards.VOTE_REGISTRAR_ROLE(), await governor.getAddress())
-
-      await xAllocationPool.connect(owner).setXAllocationVotingAddress(await xAllocationVoting.getAddress())
-      await xAllocationPool.connect(owner).setEmissionsAddress(await emissions.getAddress())
-
-      // Set xAllocationGovernor and VoterRewards in emissions
-      await emissions.connect(owner).setXAllocationsGovernorAddress(await xAllocationVoting.getAddress())
-      await emissions.connect(owner).setVote2EarnAddress(await voterRewards.getAddress())
-      await b3tr.connect(owner).grantRole(await b3tr.MINTER_ROLE(), await emissions.getAddress())
-
-      await veBetterPassport.toggleCheck(4)
-
-      const roundStarterRole = await xAllocationVoting.ROUND_STARTER_ROLE()
-      await xAllocationVoting
-        .connect(owner)
-        .grantRole(roundStarterRole, await emissions.getAddress())
-        .then(async tx => await tx.wait())
-      await xAllocationVoting
-        .connect(owner)
-        .grantRole(roundStarterRole, owner.address)
-        .then(async tx => await tx.wait())
-
-      const testKeys = getTestKeys(50)
-
-      let eligibleAppIds: string[] = []
-      APPS.forEach(async (app, index) => {
-        const tx = await x2EarnAppsV1.addApp(app.teamWalletAddress, app.admin, app.name, app.metadataURI)
-        await tx.wait()
-
-        const appId = ethers.keccak256(ethers.toUtf8Bytes(app.name))
-        eligibleAppIds.push(appId)
-
-        // Add moderators
-        for (let i = 0; i < 3; i++) {
-          await x2EarnAppsV1.connect(owner).addAppModerator(appId, testKeys[index + i].address)
-        }
-      })
-
-      // Get VTHO tokens
-      for (let i = 0; i < otherAccounts.length; i++) {
-        // Create two node holders with an endorsement score
-        await getVot3Tokens(otherAccounts[i], "1000")
-        expect(await vot3.balanceOf(otherAccounts[i].address)).to.eql(ethers.parseEther("1000"))
-      }
-
-      expect(await x2EarnAppsV1.appsCount()).to.eql(8n)
-      expect((await x2EarnAppsV1.allEligibleApps()).length).to.eql(8)
-      await emissions.connect(owner).bootstrap()
-      await emissions.connect(owner).start()
-
-      // Expect round 1 to start
-      expect(await emissions.getCurrentCycle()).to.eql(1n)
-
-      // Start voting rounds
-      for (let i = 1; i < 18; i++) {
-        // Get each of the users to vote
-        otherAccounts.map(async account => {
-          const [firstAppIndex, secondAppIndex] = getTwoUniqueRandomIndices(eligibleAppIds.length)
-          const appIdsToVoteOn = [eligibleAppIds[firstAppIndex], eligibleAppIds[secondAppIndex]]
-
-          const voteAmounts = [
-            ethers.parseEther((Math.random() * 100).toFixed(2)), // Random amount for the first app
-            ethers.parseEther((Math.random() * 100).toFixed(2)), // Random amount for the second app
-          ]
-
-          const tx = await xAllocationVoting.connect(account).castVote(i, appIdsToVoteOn, voteAmounts)
-          await tx.wait()
-        })
-
-        // Wait for the round to end
-        const blockNextCycle = await emissions.getNextCycleBlock()
-        await waitForBlock(Number(blockNextCycle))
-
-        // Claim rewards as voter
-        otherAccounts.map(async account => {
-          const amount = await voterRewards.cycleToVoterToTotal(i, account.address)
-          expect(amount).to.not.eql(0n)
-          const tx = await voterRewards.connect(account).claimReward(i, account.address)
-          await tx.wait()
-
-          // Covert to vot3
-          await b3tr.connect(account).approve(await vot3.getAddress(), amount)
-          await vot3.connect(account).convertToVOT3(amount)
-
-          expect(await voterRewards.cycleToVoterToTotal(i, account.address)).to.eql(0n)
-        })
-
-        // Claim X2Earn rewards
-        eligibleAppIds.map(async appId => {
-          expect(await xAllocationPool.claimableAmount(i, appId)).to.not.eql(0n)
-          const tx = await xAllocationPool.connect(owner).claim(i, appId)
-          await tx.wait()
-        })
-
-        await emissions.distribute()
-      }
-
-      // Upgrade to V2 of X2EarnApps
-      const x2EarnAppsV2 = (await upgradeProxy(
-        "X2EarnAppsV1",
-        "X2EarnApps",
-        await x2EarnAppsV1.getAddress(),
-        [
-          config.XAPP_GRACE_PERIOD,
-          await nodeManagement.getAddress(),
-          await veBetterPassport.getAddress(),
-          await x2EarnCreator.getAddress(),
-        ],
-        {
-          version: 2,
-          libraries: {
-            AdministrationUtils: await administrationUtils.getAddress(),
-            EndorsementUtils: await endorsementUtils.getAddress(),
-            VoteEligibilityUtils: await voteEligibilityUtils.getAddress(),
-          },
-        },
-      )) as X2EarnApps
-
-      // Grant minter and burner role to X2Earn contract
-      await x2EarnCreator.connect(owner).grantRole(await x2EarnCreator.MINTER_ROLE(), await x2EarnAppsV2.getAddress())
-      await x2EarnCreator.connect(owner).grantRole(await x2EarnCreator.BURNER_ROLE(), await x2EarnAppsV2.getAddress())
-
-      // Check if all apps are still registered
-      expect(await x2EarnAppsV2.appsCount()).to.eql(8n)
-      expect((await x2EarnAppsV2.allEligibleApps()).length).to.eql(8)
-
-      // Grant the ACTION_SCORE_MANAGER_ROLE to X2Earn contract
-      await veBetterPassport
-        .grantRole(await veBetterPassport.ACTION_SCORE_MANAGER_ROLE(), await x2EarnAppsV2.getAddress())
-        .then(async tx => await tx.wait())
-
-      // Check if all moderators are still registered and endorse each app
-      for (let i = 0; i < eligibleAppIds.length; i++) {
-        const moderators = await x2EarnAppsV2.appModerators(eligibleAppIds[i])
-        expect(moderators[0]).to.eql(testKeys[i].address)
-        expect(moderators[1]).to.eql(testKeys[i + 1].address)
-        expect(moderators[2]).to.eql(testKeys[i + 2].address)
-
-        // Check endorsement status -> all apps should be unendorsed -> Grace period should start
-        await expect(x2EarnAppsV2.checkEndorsement(eligibleAppIds[i])).to.emit(
-          x2EarnAppsV2,
-          "AppUnendorsedGracePeriodStarted",
-        )
-        expect(await x2EarnAppsV2.isAppUnendorsed(eligibleAppIds[i])).to.eql(true)
-
-        const secuirtyScore = await veBetterPassport.appSecurity(eligibleAppIds[i])
-
-        // Endorse the app
-        await vechainNodesMock.addToken(otherAccounts[i], 7, false, 0, 0)
-        await expect(x2EarnAppsV2.connect(otherAccounts[i]).endorseApp(eligibleAppIds[i], BigInt(i + 1))).to.emit(
-          x2EarnAppsV2,
-          "AppEndorsed",
-        )
-        // Check endorsement status -> all apps should be endorsed
-        await x2EarnAppsV2.checkEndorsement(eligibleAppIds[i])
-        expect(await x2EarnAppsV2.isAppUnendorsed(eligibleAppIds[i])).to.eql(false)
-
-        // Secuirty score should remain same
-        expect(await veBetterPassport.appSecurity(eligibleAppIds[i])).to.eql(secuirtyScore)
-      }
-
-      // Continue voting rounds
-      for (let i = 1; i < 5; i++) {
-        // Get each of the users to vote
-        otherAccounts.map(async account => {
-          const [firstAppIndex, secondAppIndex] = getTwoUniqueRandomIndices(eligibleAppIds.length)
-          const appIdsToVoteOn = [eligibleAppIds[firstAppIndex], eligibleAppIds[secondAppIndex]]
-
-          const voteAmounts = [
-            ethers.parseEther((Math.random() * 100).toFixed(2)), // Random amount for the first app
-            ethers.parseEther((Math.random() * 100).toFixed(2)), // Random amount for the second app
-          ]
-
-          const tx = await xAllocationVoting.connect(account).castVote(i, appIdsToVoteOn, voteAmounts)
-          await tx.wait()
-        })
-
-        // Wait for the round to end
-        const blockNextCycle = await emissions.getNextCycleBlock()
-        await waitForBlock(Number(blockNextCycle))
-
-        // Claim rewards as voter
-        otherAccounts.map(async account => {
-          const amount = await voterRewards.cycleToVoterToTotal(i, account.address)
-          expect(amount).to.not.eql(0n)
-          const tx = await voterRewards.connect(account).claimReward(i, account.address)
-          await tx.wait()
-
-          // Covert to vot3
-          await b3tr.connect(account).approve(await vot3.getAddress(), amount)
-          await vot3.connect(account).convertToVOT3(amount)
-
-          expect(await voterRewards.cycleToVoterToTotal(i, account.address)).to.eql(0n)
-        })
-
-        // Claim X2Earn rewards
-        eligibleAppIds.map(async appId => {
-          expect(await xAllocationPool.claimableAmount(i, appId)).to.not.eql(0n)
-          const tx = await xAllocationPool.connect(owner).claim(i, appId)
-          await tx.wait()
-        })
-
-        // Check endorsement status -> all apps should be unendorsed -> Grace period should start
-        for (let i = 0; i < eligibleAppIds.length; i++) {
-          await x2EarnAppsV2.checkEndorsement(eligibleAppIds[i])
-          expect(await x2EarnAppsV2.isEligibleNow(eligibleAppIds[i])).to.eql(true)
-        }
-
-        await emissions.distribute()
-      }
-
-      // Submit a new app
-      await x2EarnAppsV2
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-      const newAppId = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[0].address))
-
-      // Should be 1 app pending endorsement
-      expect(await x2EarnAppsV2.unendorsedAppIds()).to.deep.equal([newAppId])
-
-      // Should not be recognised as part of ecosystem yet
-      expect(await x2EarnAppsV2.apps()).to.not.include(newAppId)
-
-      // App security score should be 0
-      expect(await veBetterPassport.appSecurity(newAppId)).to.eql(0n)
-
-      // Endorse the app
-      await vechainNodesMock.addToken(otherAccount, 7, false, 0, 0)
-      const tokenId = await vechainNodesMock.ownerToId(otherAccount.address)
-      await x2EarnAppsV2.connect(otherAccount).endorseApp(newAppId, tokenId)
-
-      // Should be eligible
-      expect(await x2EarnAppsV2.isEligibleNow(newAppId)).to.eql(true)
-
-      // Should not be eligible for voting yet
-      const currentRound = await emissions.getCurrentCycle()
-      expect(await xAllocationVoting.isEligibleForVote(newAppId, currentRound)).to.eql(false)
-
-      // Should no longer be looking for endorsement
-      expect(await x2EarnAppsV2.unendorsedAppIds()).to.deep.equal([])
-
-      // Security score should be LOW
-      expect(await veBetterPassport.appSecurity(newAppId)).to.eql(1n)
-
-      // Cannot Vote on the app
-      await catchRevert(
-        xAllocationVoting
-          .connect(otherAccounts[1])
-          .castVote(1, [newAppId, eligibleAppIds[0]], [ethers.parseEther("10"), 0]),
-      )
-
-      // Wait for the round to end
-      const blockNextCycle = await emissions.getNextCycleBlock()
-      await waitForBlock(Number(blockNextCycle))
-
-      // Start new round of voting
-      await emissions.distribute()
-
-      // Should be eligible for voting now
-      expect(await xAllocationVoting.isEligibleForVote(newAppId, currentRound + 1n)).to.eql(true)
-
-      // Get each of the users to vote
-      otherAccounts.map(async account => {
-        const [firstAppIndex] = getTwoUniqueRandomIndices(eligibleAppIds.length)
-        const appIdsToVoteOn = [newAppId, eligibleAppIds[firstAppIndex]]
-
-        const voteAmounts = [
-          ethers.parseEther((Math.random() * 100).toFixed(2)), // Random amount for the first app
-          ethers.parseEther((Math.random() * 100).toFixed(2)), // Random amount for the second app
-        ]
-
-        const tx = await xAllocationVoting.connect(account).castVote(currentRound + 1n, appIdsToVoteOn, voteAmounts)
-        await tx.wait()
-      })
-
-      // Wait for the round to end
-      const blockNextCycle2 = await emissions.getNextCycleBlock()
-      await waitForBlock(Number(blockNextCycle2))
-
-      // New App can claim rewards
-      expect(await xAllocationPool.claimableAmount(currentRound + 1n, newAppId)).to.not.eql(0n)
-      const tx = await xAllocationPool.connect(owner).claim(currentRound + 1n, newAppId)
-      await tx.wait()
+      expect(await x2EarnApps.version()).to.equal("1")
     })
   })
 
@@ -1197,43 +107,16 @@ describe("X-Apps - @shard3", function () {
       expect(await x2EarnApps.MAX_MODERATORS()).to.eql(100n)
       expect(await x2EarnApps.MAX_REWARD_DISTRIBUTORS()).to.eql(100n)
     })
-
-    it("Only admin can update node management contract address", async function () {
-      const { x2EarnApps, otherAccount, nodeManagement, owner } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      expect(await x2EarnApps.getNodeManagementContract()).to.eql(await nodeManagement.getAddress())
-      await catchRevert(x2EarnApps.connect(otherAccount).setNodeManagementContract(otherAccount.address))
-
-      await x2EarnApps.connect(owner).setNodeManagementContract(await otherAccount.getAddress())
-
-      expect(await x2EarnApps.getNodeManagementContract()).to.eql(await otherAccount.getAddress())
-    })
-
-    it("Only admin can update veBetter passport contract address", async function () {
-      const { x2EarnApps, otherAccount, veBetterPassport, owner } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      expect(await x2EarnApps.getVeBetterPassportContract()).to.eql(await veBetterPassport.getAddress())
-      await catchRevert(x2EarnApps.connect(otherAccount).setVeBetterPassportContract(otherAccount.address))
-
-      await x2EarnApps.connect(owner).setVeBetterPassportContract(await otherAccount.getAddress())
-
-      expect(await x2EarnApps.getVeBetterPassportContract()).to.eql(await otherAccount.getAddress())
-    })
   })
 
   describe("Add apps", function () {
-    it("Should be able to register an app successfully", async function () {
+    it("Should be able to add an app successfully", async function () {
       const { x2EarnApps, otherAccounts, owner } = await getOrDeployContractInstances({ forceDeploy: true })
       const app1Id = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[0].address))
 
       let tx = await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
       let receipt = await tx.wait()
       if (!receipt) throw new Error("No receipt")
 
@@ -1245,18 +128,66 @@ describe("X-Apps - @shard3", function () {
       expect(address).to.eql(otherAccounts[0].address)
     })
 
-    it("Should not be able to register an app if it is already registered", async function () {
+    it("Should not be able to add an app if it is already added", async function () {
       const { x2EarnApps, otherAccounts, owner } = await getOrDeployContractInstances({ forceDeploy: true })
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
 
       await catchRevert(
         x2EarnApps
           .connect(owner)
-          .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI"),
+          .addApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI"),
       )
     })
+
+    it("Only admin address should be able to add an app", async function () {
+      const { x2EarnApps, otherAccounts } = await getOrDeployContractInstances({ forceDeploy: true })
+
+      await catchRevert(
+        x2EarnApps
+          .connect(otherAccounts[0])
+          .addApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI"),
+      )
+    })
+
+    it("Should be possible to add a new app through the DAO", async function () {
+      const { otherAccounts, x2EarnApps, owner, timeLock } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      await bootstrapAndStartEmissions()
+
+      const proposer = otherAccounts[0]
+      const voter1 = otherAccounts[1]
+      const app1Id = ethers.keccak256(ethers.toUtf8Bytes("Bike 4 Life"))
+
+      // check that the DAO is admin of the x2EarnApps contract
+      await x2EarnApps.connect(owner).grantRole(await x2EarnApps.GOVERNANCE_ROLE(), await timeLock.getAddress())
+      expect(await x2EarnApps.hasRole(await x2EarnApps.GOVERNANCE_ROLE(), await timeLock.getAddress())).to.be.true
+
+      // check that app does not exists
+      expect(await x2EarnApps.appExists(app1Id)).to.be.false
+
+      await createProposalAndExecuteIt(
+        proposer,
+        voter1,
+        x2EarnApps,
+        await ethers.getContractFactory("X2EarnApps"),
+        "Add app to the list",
+        "addApp",
+        [otherAccounts[1].address, otherAccounts[1].address, "Bike 4 Life", "metadataURI"],
+      )
+
+      // check that app was added
+      const app = await x2EarnApps.app(app1Id)
+      expect(app[0]).to.eql(app1Id)
+      expect(app[1]).to.eql(otherAccounts[1].address)
+      expect(app[2]).to.eql("Bike 4 Life")
+
+      const admin = await x2EarnApps.appAdmin(app1Id)
+      expect(admin).to.eql(otherAccounts[1].address)
+    }).timeout(18000000)
 
     it("Should be able to fetch app team wallet address", async function () {
       const { x2EarnApps, otherAccounts, owner } = await getOrDeployContractInstances({
@@ -1267,10 +198,10 @@ describe("X-Apps - @shard3", function () {
       const app2Id = ethers.keccak256(ethers.toUtf8Bytes("My app #2"))
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[2].address, otherAccounts[2].address, "My app", "metadataURI")
+        .addApp(otherAccounts[2].address, otherAccounts[2].address, "My app", "metadataURI")
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[3].address, otherAccounts[3].address, "My app #2", "metadataURI")
+        .addApp(otherAccounts[3].address, otherAccounts[3].address, "My app #2", "metadataURI")
 
       const app1ReceiverAddress = await x2EarnApps.teamWalletAddress(app1Id)
       const app2ReceiverAddress = await x2EarnApps.teamWalletAddress(app2Id)
@@ -1278,94 +209,40 @@ describe("X-Apps - @shard3", function () {
       expect(app2ReceiverAddress).to.eql(otherAccounts[3].address)
     })
 
-    it("Cannot register an app that has ZERO address as the team wallet address", async function () {
+    it("Cannot add an app that has ZERO address as the team wallet address", async function () {
       const { x2EarnApps, otherAccounts, owner } = await getOrDeployContractInstances({
         forceDeploy: true,
       })
 
       await catchRevert(
-        x2EarnApps.connect(owner).submitApp(ZERO_ADDRESS, otherAccounts[2].address, "My app", "metadataURI"),
+        x2EarnApps.connect(owner).addApp(ZERO_ADDRESS, otherAccounts[2].address, "My app", "metadataURI"),
       )
     })
 
-    it("Cannot register an app that has ZERO address as the admin", async function () {
+    it("Cannot add an app that has ZERO address as the admin", async function () {
       const { x2EarnApps, otherAccounts, owner } = await getOrDeployContractInstances({
         forceDeploy: true,
       })
 
       await catchRevert(
-        x2EarnApps.connect(owner).submitApp(otherAccounts[2].address, ZERO_ADDRESS, "My app", "metadataURI"),
+        x2EarnApps.connect(owner).addApp(otherAccounts[2].address, ZERO_ADDRESS, "My app", "metadataURI"),
       )
-    })
-
-    it("Only users with the XAPP creator nft can register an app", async function () {
-      const { x2EarnApps, otherAccounts, x2EarnCreator } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      await expect(
-        x2EarnApps
-          .connect(otherAccounts[0])
-          .submitApp(otherAccounts[2].address, otherAccounts[2].address, "My app", "metadataURI"),
-      ).to.be.revertedWithCustomError(x2EarnApps, "X2EarnUnverifiedCreator")
-
-      // Mint the NFT
-      await x2EarnCreator.safeMint(otherAccounts[0].address)
-
-      await x2EarnApps
-        .connect(otherAccounts[0])
-        .submitApp(otherAccounts[2].address, otherAccounts[2].address, "My app", "metadataURI")
     })
   })
 
   describe("Fetch apps", function () {
-    it("Can get eligible apps count", async function () {
-      const { x2EarnApps, otherAccounts, owner, otherAccount } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
+    it("Can get apps count", async function () {
+      const { x2EarnApps, otherAccounts, owner } = await getOrDeployContractInstances({ forceDeploy: true })
 
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
-
-      const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
-      await endorseApp(app1Id, owner)
-
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[1].address, otherAccounts[1].address, "My app #2", "metadataURI")
-
-      const app2Id = ethers.keccak256(ethers.toUtf8Bytes("My app #2"))
-      await endorseApp(app2Id, otherAccount)
+        .addApp(otherAccounts[1].address, otherAccounts[1].address, "My app #2", "metadataURI")
 
       const appsCount = await x2EarnApps.appsCount()
       expect(appsCount).to.eql(2n)
-    })
-
-    it("Can get unendorsed app ids", async function () {
-      const { x2EarnApps, otherAccounts, owner } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
-
-      await x2EarnApps.unendorsedAppIds()
-      const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
-
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[1].address, otherAccounts[1].address, "My app #2", "metadataURI")
-      const app2Id = ethers.keccak256(ethers.toUtf8Bytes("My app #2"))
-
-      // unendorsed apps
-      const appIds = await x2EarnApps.unendorsedAppIds()
-      expect(appIds).to.eql([app1Id, app2Id])
-
-      // endorsed apps
-      const appsCount = await x2EarnApps.appsCount()
-      expect(appsCount).to.eql(0n)
     })
 
     it("Can retrieve app by id", async function () {
@@ -1374,7 +251,7 @@ describe("X-Apps - @shard3", function () {
       const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
 
       const app = await x2EarnApps.app(app1Id)
       expect(app.id).to.eql(app1Id)
@@ -1383,39 +260,17 @@ describe("X-Apps - @shard3", function () {
       expect(app.metadataURI).to.eql("metadataURI")
     })
 
-    it("Can index endorsed apps", async function () {
+    it("Can index apps", async function () {
       const { x2EarnApps, otherAccounts, owner } = await getOrDeployContractInstances({ forceDeploy: true })
 
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
-
-      const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
-      await endorseApp(app1Id, otherAccounts[0])
-
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[1].address, otherAccounts[1].address, "My app #2", "metadataURI")
-
-      const app2Id = ethers.keccak256(ethers.toUtf8Bytes("My app #2"))
-      await endorseApp(app2Id, otherAccounts[1])
+        .addApp(otherAccounts[1].address, otherAccounts[1].address, "My app #2", "metadataURI")
 
       const apps = await x2EarnApps.apps()
-      expect(apps.length).to.eql(2)
-    })
-
-    it("Can index unendorsed apps", async function () {
-      const { x2EarnApps, otherAccounts, owner } = await getOrDeployContractInstances({ forceDeploy: true })
-
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
-
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[1].address, otherAccounts[1].address, "My app #2", "metadataURI")
-
-      const apps = await x2EarnApps.unendorsedApps()
       expect(apps.length).to.eql(2)
     })
 
@@ -1424,27 +279,16 @@ describe("X-Apps - @shard3", function () {
 
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
-      const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
-      await endorseApp(app1Id, otherAccounts[0])
-
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[1].address, otherAccounts[1].address, "My app #2", "metadataURI")
-      const app2Id = ethers.keccak256(ethers.toUtf8Bytes("My app #2"))
-      await endorseApp(app2Id, otherAccounts[1])
-
+        .addApp(otherAccounts[1].address, otherAccounts[1].address, "My app #2", "metadataURI")
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[2].address, otherAccounts[2].address, "My app #3", "metadataURI")
-      const app3Id = ethers.keccak256(ethers.toUtf8Bytes("My app #3"))
-      await endorseApp(app3Id, otherAccounts[2])
-
+        .addApp(otherAccounts[2].address, otherAccounts[2].address, "My app #3", "metadataURI")
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[3].address, otherAccounts[3].address, "My app #4", "metadataURI")
-      const app4Id = ethers.keccak256(ethers.toUtf8Bytes("My app #4"))
-      await endorseApp(app4Id, otherAccounts[3])
+        .addApp(otherAccounts[3].address, otherAccounts[3].address, "My app #4", "metadataURI")
 
       const apps1 = await x2EarnApps.getPaginatedApps(0, 2)
       expect(apps1.length).to.eql(2)
@@ -1463,27 +307,16 @@ describe("X-Apps - @shard3", function () {
 
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
-      const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
-      await endorseApp(app1Id, otherAccounts[0])
-
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[1].address, otherAccounts[1].address, "My app #2", "metadataURI")
-      const app2Id = ethers.keccak256(ethers.toUtf8Bytes("My app #2"))
-      await endorseApp(app2Id, otherAccounts[1])
-
+        .addApp(otherAccounts[1].address, otherAccounts[1].address, "My app #2", "metadataURI")
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[2].address, otherAccounts[2].address, "My app #3", "metadataURI")
-      const app3Id = ethers.keccak256(ethers.toUtf8Bytes("My app #3"))
-      await endorseApp(app3Id, otherAccounts[2])
-
+        .addApp(otherAccounts[2].address, otherAccounts[2].address, "My app #3", "metadataURI")
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[3].address, otherAccounts[3].address, "My app #4", "metadataURI")
-      const app4Id = ethers.keccak256(ethers.toUtf8Bytes("My app #4"))
-      await endorseApp(app4Id, otherAccounts[3])
+        .addApp(otherAccounts[3].address, otherAccounts[3].address, "My app #4", "metadataURI")
 
       const count = await x2EarnApps.appsCount()
       expect(count).to.eql(4n)
@@ -1503,18 +336,16 @@ describe("X-Apps - @shard3", function () {
 
       // const limit = 1000
 
-      // let registerAppsPromises = []
+      // let addAppsPromises = []
       // for (let i = 1; i <= limit; i++) {
-      //   registerAppsPromises.push(
+      //   addAppsPromises.push(
       //     x2EarnApps
       //       .connect(owner)
-      //       .submitApp(otherAccounts[1].address, otherAccounts[1].address, "My app" + i, "metadataURI"),
+      //       .addApp(otherAccounts[1].address, otherAccounts[1].address, "My app" + i, "metadataURI"),
       //   )
-      //   const appId = ethers.keccak256(ethers.toUtf8Bytes("My app" + i))
-      //   await endorseApp(appId, otherAccounts[i])
       // }
 
-      // await Promise.all(registerAppsPromises)
+      // await Promise.all(addAppsPromises)
 
       // const apps = await x2EarnApps.apps()
       // expect(apps.length).to.eql(limit)
@@ -1527,7 +358,7 @@ describe("X-Apps - @shard3", function () {
   })
 
   describe("App availability for allocation voting", function () {
-    it("Should be possible to endorse an app and make it available for allocation voting", async function () {
+    it("Should be possible to add an app and make it available for allocation voting", async function () {
       const { x2EarnApps, xAllocationVoting, otherAccounts, owner } = await getOrDeployContractInstances({
         forceDeploy: true,
       })
@@ -1538,10 +369,7 @@ describe("X-Apps - @shard3", function () {
 
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-
-      const appId = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[0].address))
-      await endorseApp(appId, otherAccounts[0])
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
 
       let roundId = await startNewAllocationRound()
 
@@ -1559,8 +387,7 @@ describe("X-Apps - @shard3", function () {
       const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-      await endorseApp(app1Id, otherAccounts[0])
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
 
       let round1 = await startNewAllocationRound()
 
@@ -1598,11 +425,8 @@ describe("X-Apps - @shard3", function () {
       const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-      const appId = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[0].address))
-      await endorseApp(appId, otherAccounts[0])
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
 
-      expect(await x2EarnApps.isEligibleNow(app1Id)).to.eql(true)
       await x2EarnApps.connect(owner).setVotingEligibility(app1Id, false)
       expect(await x2EarnApps.isEligibleNow(app1Id)).to.eql(false)
 
@@ -1629,21 +453,6 @@ describe("X-Apps - @shard3", function () {
     })
 
     it("Non existing app is not eligible", async function () {
-      const { xAllocationVoting, x2EarnApps, owner, otherAccounts } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-
-      const appId = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[0].address))
-
-      expect(await x2EarnApps.isEligibleNow(appId)).to.eql(false)
-      expect(await x2EarnApps.isEligible(appId, (await xAllocationVoting.clock()) - 1n)).to.eql(false)
-    })
-
-    it("Non endorsed app is not eligible", async function () {
       const { xAllocationVoting, x2EarnApps } = await getOrDeployContractInstances({ forceDeploy: true })
 
       const app1Id = await x2EarnApps.hashAppName(ZERO_ADDRESS)
@@ -1660,26 +469,13 @@ describe("X-Apps - @shard3", function () {
       const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-
-      const appId = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[0].address))
-      await endorseApp(appId, otherAccounts[0])
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
 
       await expect(x2EarnApps.isEligible(app1Id, (await xAllocationVoting.clock()) + 1n)).to.be.reverted
     })
 
     it("DAO can make an app unavailable for allocation voting starting from next round", async function () {
-      const {
-        otherAccounts,
-        x2EarnApps,
-        xAllocationVoting,
-        emissions,
-        timeLock,
-        owner,
-        endorsementUtils,
-        administrationUtils,
-        voteEligibilityUtils,
-      } = await getOrDeployContractInstances({
+      const { otherAccounts, x2EarnApps, xAllocationVoting, emissions, timeLock } = await getOrDeployContractInstances({
         forceDeploy: true,
       })
 
@@ -1695,12 +491,15 @@ describe("X-Apps - @shard3", function () {
       // granting role to the timelock
       await x2EarnApps.grantRole(await x2EarnApps.GOVERNANCE_ROLE(), await timeLock.getAddress())
 
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, "Bike 4 Life", "metadataURI")
-      await endorseApp(app1Id, otherAccounts[0])
-
-      await waitForCurrentRoundToEnd()
+      await createProposalAndExecuteIt(
+        proposer,
+        voter1,
+        x2EarnApps,
+        await ethers.getContractFactory("X2EarnApps"),
+        "Add app to the list",
+        "addApp",
+        [otherAccounts[0].address, otherAccounts[0].address, "Bike 4 Life", "metadataURI"],
+      )
 
       // start new round
       await emissions.distribute()
@@ -1714,13 +513,7 @@ describe("X-Apps - @shard3", function () {
         proposer,
         voter1,
         x2EarnApps,
-        await ethers.getContractFactory("X2EarnApps", {
-          libraries: {
-            AdministrationUtils: await administrationUtils.getAddress(),
-            EndorsementUtils: await endorsementUtils.getAddress(),
-            VoteEligibilityUtils: await voteEligibilityUtils.getAddress(),
-          },
-        }),
+        await ethers.getContractFactory("X2EarnApps"),
         "Exclude app from the allocation voting rounds",
         "setVotingEligibility",
         [app1Id, false],
@@ -1750,6 +543,18 @@ describe("X-Apps - @shard3", function () {
       await catchRevert(x2EarnApps.connect(otherAccounts[0]).setVotingEligibility(app1Id, true))
     })
 
+    it("Only admin with governor role add an app to the list", async function () {
+      const { x2EarnApps, otherAccounts } = await getOrDeployContractInstances({ forceDeploy: false })
+
+      expect(await x2EarnApps.hasRole(await x2EarnApps.GOVERNANCE_ROLE(), otherAccounts[0].address)).to.eql(false)
+
+      await catchRevert(
+        x2EarnApps
+          .connect(otherAccounts[0])
+          .addApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI"),
+      )
+    })
+
     it("App needs to wait next round if added during an ongoing round", async function () {
       const { otherAccounts, x2EarnApps, owner, xAllocationVoting, veBetterPassport } =
         await getOrDeployContractInstances({
@@ -1771,10 +576,7 @@ describe("X-Apps - @shard3", function () {
 
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-
-      const appId = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[0].address))
-      await endorseApp(appId, otherAccounts[0])
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
       let isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
       expect(isEligibleForVote).to.eql(false)
 
@@ -1790,7 +592,7 @@ describe("X-Apps - @shard3", function () {
       await waitForRoundToEnd(round1)
       let round2 = await startNewAllocationRound()
 
-      // app should be eligible from this round
+      // app should not be eligible from this round
       isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round2)
       expect(isEligibleForVote).to.eql(true)
 
@@ -1811,557 +613,13 @@ describe("X-Apps - @shard3", function () {
     })
   })
 
-  describe("Creator NFT", function () {
-    it("Users with the XAPP creator nft can register an app sucesfully", async function () {
-      const { x2EarnApps, otherAccounts, x2EarnCreator } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      // Mint the NFT
-      await x2EarnCreator.safeMint(otherAccounts[0].address)
-
-      await x2EarnApps
-        .connect(otherAccounts[0])
-        .submitApp(otherAccounts[2].address, otherAccounts[2].address, otherAccounts[2].address, "metadataURI")
-
-      const app1Id = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[2].address))
-
-      // App should be registered successfully
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(true)
-
-      // User should be listed as one of the apps creators
-      expect(await x2EarnApps.appCreators(app1Id)).to.deep.equal([otherAccounts[0].address])
-    })
-
-    it("App admin can add more creators for the app", async function () {
-      const { x2EarnApps, otherAccounts, x2EarnCreator } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      // Mint the NFT
-      await x2EarnCreator.safeMint(otherAccounts[0].address)
-
-      await x2EarnApps
-        .connect(otherAccounts[0])
-        .submitApp(otherAccounts[2].address, otherAccounts[2].address, otherAccounts[2].address, "metadataURI")
-
-      const app1Id = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[2].address))
-
-      // App should be registered successfully
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(true)
-
-      // User should be listed as one of the apps creators
-      expect(await x2EarnApps.appCreators(app1Id)).to.deep.equal([otherAccounts[0].address])
-
-      // App admin can add more creators for the app
-      await expect(x2EarnApps.connect(otherAccounts[2]).addCreator(app1Id, otherAccounts[1].address)).to.emit(
-        x2EarnApps,
-        "CreatorAddedToApp",
-      )
-
-      // New creator should be added to the app
-      expect(await x2EarnApps.appCreators(app1Id)).to.deep.equal([otherAccounts[0].address, otherAccounts[1].address])
-    })
-
-    it("An app can have up to 3 creators", async function () {
-      const { x2EarnApps, otherAccounts, x2EarnCreator } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      // Mint the NFT
-      await x2EarnCreator.safeMint(otherAccounts[0].address)
-
-      await x2EarnApps
-        .connect(otherAccounts[0])
-        .submitApp(otherAccounts[2].address, otherAccounts[2].address, otherAccounts[2].address, "metadataURI")
-
-      const app1Id = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[2].address))
-
-      // App should be registered successfully
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(true)
-
-      // User should be listed as one of the apps creators
-      expect(await x2EarnApps.appCreators(app1Id)).to.deep.equal([otherAccounts[0].address])
-
-      // App admin can add more creators for the app
-      await x2EarnApps.connect(otherAccounts[2]).addCreator(app1Id, otherAccounts[1].address)
-
-      await x2EarnApps.connect(otherAccounts[2]).addCreator(app1Id, otherAccounts[2].address)
-
-      // New creators should be added to the app
-      expect(await x2EarnApps.appCreators(app1Id)).to.deep.equal([
-        otherAccounts[0].address,
-        otherAccounts[1].address,
-        otherAccounts[2].address,
-      ])
-
-      // Adding a fourth creator should fail
-      await expect(
-        x2EarnApps.connect(otherAccounts[2]).addCreator(app1Id, otherAccounts[3].address),
-      ).to.be.revertedWithCustomError(x2EarnApps, "X2EarnMaxCreatorsReached")
-    })
-
-    it("Same creator cannot be added twice to the same app", async function () {
-      const { x2EarnApps, otherAccounts, x2EarnCreator } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      // Mint the NFT
-      await x2EarnCreator.safeMint(otherAccounts[0].address)
-
-      await x2EarnApps
-        .connect(otherAccounts[0])
-        .submitApp(otherAccounts[2].address, otherAccounts[2].address, otherAccounts[2].address, "metadataURI")
-
-      const app1Id = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[2].address))
-
-      // App should be registered successfully
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(true)
-
-      // User should be listed as one of the apps creators
-      expect(await x2EarnApps.appCreators(app1Id)).to.deep.equal([otherAccounts[0].address])
-
-      // App admin can add more creators for the app
-      await x2EarnApps.connect(otherAccounts[2]).addCreator(app1Id, otherAccounts[1].address)
-
-      // New creator should be added to the app
-      expect(await x2EarnApps.appCreators(app1Id)).to.deep.equal([otherAccounts[0].address, otherAccounts[1].address])
-
-      // Adding the same creator again should fail
-      await expect(
-        x2EarnApps.connect(otherAccounts[2]).addCreator(app1Id, otherAccounts[1].address),
-      ).to.be.revertedWithCustomError(x2EarnApps, "X2EarnAlreadyCreator")
-    })
-
-    it("Should mint a creator NFT for a creator that gets added after registration that doesnt currently hold one", async function () {
-      const { x2EarnApps, otherAccounts, x2EarnCreator } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      // Mint the NFT
-      await x2EarnCreator.safeMint(otherAccounts[0].address)
-
-      await x2EarnApps
-        .connect(otherAccounts[0])
-        .submitApp(otherAccounts[2].address, otherAccounts[2].address, otherAccounts[2].address, "metadataURI")
-
-      const app1Id = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[2].address))
-
-      // Adding a new creator that doesnt hold a creator NFT
-      await expect(x2EarnApps.connect(otherAccounts[2]).addCreator(app1Id, otherAccounts[1].address)).to.emit(
-        x2EarnCreator,
-        "Transfer",
-      )
-
-      // New creator should be added to the app
-      expect(await x2EarnApps.appCreators(app1Id)).to.deep.equal([otherAccounts[0].address, otherAccounts[1].address])
-
-      // New creator should have a creator NFT minted for them
-      expect(await x2EarnCreator.balanceOf(otherAccounts[1].address)).to.eql(1n)
-
-      // Adding a new creator that already holds a creator NFT should not mint a new one
-      await x2EarnCreator.safeMint(otherAccounts[2].address) // Mint the NFT
-
-      const balanceBefore = await x2EarnCreator.balanceOf(otherAccounts[2].address)
-
-      // Adding the user with a creator NFT
-      await expect(x2EarnApps.connect(otherAccounts[2]).addCreator(app1Id, otherAccounts[2].address)).to.not.emit(
-        x2EarnCreator,
-        "Transfer",
-      )
-
-      // Balance of the user should remain the same
-      expect(await x2EarnCreator.balanceOf(otherAccounts[2].address)).to.eql(balanceBefore)
-    })
-
-    it("Should burn a creator NFT for a creator that gets removed from an app and is not a creator for any other app", async function () {
-      const { x2EarnApps, otherAccounts, x2EarnCreator } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      // Mint the NFT
-      await x2EarnCreator.safeMint(otherAccounts[0].address)
-
-      await x2EarnApps
-        .connect(otherAccounts[0])
-        .submitApp(otherAccounts[2].address, otherAccounts[2].address, otherAccounts[2].address, "metadataURI")
-
-      const app1Id = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[2].address))
-
-      // Adding a new creator
-      await x2EarnApps.connect(otherAccounts[2]).addCreator(app1Id, otherAccounts[1].address)
-
-      // New creator should be added to the app
-      expect(await x2EarnApps.appCreators(app1Id)).to.deep.equal([otherAccounts[0].address, otherAccounts[1].address])
-
-      // New creator should have a creator NFT minted for them
-      expect(await x2EarnCreator.balanceOf(otherAccounts[1].address)).to.eql(1n)
-
-      // Removing the creator
-      await expect(x2EarnApps.connect(otherAccounts[2]).removeAppCreator(app1Id, otherAccounts[1].address)).to.emit(
-        x2EarnCreator,
-        "Transfer",
-      )
-
-      // New creator should have their creator NFT burned
-      expect(await x2EarnCreator.balanceOf(otherAccounts[1].address)).to.eql(0n)
-    })
-
-    it("Should track the number of apps a creator is a part of", async function () {
-      const { x2EarnApps, otherAccounts, x2EarnCreator } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      // Mint the NFT
-      await x2EarnCreator.safeMint(otherAccounts[0].address)
-
-      await x2EarnApps
-        .connect(otherAccounts[0])
-        .submitApp(otherAccounts[2].address, otherAccounts[2].address, otherAccounts[2].address, "metadataURI")
-
-      await x2EarnApps
-        .connect(otherAccounts[0])
-        .submitApp(otherAccounts[3].address, otherAccounts[3].address, otherAccounts[3].address, "metadataURI")
-
-      const app1Id = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[2].address))
-      const app2Id = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[3].address))
-
-      // Adding a new creator
-      await x2EarnApps.connect(otherAccounts[2]).addCreator(app1Id, otherAccounts[1].address)
-      await x2EarnApps.connect(otherAccounts[3]).addCreator(app2Id, otherAccounts[1].address)
-
-      // New creator should be added to the app
-      expect(await x2EarnApps.appCreators(app1Id)).to.deep.equal([otherAccounts[0].address, otherAccounts[1].address])
-      expect(await x2EarnApps.appCreators(app2Id)).to.deep.equal([otherAccounts[0].address, otherAccounts[1].address])
-
-      // Should be considered a creator for 2 apps
-      expect(await x2EarnApps.isAppCreator(app1Id, otherAccounts[1].address)).to.eql(true)
-
-      // New creator should have a creator NFT minted for them
-      expect(await x2EarnCreator.balanceOf(otherAccounts[1].address)).to.eql(1n)
-      expect(await x2EarnApps.creatorApps(otherAccounts[0].address)).to.eql(2n)
-
-      // New creator should be part of 2 apps
-      expect(await x2EarnApps.creatorApps(otherAccounts[1].address)).to.eql(2n)
-      expect(await x2EarnApps.creatorApps(otherAccounts[0].address)).to.eql(2n)
-
-      // Removing the creator
-      await x2EarnApps.connect(otherAccounts[2]).removeAppCreator(app1Id, otherAccounts[1].address)
-      await x2EarnApps.connect(otherAccounts[3]).removeAppCreator(app2Id, otherAccounts[1].address)
-
-      // New creator should have their creator NFT burned
-      expect(await x2EarnCreator.balanceOf(otherAccounts[1].address)).to.eql(0n)
-      expect(await x2EarnApps.creatorApps(otherAccounts[1].address)).to.eql(0n)
-
-      expect(await x2EarnApps.appCreators(app1Id)).to.deep.equal([otherAccounts[0].address])
-      expect(await x2EarnApps.appCreators(app2Id)).to.deep.equal([otherAccounts[0].address])
-
-      // Should not be considered a creator for 2 apps
-      expect(await x2EarnApps.isAppCreator(app1Id, otherAccounts[1].address)).to.eql(false)
-
-      // Other creator should still be part of 2 apps
-      expect(await x2EarnApps.creatorApps(otherAccounts[0].address)).to.eql(2n)
-    })
-
-    it("Should not be able to remove a creator that is not part of the app", async function () {
-      const { x2EarnApps, otherAccounts, x2EarnCreator } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      // Mint the NFT
-      await x2EarnCreator.safeMint(otherAccounts[0].address)
-
-      await x2EarnApps
-        .connect(otherAccounts[0])
-        .submitApp(otherAccounts[2].address, otherAccounts[2].address, otherAccounts[2].address, "metadataURI")
-
-      const app1Id = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[2].address))
-
-      // Removing a creator that is not part of the app should fail
-      await expect(
-        x2EarnApps.connect(otherAccounts[2]).removeAppCreator(app1Id, otherAccounts[3].address),
-      ).to.be.revertedWithCustomError(x2EarnApps, "X2EarnNonexistentCreator")
-    })
-
-    it("Should not be able to add a creator to an app that does not exist", async function () {
-      const { x2EarnApps, otherAccounts } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      const app1Id = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[2].address))
-
-      // Adding a creator to an app that does not exist should fail
-      await expect(x2EarnApps.addCreator(app1Id, otherAccounts[1].address)).to.be.revertedWithCustomError(
-        x2EarnApps,
-        "X2EarnNonexistentApp",
-      )
-    })
-
-    it("Should not be able to remove a creator from an app that does not exist", async function () {
-      const { x2EarnApps, otherAccounts } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      const app1Id = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[2].address))
-
-      // Removing a creator from an app that does not exist should fail
-      await expect(x2EarnApps.removeAppCreator(app1Id, otherAccounts[1].address)).to.be.revertedWithCustomError(
-        x2EarnApps,
-        "X2EarnNonexistentApp",
-      )
-    })
-
-    it("Should revoke all creator rights if their XApp is blacklisted, unless they are still aprt of other app", async function () {
-      const { x2EarnApps, otherAccounts, x2EarnCreator } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      // Mint the NFT
-      await x2EarnCreator.safeMint(otherAccounts[0].address)
-
-      // Other Accounts 0 creates 2 apps -> Creator of both apps
-      await x2EarnApps
-        .connect(otherAccounts[0])
-        .submitApp(otherAccounts[2].address, otherAccounts[2].address, otherAccounts[2].address, "metadataURI")
-
-      await x2EarnApps
-        .connect(otherAccounts[0])
-        .submitApp(otherAccounts[3].address, otherAccounts[3].address, otherAccounts[3].address, "metadataURI")
-
-      const app1Id = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[2].address))
-      const app2Id = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[3].address))
-
-      // Other account 2 and 3 are added as creators to the app 1
-      await x2EarnApps.connect(otherAccounts[2]).addCreator(app1Id, otherAccounts[1].address)
-      await x2EarnApps.connect(otherAccounts[2]).addCreator(app1Id, otherAccounts[2].address)
-
-      // Both apps get endorsed
-      await endorseApp(app1Id, otherAccounts[2])
-      await endorseApp(app2Id, otherAccounts[3])
-
-      // Each account should have a creator NFT minted for them
-      expect(await x2EarnCreator.balanceOf(otherAccounts[0].address)).to.eql(1n)
-      expect(await x2EarnCreator.balanceOf(otherAccounts[1].address)).to.eql(1n)
-      expect(await x2EarnCreator.balanceOf(otherAccounts[2].address)).to.eql(1n)
-
-      // Blacklisting the first app
-      await x2EarnApps.setVotingEligibility(app1Id, false) // Blacklist the app
-
-      // Other account 1 & 2 should have their creator NFT burned
-      expect(await x2EarnCreator.balanceOf(otherAccounts[1].address)).to.eql(0n)
-      expect(await x2EarnCreator.balanceOf(otherAccounts[2].address)).to.eql(0n)
-
-      // Other account 0 should still have their creator NFT
-      expect(await x2EarnCreator.balanceOf(otherAccounts[0].address)).to.eql(1n)
-
-      // Should all still be considered creators of the app for info purposes
-      expect(await x2EarnApps.appCreators(app1Id)).to.deep.equal([
-        otherAccounts[0].address,
-        otherAccounts[1].address,
-        otherAccounts[2].address,
-      ])
-    })
-
-    it("Should regrant creator rights if their XApp is unblacklisted", async function () {
-      const { x2EarnApps, otherAccounts, x2EarnCreator } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      // Mint the NFT
-      await x2EarnCreator.safeMint(otherAccounts[0].address)
-
-      // Other Accounts 0 creates 2 apps -> Creator of both apps
-      await x2EarnApps
-        .connect(otherAccounts[0])
-        .submitApp(otherAccounts[2].address, otherAccounts[2].address, otherAccounts[2].address, "metadataURI")
-
-      await x2EarnApps
-        .connect(otherAccounts[0])
-        .submitApp(otherAccounts[3].address, otherAccounts[3].address, otherAccounts[3].address, "metadataURI")
-
-      const app1Id = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[2].address))
-      const app2Id = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[3].address))
-
-      // Other account 2 and 3 are added as creators to the app 1
-      await x2EarnApps.connect(otherAccounts[2]).addCreator(app1Id, otherAccounts[1].address)
-      await x2EarnApps.connect(otherAccounts[2]).addCreator(app1Id, otherAccounts[2].address)
-
-      // Both apps get endorsed
-      await endorseApp(app1Id, otherAccounts[2])
-      await endorseApp(app2Id, otherAccounts[3])
-
-      // Each account should have a creator NFT minted for them
-      expect(await x2EarnCreator.balanceOf(otherAccounts[0].address)).to.eql(1n)
-      expect(await x2EarnCreator.balanceOf(otherAccounts[1].address)).to.eql(1n)
-      expect(await x2EarnCreator.balanceOf(otherAccounts[2].address)).to.eql(1n)
-
-      // Blacklisting the first app
-      await x2EarnApps.setVotingEligibility(app1Id, false) // Blacklist the app
-
-      // Other account 1 & 2 should have their creator NFT burned
-      expect(await x2EarnCreator.balanceOf(otherAccounts[1].address)).to.eql(0n)
-      expect(await x2EarnCreator.balanceOf(otherAccounts[2].address)).to.eql(0n)
-
-      // Other account 0 should still have their creator NFT
-      expect(await x2EarnCreator.balanceOf(otherAccounts[0].address)).to.eql(1n)
-
-      // Should all still be considered creators of the app for info purposes
-      expect(await x2EarnApps.appCreators(app1Id)).to.deep.equal([
-        otherAccounts[0].address,
-        otherAccounts[1].address,
-        otherAccounts[2].address,
-      ])
-
-      // Unblacklisting the first app
-      await x2EarnApps.setVotingEligibility(app1Id, true) // Unblacklist the app
-
-      // Other account 1 & 2 should have their creator NFT minted
-      expect(await x2EarnCreator.balanceOf(otherAccounts[1].address)).to.eql(1n)
-      expect(await x2EarnCreator.balanceOf(otherAccounts[2].address)).to.eql(1n)
-    })
-
-    it("XApps user endorsed should not go into negative if blacklisted multiple times", async function () {
-      const { x2EarnApps, otherAccounts, x2EarnCreator } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      // Mint the NFT
-      await x2EarnCreator.safeMint(otherAccounts[0].address)
-
-      // Other Accounts 0 creates 2 apps -> Creator of both apps
-      await x2EarnApps
-        .connect(otherAccounts[0])
-        .submitApp(otherAccounts[2].address, otherAccounts[2].address, otherAccounts[2].address, "metadataURI")
-
-      await x2EarnApps
-        .connect(otherAccounts[0])
-        .submitApp(otherAccounts[3].address, otherAccounts[3].address, otherAccounts[3].address, "metadataURI")
-
-      const app1Id = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[2].address))
-      const app2Id = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[3].address))
-
-      // Other account 2 and 3 are added as creators to the app 1
-      await x2EarnApps.connect(otherAccounts[2]).addCreator(app1Id, otherAccounts[1].address)
-      await x2EarnApps.connect(otherAccounts[2]).addCreator(app1Id, otherAccounts[2].address)
-
-      // Both apps get endorsed
-      await endorseApp(app1Id, otherAccounts[2])
-      await endorseApp(app2Id, otherAccounts[3])
-
-      // Each account should have a creator NFT minted for them
-      expect(await x2EarnCreator.balanceOf(otherAccounts[0].address)).to.eql(1n)
-      expect(await x2EarnCreator.balanceOf(otherAccounts[1].address)).to.eql(1n)
-      expect(await x2EarnCreator.balanceOf(otherAccounts[2].address)).to.eql(1n)
-
-      // Other account 1 & 2 should be creators of 1 app
-      expect(await x2EarnApps.creatorApps(otherAccounts[1].address)).to.eql(1n)
-      expect(await x2EarnApps.creatorApps(otherAccounts[2].address)).to.eql(1n)
-
-      // Blacklisting the first app
-      await x2EarnApps.setVotingEligibility(app1Id, false) // Blacklist the app
-
-      // Other account 1 & 2 should have their creator NFT burned
-      expect(await x2EarnCreator.balanceOf(otherAccounts[1].address)).to.eql(0n)
-      expect(await x2EarnCreator.balanceOf(otherAccounts[2].address)).to.eql(0n)
-
-      // Other account 1 & 2 should be creators of 0 apps
-      expect(await x2EarnApps.creatorApps(otherAccounts[1].address)).to.eql(0n)
-      expect(await x2EarnApps.creatorApps(otherAccounts[2].address)).to.eql(0n)
-
-      // Blacklisting the first app again
-      await x2EarnApps.setVotingEligibility(app1Id, false) // Blacklist the app
-
-      // Other account 1 & 2 should not have their creator NFT burned again as they are already burned
-      expect(await x2EarnCreator.balanceOf(otherAccounts[1].address)).to.eql(0n)
-      expect(await x2EarnCreator.balanceOf(otherAccounts[2].address)).to.eql(0n)
-
-      // Other account 1 & 2 should be creators of 0 apps
-      expect(await x2EarnApps.creatorApps(otherAccounts[1].address)).to.eql(0n)
-      expect(await x2EarnApps.creatorApps(otherAccounts[2].address)).to.eql(0n)
-    })
-
-    it("XApps user endorsed should not keep increasing if de-blacklisted multiple times", async function () {
-      const { x2EarnApps, otherAccounts, x2EarnCreator } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      // Mint the NFT
-      await x2EarnCreator.safeMint(otherAccounts[0].address)
-
-      // Other Accounts 0 creates 2 apps -> Creator of both apps
-      await x2EarnApps
-        .connect(otherAccounts[0])
-        .submitApp(otherAccounts[2].address, otherAccounts[2].address, otherAccounts[2].address, "metadataURI")
-
-      await x2EarnApps
-        .connect(otherAccounts[0])
-        .submitApp(otherAccounts[3].address, otherAccounts[3].address, otherAccounts[3].address, "metadataURI")
-
-      const app1Id = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[2].address))
-      const app2Id = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[3].address))
-
-      // Other account 2 and 3 are added as creators to the app 1
-      await x2EarnApps.connect(otherAccounts[2]).addCreator(app1Id, otherAccounts[1].address)
-      await x2EarnApps.connect(otherAccounts[2]).addCreator(app1Id, otherAccounts[2].address)
-
-      // Both apps get endorsed
-      await endorseApp(app1Id, otherAccounts[2])
-      await endorseApp(app2Id, otherAccounts[3])
-
-      // Each account should have a creator NFT minted for them
-      expect(await x2EarnCreator.balanceOf(otherAccounts[0].address)).to.eql(1n)
-      expect(await x2EarnCreator.balanceOf(otherAccounts[1].address)).to.eql(1n)
-      expect(await x2EarnCreator.balanceOf(otherAccounts[2].address)).to.eql(1n)
-
-      // De- Blacklisting the first app (It is not blacklisted)
-      await x2EarnApps.setVotingEligibility(app1Id, true)
-
-      // Other account 1 & 2 should have their no changes in creator NFT
-      expect(await x2EarnCreator.balanceOf(otherAccounts[1].address)).to.eql(1n)
-      expect(await x2EarnCreator.balanceOf(otherAccounts[2].address)).to.eql(1n)
-
-      // Other account 1 & 2 should be creators of 1 app
-      expect(await x2EarnApps.creatorApps(otherAccounts[1].address)).to.eql(1n)
-      expect(await x2EarnApps.creatorApps(otherAccounts[2].address)).to.eql(1n)
-
-      // De- Blacklisting the first app (It is not blacklisted)
-      await x2EarnApps.setVotingEligibility(app1Id, false) // Blacklist the app
-
-      // Should all still be considered creators of the app for info purposes
-      expect(await x2EarnApps.appCreators(app1Id)).to.deep.equal([
-        otherAccounts[0].address,
-        otherAccounts[1].address,
-        otherAccounts[2].address,
-      ])
-
-      // Other account 1 & 2 should be creators of 0 apps
-      expect(await x2EarnApps.creatorApps(otherAccounts[1].address)).to.eql(0n)
-      expect(await x2EarnApps.creatorApps(otherAccounts[2].address)).to.eql(0n)
-
-      // Other account 1 & 2 should have their creator NFT burned
-      expect(await x2EarnCreator.balanceOf(otherAccounts[1].address)).to.eql(0n)
-      expect(await x2EarnCreator.balanceOf(otherAccounts[2].address)).to.eql(0n)
-
-      // Blacklisting the first app again (should not decrease the creator NFT)
-      await x2EarnApps.setVotingEligibility(app1Id, false) // Blacklist the app again
-
-      // Other account 1 & 2 should be creators of 0 apps
-      expect(await x2EarnApps.creatorApps(otherAccounts[1].address)).to.eql(0n)
-      expect(await x2EarnApps.creatorApps(otherAccounts[2].address)).to.eql(0n)
-
-      // Other account 1 & 2 should have their creator NFT burned
-      expect(await x2EarnCreator.balanceOf(otherAccounts[1].address)).to.eql(0n)
-      expect(await x2EarnCreator.balanceOf(otherAccounts[2].address)).to.eql(0n)
-    })
-  })
-
   describe("Admin address", function () {
     it("Admin can update the admin address of an app", async function () {
       const { x2EarnApps, otherAccounts, owner } = await getOrDeployContractInstances({ forceDeploy: true })
       const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
 
       const admin = await x2EarnApps.appAdmin(app1Id)
       expect(admin).to.eql(otherAccounts[0].address)
@@ -2386,7 +644,7 @@ describe("X-Apps - @shard3", function () {
       const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
 
       await catchRevert(x2EarnApps.connect(otherAccounts[0]).setAppAdmin(app1Id, ZERO_ADDRESS))
     })
@@ -2396,7 +654,7 @@ describe("X-Apps - @shard3", function () {
       const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
 
       const admin = await x2EarnApps.appAdmin(app1Id)
       expect(admin).to.eql(otherAccounts[0].address)
@@ -2413,7 +671,7 @@ describe("X-Apps - @shard3", function () {
       const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
 
       // check that is not admin
       expect(await x2EarnApps.isAppAdmin(app1Id, otherAccounts[1].address)).to.eql(false)
@@ -2443,7 +701,7 @@ describe("X-Apps - @shard3", function () {
       const app1Id = await x2EarnApps.hashAppName("My app")
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
 
       const baseURI = await x2EarnApps.baseURI()
       const appURI = await x2EarnApps.appURI(app1Id)
@@ -2456,7 +714,7 @@ describe("X-Apps - @shard3", function () {
       const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
 
       const newMetadataURI = "metadataURI2"
       await x2EarnApps.connect(owner).updateAppMetadata(app1Id, newMetadataURI)
@@ -2469,7 +727,7 @@ describe("X-Apps - @shard3", function () {
       const { x2EarnApps, otherAccounts, owner } = await getOrDeployContractInstances({ forceDeploy: true })
       const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
       const appAdmin = otherAccounts[9]
-      await x2EarnApps.connect(owner).submitApp(otherAccounts[0].address, appAdmin.address, "My app", "metadataURI")
+      await x2EarnApps.connect(owner).addApp(otherAccounts[0].address, appAdmin.address, "My app", "metadataURI")
 
       const newMetadataURI = "metadataURI2"
       await x2EarnApps.connect(appAdmin).updateAppMetadata(app1Id, newMetadataURI)
@@ -2483,7 +741,7 @@ describe("X-Apps - @shard3", function () {
       const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
       const appAdmin = otherAccounts[9]
       const appModerator = otherAccounts[10]
-      await x2EarnApps.connect(owner).submitApp(otherAccounts[0].address, appAdmin.address, "My app", "metadataURI")
+      await x2EarnApps.connect(owner).addApp(otherAccounts[0].address, appAdmin.address, "My app", "metadataURI")
 
       await x2EarnApps.connect(appAdmin).addAppModerator(app1Id, appModerator.address)
       expect(await x2EarnApps.isAppModerator(app1Id, appModerator.address)).to.be.true
@@ -2501,7 +759,7 @@ describe("X-Apps - @shard3", function () {
       const appAdmin = otherAccounts[9]
       const unauthorizedUser = otherAccounts[8]
       const oldMetadataURI = "metadataURI"
-      await x2EarnApps.connect(owner).submitApp(otherAccounts[0].address, appAdmin.address, "My app", oldMetadataURI)
+      await x2EarnApps.connect(owner).addApp(otherAccounts[0].address, appAdmin.address, "My app", oldMetadataURI)
 
       const newMetadataURI = "metadataURI2"
       await expect(x2EarnApps.connect(unauthorizedUser).updateAppMetadata(app1Id, newMetadataURI)).to.be.rejected
@@ -2532,7 +790,7 @@ describe("X-Apps - @shard3", function () {
       const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
 
       const teamWalletAddress = await x2EarnApps.teamWalletAddress(app1Id)
       expect(teamWalletAddress).to.eql(otherAccounts[0].address)
@@ -2543,7 +801,7 @@ describe("X-Apps - @shard3", function () {
       const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
 
       const appReceiverAddress1 = await x2EarnApps.teamWalletAddress(app1Id)
 
@@ -2562,7 +820,7 @@ describe("X-Apps - @shard3", function () {
       const { x2EarnApps, otherAccounts, owner } = await getOrDeployContractInstances({ forceDeploy: true })
       const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
       const appAdmin = otherAccounts[9]
-      await x2EarnApps.connect(owner).submitApp(otherAccounts[0].address, appAdmin.address, "My app", "metadataURI")
+      await x2EarnApps.connect(owner).addApp(otherAccounts[0].address, appAdmin.address, "My app", "metadataURI")
 
       const appReceiverAddress1 = await x2EarnApps.teamWalletAddress(app1Id)
 
@@ -2584,7 +842,7 @@ describe("X-Apps - @shard3", function () {
       const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
 
       const appReceiverAddress1 = await x2EarnApps.teamWalletAddress(app1Id)
 
@@ -2609,7 +867,7 @@ describe("X-Apps - @shard3", function () {
       const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
 
       const appReceiverAddress1 = await x2EarnApps.teamWalletAddress(app1Id)
 
@@ -2634,7 +892,7 @@ describe("X-Apps - @shard3", function () {
       const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
 
       const appReceiverAddress1 = await x2EarnApps.teamWalletAddress(app1Id)
 
@@ -2662,7 +920,7 @@ describe("X-Apps - @shard3", function () {
       const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
 
       await catchRevert(x2EarnApps.connect(otherAccounts[0]).updateTeamWalletAddress(app1Id, ZERO_ADDRESS))
     })
@@ -2674,7 +932,7 @@ describe("X-Apps - @shard3", function () {
       const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
 
       const isModerator = await x2EarnApps.isAppModerator(app1Id, otherAccounts[0].address)
       expect(isModerator).to.be.false
@@ -2688,7 +946,7 @@ describe("X-Apps - @shard3", function () {
       const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
 
       const adminRole = await x2EarnApps.DEFAULT_ADMIN_ROLE()
       const isAdmin = await x2EarnApps.hasRole(adminRole, owner.address)
@@ -2705,7 +963,7 @@ describe("X-Apps - @shard3", function () {
       const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
       await x2EarnApps.connect(owner).addAppModerator(app1Id, otherAccounts[1].address)
 
       const adminRole = await x2EarnApps.DEFAULT_ADMIN_ROLE()
@@ -2725,7 +983,7 @@ describe("X-Apps - @shard3", function () {
       const { x2EarnApps, otherAccounts, owner } = await getOrDeployContractInstances({ forceDeploy: true })
       const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
       const appAdmin = otherAccounts[9]
-      await x2EarnApps.connect(owner).submitApp(otherAccounts[0].address, appAdmin.address, "My app", "metadataURI")
+      await x2EarnApps.connect(owner).addApp(otherAccounts[0].address, appAdmin.address, "My app", "metadataURI")
 
       const adminRole = await x2EarnApps.DEFAULT_ADMIN_ROLE()
       const isAdmin = await x2EarnApps.hasRole(adminRole, appAdmin.address)
@@ -2743,7 +1001,7 @@ describe("X-Apps - @shard3", function () {
       const { x2EarnApps, otherAccounts, owner } = await getOrDeployContractInstances({ forceDeploy: true })
       const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
       const appAdmin = otherAccounts[9]
-      await x2EarnApps.connect(owner).submitApp(otherAccounts[0].address, appAdmin.address, "My app", "metadataURI")
+      await x2EarnApps.connect(owner).addApp(otherAccounts[0].address, appAdmin.address, "My app", "metadataURI")
       await x2EarnApps.connect(appAdmin).addAppModerator(app1Id, otherAccounts[1].address)
       await x2EarnApps.connect(appAdmin).addAppModerator(app1Id, otherAccounts[2].address)
 
@@ -2769,7 +1027,7 @@ describe("X-Apps - @shard3", function () {
       const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
       await x2EarnApps.connect(owner).addAppModerator(app1Id, otherAccounts[1].address)
       await x2EarnApps.connect(owner).addAppModerator(app1Id, otherAccounts[2].address)
 
@@ -2782,7 +1040,7 @@ describe("X-Apps - @shard3", function () {
       const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
       await x2EarnApps.connect(owner).addAppModerator(app1Id, otherAccounts[1].address)
 
       let isModerator = await x2EarnApps.isAppModerator(app1Id, otherAccounts[1].address)
@@ -2812,7 +1070,7 @@ describe("X-Apps - @shard3", function () {
 
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
 
       await expect(x2EarnApps.connect(otherAccounts[0]).addAppModerator(app1Id, ZERO_ADDRESS)).to.be.rejected
     })
@@ -2823,7 +1081,7 @@ describe("X-Apps - @shard3", function () {
 
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
 
       await expect(x2EarnApps.connect(otherAccounts[0]).removeAppModerator(app1Id, ZERO_ADDRESS)).to.be.rejected
     })
@@ -2849,7 +1107,7 @@ describe("X-Apps - @shard3", function () {
       const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
       await x2EarnApps.connect(owner).addAppModerator(app1Id, otherAccounts[1].address)
       await x2EarnApps.connect(owner).addAppModerator(app1Id, otherAccounts[2].address)
 
@@ -2873,7 +1131,7 @@ describe("X-Apps - @shard3", function () {
       const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
 
       await expect(x2EarnApps.connect(owner).removeAppModerator(app1Id, otherAccounts[1].address)).to.be.rejected
     })
@@ -2883,7 +1141,7 @@ describe("X-Apps - @shard3", function () {
       const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
 
       await expect(x2EarnApps.connect(owner).removeAppModerator(app1Id, ZERO_ADDRESS)).to.be.rejected
     })
@@ -2899,7 +1157,7 @@ describe("X-Apps - @shard3", function () {
       const { x2EarnApps, otherAccounts, owner } = await getOrDeployContractInstances({ forceDeploy: true })
       const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
       const appAdmin = otherAccounts[9]
-      await x2EarnApps.connect(owner).submitApp(otherAccounts[0].address, appAdmin.address, "My app", "metadataURI")
+      await x2EarnApps.connect(owner).addApp(otherAccounts[0].address, appAdmin.address, "My app", "metadataURI")
 
       const limit = await x2EarnApps.MAX_MODERATORS()
 
@@ -2930,7 +1188,7 @@ describe("X-Apps - @shard3", function () {
       const app1Id = await x2EarnApps.hashAppName("My app")
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
 
       await x2EarnApps.connect(owner).addRewardDistributor(app1Id, otherAccounts[1].address)
 
@@ -2943,7 +1201,7 @@ describe("X-Apps - @shard3", function () {
       const app1Id = await x2EarnApps.hashAppName("My app")
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
       await x2EarnApps.connect(owner).addRewardDistributor(app1Id, otherAccounts[1].address)
 
       let isDistributor = await x2EarnApps.isRewardDistributor(app1Id, otherAccounts[1].address)
@@ -2975,7 +1233,7 @@ describe("X-Apps - @shard3", function () {
 
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
 
       await expect(x2EarnApps.connect(otherAccounts[0]).addRewardDistributor(app1Id, ZERO_ADDRESS)).to.be.rejected
     })
@@ -2986,7 +1244,7 @@ describe("X-Apps - @shard3", function () {
 
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
 
       await expect(x2EarnApps.connect(otherAccounts[0]).removeRewardDistributor(app1Id, ZERO_ADDRESS)).to.be.rejected
     })
@@ -2997,7 +1255,7 @@ describe("X-Apps - @shard3", function () {
 
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
 
       await expect(x2EarnApps.connect(owner).removeRewardDistributor(app1Id, otherAccounts[1].address)).to.be.rejected
     })
@@ -3007,7 +1265,7 @@ describe("X-Apps - @shard3", function () {
       const app1Id = await x2EarnApps.hashAppName("My app")
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
       await x2EarnApps.connect(owner).addRewardDistributor(app1Id, otherAccounts[1].address)
       await x2EarnApps.connect(owner).addRewardDistributor(app1Id, otherAccounts[2].address)
 
@@ -3031,7 +1289,7 @@ describe("X-Apps - @shard3", function () {
       const app1Id = await x2EarnApps.hashAppName("My app")
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
       await x2EarnApps.connect(owner).addRewardDistributor(app1Id, otherAccounts[1].address)
       await x2EarnApps.connect(owner).addRewardDistributor(app1Id, otherAccounts[2].address)
 
@@ -3044,7 +1302,7 @@ describe("X-Apps - @shard3", function () {
       const app1Id = await x2EarnApps.hashAppName("My app")
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
       await x2EarnApps.connect(owner).addRewardDistributor(app1Id, otherAccounts[1].address)
 
       let isDistributor = await x2EarnApps.isRewardDistributor(app1Id, otherAccounts[1].address)
@@ -3075,7 +1333,7 @@ describe("X-Apps - @shard3", function () {
       const limit = await x2EarnApps.MAX_REWARD_DISTRIBUTORS()
       const app1Id = await x2EarnApps.hashAppName("My app")
       const appAdmin = otherAccounts[9]
-      await x2EarnApps.connect(owner).submitApp(otherAccounts[0].address, appAdmin.address, "My app", "metadataURI")
+      await x2EarnApps.connect(owner).addApp(otherAccounts[0].address, appAdmin.address, "My app", "metadataURI")
 
       const addDistributorPromises = []
       for (let i = 1; i <= limit; i++) {
@@ -3104,7 +1362,7 @@ describe("X-Apps - @shard3", function () {
       const app1Id = await x2EarnApps.hashAppName("My app")
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
 
       const teamAllocationPercentage = await x2EarnApps.teamAllocationPercentage(app1Id)
       expect(teamAllocationPercentage).to.eql(0n)
@@ -3115,7 +1373,7 @@ describe("X-Apps - @shard3", function () {
       const app1Id = await x2EarnApps.hashAppName("My app")
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
       await x2EarnApps.connect(owner).setTeamAllocationPercentage(app1Id, 50)
 
       let teamAllocationPercentage = await x2EarnApps.teamAllocationPercentage(app1Id)
@@ -3132,7 +1390,7 @@ describe("X-Apps - @shard3", function () {
       const app1Id = await x2EarnApps.hashAppName("My app")
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
       await x2EarnApps.connect(owner).setTeamAllocationPercentage(app1Id, 50)
 
       let teamAllocationPercentage = await x2EarnApps.teamAllocationPercentage(app1Id)
@@ -3151,7 +1409,7 @@ describe("X-Apps - @shard3", function () {
       const app1Id = await x2EarnApps.hashAppName("My app")
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
 
       await expect(x2EarnApps.connect(owner).setTeamAllocationPercentage(app1Id, 101)).to.be.rejected
     })
@@ -3161,7 +1419,7 @@ describe("X-Apps - @shard3", function () {
       const app1Id = await x2EarnApps.hashAppName("My app")
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
 
       await expect(x2EarnApps.connect(owner).setTeamAllocationPercentage(app1Id, -1)).to.be.rejected
     })
@@ -3173,7 +1431,7 @@ describe("X-Apps - @shard3", function () {
       await expect(x2EarnApps.connect(otherAccounts[0]).setTeamAllocationPercentage(app1Id, 50)).to.be.rejected
     })
 
-    it("User with DEFAULT_ADMIN_ROLE can update the team allocation percentage of an app", async function () {
+    it("Userr with DEFAULT_ADMIN_ROLE can update the team allocation percentage of an app", async function () {
       const { x2EarnApps, otherAccounts, owner } = await getOrDeployContractInstances({ forceDeploy: true })
       const adminRole = await x2EarnApps.DEFAULT_ADMIN_ROLE()
       const isAdmin = await x2EarnApps.hasRole(adminRole, owner.address)
@@ -3182,7 +1440,7 @@ describe("X-Apps - @shard3", function () {
       const app1Id = await x2EarnApps.hashAppName("My app")
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
       await x2EarnApps.connect(owner).setTeamAllocationPercentage(app1Id, 50)
 
       let teamAllocationPercentage = await x2EarnApps.teamAllocationPercentage(app1Id)
@@ -3210,8 +1468,7 @@ describe("X-Apps - @shard3", function () {
       const app1Id = await x2EarnApps.hashAppName("My app")
       await x2EarnApps
         .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
-      await endorseApp(app1Id, otherAccounts[0])
+        .addApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
       await x2EarnApps.connect(owner).setTeamAllocationPercentage(app1Id, 0)
 
       let teamAllocationPercentage = await x2EarnApps.teamAllocationPercentage(app1Id)
@@ -3279,2673 +1536,6 @@ describe("X-Apps - @shard3", function () {
       const x2EarnRewardsPoolBalanceAfter3 = await b3tr.balanceOf(await x2EarnRewardsPool.getAddress())
       expect(x2EarnRewardsPoolBalanceAfter3).to.eql(x2EarnRewardsPoolBalanceAfter2 + teamWalletBalanceAfter2)
       expect(await b3tr.balanceOf(teamWalletAddress)).to.eql(0n)
-    })
-  })
-
-  describe("XApp Endorsement", function () {
-    it("If an XAPP is endorsed with a score of 100 they should be eligble for XAllocation Voting", async function () {
-      const { x2EarnApps, otherAccounts, owner } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      expect(await x2EarnApps.hasRole(await x2EarnApps.GOVERNANCE_ROLE(), owner.address)).to.eql(true)
-
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
-
-      // Register XAPP -> XAPP is pedning endorsement
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-
-      const appIdsPendingEndorsement1 = await x2EarnApps.unendorsedAppIds()
-      expect(appIdsPendingEndorsement1.length).to.eql(1)
-
-      // Create two Mjolnir node holders with an endorsement score of 50 each
-      await createNodeHolder(3, otherAccounts[1]) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 50
-      await createNodeHolder(3, otherAccounts[2]) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 50
-
-      // Endorse XAPP with both Mjolnir node holders
-      expect(await x2EarnApps.getNodeEndorsementScore(1)).to.eql(50n) // Node ID 1 has an endorsement score is 50
-      await x2EarnApps.connect(otherAccounts[1]).endorseApp(app1Id, 1) // Endorse with node holder 1
-      expect(await x2EarnApps.getScore(app1Id)).to.eql(50n) // XAPP endorsement score is 50
-
-      expect(await x2EarnApps.getNodeEndorsementScore(2)).to.eql(50n) // Node Id 2 has an endorsement score is 50
-      await x2EarnApps.connect(otherAccounts[2]).endorseApp(app1Id, 2) // Endorse with node holder 2
-      expect(await x2EarnApps.getScore(app1Id)).to.eql(100n) // XAPP endorsement score is now 100
-
-      const appIdsPendingEndorsement2 = await x2EarnApps.unendorsedAppIds()
-      expect(appIdsPendingEndorsement2.length).to.eql(0)
-
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(false)
-      expect(await x2EarnApps.isEligibleNow(app1Id)).to.eql(true)
-    })
-
-    it("If an XAPP is endorsed with a score less than 100 they should not be eligble for XAllocation Voting", async function () {
-      const { x2EarnApps, otherAccounts, owner } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      expect(await x2EarnApps.hasRole(await x2EarnApps.GOVERNANCE_ROLE(), owner.address)).to.eql(true)
-
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
-
-      // Register XAPP -> XAPP is pedning endorsement
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-
-      const appIdsPendingEndorsement1 = await x2EarnApps.unendorsedAppIds()
-      expect(appIdsPendingEndorsement1.length).to.eql(1)
-
-      // Create one Mjolnir node holder with an endorsement score of 50
-      await createNodeHolder(3, otherAccounts[1]) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 50
-
-      // Endorse XAPP with both Mjolnir node holder -> XAPP endorsement score is 50 -> XAPP is not eligible for XAllocation Voting
-      await x2EarnApps.connect(otherAccounts[1]).endorseApp(app1Id, 1) // Node holder endorsement score is 50
-      expect(await x2EarnApps.getScore(app1Id)).to.eql(50n) // XAPP endorsement score is 50
-
-      const appIdsPendingEndorsement2 = await x2EarnApps.unendorsedAppIds()
-      expect(appIdsPendingEndorsement2.length).to.eql(1)
-
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(true)
-      expect(await x2EarnApps.isEligibleNow(app1Id)).to.eql(false)
-    })
-
-    it("If an XAPP has a score of 100 and is unendorsed by a node holder and their score falls below a 100 they will enter a grace period", async function () {
-      const { x2EarnApps, xAllocationVoting, otherAccounts, owner } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      expect(await x2EarnApps.hasRole(await x2EarnApps.GOVERNANCE_ROLE(), owner.address)).to.eql(true)
-
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
-
-      // Register XAPP -> XAPP is pedning endorsement
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-
-      const appIdsPendingEndorsement1 = await x2EarnApps.unendorsedAppIds()
-      expect(appIdsPendingEndorsement1.length).to.eql(1)
-
-      // Create two Mjolnir node holders with an endorsement score of 50 each
-      await createNodeHolder(3, otherAccounts[1]) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 50
-      await createNodeHolder(3, otherAccounts[2]) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 50
-
-      await x2EarnApps.connect(otherAccounts[1]).endorseApp(app1Id, 1) // Node holder endorsement score is 50
-      await x2EarnApps.connect(otherAccounts[2]).endorseApp(app1Id, 2) // Node holder endorsement score is 50
-
-      expect(await x2EarnApps.nodeToEndorsedApp(1)).to.eql(app1Id) // Node ID 1 has endorsed app1Id
-
-      let round1 = await startNewAllocationRound()
-
-      // app should be eligible for the current round
-      let isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
-      expect(isEligibleForVote).to.eql(true)
-
-      // App is not pending endorsement
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(false)
-
-      // remove endorsement from one of the node holders
-      const tx = await x2EarnApps.connect(otherAccounts[1]).unendorseApp(app1Id, 1)
-
-      expect(await x2EarnApps.nodeToEndorsedApp(1)).to.not.eql(app1Id) // Node ID 1 should not have endorsed app1Id
-
-      const receipt = await tx.wait()
-      if (!receipt) throw new Error("No receipt")
-
-      let events = receipt?.logs
-
-      let decodedEvents = events?.map(event => {
-        return x2EarnApps.interface.parseLog({
-          topics: event?.topics as string[],
-          data: event?.data as string,
-        })
-      })
-      const event = decodedEvents.find(event => event?.name === "AppEndorsed")
-      expect(event).to.not.equal(undefined)
-
-      // app should still be eligible for the current round
-      isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
-      expect(isEligibleForVote).to.eql(true)
-
-      // app should be pending endorsement -> score is now 50 -> grace period starts
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(true)
-
-      // wait for round to end
-      await waitForCurrentRoundToEnd()
-
-      // start new round
-      let round2 = await startNewAllocationRound()
-
-      // app should still be eligible for the current round as it is in the grace period
-      isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round2)
-      expect(isEligibleForVote).to.eql(true)
-    })
-
-    it("If an XAPP has a score of 100 and its app admin removes endorsement by a node holder and their score falls below a 100 they will enter a grace period", async function () {
-      const { x2EarnApps, xAllocationVoting, otherAccounts, owner } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      expect(await x2EarnApps.hasRole(await x2EarnApps.GOVERNANCE_ROLE(), owner.address)).to.eql(true)
-
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
-
-      // Register XAPP -> XAPP is pedning endorsement
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-
-      const appIdsPendingEndorsement1 = await x2EarnApps.unendorsedAppIds()
-      expect(appIdsPendingEndorsement1.length).to.eql(1)
-
-      // Create two Mjolnir node holders with an endorsement score of 50 each
-      await createNodeHolder(3, otherAccounts[1]) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 50
-      await createNodeHolder(3, otherAccounts[2]) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 50
-
-      await x2EarnApps.connect(otherAccounts[1]).endorseApp(app1Id, 1) // Node holder endorsement score is 50
-      await x2EarnApps.connect(otherAccounts[2]).endorseApp(app1Id, 2) // Node holder endorsement score is 50
-
-      let round1 = await startNewAllocationRound()
-
-      // app should be eligible for the current round
-      let isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
-      expect(isEligibleForVote).to.eql(true)
-
-      // App is not pending endorsement
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(false)
-
-      // remove endorsement from one of the node holders
-      const tx = await x2EarnApps.connect(otherAccounts[0]).removeNodeEndorsement(app1Id, 1)
-
-      const receipt = await tx.wait()
-      if (!receipt) throw new Error("No receipt")
-
-      let events = receipt?.logs
-
-      let decodedEvents = events?.map(event => {
-        return x2EarnApps.interface.parseLog({
-          topics: event?.topics as string[],
-          data: event?.data as string,
-        })
-      })
-      const event = decodedEvents.find(event => event?.name === "AppEndorsed")
-      expect(event).to.not.equal(undefined)
-
-      // app should still be eligible for the current round
-      isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
-      expect(isEligibleForVote).to.eql(true)
-
-      // app should be pending endorsement -> score is now 50 -> grace period starts
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(true)
-
-      // wait for round to end
-      await waitForCurrentRoundToEnd()
-
-      // start new round
-      let round2 = await startNewAllocationRound()
-
-      // app should still be eligible for the current round as it is in the grace period
-      isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round2)
-      expect(isEligibleForVote).to.eql(true)
-    })
-
-    it("If an XAPP is in the grace period for longer than 2 cycles and has not got reendorsed they are removed from voting rounds", async function () {
-      const { x2EarnApps, xAllocationVoting, otherAccounts, owner } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      expect(await x2EarnApps.hasRole(await x2EarnApps.GOVERNANCE_ROLE(), owner.address)).to.eql(true)
-
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
-
-      // Register XAPP -> XAPP is pedning endorsement
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-
-      const appIdsPendingEndorsement1 = await x2EarnApps.unendorsedAppIds()
-      expect(appIdsPendingEndorsement1.length).to.eql(1)
-
-      // Create two Mjolnir node holders with an endorsement score of 50 each
-      await createNodeHolder(3, otherAccounts[1]) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 50
-      await createNodeHolder(3, otherAccounts[2]) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 50
-
-      await x2EarnApps.connect(otherAccounts[1]).endorseApp(app1Id, 1) // Node holder endorsement score is 50
-      await x2EarnApps.connect(otherAccounts[2]).endorseApp(app1Id, 2) // Node holder endorsement score is 50
-
-      let round1 = await startNewAllocationRound()
-
-      // app should be eligible for the current round
-      let isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
-      expect(isEligibleForVote).to.eql(true)
-
-      // App is not pending endorsement
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(false)
-
-      // No apps pending endorsent
-      expect((await x2EarnApps.unendorsedAppIds()).length).to.eql(0)
-
-      // No apps pending endorsent
-      expect((await x2EarnApps.unendorsedApps()).length).to.eql(0)
-
-      // remove endorsement from one of the node holders
-      await x2EarnApps.connect(otherAccounts[1]).unendorseApp(app1Id, 1)
-
-      // App is pending endorsent
-      expect((await x2EarnApps.unendorsedApps()).length).to.eql(1)
-
-      // app should still be eligible for the current round
-      isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
-      expect(isEligibleForVote).to.eql(true)
-
-      // app should be pending endorsement -> score is now 50 -> grace period starts
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(true)
-
-      // wait for round to end
-      await waitForCurrentRoundToEnd()
-
-      // start new round -> 1st cycle unedorsed
-      let round2 = await startNewAllocationRound()
-
-      // app should still be eligible for the current round as it is in the grace period
-      isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round2)
-      expect(isEligibleForVote).to.eql(true)
-
-      // check endorsement
-      await x2EarnApps.checkEndorsement(app1Id)
-
-      // wait for round to end
-      await waitForCurrentRoundToEnd()
-
-      // start new round -> 2nd cycle unendorsed
-      let round3 = await startNewAllocationRound()
-
-      // app should still be eligible for the current round as it is in the grace period
-      isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round3)
-      expect(isEligibleForVote).to.eql(true)
-
-      // check endorsement this time it will remove the app from the voting rounds
-      await x2EarnApps.checkEndorsement(app1Id)
-
-      // wait for round to end
-      await waitForCurrentRoundToEnd()
-
-      // start new round -> 3rd cycle unendorsed
-      let round4 = await startNewAllocationRound()
-
-      // app should not be eligible for the current round as it is not in the grace period
-      isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round4)
-      expect(isEligibleForVote).to.eql(false)
-
-      // App is still pending endorsent
-      expect((await x2EarnApps.unendorsedApps()).length).to.eql(1)
-    })
-
-    it("If an XAPP is in the grace period for longer than 2 cycles and has not got reendorsed they are removed from voting rounds and any endorser can remove their endorsement", async function () {
-      const config = createLocalConfig()
-      const { x2EarnApps, xAllocationVoting, otherAccounts, owner } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      expect(await x2EarnApps.hasRole(await x2EarnApps.GOVERNANCE_ROLE(), owner.address)).to.eql(true)
-
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
-
-      // Register XAPP -> XAPP is pedning endorsement
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-
-      const appIdsPendingEndorsement1 = await x2EarnApps.unendorsedAppIds()
-      expect(appIdsPendingEndorsement1.length).to.eql(1)
-
-      // Create two Mjolnir node holders with an endorsement score of 50 each
-      await createNodeHolder(3, otherAccounts[1]) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 50
-      await createNodeHolder(3, otherAccounts[2]) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 50
-
-      await x2EarnApps.connect(otherAccounts[1]).endorseApp(app1Id, 1) // Node holder endorsement score is 50
-      await x2EarnApps.connect(otherAccounts[2]).endorseApp(app1Id, 2) // Node holder endorsement score is 50
-
-      let round1 = await startNewAllocationRound()
-
-      // app should be eligible for the current round
-      let isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
-      expect(isEligibleForVote).to.eql(true)
-
-      // App is not pending endorsement
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(false)
-
-      // remove endorsement from one of the node holders
-      const tx = await x2EarnApps.connect(otherAccounts[1]).unendorseApp(app1Id, 1)
-
-      const receipt = await tx.wait()
-      if (!receipt) throw new Error("No receipt")
-
-      // check event emitted
-      let events = receipt?.logs
-      let decodedEvents = events?.map(event => {
-        return x2EarnApps.interface.parseLog({
-          topics: event?.topics as string[],
-          data: event?.data as string,
-        })
-      })
-
-      const event = decodedEvents.find(event => event?.name === "AppEndorsementStatusUpdated")
-      expect(event).to.not.equal(undefined)
-
-      const eventGracePeriod = decodedEvents.find(event => event?.name === "AppUnendorsedGracePeriodStarted")
-      expect(eventGracePeriod).to.not.equal(undefined)
-      expect(eventGracePeriod?.args[0]).to.eql(app1Id)
-      expect(eventGracePeriod?.args[1]).to.eql(BigInt(receipt.blockNumber))
-      expect(eventGracePeriod?.args[2]).to.eql(BigInt(receipt.blockNumber + config.XAPP_GRACE_PERIOD))
-
-      // app should still be eligible for the current round
-      isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
-      expect(isEligibleForVote).to.eql(true)
-
-      // app should be pending endorsement -> score is now 50 -> grace period starts
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(true)
-
-      // wait for round to end
-      await waitForCurrentRoundToEnd()
-
-      // start new round -> 1st cycle unedorsed
-      let round2 = await startNewAllocationRound()
-
-      // app should still be eligible for the current round as it is in the grace period
-      isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round2)
-      expect(isEligibleForVote).to.eql(true)
-
-      // check endorsement
-      await x2EarnApps.checkEndorsement(app1Id)
-
-      // wait for round to end
-      await waitForCurrentRoundToEnd()
-
-      // start new round -> 2nd cycle unendorsed
-      let round3 = await startNewAllocationRound()
-
-      // app should still be eligible for the current round as it is in the grace period
-      isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round3)
-      expect(isEligibleForVote).to.eql(true)
-
-      // remove endorsement from one of the node holders -> grace period is passed -> app is removed from voting rounds
-      await x2EarnApps.connect(otherAccounts[2]).unendorseApp(app1Id, 2)
-
-      // wait for round to end
-      await waitForCurrentRoundToEnd()
-
-      // start new round -> 3rd cycle unendorsed
-      let round4 = await startNewAllocationRound()
-
-      // app should not be eligible for the current round as it is not in the grace period
-      isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round4)
-      expect(isEligibleForVote).to.eql(false)
-    })
-
-    it("If an XAPP is in the grace period for longer than 2 cycles and has not got reendorsed they are removed from voting rounds and app admin can rmeove endorsements", async function () {
-      const config = createLocalConfig()
-      const { x2EarnApps, xAllocationVoting, otherAccounts, owner } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      expect(await x2EarnApps.hasRole(await x2EarnApps.GOVERNANCE_ROLE(), owner.address)).to.eql(true)
-
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
-
-      // Register XAPP -> XAPP is pedning endorsement
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-
-      const appIdsPendingEndorsement1 = await x2EarnApps.unendorsedAppIds()
-      expect(appIdsPendingEndorsement1.length).to.eql(1)
-
-      // Create two Mjolnir node holders with an endorsement score of 50 each
-      await createNodeHolder(3, otherAccounts[1]) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 50
-      await createNodeHolder(3, otherAccounts[2]) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 50
-
-      await x2EarnApps.connect(otherAccounts[1]).endorseApp(app1Id, 1) // Node holder endorsement score is 50
-      await x2EarnApps.connect(otherAccounts[2]).endorseApp(app1Id, 2) // Node holder endorsement score is 50
-
-      let round1 = await startNewAllocationRound()
-
-      // app should be eligible for the current round
-      let isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
-      expect(isEligibleForVote).to.eql(true)
-
-      // App is not pending endorsement
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(false)
-
-      // remove endorsement from one of the node holders
-      const tx = await x2EarnApps.connect(otherAccounts[1]).unendorseApp(app1Id, 1)
-
-      const receipt = await tx.wait()
-      if (!receipt) throw new Error("No receipt")
-
-      // check event emitted
-      let events = receipt?.logs
-      let decodedEvents = events?.map(event => {
-        return x2EarnApps.interface.parseLog({
-          topics: event?.topics as string[],
-          data: event?.data as string,
-        })
-      })
-
-      const event = decodedEvents.find(event => event?.name === "AppEndorsementStatusUpdated")
-      expect(event).to.not.equal(undefined)
-
-      const eventGracePeriod = decodedEvents.find(event => event?.name === "AppUnendorsedGracePeriodStarted")
-      expect(eventGracePeriod).to.not.equal(undefined)
-      expect(eventGracePeriod?.args[0]).to.eql(app1Id)
-      expect(eventGracePeriod?.args[1]).to.eql(BigInt(receipt.blockNumber))
-      expect(eventGracePeriod?.args[2]).to.eql(BigInt(receipt.blockNumber + config.XAPP_GRACE_PERIOD))
-
-      // app should still be eligible for the current round
-      isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
-      expect(isEligibleForVote).to.eql(true)
-
-      // app should be pending endorsement -> score is now 50 -> grace period starts
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(true)
-
-      // wait for round to end
-      await waitForCurrentRoundToEnd()
-
-      // start new round -> 1st cycle unedorsed
-      let round2 = await startNewAllocationRound()
-
-      // app should still be eligible for the current round as it is in the grace period
-      isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round2)
-      expect(isEligibleForVote).to.eql(true)
-
-      // check endorsement
-      await x2EarnApps.checkEndorsement(app1Id)
-
-      // wait for round to end
-      await waitForCurrentRoundToEnd()
-
-      // start new round -> 2nd cycle unendorsed
-      let round3 = await startNewAllocationRound()
-
-      // app should still be eligible for the current round as it is in the grace period
-      isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round3)
-      expect(isEligibleForVote).to.eql(true)
-
-      // app admin removes endorsement from one of the node holders
-      await x2EarnApps.connect(otherAccounts[0]).removeNodeEndorsement(app1Id, 2)
-
-      // wait for round to end
-      await waitForCurrentRoundToEnd()
-
-      // start new round -> 3rd cycle unendorsed
-      let round4 = await startNewAllocationRound()
-
-      // app should not be eligible for the current round as it is not in the grace period
-      isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round4)
-      expect(isEligibleForVote).to.eql(false)
-
-      const endorsers = await x2EarnApps.getEndorsers(app1Id)
-      expect(endorsers.length).to.eql(0)
-    })
-
-    it("If the grace period is updated it should should update the grace period for apps that are already in the grace period", async function () {
-      const config = createLocalConfig()
-      const { x2EarnApps, xAllocationVoting, otherAccounts, owner } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      expect(await x2EarnApps.hasRole(await x2EarnApps.GOVERNANCE_ROLE(), owner.address)).to.eql(true)
-
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
-
-      // Register XAPP -> XAPP is pedning endorsement
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-
-      const appIdsPendingEndorsement1 = await x2EarnApps.unendorsedAppIds()
-      expect(appIdsPendingEndorsement1.length).to.eql(1)
-
-      // Create two Mjolnir node holders with an endorsement score of 50 each
-      await createNodeHolder(3, otherAccounts[1]) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 50
-      await createNodeHolder(3, otherAccounts[2]) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 50
-
-      await x2EarnApps.connect(otherAccounts[1]).endorseApp(app1Id, 1) // Node holder endorsement score is 50
-      await x2EarnApps.connect(otherAccounts[2]).endorseApp(app1Id, 2) // Node holder endorsement score is 50
-
-      let round1 = await startNewAllocationRound()
-
-      // app should be eligible for the current round
-      let isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
-      expect(isEligibleForVote).to.eql(true)
-
-      // App is not pending endorsement
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(false)
-
-      // remove endorsement from one of the node holders
-      const tx = await x2EarnApps.connect(otherAccounts[1]).unendorseApp(app1Id, 1)
-
-      const receipt = await tx.wait()
-      if (!receipt) throw new Error("No receipt")
-
-      // check event emitted
-      let events = receipt?.logs
-      let decodedEvents = events?.map(event => {
-        return x2EarnApps.interface.parseLog({
-          topics: event?.topics as string[],
-          data: event?.data as string,
-        })
-      })
-
-      const event = decodedEvents.find(event => event?.name === "AppEndorsementStatusUpdated")
-      expect(event).to.not.equal(undefined)
-
-      const eventGracePeriod = decodedEvents.find(event => event?.name === "AppUnendorsedGracePeriodStarted")
-      expect(eventGracePeriod).to.not.equal(undefined)
-      expect(eventGracePeriod?.args[0]).to.eql(app1Id)
-      expect(eventGracePeriod?.args[1]).to.eql(BigInt(receipt.blockNumber))
-      expect(eventGracePeriod?.args[2]).to.eql(BigInt(receipt.blockNumber + config.XAPP_GRACE_PERIOD))
-
-      // app should still be eligible for the current round
-      isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
-      expect(isEligibleForVote).to.eql(true)
-
-      // app should be pending endorsement -> score is now 50 -> grace period starts
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(true)
-
-      // wait for round to end
-      await waitForCurrentRoundToEnd()
-
-      // start new round -> 1st cycle unedorsed
-      let round2 = await startNewAllocationRound()
-
-      // app should still be eligible for the current round as it is in the grace period
-      isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round2)
-      expect(isEligibleForVote).to.eql(true)
-
-      // App is eligible as in grace period
-      expect(await x2EarnApps.isEligibleNow(app1Id)).to.eql(true)
-
-      // If we update the grace period now to 1 block the app should not be eligible if we check endorsement
-      await x2EarnApps.updateGracePeriod(1)
-
-      // check endorsement this time it will remove the app from the voting rounds
-      await x2EarnApps.checkEndorsement(app1Id)
-
-      // app should still be eligible for the current round as it was not removed before the round started
-      isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round2)
-      expect(isEligibleForVote).to.eql(true)
-
-      // App is no longer eligible
-      expect(await x2EarnApps.isEligibleNow(app1Id)).to.eql(false)
-
-      // check endorsement
-      await x2EarnApps.checkEndorsement(app1Id)
-
-      // wait for round to end
-      await waitForCurrentRoundToEnd()
-
-      // start new round -> 2nd cycle unendorsed
-      let round3 = await startNewAllocationRound()
-
-      // app id not eligible for the current round
-      isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round3)
-      expect(isEligibleForVote).to.eql(false)
-
-      // Updating grace period now has no effect as the app is no longer eligible
-      await x2EarnApps.updateGracePeriod(500000)
-
-      // check endorsement
-      await x2EarnApps.checkEndorsement(app1Id)
-
-      // app should not be eligible now
-      expect(await x2EarnApps.isEligibleNow(app1Id)).to.eql(false)
-    })
-
-    it("If an XAPP is no longer in eligible for voting as they lost their endorsement they can get added in by getting reendorsed", async function () {
-      const { x2EarnApps, xAllocationVoting, otherAccounts, owner } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      expect(await x2EarnApps.hasRole(await x2EarnApps.GOVERNANCE_ROLE(), owner.address)).to.eql(true)
-
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
-
-      // Register XAPP -> XAPP is pedning endorsement
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-
-      const appIdsPendingEndorsement1 = await x2EarnApps.unendorsedAppIds()
-      expect(appIdsPendingEndorsement1.length).to.eql(1)
-
-      // Create two Mjolnir node holders with an endorsement score of 50 each
-      await createNodeHolder(3, otherAccounts[1]) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 50
-      await createNodeHolder(3, otherAccounts[2]) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 50
-
-      await x2EarnApps.connect(otherAccounts[1]).endorseApp(app1Id, 1) // Node holder endorsement score is 50
-      await x2EarnApps.connect(otherAccounts[2]).endorseApp(app1Id, 2) // Node holder endorsement score is 50
-
-      let round1 = await startNewAllocationRound()
-
-      // app should be eligible for the current round
-      let isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
-      expect(isEligibleForVote).to.eql(true)
-
-      // App is not pending endorsement
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(false)
-
-      // remove endorsement from one of the node holders
-      await x2EarnApps.connect(otherAccounts[1]).unendorseApp(app1Id, 1)
-
-      // app should still be eligible for the current round
-      isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
-      expect(isEligibleForVote).to.eql(true)
-
-      // app should be pending endorsement -> score is now 50 -> grace period starts
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(true)
-
-      // App is pending endorsent
-      expect((await x2EarnApps.unendorsedApps()).length).to.eql(1)
-
-      // wait for round to end
-      await waitForCurrentRoundToEnd()
-
-      // start new round -> 1st cycle unedorsed
-      let round2 = await startNewAllocationRound()
-
-      // app should still be eligible for the current round as it is in the grace period
-      isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round2)
-      expect(isEligibleForVote).to.eql(true)
-
-      // check endorsement
-      await x2EarnApps.checkEndorsement(app1Id)
-
-      // wait for round to end
-      await waitForCurrentRoundToEnd()
-
-      // start new round -> 2nd cycle unendorsed
-      let round3 = await startNewAllocationRound()
-
-      // app should still be eligible for the current round as it is in the grace period
-      isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round3)
-      expect(isEligibleForVote).to.eql(true)
-
-      // check endorsement this time it will remove the app from the voting rounds
-      await x2EarnApps.checkEndorsement(app1Id)
-
-      // check endorsement
-      await x2EarnApps.checkEndorsement(app1Id)
-
-      // wait for round to end
-      await waitForCurrentRoundToEnd()
-
-      // start new round -> 3rd cycle unendorsed
-      let round4 = await startNewAllocationRound()
-
-      // app should not be eligible for the current round as it is not in the grace period
-      isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round4)
-      expect(isEligibleForVote).to.eql(false)
-
-      // App is pending endorsement
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(true)
-
-      // reendorse the app
-      await x2EarnApps.connect(otherAccounts[1]).endorseApp(app1Id, 1)
-
-      // App is not pending endorsement
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(false)
-
-      // App is not pending endorsent
-      expect((await x2EarnApps.unendorsedApps()).length).to.eql(0)
-
-      // wait for round to end
-      await waitForCurrentRoundToEnd()
-      // start new round -> 4th cycle reendorsed
-
-      let round5 = await startNewAllocationRound()
-      isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round5)
-      expect(isEligibleForVote).to.eql(true)
-    })
-
-    it("If an XNode endorser transfers its XNode XApp will not enter grace period, they will remain endorsed", async function () {
-      const { x2EarnApps, xAllocationVoting, otherAccounts, owner, vechainNodesMock } =
-        await getOrDeployContractInstances({
-          forceDeploy: true,
-        })
-
-      expect(await x2EarnApps.hasRole(await x2EarnApps.GOVERNANCE_ROLE(), owner.address)).to.eql(true)
-
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
-
-      // Register XAPP -> XAPP is pedning endorsement
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-
-      const appIdsPendingEndorsement1 = await x2EarnApps.unendorsedAppIds()
-      expect(appIdsPendingEndorsement1.length).to.eql(1)
-
-      // Create two Mjolnir node holders with an endorsement score of 50 each
-      await createNodeHolder(3, otherAccounts[1]) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 50
-      await createNodeHolder(3, otherAccounts[2]) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 50
-
-      await x2EarnApps.connect(otherAccounts[1]).endorseApp(app1Id, 1) // Node holder endorsement score is 50
-      await x2EarnApps.connect(otherAccounts[2]).endorseApp(app1Id, 2) // Node holder endorsement score is 50
-
-      let round1 = await startNewAllocationRound()
-
-      // app should be eligible for the current round
-      let isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
-      expect(isEligibleForVote).to.eql(true)
-
-      // Skip ahead 1 day to be able to transfer node
-      await time.setNextBlockTimestamp((await time.latest()) + 86400)
-
-      // XNode holder transfers its XNode
-      const tokenId = await vechainNodesMock.ownerToId(otherAccounts[1].address)
-      await vechainNodesMock
-        .connect(otherAccounts[1])
-        .transferFrom(otherAccounts[1].address, otherAccounts[3].address, tokenId)
-
-      const tokenId1 = await vechainNodesMock.ownerToId(otherAccounts[3].address)
-      expect(tokenId1).to.eql(tokenId)
-
-      // this will only get picked up if endorsement is checked
-      await x2EarnApps.checkEndorsement(app1Id)
-
-      // app should be pending endorsement -> score is now 50 -> grace period starts
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(false)
-      expect(await x2EarnApps.getScore(app1Id)).to.eql(100n)
-
-      // App is not pending endorsent
-      expect((await x2EarnApps.unendorsedApps()).length).to.eql(0)
-    })
-
-    it("An XAPP can only be endorsed if it is pending endorsement (score < 100)", async function () {
-      const { x2EarnApps, otherAccounts, owner } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      expect(await x2EarnApps.hasRole(await x2EarnApps.GOVERNANCE_ROLE(), owner.address)).to.eql(true)
-
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
-
-      // Register XAPP -> XAPP is pedning endorsement
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-
-      const appIdsPendingEndorsement1 = await x2EarnApps.unendorsedAppIds()
-      expect(appIdsPendingEndorsement1.length).to.eql(1)
-
-      // Create MjölnirX node holder with an endorsement score of 100
-      await createNodeHolder(7, otherAccounts[1]) // Node strength level 7 corresponds (MjolnirX) to an endorsement score of 100
-
-      // App should be pending endorsement -> score is 0 never endorsed
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(true)
-
-      // App is pending endorsent
-      expect((await x2EarnApps.unendorsedApps()).length).to.eql(1)
-
-      // Endorse XAPP with MjölnirX node holder
-      const tx = await x2EarnApps.connect(otherAccounts[1]).endorseApp(app1Id, 1) // Node holder endorsement score is 100
-
-      // Check event emitted
-      let receipt = await tx.wait()
-      if (!receipt) throw new Error("No receipt")
-
-      let events = receipt?.logs
-
-      let decodedEvents = events?.map(event => {
-        return x2EarnApps.interface.parseLog({
-          topics: event?.topics as string[],
-          data: event?.data as string,
-        })
-      })
-      const event = decodedEvents.find(event => event?.name === "AppEndorsed")
-      expect(event).to.not.equal(undefined)
-
-      // App is not pending endorsent
-      expect((await x2EarnApps.unendorsedApps()).length).to.eql(0)
-
-      // Should revert as app is already endorsed
-      // Create another MjölnirX node holder with an endorsement score of 100
-      await createNodeHolder(7, otherAccounts[2]) // Node strength level 7 corresponds (MjolnirX) to an endorsement score of 100
-      await expect(x2EarnApps.connect(otherAccounts[2]).endorseApp(app1Id, 2)).to.revertedWithCustomError(
-        x2EarnApps,
-        "X2EarnAppAlreadyEndorsed",
-      )
-
-      // App should not be pending endorsement
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(false)
-
-      // App should be eligible for voting
-      expect(await x2EarnApps.isEligibleNow(app1Id)).to.eql(true)
-    })
-
-    it("If a XNode holder transfers/sells its XNode the XAPPs remains endorsed by XNode and new owner is endorser", async function () {
-      const { x2EarnApps, otherAccounts, owner, vechainNodesMock } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      expect(await x2EarnApps.hasRole(await x2EarnApps.GOVERNANCE_ROLE(), owner.address)).to.eql(true)
-
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
-
-      // Register XAPP -> XAPP is pedning endorsement
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-
-      const appIdsPendingEndorsement1 = await x2EarnApps.unendorsedAppIds()
-      expect(appIdsPendingEndorsement1.length).to.eql(1)
-
-      // Create MjölnirX node holder with an endorsement score of 100
-      await createNodeHolder(7, otherAccounts[1]) // Node strength level 7 corresponds (MjolnirX) to an endorsement score of 100
-
-      // App should be pending endorsement -> score is 0 never endorsed
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(true)
-
-      // Endorse XAPP with MjölnirX node holder
-      await x2EarnApps.connect(otherAccounts[1]).endorseApp(app1Id, 1) // Node holder endorsement score is 100
-
-      // Get XAPP score
-      const score = await x2EarnApps.getScore(app1Id)
-
-      // App should not be pending endorsement
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(false)
-
-      // Xnode holder should be listed as an endorser
-      const endorsers = await x2EarnApps.getEndorsers(app1Id)
-      expect(endorsers[0]).to.eql(otherAccounts[1].address)
-
-      // Xnode holder loses its XNode status
-      // Skip ahead 1 day to be able to transfer node
-      await time.setNextBlockTimestamp((await time.latest()) + 86400)
-
-      // XNode holder transfers its XNode
-      const tokenId = await vechainNodesMock.ownerToId(otherAccounts[1].address)
-      await vechainNodesMock
-        .connect(otherAccounts[1])
-        .transferFrom(otherAccounts[1].address, otherAccounts[3].address, tokenId)
-
-      // New Xnode holder should still listed as an endorser
-      const endorsers1 = await x2EarnApps.getEndorsers(app1Id)
-      expect(endorsers1[0]).to.eql(otherAccounts[3].address)
-
-      // XAPP should have same score
-      expect(await x2EarnApps.getScore(app1Id)).to.eql(score)
-
-      // XAPP should not be pending endorsement
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(false)
-    })
-
-    it("If a XNode holder loses its XNode status they are removed as an endorser when XApp endorser score is checked", async function () {
-      const { x2EarnApps, otherAccounts, owner, vechainNodesMock } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      expect(await x2EarnApps.hasRole(await x2EarnApps.GOVERNANCE_ROLE(), owner.address)).to.eql(true)
-
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
-
-      // Register XAPP -> XAPP is pedning endorsement
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-
-      const appIdsPendingEndorsement1 = await x2EarnApps.unendorsedAppIds()
-      expect(appIdsPendingEndorsement1.length).to.eql(1)
-
-      // Create MjölnirX node holder with an endorsement score of 100
-      await createNodeHolder(7, otherAccounts[1]) // Node strength level 7 corresponds (MjolnirX) to an endorsement score of 100
-
-      // App should be pending endorsement -> score is 0 never endorsed
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(true)
-
-      // Endorse XAPP with MjölnirX node holder
-      await x2EarnApps.connect(otherAccounts[1]).endorseApp(app1Id, 1) // Node holder endorsement score is 100
-
-      // App should not be pending endorsement
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(false)
-
-      // Xnode holder should be listed as an endorser
-      const endorsers = await x2EarnApps.getEndorsers(app1Id)
-      expect(endorsers[0]).to.eql(otherAccounts[1].address)
-
-      // Xnode holder loses its XNode status
-      // Skip ahead 1 day
-      await time.setNextBlockTimestamp((await time.latest()) + 86400)
-
-      // XNode holder transfers its XNode
-      const tokenId = await vechainNodesMock.ownerToId(otherAccounts[1].address)
-      await vechainNodesMock.connect(owner).downgradeTo(tokenId, 0)
-
-      // Xnode holder should not still be listed as an endorser
-      const endorsers1 = await x2EarnApps.getEndorsers(app1Id)
-      expect(endorsers1.length).to.eql(0)
-
-      // XApp is not pending endorsement yet
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(false)
-
-      // this will only get picked up if endorsement is checked
-      await x2EarnApps.checkEndorsement(app1Id)
-
-      // App is pending endorsent
-      expect((await x2EarnApps.unendorsedApps()).length).to.eql(1)
-    })
-
-    it("Should return correct value for grace period length", async function () {
-      const config = createLocalConfig()
-      const { x2EarnApps } = await getOrDeployContractInstances({
-        forceDeploy: false,
-      })
-      const gracePeriod = await x2EarnApps.gracePeriod()
-      expect(gracePeriod).to.eql(BigInt(config.XAPP_GRACE_PERIOD))
-    })
-
-    it("Grace period can be updated by admin with governance role", async function () {
-      const config = createLocalConfig()
-      const { x2EarnApps, otherAccounts, owner } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-      expect(await x2EarnApps.hasRole(await x2EarnApps.GOVERNANCE_ROLE(), owner.address)).to.eql(true)
-
-      const gracePeriod = await x2EarnApps.gracePeriod()
-      expect(gracePeriod).to.eql(BigInt(config.XAPP_GRACE_PERIOD))
-
-      await catchRevert(x2EarnApps.connect(otherAccounts[0]).updateGracePeriod(1000))
-
-      const newGracePeriod = 1000
-      await x2EarnApps.connect(owner).updateGracePeriod(newGracePeriod)
-
-      const gracePeriodAfterUpdate = await x2EarnApps.gracePeriod()
-      expect(gracePeriodAfterUpdate).to.eql(BigInt(newGracePeriod))
-    })
-
-    it("Node endorsement scores can be updated by admin with governance role", async function () {
-      const { x2EarnApps, otherAccounts, owner } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-      expect(await x2EarnApps.hasRole(await x2EarnApps.GOVERNANCE_ROLE(), owner.address)).to.eql(true)
-
-      await createNodeHolder(1, otherAccounts[1]) // Node strength level 1 corresponds (Thor) to an endorsement score of 10
-      await createNodeHolder(2, otherAccounts[2]) // Node strength level 2 corresponds (Odin) to an endorsement score of 20
-      await createNodeHolder(3, otherAccounts[3]) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 50
-      await createNodeHolder(4, otherAccounts[4]) // Node strength level 4 corresponds (MjolnirX) to an endorsement score of 100
-      await createNodeHolder(5, otherAccounts[5]) // Node strength level 5 corresponds (MjolnirX) to an endorsement score of 100
-      await createNodeHolder(6, otherAccounts[6]) // Node strength level 6 corresponds (MjolnirX) to an endorsement score of 100
-      await createNodeHolder(7, otherAccounts[7]) // Node strength level 7 corresponds (MjolnirX) to an endorsement score of 100
-
-      expect(await x2EarnApps.getUsersEndorsementScore(otherAccounts[1].address)).to.eql(2n)
-      expect(await x2EarnApps.getUsersEndorsementScore(otherAccounts[2].address)).to.eql(13n)
-      expect(await x2EarnApps.getUsersEndorsementScore(otherAccounts[3].address)).to.eql(50n)
-      expect(await x2EarnApps.getUsersEndorsementScore(otherAccounts[4].address)).to.eql(3n)
-      expect(await x2EarnApps.getUsersEndorsementScore(otherAccounts[5].address)).to.eql(9n)
-      expect(await x2EarnApps.getUsersEndorsementScore(otherAccounts[6].address)).to.eql(35n)
-      expect(await x2EarnApps.getUsersEndorsementScore(otherAccounts[7].address)).to.eql(100n)
-
-      expect(await x2EarnApps.getNodeEndorsementScore(1)).to.eql(2n)
-      expect(await x2EarnApps.getNodeEndorsementScore(2)).to.eql(13n)
-      expect(await x2EarnApps.getNodeEndorsementScore(3)).to.eql(50n)
-      expect(await x2EarnApps.getNodeEndorsementScore(4)).to.eql(3n)
-      expect(await x2EarnApps.getNodeEndorsementScore(5)).to.eql(9n)
-      expect(await x2EarnApps.getNodeEndorsementScore(6)).to.eql(35n)
-      expect(await x2EarnApps.getNodeEndorsementScore(7)).to.eql(100n)
-
-      const newEndorsementScores = {
-        strength: 1,
-        thunder: 2,
-        mjolnir: 3,
-        veThorX: 4,
-        strengthX: 5,
-        thunderX: 6,
-        mjolnirX: 7,
-      }
-
-      await x2EarnApps.connect(owner).updateNodeEndorsementScores(newEndorsementScores)
-
-      expect(await x2EarnApps.getUsersEndorsementScore(otherAccounts[1].address)).to.eql(
-        BigInt(newEndorsementScores.strength),
-      )
-      expect(await x2EarnApps.getUsersEndorsementScore(otherAccounts[2].address)).to.eql(
-        BigInt(newEndorsementScores.thunder),
-      )
-      expect(await x2EarnApps.getUsersEndorsementScore(otherAccounts[3].address)).to.eql(
-        BigInt(newEndorsementScores.mjolnir),
-      )
-      expect(await x2EarnApps.getUsersEndorsementScore(otherAccounts[4].address)).to.eql(
-        BigInt(newEndorsementScores.veThorX),
-      )
-      expect(await x2EarnApps.getUsersEndorsementScore(otherAccounts[5].address)).to.eql(
-        BigInt(newEndorsementScores.strengthX),
-      )
-      expect(await x2EarnApps.getUsersEndorsementScore(otherAccounts[6].address)).to.eql(
-        BigInt(newEndorsementScores.thunderX),
-      )
-      expect(await x2EarnApps.getUsersEndorsementScore(otherAccounts[7].address)).to.eql(
-        BigInt(newEndorsementScores.mjolnirX),
-      )
-    })
-
-    it("Only a default admin or app admin can call 'removeNodeEndorsement'", async function () {
-      const { x2EarnApps, otherAccounts, owner } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      expect(await x2EarnApps.hasRole(await x2EarnApps.DEFAULT_ADMIN_ROLE(), owner.address)).to.eql(true)
-
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
-
-      // Register XAPP -> XAPP is pedning endorsement
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-
-      const appIdsPendingEndorsement1 = await x2EarnApps.unendorsedAppIds()
-      expect(appIdsPendingEndorsement1.length).to.eql(1)
-
-      // Create two Mjolnir node holders with an endorsement score of 50 each
-      await createNodeHolder(3, otherAccounts[1]) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 50
-      await createNodeHolder(3, otherAccounts[2]) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 50
-
-      await x2EarnApps.connect(otherAccounts[1]).endorseApp(app1Id, 1) // Node holder endorsement score is 50
-      await x2EarnApps.connect(otherAccounts[2]).endorseApp(app1Id, 2) // Node holder endorsement score is 50
-
-      // App not pending endorsement
-      const appIdsPendingEndorsement2 = await x2EarnApps.unendorsedAppIds()
-      expect(appIdsPendingEndorsement2.length).to.eql(0)
-
-      // Should revert if random user calls removeNodeEndorsement
-      await expect(x2EarnApps.connect(otherAccounts[10]).removeNodeEndorsement(app1Id, 1)).to.be.reverted
-
-      // Should not revert if xapp admin user calls removeNodeEndorsement
-      await expect(x2EarnApps.connect(otherAccounts[0]).removeNodeEndorsement(app1Id, 1)).to.not.be.reverted
-
-      // Should not revert if default admin user calls removeNodeEndorsement
-      await expect(x2EarnApps.connect(owner).removeNodeEndorsement(app1Id, 2)).to.not.be.reverted
-    })
-
-    it("Should revert if admin tries to remove endorsement of an XAPP that has not been submitted", async function () {
-      const { x2EarnApps, otherAccounts, owner } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      expect(await x2EarnApps.hasRole(await x2EarnApps.DEFAULT_ADMIN_ROLE(), owner.address)).to.eql(true)
-
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
-
-      // Should reverts as app has not been submitted
-      await expect(x2EarnApps.connect(owner).removeNodeEndorsement(app1Id, 1)).to.be.reverted
-    })
-
-    it("Should revert if admin tries to remove endorsement of an XNode that is not endorsing XAPP", async function () {
-      const { x2EarnApps, otherAccounts, owner } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      expect(await x2EarnApps.hasRole(await x2EarnApps.DEFAULT_ADMIN_ROLE(), owner.address)).to.eql(true)
-
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
-
-      // Create MjölnirX node holder with an endorsement score of 100
-      await createNodeHolder(7, otherAccounts[1]) // Node strength level 7 corresponds (MjolnirX) to an endorsement score of 100
-
-      // Endorse XAPP with MjölnirX node holder
-      await x2EarnApps.connect(otherAccounts[1]).endorseApp(app1Id, 1) // Node holder endorsement score is 100
-
-      // Should reverts as node id that is not an endorser is passed in
-      await expect(x2EarnApps.connect(owner).removeNodeEndorsement(app1Id, 10)).to.be.reverted
-
-      // Should not revert as node id that is an endorser is passed in
-      await expect(x2EarnApps.connect(owner).removeNodeEndorsement(app1Id, 1)).to.not.be.reverted
-    })
-
-    it("Endorsement score threshold can be updated by admin with governance role", async function () {
-      const config = createLocalConfig()
-      const { x2EarnApps, otherAccounts, owner } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-      expect(await x2EarnApps.hasRole(await x2EarnApps.GOVERNANCE_ROLE(), owner.address)).to.eql(true)
-
-      expect(await x2EarnApps.endorsementScoreThreshold()).to.eql(BigInt(100n))
-
-      // Should revert as not admin
-      await catchRevert(x2EarnApps.connect(otherAccounts[3]).updateEndorsementScoreThreshold(1000))
-
-      // Update endorsement score threshold
-      await x2EarnApps.connect(owner).updateEndorsementScoreThreshold(1000)
-
-      // Check updated endorsement score threshold
-      expect(await x2EarnApps.endorsementScoreThreshold()).to.eql(BigInt(1000n))
-    })
-
-    it("An XAPP can only endorse one XApp at once", async function () {
-      const { x2EarnApps, otherAccounts, owner } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      expect(await x2EarnApps.hasRole(await x2EarnApps.GOVERNANCE_ROLE(), owner.address)).to.eql(true)
-
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
-      const app2Id = await x2EarnApps.hashAppName(otherAccounts[1].address)
-
-      // Register XAPPs -> XAPP is pending endorsement
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[1].address, otherAccounts[1].address, otherAccounts[1].address, "metadataURI")
-
-      const appIdsPendingEndorsement1 = await x2EarnApps.unendorsedAppIds()
-      expect(appIdsPendingEndorsement1.length).to.eql(2)
-
-      // Create MjölnirX node holder with an endorsement score of 100
-      await createNodeHolder(7, otherAccounts[1]) // Node strength level 7 corresponds (MjolnirX) to an endorsement score of 100
-
-      // App should be pending endorsement -> score is 0 never endorsed
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(true)
-
-      // Endorse XAPP with MjölnirX node holder
-      await x2EarnApps.connect(otherAccounts[1]).endorseApp(app1Id, 1) // Node holder endorsement score is 100
-
-      // Should revert as endorser is already endorsing an XApp
-      await expect(x2EarnApps.connect(otherAccounts[1]).endorseApp(app2Id, 2)).to.revertedWithCustomError(
-        x2EarnApps,
-        "X2EarnNonNodeHolder",
-      )
-
-      // App2 should be pending endorsement
-      expect(await x2EarnApps.isAppUnendorsed(app2Id)).to.eql(true)
-
-      // Appw should not be eligible for voting
-      expect(await x2EarnApps.isEligibleNow(app2Id)).to.eql(false)
-    })
-
-    it("Only an node holder can endorse an XAPP", async function () {
-      const { x2EarnApps, otherAccounts, owner } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
-
-      // Register XAPPs -> XAPP is pending endorsement
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-
-      const appIdsPendingEndorsement1 = await x2EarnApps.unendorsedAppIds()
-      expect(appIdsPendingEndorsement1.length).to.eql(1)
-
-      // Should revert as endorser is already endorsing an XApp
-      await expect(x2EarnApps.connect(otherAccounts[1]).endorseApp(app1Id, 1)).to.revertedWithCustomError(
-        x2EarnApps,
-        "X2EarnNonNodeHolder",
-      )
-
-      // App2 should be pending endorsement
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(true)
-
-      // Appw should not be eligible for voting
-      expect(await x2EarnApps.isEligibleNow(app1Id)).to.eql(false)
-    })
-
-    it("Cannot endorse a blacklisted XAPP and a blacklisted App cannot be pending endorsement", async function () {
-      const { x2EarnApps, otherAccounts, owner } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      expect(await x2EarnApps.hasRole(await x2EarnApps.GOVERNANCE_ROLE(), owner.address)).to.eql(true)
-
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
-
-      // Register XAPPs -> XAPP is pending endorsement
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-
-      // Blacklist XAPP
-      await x2EarnApps.connect(owner).setVotingEligibility(app1Id, false)
-
-      // Create MjölnirX node holder with an endorsement score of 100
-      await createNodeHolder(7, otherAccounts[1]) // Node strength level 7 corresponds (MjolnirX) to an endorsement score of 100
-
-      // Should revert as endorser is already endorsing an XApp
-      await expect(x2EarnApps.connect(otherAccounts[1]).endorseApp(app1Id, 1)).to.revertedWithCustomError(
-        x2EarnApps,
-        "X2EarnAppBlacklisted",
-      )
-
-      // App2 should be pending endorsement
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(false)
-
-      // Appw should not be eligible for voting
-      expect(await x2EarnApps.isEligibleNow(app1Id)).to.eql(false)
-    })
-
-    it("Cannot endorse an XAPP that does not exist", async function () {
-      const { x2EarnApps, otherAccounts } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      // AppId that does not exist
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
-
-      // Should revert as endorser is already endorsing an XApp
-      await expect(x2EarnApps.connect(otherAccounts[1]).endorseApp(app1Id, 1)).to.revertedWithCustomError(
-        x2EarnApps,
-        "X2EarnNonexistentApp",
-      )
-    })
-
-    it("Cannot unendorse an XAPP that does not exist", async function () {
-      const { x2EarnApps, otherAccounts } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      // AppId that does not exist
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
-
-      // User should be a node holder to by pass first check
-      await createNodeHolder(7, otherAccounts[1])
-
-      // Should revert as endorser is already endorsing an XApp
-      await expect(x2EarnApps.connect(otherAccounts[1]).unendorseApp(app1Id, 1)).to.revertedWithCustomError(
-        x2EarnApps,
-        "X2EarnNonexistentApp",
-      )
-    })
-
-    it("Cannot unendorse an XAPP if not an endorser", async function () {
-      const { x2EarnApps, otherAccounts, owner } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      // User should be a node holder to by pass first check
-      await createNodeHolder(7, otherAccounts[1])
-
-      // Register XAPPs -> XAPP is pending endorsement
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-
-      // AppId that does not exist
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
-
-      // Should revert as user is not an endorser
-      await expect(x2EarnApps.connect(otherAccounts[1]).unendorseApp(app1Id, 1)).to.revertedWithCustomError(
-        x2EarnApps,
-        "X2EarnNonEndorser",
-      )
-    })
-
-    it("Cannot check endorsement status of an XAPP that does not exist", async function () {
-      const { x2EarnApps, otherAccounts } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      // AppId that does not exist
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
-
-      // Should revert as endorser is already endorsing an XApp
-      await expect(x2EarnApps.connect(otherAccounts[1]).checkEndorsement(app1Id)).to.revertedWithCustomError(
-        x2EarnApps,
-        "X2EarnNonexistentApp",
-      )
-    })
-
-    it("Does not revert if checking the status of a blacklisted XAPP", async function () {
-      const { x2EarnApps, otherAccounts, owner } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      expect(await x2EarnApps.hasRole(await x2EarnApps.GOVERNANCE_ROLE(), owner.address)).to.eql(true)
-
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
-
-      // Register XAPPs -> XAPP is pending endorsement
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-
-      // Blacklist XAPP
-      await x2EarnApps.connect(owner).setVotingEligibility(app1Id, false)
-
-      expect(await x2EarnApps.checkEndorsement(app1Id)).to.not.be.reverted
-    })
-
-    it("A blacklisted XAPP is not pending endorsement", async function () {
-      const { x2EarnApps, otherAccounts, owner } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      expect(await x2EarnApps.hasRole(await x2EarnApps.GOVERNANCE_ROLE(), owner.address)).to.eql(true)
-
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
-
-      // Register XAPPs -> XAPP is pending endorsement
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-
-      // Blacklist XAPP
-      await x2EarnApps.connect(owner).setVotingEligibility(app1Id, false)
-
-      // App should not be pending endorsement
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(false)
-    })
-
-    it("A node holder can remove endorsement if a XAPP is blacklisted", async function () {
-      const { x2EarnApps, otherAccounts, owner, otherAccount, x2EarnCreator } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
-
-      // Register XAPPs -> XAPP is pending endorsement
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-
-      // Create MjölnirX node holder with an endorsement score of 100
-      await createNodeHolder(7, otherAccounts[0]) // Node strength level 7 corresponds (MjolnirX) to an endorsement score of 100
-
-      // Endorse XAPP with MjölnirX node holder
-      await x2EarnApps.connect(otherAccounts[0]).endorseApp(app1Id, 1) // Node holder endorsement score is 100
-
-      // Blacklist XAPP
-      await x2EarnApps.connect(owner).setVotingEligibility(app1Id, false)
-
-      // Should not revert as endorser if the XAPP is blacklisted
-      await expect(x2EarnApps.connect(otherAccounts[0]).unendorseApp(app1Id, 1)).to.not.be.reverted
-
-      // App should not be pending endorsement -> blacklisted XApps should not be pendng endosement
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(false)
-
-      // Xnode holder should no longer be listed as an endorser
-      const endorsers = await x2EarnApps.getEndorsers(app1Id)
-      expect(endorsers.length).to.eql(0)
-
-      // Endorser should be able to endorse a different XAPP
-      const app2Id = await x2EarnApps.hashAppName(otherAccounts[1].address)
-
-      // Grant other account creator NFT
-      await x2EarnCreator.connect(owner).safeMint(otherAccount.address)
-
-      // Register XAPPs -> XAPP is pending endorsement
-      await x2EarnApps
-        .connect(otherAccount)
-        .submitApp(otherAccounts[1].address, otherAccounts[1].address, otherAccounts[1].address, "metadataURI")
-
-      await expect(x2EarnApps.connect(otherAccounts[0]).endorseApp(app2Id, 1)).to.not.be.reverted
-    })
-
-    it("A node holder can unendorse one XAPP and reendorse another", async function () {
-      const { x2EarnApps, otherAccounts, owner } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
-
-      // Register XAPPs -> XAPP is pending endorsement
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-
-      // Create MjölnirX node holder with an endorsement score of 100
-      await createNodeHolder(7, otherAccounts[0]) // Node strength level 7 corresponds (MjolnirX) to an endorsement score of 100
-
-      // Endorse XAPP with MjölnirX node holder
-      await x2EarnApps.connect(otherAccounts[0]).endorseApp(app1Id, 1) // Node holder endorsement score is 100
-
-      // Should not revert as endorser if the XAPP is blacklisted
-      await expect(x2EarnApps.connect(otherAccounts[0]).unendorseApp(app1Id, 1)).to.not.be.reverted
-
-      // App should not be pending endorsement
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(true)
-
-      // Xnode holder should no longer be listed as an endorser
-      const endorsers = await x2EarnApps.getEndorsers(app1Id)
-      expect(endorsers.length).to.eql(0)
-
-      // Endorser should be able to endorse a different XAPP
-      const app2Id = await x2EarnApps.hashAppName(otherAccounts[1].address)
-
-      // Register XAPPs -> XAPP is pending endorsement
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[1].address, otherAccounts[1].address, otherAccounts[1].address, "metadataURI")
-
-      await expect(x2EarnApps.connect(otherAccounts[0]).endorseApp(app2Id, 1)).to.not.be.reverted
-
-      // Node holder should listed as endorser
-      const endorsers2 = await x2EarnApps.getEndorsers(app2Id)
-      expect(endorsers2[0]).to.eql(otherAccounts[0].address)
-    })
-
-    it("An XAPP that has been black listed should not be elgible for voting in following rounds even if endorsed", async function () {
-      const { x2EarnApps, xAllocationVoting, otherAccounts, owner } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      expect(await x2EarnApps.hasRole(await x2EarnApps.GOVERNANCE_ROLE(), owner.address)).to.eql(true)
-
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
-
-      // Register XAPP -> XAPP is pedning endorsement
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-
-      const appIdsPendingEndorsement1 = await x2EarnApps.unendorsedAppIds()
-      expect(appIdsPendingEndorsement1.length).to.eql(1)
-
-      // Create two Mjolnir node holders with an endorsement score of 50 each
-      await createNodeHolder(3, otherAccounts[1]) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 50
-      await createNodeHolder(3, otherAccounts[2]) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 50
-
-      await x2EarnApps.connect(otherAccounts[1]).endorseApp(app1Id, 1) // Node holder endorsement score is 50
-      await x2EarnApps.connect(otherAccounts[2]).endorseApp(app1Id, 2) // Node holder endorsement score is 50
-
-      let round1 = await startNewAllocationRound()
-
-      // app should be eligible for the current round
-      let isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
-      expect(isEligibleForVote).to.eql(true)
-
-      // App is not pending endorsement
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(false)
-
-      // blacklist XAPP from future rounds
-      await x2EarnApps.connect(owner).setVotingEligibility(app1Id, false)
-
-      // app should still be eligible for the current round
-      isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
-      expect(isEligibleForVote).to.eql(true)
-
-      // app should not be pending endorsement -> blacklisted XAPPS shoould nto be pending endorsement
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(false)
-
-      // wait for round to end
-      await waitForCurrentRoundToEnd()
-
-      // start new round -> 1st cycle unedorsed
-      let round2 = await startNewAllocationRound()
-
-      // app should not be eligible for voting in current round
-      isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round2)
-      expect(isEligibleForVote).to.eql(false)
-
-      // user should still be endorsed by XAPPS
-      const endorsers = await x2EarnApps.getEndorsers(app1Id)
-      expect(endorsers.length).to.eql(2)
-
-      // check endorsement
-      await x2EarnApps.checkEndorsement(app1Id)
-
-      // wait for round to end
-      await waitForCurrentRoundToEnd()
-
-      // start new round -> 2nd cycle unendorsed
-      let round3 = await startNewAllocationRound()
-
-      // app should still still not be eligible for the current round
-      isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round3)
-      expect(isEligibleForVote).to.eql(false)
-    })
-
-    it("An XAPP that has been black listed should not be able to be endorsed until removed from the blacklist", async function () {
-      const { x2EarnApps, otherAccounts, owner } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      expect(await x2EarnApps.hasRole(await x2EarnApps.GOVERNANCE_ROLE(), owner.address)).to.eql(true)
-
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
-
-      // Register XAPP -> XAPP is pending endorsement
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-
-      const appIdsPendingEndorsement1 = await x2EarnApps.unendorsedAppIds()
-      expect(appIdsPendingEndorsement1.length).to.eql(1)
-
-      // Create two Mjolnir node holders with an endorsement score of 50 each
-      await createNodeHolder(3, otherAccounts[1]) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 50
-      await createNodeHolder(3, otherAccounts[2]) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 50
-
-      // blacklist XAPP
-      await x2EarnApps.connect(owner).setVotingEligibility(app1Id, false)
-
-      // app should not be pending endorsement -> blacklisted XAPPS should nto be pending endorsement
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(false)
-
-      // Check XApps pending endorsement should be empty
-      expect((await x2EarnApps.unendorsedAppIds()).length).to.eql(0)
-
-      // blacklist XAPP
-      await x2EarnApps.connect(owner).setVotingEligibility(app1Id, true)
-
-      // app should not be pending endorsement until app endorsement is checked
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(false)
-
-      await x2EarnApps.checkEndorsement(app1Id)
-
-      // app should now be pending endorsement
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(true)
-
-      // Check XApps pending endorsement should be empty
-      expect((await x2EarnApps.unendorsedAppIds()).length).to.eql(1)
-    })
-
-    it("An XAPPs security should be set to LOW when they intially join the platform", async function () {
-      const { x2EarnApps, otherAccounts, owner, veBetterPassport } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
-
-      // Register XAPP -> XAPP is pending endorsement
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-
-      await endorseApp(app1Id, otherAccounts[1])
-
-      // Get app security level
-      const appSecurityLevel = await veBetterPassport.appSecurity(app1Id)
-      expect(appSecurityLevel).to.eql(1n)
-    })
-
-    it("An XAPPs security should be set to NONE when they lose there endorsement", async function () {
-      const config = createLocalConfig()
-      config.XAPP_GRACE_PERIOD = 0
-      const { x2EarnApps, otherAccounts, owner, veBetterPassport } = await getOrDeployContractInstances({
-        forceDeploy: true,
-        config,
-      })
-
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
-
-      // Register XAPP -> XAPP is pending endorsement
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-
-      await endorseApp(app1Id, otherAccounts[1])
-
-      // Get app security level
-      const appSecurityLevel = await veBetterPassport.appSecurity(app1Id)
-      expect(appSecurityLevel).to.eql(1n)
-
-      await x2EarnApps.connect(otherAccounts[1]).unendorseApp(app1Id, 1) // Node holder removes their endorsement
-
-      // Check endorsement
-      await x2EarnApps.checkEndorsement(app1Id)
-
-      // Get app security level
-      const appSecurityLevel2 = await veBetterPassport.appSecurity(app1Id)
-      expect(appSecurityLevel2).to.eql(0n)
-    })
-
-    it("An XAPPs security should be reset when an XAPP that once was endorsed gets re-endorsed", async function () {
-      const config = createLocalConfig()
-      config.XAPP_GRACE_PERIOD = 0
-      const { x2EarnApps, otherAccounts, owner, veBetterPassport } = await getOrDeployContractInstances({
-        forceDeploy: true,
-        config,
-      })
-
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
-      const app2Id = await x2EarnApps.hashAppName(otherAccounts[1].address)
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[1].address, otherAccounts[1].address, otherAccounts[1].address, "metadataURI")
-
-      await endorseApp(app1Id, otherAccounts[1])
-      await endorseApp(app2Id, otherAccounts[2])
-
-      // Get app security level
-      expect(await veBetterPassport.appSecurity(app1Id)).to.eql(1n)
-      expect(await veBetterPassport.appSecurity(app2Id)).to.eql(1n)
-
-      // Passport admin changes their security level
-      await veBetterPassport.connect(owner).setAppSecurity(app1Id, 0)
-      await veBetterPassport.connect(owner).setAppSecurity(app2Id, 3)
-
-      // Get app security level
-      expect(await veBetterPassport.appSecurity(app1Id)).to.eql(0n)
-      expect(await veBetterPassport.appSecurity(app2Id)).to.eql(3n)
-
-      // Unendorse apps
-      await x2EarnApps.connect(otherAccounts[1]).unendorseApp(app1Id, 1)
-      await x2EarnApps.connect(otherAccounts[2]).unendorseApp(app2Id, 2)
-
-      // Check endorsement
-      await x2EarnApps.checkEndorsement(app1Id)
-      await x2EarnApps.checkEndorsement(app2Id)
-
-      // App security level should be NONE
-      expect(await veBetterPassport.appSecurity(app1Id)).to.eql(0n)
-      expect(await veBetterPassport.appSecurity(app2Id)).to.eql(0n)
-
-      // Re-endorse apps
-      await x2EarnApps.connect(otherAccounts[1]).endorseApp(app1Id, 1)
-      await x2EarnApps.connect(otherAccounts[2]).endorseApp(app2Id, 2)
-
-      // Scores should be reset to where they were before
-      expect(await veBetterPassport.appSecurity(app1Id)).to.eql(0n)
-      expect(await veBetterPassport.appSecurity(app2Id)).to.eql(3n)
-    })
-
-    it("An XAPP that has been removed from black list that has endorsers should not be pending endorsement", async function () {
-      const { x2EarnApps, xAllocationVoting, otherAccounts, owner } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      expect(await x2EarnApps.hasRole(await x2EarnApps.GOVERNANCE_ROLE(), owner.address)).to.eql(true)
-
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
-
-      // Register XAPP -> XAPP is pedning endorsement
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-
-      const appIdsPendingEndorsement1 = await x2EarnApps.unendorsedAppIds()
-      expect(appIdsPendingEndorsement1.length).to.eql(1)
-
-      // Create two Mjolnir node holders with an endorsement score of 50 each
-      await createNodeHolder(3, otherAccounts[1]) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 50
-      await createNodeHolder(3, otherAccounts[2]) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 50
-
-      await x2EarnApps.connect(otherAccounts[1]).endorseApp(app1Id, 1) // Node holder endorsement score is 50
-      await x2EarnApps.connect(otherAccounts[2]).endorseApp(app1Id, 2) // Node holder endorsement score is 50
-
-      let round1 = await startNewAllocationRound()
-
-      // app should be eligible for the current round
-      let isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
-      expect(isEligibleForVote).to.eql(true)
-
-      // App is not pending endorsement -> blacklisted XAPPS shoould not be pending endorsement
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(false)
-
-      // blacklist XAPP from future rounds
-      await x2EarnApps.connect(owner).setVotingEligibility(app1Id, false)
-
-      // app should still be eligible for the current round
-      isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
-      expect(isEligibleForVote).to.eql(true)
-
-      // app should not be pending endorsement -> blacklisted XAPPS shoould nto be pending endorsement
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(false)
-
-      // wait for round to end
-      await waitForCurrentRoundToEnd()
-
-      // start new round -> 1st cycle unedorsed
-      let round2 = await startNewAllocationRound()
-
-      // app should not be eligible for voting in current round
-      isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round2)
-      expect(isEligibleForVote).to.eql(false)
-
-      // wait for round to end
-      await waitForCurrentRoundToEnd()
-
-      // Remove XAPP from blacklist
-      await x2EarnApps.connect(owner).setVotingEligibility(app1Id, true)
-
-      // To find XAPPS that have been unblacklisted need to check endorsement status
-      await x2EarnApps.checkEndorsement(app1Id)
-
-      // Should not be pending endorsement
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(false)
-
-      // start new round
-      let round3 = await startNewAllocationRound()
-
-      expect(await xAllocationVoting.isEligibleForVote(app1Id, round3)).to.eql(true)
-
-      // Get apps info should not be empty as app
-      const appsInfo = await x2EarnApps.apps()
-      expect(appsInfo.length).to.eql(1)
-
-      // Get all eligible apps should return 1
-      const eligbleApps = await x2EarnApps.allEligibleApps()
-      expect(eligbleApps.length).to.eql(1)
-
-      // Unedorsed apps list should be empty
-      expect((await x2EarnApps.unendorsedAppIds()).length).to.eql(0)
-    })
-
-    it("An XAPP that has been removed from blacklist that had been endorsed pre blacklist but now has no endorsers should be pending endorsement and in two week grace period", async function () {
-      const { x2EarnApps, xAllocationVoting, otherAccounts, owner } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      expect(await x2EarnApps.hasRole(await x2EarnApps.GOVERNANCE_ROLE(), owner.address)).to.eql(true)
-
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
-
-      // Register XAPP -> XAPP is pedning endorsement
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-
-      const appIdsPendingEndorsement1 = await x2EarnApps.unendorsedAppIds()
-      expect(appIdsPendingEndorsement1.length).to.eql(1)
-
-      // Get apps info should be empty as app is not eligible
-      const appsInfo1 = await x2EarnApps.apps()
-      expect(appsInfo1.length).to.eql(0)
-
-      // Create two Mjolnir node holders with an endorsement score of 50 each
-      await createNodeHolder(3, otherAccounts[1]) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 50
-      await createNodeHolder(3, otherAccounts[2]) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 50
-
-      await x2EarnApps.connect(otherAccounts[1]).endorseApp(app1Id, 1) // Node holder endorsement score is 50
-      await x2EarnApps.connect(otherAccounts[2]).endorseApp(app1Id, 2) // Node holder endorsement score is 50
-
-      // Get apps info should not be empty as app is eligible
-      const appsInfo2 = await x2EarnApps.apps()
-      expect(appsInfo2.length).to.eql(1)
-
-      let round1 = await startNewAllocationRound()
-
-      // app should be eligible for the current round
-      let isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
-      expect(isEligibleForVote).to.eql(true)
-
-      // App is not pending endorsement
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(false)
-
-      // blacklist XAPP from future rounds
-      await x2EarnApps.connect(owner).setVotingEligibility(app1Id, false)
-
-      // app should still be eligible for the current round
-      isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
-      expect(isEligibleForVote).to.eql(true)
-
-      // app should not be pending endorsement -> blacklisted XAPPS shoould nto be pending endorsement
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(false)
-
-      // wait for round to end
-      await waitForCurrentRoundToEnd()
-
-      // start new round -> 1st cycle unedorsed
-      let round2 = await startNewAllocationRound()
-
-      // app should not be eligible for voting in current round
-      isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round2)
-      expect(isEligibleForVote).to.eql(false)
-
-      // XAPP gets unendorsed
-      await x2EarnApps.connect(otherAccounts[1]).unendorseApp(app1Id, 1) // Node holder endorsement score is 50
-      await x2EarnApps.connect(otherAccounts[2]).unendorseApp(app1Id, 2) // Node holder endorsement score is 50
-
-      // Get apps info should be not empty as app was once eligible
-      const appsInfo3 = await x2EarnApps.apps()
-      expect(appsInfo3.length).to.eql(1)
-
-      // check endorsers should be 0
-      const endorsers2 = await x2EarnApps.getEndorsers(app1Id)
-      expect(endorsers2.length).to.eql(0)
-
-      // app should not be pending endorsement -> blacklisted XAPPS shoould not be pending endorsement
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(false)
-
-      // wait for round to end
-      await waitForCurrentRoundToEnd()
-
-      // Remove XAPP from blacklist
-      await x2EarnApps.connect(owner).setVotingEligibility(app1Id, true)
-
-      // Get apps info should not be empty as app had once been eligible and is now pending endorsement
-      const appsInfo4 = await x2EarnApps.apps()
-      expect(appsInfo4.length).to.eql(1)
-
-      // To find XAPPS that have been unblacklisted need to check endorsement status
-      await x2EarnApps.checkEndorsement(app1Id)
-
-      // Should be pending endorsement
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(true)
-
-      // Unedorsed apps list should be 1 as app is in grace period
-      expect((await x2EarnApps.unendorsedAppIds()).length).to.eql(1)
-
-      // start new round
-      let round3 = await startNewAllocationRound()
-
-      expect(await xAllocationVoting.isEligibleForVote(app1Id, round3)).to.eql(true)
-
-      // Get apps info should be equal to 1 as app is eligible
-      const appsInfo5 = await x2EarnApps.apps()
-      expect(appsInfo5.length).to.eql(1)
-
-      // Unedorsed apps list should contain 1
-      expect((await x2EarnApps.unendorsedAppIds()).length).to.eql(1)
-
-      // wait for round to end
-      await waitForCurrentRoundToEnd()
-
-      // start new round
-      await startNewAllocationRound()
-
-      // wait for round to end
-      await waitForCurrentRoundToEnd()
-
-      // check status of endorsement
-      await x2EarnApps.checkEndorsement(app1Id)
-
-      // start new round
-      const latestRound = await startNewAllocationRound()
-
-      // app should not be eligible for voting
-      expect(await xAllocationVoting.isEligibleForVote(app1Id, latestRound)).to.eql(false)
-
-      // app should be pending endorsement
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(true)
-
-      // Apps pending endorsement should be 1
-      expect((await x2EarnApps.unendorsedAppIds()).length).to.eql(1)
-    })
-
-    it("An XAPP that has been removed from black list, but did not reach score threshold pre blacklist, but node has increased score since so that XApp now has a score greater than 100, they should not be peding endorsement ", async function () {
-      const { x2EarnApps, xAllocationVoting, otherAccounts, owner, vechainNodesMock } =
-        await getOrDeployContractInstances({
-          forceDeploy: true,
-        })
-
-      expect(await x2EarnApps.hasRole(await x2EarnApps.GOVERNANCE_ROLE(), owner.address)).to.eql(true)
-
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
-
-      // Register XAPP -> XAPP is pedning endorsement
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-
-      const appIdsPendingEndorsement1 = await x2EarnApps.unendorsedAppIds()
-      expect(appIdsPendingEndorsement1.length).to.eql(1)
-
-      // Create two node holders with an endorsement score
-      await createNodeHolder(2, owner) // Node strength level 2 corresponds (Thunder) to an endorsement score of 13
-      await createNodeHolder(1, otherAccounts[2]) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 2
-
-      // Endorse XAPP with node holder -> combined endorsement score is 63 -> less than 100
-      await x2EarnApps.connect(owner).endorseApp(app1Id, 1) // Node holder endorsement score is 50
-      await x2EarnApps.connect(otherAccounts[2]).endorseApp(app1Id, 2) // Node holder endorsement score is 2
-
-      // Check endorsement
-      await x2EarnApps.checkEndorsement(app1Id)
-
-      // app should be pending endorsement
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(true)
-
-      // app should not be eligible for voting
-      expect(await x2EarnApps.isEligibleNow(app1Id)).to.eql(false)
-
-      // App should not be added so should not exist in vebetter DAO app list
-      expect(await x2EarnApps.appExists(app1Id)).to.eql(false)
-
-      // Get apps info should be empty as app is not eligible
-      expect((await x2EarnApps.apps()).length).to.eql(0)
-
-      // Unedorsed apps list should not be empty
-      expect((await x2EarnApps.unendorsedAppIds()).length).to.eql(1)
-
-      // blacklist XAPP from future rounds
-      await x2EarnApps.connect(owner).setVotingEligibility(app1Id, false)
-
-      // Skip ahead 1 day to be able to transfer node
-      await time.setNextBlockTimestamp((await time.latest()) + 86400)
-      // XNode holder increases its node strength by getting a new node while XAPP is blacklisted
-
-      const tokenId2 = await vechainNodesMock.ownerToId(otherAccounts[2].address)
-      await vechainNodesMock.upgradeTo(tokenId2, 7)
-
-      // app should not be pending endorsement -> blacklisted XAPPS should not be pending endorsement
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(false)
-
-      // wait for round to end
-      await waitForCurrentRoundToEnd()
-
-      // start new round -> 1st cycle unedorsed
-      let round2 = await startNewAllocationRound()
-
-      // app should not be eligible for voting in current round
-      expect(await xAllocationVoting.isEligibleForVote(app1Id, round2)).to.eql(false)
-
-      // wait for round to end
-      await waitForCurrentRoundToEnd()
-
-      // Remove XAPP from blacklist
-      await x2EarnApps.connect(owner).setVotingEligibility(app1Id, true)
-
-      // To find XAPPS that have been unblacklisted need to check endorsement status
-      await x2EarnApps.checkEndorsement(app1Id)
-
-      // Should not be pending endorsement
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(false)
-
-      // Get all eligible apps should return 1
-      const eligbleApps = await x2EarnApps.allEligibleApps()
-      expect(eligbleApps.length).to.eql(1)
-
-      // start new round
-      let round3 = await startNewAllocationRound()
-
-      // app should be eligible for the current round
-      expect(await xAllocationVoting.isEligibleForVote(app1Id, round3)).to.eql(true)
-
-      // Get apps info should not be empty as app is eligible
-      const appsInfo = await x2EarnApps.apps()
-      expect(appsInfo.length).to.eql(1)
-
-      // Unedorsed apps list should be empty
-      expect((await x2EarnApps.unendorsedAppIds()).length).to.eql(0)
-    })
-
-    it("Should be able to get a node holders endorsement score", async function () {
-      const { x2EarnApps, otherAccounts, owner } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      await createNodeHolder(0, otherAccounts[0]) // Node strength level 0 corresponds (None) to an endorsement score of 0
-      await createNodeHolder(1, otherAccounts[1]) // Node strength level 1 corresponds (Strength) to an endorsement score of 2
-      await createNodeHolder(2, otherAccounts[2]) // Node strength level 2 corresponds (Thunder) to an endorsement score of 13
-      await createNodeHolder(3, otherAccounts[3]) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 50
-      await createNodeHolder(4, otherAccounts[4]) // Node strength level 4 corresponds (VeThorX) to an endorsement score of 3
-      await createNodeHolder(5, otherAccounts[5]) // Node strength level 5 corresponds (StrengthX) to an endorsement score of 9
-      await createNodeHolder(6, otherAccounts[6]) // Node strength level 6 corresponds (ThunderX) to an endorsement score of 35
-      await createNodeHolder(7, otherAccounts[7]) // Node strength level 7 corresponds (MjolnirX) to an endorsement score of 100
-
-      // Get endorsement score
-      expect(await x2EarnApps.getUsersEndorsementScore(otherAccounts[0].address)).to.eql(0n) // Node strength level 0 corresponds (None) to an endorsement score of 0
-      expect(await x2EarnApps.getUsersEndorsementScore(otherAccounts[1].address)).to.eql(2n) // Node strength level 1 corresponds (Strength) to an endorsement score of 2
-      expect(await x2EarnApps.getUsersEndorsementScore(otherAccounts[2].address)).to.eql(13n) // Node strength level 2 corresponds (Thunder) to an endorsement score of 13
-      expect(await x2EarnApps.getUsersEndorsementScore(otherAccounts[3].address)).to.eql(50n) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 50
-      expect(await x2EarnApps.getUsersEndorsementScore(otherAccounts[4].address)).to.eql(3n) // Node strength level 4 corresponds (VeThorX) to an endorsement score of 3
-      expect(await x2EarnApps.getUsersEndorsementScore(otherAccounts[5].address)).to.eql(9n) // Node strength level 5 corresponds (StrengthX) to an endorsement score of 9
-      expect(await x2EarnApps.getUsersEndorsementScore(otherAccounts[6].address)).to.eql(35n) // Node strength level 6 corresponds (ThunderX) to an endorsement score of 35
-      expect(await x2EarnApps.getUsersEndorsementScore(otherAccounts[7].address)).to.eql(100n) // Node strength level 7 corresponds (MjolnirX) to an endorsement score of 100
-    })
-
-    it("Should be able to get a nodes endorsement score", async function () {
-      const { x2EarnApps, otherAccounts } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      await createNodeHolder(0, otherAccounts[0]) // Node strength level 0 corresponds (None) to an endorsement score of 0
-      await createNodeHolder(1, otherAccounts[1]) // Node strength level 1 corresponds (Strength) to an endorsement score of 2
-      await createNodeHolder(2, otherAccounts[2]) // Node strength level 2 corresponds (Thunder) to an endorsement score of 13
-      await createNodeHolder(3, otherAccounts[3]) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 50
-      await createNodeHolder(4, otherAccounts[4]) // Node strength level 4 corresponds (VeThorX) to an endorsement score of 3
-      await createNodeHolder(5, otherAccounts[5]) // Node strength level 5 corresponds (StrengthX) to an endorsement score of 9
-      await createNodeHolder(6, otherAccounts[6]) // Node strength level 6 corresponds (ThunderX) to an endorsement score of 35
-      await createNodeHolder(7, otherAccounts[7]) // Node strength level 7 corresponds (MjolnirX) to an endorsement score of 100
-
-      // Get endorsement score
-      expect(await x2EarnApps.getNodeEndorsementScore(1)).to.eql(0n) // Node strength level 0 corresponds (None) to an endorsement score of 0
-      expect(await x2EarnApps.getNodeEndorsementScore(2)).to.eql(2n) // Node strength level 1 corresponds (Strength) to an endorsement score of 2
-      expect(await x2EarnApps.getNodeEndorsementScore(3)).to.eql(13n) // Node strength level 2 corresponds (Thunder) to an endorsement score of 13
-      expect(await x2EarnApps.getNodeEndorsementScore(4)).to.eql(50n) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 50
-      expect(await x2EarnApps.getNodeEndorsementScore(5)).to.eql(3n) // Node strength level 4 corresponds (VeThorX) to an endorsement score of 3
-      expect(await x2EarnApps.getNodeEndorsementScore(6)).to.eql(9n) // Node strength level 5 corresponds (StrengthX) to an endorsement score of 9
-      expect(await x2EarnApps.getNodeEndorsementScore(7)).to.eql(35n) // Node strength level 6 corresponds (ThunderX) to an endorsement score of 35
-      expect(await x2EarnApps.getNodeEndorsementScore(8)).to.eql(100n) // Node strength level 7 corresponds (MjolnirX) to an endorsement score of 100
-    })
-
-    it("If an XAPP has a score less than 100 but one of its endorsers increases the node strength when endorsement status is checked they will be endorsed ", async function () {
-      const { x2EarnApps, otherAccounts, owner, vechainNodesMock } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
-
-      // Register XAPP -> XAPP is pedning endorsement
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-
-      const appIdsPendingEndorsement1 = await x2EarnApps.unendorsedAppIds()
-      expect(appIdsPendingEndorsement1.length).to.eql(1)
-
-      // Create two node holders with an endorsement score
-      await createNodeHolder(2, owner) // Node strength level 2 corresponds (Thunder) to an endorsement score of 13
-      await createNodeHolder(3, otherAccounts[2]) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 50
-
-      // Endorse XAPP with node holder -> combined endorsement score is 63 -> less than 100
-      await x2EarnApps.connect(owner).endorseApp(app1Id, 1) // Node holder endorsement score is 50
-      await x2EarnApps.connect(otherAccounts[2]).endorseApp(app1Id, 2) // Node holder endorsement score is 50
-
-      // Check endorsement
-      await x2EarnApps.checkEndorsement(app1Id)
-
-      // app should be pending endorsement
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(true)
-
-      // app should not be eligible for voting
-      expect(await x2EarnApps.isEligibleNow(app1Id)).to.eql(false)
-
-      // App should not be added so should exist in vebetter DAO app list
-      expect(await x2EarnApps.appExists(app1Id)).to.eql(false)
-
-      // Get apps info should be empty as app is not eligible
-      const appsInfo = await x2EarnApps.apps()
-      expect(appsInfo.length).to.eql(0)
-
-      // Skip ahead 1 day
-      await time.setNextBlockTimestamp((await time.latest()) + 86400)
-      // XNode holder increases its node strength by getting a new node
-      const tokenId2 = await vechainNodesMock.ownerToId(otherAccounts[2].address)
-      await vechainNodesMock.upgradeTo(tokenId2, 7)
-
-      // check endorsement
-      await x2EarnApps.checkEndorsement(app1Id)
-
-      // app should not be pending endorsement
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(false)
-
-      // Get apps info should have 1 app
-      const appsInfo2 = await x2EarnApps.apps()
-      expect(appsInfo2.length).to.eql(1)
-
-      // App should be added so should exist in vebetter DAO app list
-      expect(await x2EarnApps.appExists(app1Id)).to.eql(true)
-
-      // Unedorsed apps list should be empty
-      expect((await x2EarnApps.unendorsedAppIds()).length).to.eql(0)
-    })
-
-    it("If a user recieves an XNode that is endorsing an XAPP they can remove endorsement and endorse another XAPP", async function () {
-      const { x2EarnApps, otherAccounts, owner, vechainNodesMock } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
-      const app2Id = await x2EarnApps.hashAppName(otherAccounts[1].address)
-
-      // Register XAPP -> XAPP is pending endorsement
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[1].address, otherAccounts[1].address, otherAccounts[1].address, "metadataURI 1")
-
-      const appIdsPendingEndorsement1 = await x2EarnApps.unendorsedAppIds()
-      expect(appIdsPendingEndorsement1.length).to.eql(2)
-
-      // Create two node holders with an endorsement score
-      await createNodeHolder(7, owner) // Node strength level 2 corresponds (Thunder) to an endorsement score of 13
-
-      // Endorse XAPP with node holder
-      await x2EarnApps.connect(owner).endorseApp(app1Id, 1) // Node holder endorsement score 100
-
-      // Check endorsement
-      await x2EarnApps.checkEndorsement(app1Id)
-
-      // app should be pending endorsement
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(false)
-
-      // app should be eligible for voting
-      expect(await x2EarnApps.isEligibleNow(app1Id)).to.eql(true)
-
-      // App should be added so should exist in vebetter DAO app list
-      expect(await x2EarnApps.appExists(app1Id)).to.eql(true)
-
-      // Skip ahead 1 day to be able to transfer node
-      await time.setNextBlockTimestamp((await time.latest()) + 86400)
-      // XNode holder increases its node strength by getting a new node
-      const tokenId = await vechainNodesMock.ownerToId(owner.address)
-      await vechainNodesMock.connect(owner).transfer(otherAccounts[0].address, tokenId)
-
-      // check endorsement
-      await x2EarnApps.checkEndorsement(app1Id)
-
-      // app should not be pending endorsement
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(false)
-
-      // Get apps info should have 1 app
-      const appsInfo2 = await x2EarnApps.apps()
-      expect(appsInfo2.length).to.eql(1)
-
-      // Unedorsed apps list should be empty
-      expect((await x2EarnApps.unendorsedAppIds()).length).to.eql(1)
-
-      // new owner should be able to unendorse XAPP
-      await x2EarnApps.connect(otherAccounts[0]).unendorseApp(app1Id, 1)
-
-      // app should be pending endorsement
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(true)
-
-      // check endorsers should be 0
-      const endorsers = await x2EarnApps.getEndorsers(app1Id)
-      expect(endorsers.length).to.eql(0)
-
-      const appIdsPendingEndorsement2 = await x2EarnApps.unendorsedAppIds()
-      expect(appIdsPendingEndorsement2.length).to.eql(2)
-
-      // should be able to endorse new XAPP
-      await x2EarnApps.connect(otherAccounts[0]).endorseApp(app2Id, 1) // Node holder endorsement score 100
-
-      // app should not be pending endorsement
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(true)
-
-      const appIdsPendingEndorsement3 = await x2EarnApps.unendorsedAppIds()
-      expect(appIdsPendingEndorsement3.length).to.eql(1)
-    })
-
-    it("Check how expensive it is to check the endorsement status of an XAPP with 50 endorsers (MAX amount)", async function () {
-      if (network.name == "hardhat") {
-        return console.log(
-          "Skipping VTHO transfer test on hardhat network as hardcoded VTHO contract address in Treasury does not exist",
-        )
-      }
-      const { x2EarnApps, otherAccounts, owner, vechainNodesMock } = await getOrDeployContractInstances({
-        forceDeploy: false,
-      })
-
-      const accounts = getTestKeys(50)
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
-
-      // Register XAPP -> XAPP is pedning endorsement
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-      const level = 1 // score = 2
-
-      const seedAccounts: SeedAccount[] = []
-
-      accounts.forEach(key => {
-        seedAccounts.push({
-          key,
-          amount: unitsUtils.parseVET("200000"),
-        })
-      })
-
-      // aidrop VTHO
-      await airdropVTHO(seedAccounts, accounts[2])
-
-      for (let i = 0; i < 50; i++) {
-        // Create two node holders with an endorsement score
-        await vechainNodesMock.addToken(accounts[i].address, level, false, 0, 0)
-
-        const clauses = [
-          clauseBuilder.functionInteraction(
-            await x2EarnApps.getAddress(),
-            coder
-              .createInterface(JSON.stringify(X2EarnApps__factory.abi))
-              .getFunction("endorseApp") as FunctionFragment,
-            [app1Id],
-          ),
-        ]
-
-        const body: TransactionBody = await buildTxBody(clauses, accounts[i].address, 32, 10_000_000)
-
-        if (!accounts[i].pk) throw new Error("No private key")
-
-        await signAndSendTx(body, accounts[i].pk)
-      }
-
-      const endorsers = await x2EarnApps.getEndorsers(app1Id)
-      expect(endorsers.length).to.eql(50)
-
-      const tx = await x2EarnApps.checkEndorsement(app1Id)
-      const receipt = await tx.wait()
-
-      console.log(receipt?.gasUsed)
-    })
-
-    it("A user with a XNODE node delegated to them can endorse an XAPP", async function () {
-      const { x2EarnApps, otherAccounts, owner, nodeManagement } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      expect(await x2EarnApps.hasRole(await x2EarnApps.GOVERNANCE_ROLE(), owner.address)).to.eql(true)
-
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
-
-      // Register XAPP -> XAPP is pedning endorsement
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-
-      const appIdsPendingEndorsement1 = await x2EarnApps.unendorsedAppIds()
-      expect(appIdsPendingEndorsement1.length).to.eql(1)
-
-      // Create two Mjolnir node holders with an endorsement score of 50 each
-      await createNodeHolder(3, otherAccounts[1]) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 50
-      await createNodeHolder(3, otherAccounts[2]) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 50
-
-      // delegate node to user
-      await nodeManagement.connect(otherAccounts[1]).delegateNode(otherAccounts[3].address) // Other account 1 delegates node to other account 3
-      await nodeManagement.connect(otherAccounts[2]).delegateNode(otherAccounts[4].address) // Other account 2 delegates node to other account 4
-
-      // Endorse XAPP with both Mjolnir node holders
-      await x2EarnApps.connect(otherAccounts[3]).endorseApp(app1Id, 1) // Node holder endorsement score is 50
-      expect(await x2EarnApps.getScore(app1Id)).to.eql(50n) // XAPP endorsement score is 50
-      await x2EarnApps.connect(otherAccounts[4]).endorseApp(app1Id, 2) // Node holder endorsement score is 50
-      expect(await x2EarnApps.getScore(app1Id)).to.eql(100n) // XAPP endorsement score is now 100
-
-      const appIdsPendingEndorsement2 = await x2EarnApps.unendorsedAppIds()
-      expect(appIdsPendingEndorsement2.length).to.eql(0)
-
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(false)
-      expect(await x2EarnApps.isEligibleNow(app1Id)).to.eql(true)
-    })
-
-    it("A user with a XNODE node delegated to them can endorse an XAPP and the delegated XNODE owner cannot", async function () {
-      const { x2EarnApps, otherAccounts, owner, nodeManagement } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      expect(await x2EarnApps.hasRole(await x2EarnApps.GOVERNANCE_ROLE(), owner.address)).to.eql(true)
-
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
-
-      // Register XAPP -> XAPP is pedning endorsement
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-
-      const appIdsPendingEndorsement1 = await x2EarnApps.unendorsedAppIds()
-      expect(appIdsPendingEndorsement1.length).to.eql(1)
-
-      // Create two Mjolnir node holders with an endorsement score of 50 each
-      await createNodeHolder(3, otherAccounts[1]) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 50
-
-      // delegate node to user
-      await nodeManagement.connect(otherAccounts[1]).delegateNode(otherAccounts[3].address) // Other account 1 delegates node to other account 3
-
-      await expect(x2EarnApps.connect(otherAccounts[1]).endorseApp(app1Id, 2)).to.be.reverted // Node owner cannot endorse XAPP as node is delegated
-
-      // Endorse XAPP with both Mjolnir node holders
-      await x2EarnApps.connect(otherAccounts[3]).endorseApp(app1Id, 1) // Node holder endorsement score is 50
-      expect(await x2EarnApps.getScore(app1Id)).to.eql(50n) // XAPP endorsement score is 50
-    })
-
-    it("A user with multiple nodes delegated to them can endorse multiple apps", async function () {
-      const { x2EarnApps, otherAccounts, owner, nodeManagement } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      expect(await x2EarnApps.hasRole(await x2EarnApps.GOVERNANCE_ROLE(), owner.address)).to.eql(true)
-
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
-      const app2Id = await x2EarnApps.hashAppName(otherAccounts[1].address)
-      const app3Id = await x2EarnApps.hashAppName(otherAccounts[2].address)
-
-      // Register XAPP -> XAPP is pedning endorsement
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[1].address, otherAccounts[1].address, otherAccounts[1].address, "metadataURI")
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[2].address, otherAccounts[2].address, otherAccounts[2].address, "metadataURI")
-
-      const appIdsPendingEndorsement1 = await x2EarnApps.unendorsedAppIds()
-      expect(appIdsPendingEndorsement1.length).to.eql(3)
-
-      // Create two Mjolnir node holders with an endorsement score of 50 each
-      await createNodeHolder(7, otherAccounts[1]) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 100
-      await createNodeHolder(7, otherAccounts[2]) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 100
-      await createNodeHolder(7, otherAccounts[3]) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 100
-
-      // delegate node to user
-      await nodeManagement.connect(otherAccounts[1]).delegateNode(otherAccounts[4].address) // Other account 1 delegates node to other account 4
-      await nodeManagement.connect(otherAccounts[2]).delegateNode(otherAccounts[4].address) // Other account 2 delegates node to other account 4
-      await nodeManagement.connect(otherAccounts[3]).delegateNode(otherAccounts[4].address) // Other account 3 delegates node to other account 4
-
-      // Account 4 endorses all 3 XAPPs
-      await x2EarnApps.connect(otherAccounts[4]).endorseApp(app1Id, 1) // Node holder endorsement score is 100 -> XAPP endorse with token Id 1
-      await x2EarnApps.connect(otherAccounts[4]).endorseApp(app2Id, 2) // Node holder endorsement score is 100 -> XAPP endorse with token Id 2
-      await x2EarnApps.connect(otherAccounts[4]).endorseApp(app3Id, 3) // Node holder endorsement score is 100 -> XAPP endorse with token Id 3
-
-      const appIdsPendingEndorsement2 = await x2EarnApps.unendorsedAppIds()
-      expect(appIdsPendingEndorsement2.length).to.eql(0)
-
-      expect(await x2EarnApps.getEndorsers(app1Id)).to.eql([otherAccounts[4].address])
-      expect(await x2EarnApps.getEndorsers(app2Id)).to.eql([otherAccounts[4].address])
-      expect(await x2EarnApps.getEndorsers(app3Id)).to.eql([otherAccounts[4].address])
-    })
-
-    it("A user with multiple nodes delegated to them can endorse the same app multiple times", async function () {
-      const { x2EarnApps, otherAccounts, owner, nodeManagement } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      expect(await x2EarnApps.hasRole(await x2EarnApps.GOVERNANCE_ROLE(), owner.address)).to.eql(true)
-
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
-
-      // Register XAPP -> XAPP is pedning endorsement
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-
-      const appIdsPendingEndorsement1 = await x2EarnApps.unendorsedAppIds()
-      expect(appIdsPendingEndorsement1.length).to.eql(1)
-
-      // Create two Mjolnir node holders with an endorsement score of 50 each
-      await createNodeHolder(6, otherAccounts[1]) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 35
-      await createNodeHolder(6, otherAccounts[2]) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 35
-      await createNodeHolder(6, otherAccounts[3]) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 35
-
-      // delegate node to user
-      await nodeManagement.connect(otherAccounts[1]).delegateNode(otherAccounts[4].address) // Other account 1 delegates node to other account 4
-      await nodeManagement.connect(otherAccounts[2]).delegateNode(otherAccounts[4].address) // Other account 2 delegates node to other account 4
-      await nodeManagement.connect(otherAccounts[3]).delegateNode(otherAccounts[4].address) // Other account 3 delegates node to other account 4
-
-      // Account 4 endorses all 3 XAPPs
-      await x2EarnApps.connect(otherAccounts[4]).endorseApp(app1Id, 1) // Node holder endorsement score is 35 -> XAPP endorse with token Id 1
-      await x2EarnApps.connect(otherAccounts[4]).endorseApp(app1Id, 2) // Node holder endorsement score is 35 -> XAPP endorse with token Id 2
-      await x2EarnApps.connect(otherAccounts[4]).endorseApp(app1Id, 3) // Node holder endorsement score is 35 -> XAPP endorse with token Id 3
-
-      const appIdsPendingEndorsement2 = await x2EarnApps.unendorsedAppIds()
-      expect(appIdsPendingEndorsement2.length).to.eql(0)
-
-      expect(await x2EarnApps.getEndorsers(app1Id)).to.eql([
-        otherAccounts[4].address,
-        otherAccounts[4].address,
-        otherAccounts[4].address,
-      ]) // TODO: Should be unique endorsers getting returned -> need efficient way to check for unique endorsers
-    })
-
-    it("Only XApp endorser can remove their XAPP and not other node holder thats not an endorser", async function () {
-      const { x2EarnApps, xAllocationVoting, otherAccounts, owner } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      expect(await x2EarnApps.hasRole(await x2EarnApps.GOVERNANCE_ROLE(), owner.address)).to.eql(true)
-
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
-      const app2Id = await x2EarnApps.hashAppName(otherAccounts[1].address)
-
-      // Register XAPP -> XAPP is pedning endorsement
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[1].address, otherAccounts[1].address, otherAccounts[1].address, "metadataURI1")
-
-      // Create two Mjolnir node holders with an endorsement score of 100 each
-      await createNodeHolder(7, otherAccounts[1])
-      await createNodeHolder(7, otherAccounts[2])
-
-      await x2EarnApps.connect(otherAccounts[1]).endorseApp(app1Id, 1) // Node holder endorsement score is 100
-      await x2EarnApps.connect(otherAccounts[2]).endorseApp(app2Id, 2) // Node holder endorsement score is 50
-
-      expect(await x2EarnApps.nodeToEndorsedApp(1)).to.eql(app1Id) // Node ID 1 has endorsed app1Id
-
-      let round1 = await startNewAllocationRound()
-
-      // app should be eligible for the current round
-      let isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
-      expect(isEligibleForVote).to.eql(true)
-
-      // App is not pending endorsement
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(false)
-
-      // remove endorsement from one of the node holders
-      const tx = await expect(
-        x2EarnApps.connect(otherAccounts[2]).unendorseApp(app1Id, 2),
-      ).to.be.revertedWithCustomError(x2EarnApps, "X2EarnNonEndorser")
-    })
-
-    it("A user with multiple nodes delegated to them can endorse the same app multiple times", async function () {
-      const { x2EarnApps, otherAccounts, owner, nodeManagement } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      expect(await x2EarnApps.hasRole(await x2EarnApps.GOVERNANCE_ROLE(), owner.address)).to.eql(true)
-
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
-
-      // Register XAPP -> XAPP is pedning endorsement
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-
-      const appIdsPendingEndorsement1 = await x2EarnApps.unendorsedAppIds()
-      expect(appIdsPendingEndorsement1.length).to.eql(1)
-
-      // Create two Mjolnir node holders with an endorsement score of 50 each
-      await createNodeHolder(6, otherAccounts[1]) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 35
-      await createNodeHolder(6, otherAccounts[2]) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 35
-      await createNodeHolder(6, otherAccounts[3]) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 35
-
-      // delegate node to user
-      await nodeManagement.connect(otherAccounts[1]).delegateNode(otherAccounts[4].address) // Other account 1 delegates node to other account 4
-      await nodeManagement.connect(otherAccounts[2]).delegateNode(otherAccounts[4].address) // Other account 2 delegates node to other account 4
-      await nodeManagement.connect(otherAccounts[3]).delegateNode(otherAccounts[4].address) // Other account 3 delegates node to other account 4
-
-      // Account 4 endorses all 3 XAPPs
-      await x2EarnApps.connect(otherAccounts[4]).endorseApp(app1Id, 1) // Node holder endorsement score is 35 -> XAPP endorse with token Id 1
-      await x2EarnApps.connect(otherAccounts[4]).endorseApp(app1Id, 2) // Node holder endorsement score is 35 -> XAPP endorse with token Id 2
-      await x2EarnApps.connect(otherAccounts[4]).endorseApp(app1Id, 3) // Node holder endorsement score is 35 -> XAPP endorse with token Id 3
-
-      const appIdsPendingEndorsement2 = await x2EarnApps.unendorsedAppIds()
-      expect(appIdsPendingEndorsement2.length).to.eql(0)
-
-      expect(await x2EarnApps.getEndorsers(app1Id)).to.eql([
-        otherAccounts[4].address,
-        otherAccounts[4].address,
-        otherAccounts[4].address,
-      ]) // TODO: Should be unique endorsers getting returned -> need efficient way to check for unique endorsers
-    })
-
-    it("An XAPP who was endorsed by delegated node remains endorsed by XNode when delegation is revoked", async function () {
-      const { x2EarnApps, otherAccounts, owner, nodeManagement } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      expect(await x2EarnApps.hasRole(await x2EarnApps.GOVERNANCE_ROLE(), owner.address)).to.eql(true)
-
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
-
-      // Register XAPP -> XAPP is pedning endorsement
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-
-      const appIdsPendingEndorsement1 = await x2EarnApps.unendorsedAppIds()
-      expect(appIdsPendingEndorsement1.length).to.eql(1)
-
-      // Create two Mjolnir node holders with an endorsement score of 50 each
-      await createNodeHolder(7, otherAccounts[1]) // Node strength level 3 corresponds (Mjolnir) to an endorsement score of 35
-
-      // delegate node to user
-      await nodeManagement.connect(otherAccounts[1]).delegateNode(otherAccounts[4].address) // Other account 1 delegates node to other account 4
-
-      // Account 4 endorses all 3 XAPPs
-      await x2EarnApps.connect(otherAccounts[4]).endorseApp(app1Id, 1) // Node holder endorsement score is 35 -> XAPP endorse with token Id 1
-
-      const appIdsPendingEndorsement2 = await x2EarnApps.unendorsedAppIds()
-      expect(appIdsPendingEndorsement2.length).to.eql(0)
-
-      expect(await x2EarnApps.getEndorsers(app1Id)).to.eql([otherAccounts[4].address])
-
-      // revoke delegation -> Ownner of the node becomes the manager again
-      await nodeManagement.connect(otherAccounts[1]).removeNodeDelegation()
-
-      // check endorsement
-      await x2EarnApps.checkEndorsement(app1Id)
-
-      // app should not be pending endorsement
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(false)
-
-      // Get apps info should have 1 app
-      const appsInfo2 = await x2EarnApps.apps()
-      expect(appsInfo2.length).to.eql(1)
-
-      // Unedorsed apps list should be empty
-      expect((await x2EarnApps.unendorsedAppIds()).length).to.eql(0)
-
-      // XNode owner should now be the endorser
-      expect(await x2EarnApps.getEndorsers(app1Id)).to.eql([otherAccounts[1].address])
-    })
-
-    it("Admins should be able to remove an XApp from submission list", async function () {
-      const { x2EarnApps, otherAccounts, owner } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      expect(await x2EarnApps.hasRole(await x2EarnApps.DEFAULT_ADMIN_ROLE(), owner.address)).to.eql(true)
-
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
-
-      // Register XAPP -> XAPP is pedning endorsement
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-
-      const appIdsPendingEndorsement1 = await x2EarnApps.unendorsedAppIds()
-      expect(appIdsPendingEndorsement1.length).to.eql(1)
-
-      // Remove XAPP from submission list
-      await x2EarnApps.connect(owner).removeXAppSubmission(app1Id)
-
-      const appIdsPendingEndorsement2 = await x2EarnApps.unendorsedAppIds()
-
-      expect(appIdsPendingEndorsement2.length).to.eql(0)
-    })
-
-    it("Only app admins and contract admin should be able to remove an XApp from submission list", async function () {
-      const { x2EarnApps, otherAccounts, owner, x2EarnCreator } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      expect(await x2EarnApps.hasRole(await x2EarnApps.DEFAULT_ADMIN_ROLE(), owner.address)).to.eql(true)
-
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[1].address)
-      const app2Id = await x2EarnApps.hashAppName(otherAccounts[2].address)
-
-      // Mint creator NFTs to accounts sumbmitting XApps
-      await x2EarnCreator.safeMint(otherAccounts[1].address)
-      await x2EarnCreator.safeMint(otherAccounts[2].address)
-
-      // Register XAPP -> XAPP is pedning endorsement
-      await x2EarnApps
-        .connect(otherAccounts[1])
-        .submitApp(otherAccounts[1].address, otherAccounts[1].address, otherAccounts[1].address, "metadataURI 1")
-
-      await x2EarnApps
-        .connect(otherAccounts[2])
-        .submitApp(otherAccounts[2].address, otherAccounts[2].address, otherAccounts[2].address, "metadataURI 2")
-
-      const appIdsPendingEndorsement1 = await x2EarnApps.unendorsedAppIds()
-      expect(appIdsPendingEndorsement1.length).to.eql(2)
-
-      await expect(x2EarnApps.connect(otherAccounts[6]).removeXAppSubmission(app1Id)).to.be.reverted
-
-      // Remove XAPP from submission list
-      await expect(x2EarnApps.connect(owner).removeXAppSubmission(app1Id)).to.not.be.reverted
-
-      await expect(x2EarnApps.connect(otherAccounts[2]).removeXAppSubmission(app2Id)).to.not.be.reverted
-
-      const appIdsPendingEndorsement2 = await x2EarnApps.unendorsedAppIds()
-
-      expect(appIdsPendingEndorsement2.length).to.eql(0)
-    })
-
-    it("Should revert if trying to remove XApp that has not been submitted", async function () {
-      const { x2EarnApps, owner } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-      const app1Id = await x2EarnApps.hashAppName(owner.address)
-
-      await expect(x2EarnApps.connect(owner).removeXAppSubmission(app1Id)).to.be.revertedWithCustomError(
-        x2EarnApps,
-        "X2EarnNonexistentApp",
-      )
-    })
-
-    it("Should revert if trying to remove XApp that has participatted in one or more XAllocationg Voting rounds", async function () {
-      const { x2EarnApps, owner, otherAccounts, xAllocationVoting } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
-
-      // Register XAPP -> XAPP is pedning endorsement
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-
-      await endorseApp(app1Id, owner)
-
-      // app should be eligible for voting
-      expect(await x2EarnApps.isEligibleNow(app1Id)).to.eql(true)
-
-      let round1 = await startNewAllocationRound()
-
-      // app should be eligible for the current round
-      let isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
-      expect(isEligibleForVote).to.eql(true)
-
-      // App is not pending endorsement
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(false)
-
-      await expect(x2EarnApps.connect(owner).removeXAppSubmission(app1Id)).to.be.revertedWithCustomError(
-        x2EarnApps,
-        "NodeManagementXAppAlreadyIncluded",
-      )
-    })
-
-    it("Should revert if trying to remove XApp that has participatted in one or more XAllocationg Voting rounds even if unendorsed", async function () {
-      const { x2EarnApps, owner, otherAccounts, xAllocationVoting } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
-
-      // Register XAPP -> XAPP is pedning endorsement
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-
-      await endorseApp(app1Id, owner)
-
-      // app should be eligible for voting
-      expect(await x2EarnApps.isEligibleNow(app1Id)).to.eql(true)
-
-      let round1 = await startNewAllocationRound()
-
-      // app should be eligible for the current round
-      let isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
-      expect(isEligibleForVote).to.eql(true)
-
-      await x2EarnApps.connect(owner).unendorseApp(app1Id, 1)
-
-      // App is not pending endorsement
-      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(true)
-
-      // wait for round to end
-      await waitForCurrentRoundToEnd()
-
-      await expect(x2EarnApps.connect(owner).removeXAppSubmission(app1Id)).to.be.revertedWithCustomError(
-        x2EarnApps,
-        "NodeManagementXAppAlreadyIncluded",
-      )
     })
   })
 })

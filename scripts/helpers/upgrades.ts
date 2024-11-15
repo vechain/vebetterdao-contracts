@@ -1,7 +1,7 @@
 import { BaseContract, Interface } from "ethers"
 import { ethers } from "hardhat"
 import { getImplementationAddress } from "@openzeppelin/upgrades-core"
-import { AddressUtils } from "@repo/utils"
+import { compareAddresses } from "./utils"
 import { DeployUpgradeOptions } from "./type"
 
 export const deployProxy = async (
@@ -29,7 +29,7 @@ export const deployProxy = async (
   logOutput && console.log(`${contractName} proxy: ${await proxy.getAddress()}`)
 
   const newImplementationAddress = await getImplementationAddress(ethers.provider, await proxy.getAddress())
-  if (!AddressUtils.compareAddresses(newImplementationAddress, await implementation.getAddress())) {
+  if (!compareAddresses(newImplementationAddress, await implementation.getAddress())) {
     throw new Error(
       `The implementation address is not the one expected: ${newImplementationAddress} !== ${await implementation.getAddress()}`,
     )
@@ -59,7 +59,7 @@ export const deployProxyOnly = async (
   logOutput && console.log(`${contractName} proxy: ${await proxy.getAddress()}`)
 
   const newImplementationAddress = await getImplementationAddress(ethers.provider, await proxy.getAddress())
-  if (!AddressUtils.compareAddresses(newImplementationAddress, await implementation.getAddress())) {
+  if (!compareAddresses(newImplementationAddress, await implementation.getAddress())) {
     throw new Error(
       `The implementation address is not the one expected: ${newImplementationAddress} !== ${await implementation.getAddress()}`,
     )
@@ -151,7 +151,7 @@ export const deployAndUpgrade = async (
   let proxy = await deployProxy(
     contractName,
     contractArgs,
-    options?.libraries?.[0],
+    options.libraries?.[0],
     options.logOutput,
     options.versions?.[0],
   )

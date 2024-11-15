@@ -1,24 +1,16 @@
-import {
-  VOT3,
-  X2EarnApps__factory,
-  XAllocationVoting,
-  XAllocationVoting__factory,
-  X2EarnApps,
-  TokenAuction,
-} from "../../typechain-types"
+import { VOT3, X2EarnApps__factory, XAllocationVoting, XAllocationVoting__factory } from "../../typechain-types"
 import { clauseBuilder, type TransactionClause, type TransactionBody, coder, FunctionFragment } from "@vechain/sdk-core"
 import { buildTxBody, signAndSendTx } from "./txHelper"
 import { SeedAccount, TestPk } from "./seedAccounts"
 import { chunk } from "./chunk"
 
 export type App = {
-  admin: string
-  teamWalletAddress: string
+  address: string
   name: string
   metadataURI: string
 }
 
-export const registerXDapps = async (contractAddress: string, account: TestPk, apps: App[]) => {
+export const addXDapps = async (contractAddress: string, account: TestPk, apps: App[]) => {
   console.log("Adding x-apps...")
 
   const appChunks = chunk(apps, 50)
@@ -30,8 +22,8 @@ export const registerXDapps = async (contractAddress: string, account: TestPk, a
       clauses.push(
         clauseBuilder.functionInteraction(
           contractAddress,
-          coder.createInterface(JSON.stringify(X2EarnApps__factory.abi)).getFunction("submitApp") as FunctionFragment,
-          [app.teamWalletAddress, app.admin, app.name, app.metadataURI],
+          coder.createInterface(JSON.stringify(X2EarnApps__factory.abi)).getFunction("addApp") as FunctionFragment,
+          [app.address, app.address, app.name, app.metadataURI],
         ),
       )
     })
@@ -44,34 +36,6 @@ export const registerXDapps = async (contractAddress: string, account: TestPk, a
 
     await signAndSendTx(body, account.pk)
   }
-}
-
-export const endorseXApps = async (
-  endorsers: SeedAccount[],
-  x2EarnApps: X2EarnApps,
-  apps: string[],
-  vechainNodesMock: TokenAuction,
-): Promise<void> => {
-  console.log("Endorsing x-apps...")
-
-  for (let i = 0; i < apps.length; i++) {
-    const owner = endorsers[i].key.address
-    const nodeId = await vechainNodesMock.ownerToId(owner)
-    const clause = clauseBuilder.functionInteraction(
-      await x2EarnApps.getAddress(),
-      coder.createInterface(JSON.stringify(X2EarnApps__factory.abi)).getFunction("endorseApp") as FunctionFragment,
-      [apps[i], nodeId],
-    )
-
-    try {
-      const body: TransactionBody = await buildTxBody([clause], owner, 32)
-      await signAndSendTx(body, endorsers[i].key.pk)
-    } catch (e) {
-      console.log("Endorsing x-apps failed with error: ", e)
-    }
-  }
-
-  console.log("x-apps endorsed.")
 }
 
 export const castVotesToXDapps = async (
@@ -111,14 +75,9 @@ export const castVotesToXDapps = async (
             [roundId, splits.map(split => split.app), splits.map(split => split.weight)],
           ),
         )
-
-        console.log(
-          `Casting votes for ${roundId} with ${splits.map(split => split.weight)} votes to ${splits.map(split => split.app)}`,
-        )
         const body: TransactionBody = await buildTxBody(clauses, account.key.address, 32, 250_000 * splits.length)
 
         await signAndSendTx(body, account.key.pk)
-        console.log("Votes cast fro account", account.key.address)
       }),
     )
   }

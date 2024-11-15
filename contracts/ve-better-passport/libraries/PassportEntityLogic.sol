@@ -593,7 +593,10 @@ library PassportEntityLogic {
     }
 
     // Check if the entity is a delegatee or pending delegatee, if so revert
-    if (PassportDelegationLogic.isDelegatee(self, entity) || self.pendingDelegationsDelegateeToDelegators[entity].length != 0) {
+    if (
+      PassportDelegationLogic.isDelegatee(self, entity) ||
+      self.pendingDelegationsDelegateeToDelegators[entity].length != 0
+    ) {
       revert DelegatedEntity(entity);
     }
 
