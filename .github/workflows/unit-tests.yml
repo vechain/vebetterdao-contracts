@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [shard1t, shard2t, shard3t]
+        shard: [shard1, shard2, shard3]
 
     steps:
       - name: Checkout repository
@@ -64,7 +64,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          for shard in shard1t shard2t shard3t; do
+          for shard in shard1 shard2 shard3; do
             echo "Downloading artifact coverage-$shard"
             mkdir -p coverage-shards/$shard
             gh run download --name "coverage-$shard" --dir coverage-shards/$shard
