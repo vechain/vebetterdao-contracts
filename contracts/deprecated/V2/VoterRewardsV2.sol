@@ -25,11 +25,11 @@ pragma solidity 0.8.20;
 
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
-import "./interfaces/IGalaxyMember.sol";
-import "./interfaces/IB3TRGovernor.sol";
-import "./interfaces/IXAllocationVotingGovernor.sol";
-import "./interfaces/IEmissions.sol";
-import "./interfaces/IB3TR.sol";
+import "../V1/interfaces/IGalaxyMemberV1.sol";
+import "../V4/interfaces/IB3TRGovernorV4.sol";
+import "../V2/interfaces/IXAllocationVotingGovernorV2.sol";
+import "../../interfaces/IEmissions.sol";
+import "../../interfaces/IB3TR.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "@openzeppelin/contracts/utils/structs/Checkpoints.sol";
@@ -59,14 +59,8 @@ import "@openzeppelin/contracts/utils/types/Time.sol";
  * - Added the clock function to get the current block number.
  * - Added functions to check if quadratic rewarding is disabled at a specific block number or for the current cycle.
  * - Added function to disable quadratic rewarding or re-enable it.
- *
- * ------------------ Version 3 Changes ------------------
- * - Added the ability to track if a Galaxy Member NFT has voted in a proposal.
- * - Added the ability to track if a Vechain node attached to a Galaxy Member NFT has voted in a proposal.
- * - Proposal Id is now required when registering votes instead of proposal snapshot.
- * - Core logic functions are now virtual allowing to be overridden through inheritance.
  */
-contract VoterRewards is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPSUpgradeable {
+contract VoterRewardsV2 is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPSUpgradeable {
   using Checkpoints for Checkpoints.Trace208; // Checkpoints library for managing checkpoints of the selected level of the user
 
   /// @notice The role that can register votes for rewards calculation.
@@ -83,7 +77,7 @@ contract VoterRewards is AccessControlUpgradeable, ReentrancyGuardUpgradeable, U
 
   /// @custom:storage-location erc7201:b3tr.storage.VoterRewards
   struct VoterRewardsStorage {
-    IGalaxyMember galaxyMember;
+    IGalaxyMemberV1 galaxyMember;
     IB3TR b3tr;
     IEmissions emissions;
     // level => percentage multiplier for the level of the GM NFT
@@ -92,14 +86,8 @@ contract VoterRewards is AccessControlUpgradeable, ReentrancyGuardUpgradeable, U
     mapping(uint256 => uint256) cycleToTotal;
     // cycle => voter => total weighted votes for the voter in the cycle
     mapping(uint256 cycle => mapping(address voter => uint256 total)) cycleToVoterToTotal;
-    // ----------------- V2 Additions ---------------- //
     // checkpoints for the quadratic rewarding status for each cycle
     Checkpoints.Trace208 quadraticRewardingDisabled;
-    // --------------------------- V3 Additions --------------------------- //
-    // proposalId => tokenId => hasVoted (keeps track of whether a galaxy member has voted in a proposal)
-    mapping(uint256 proposalId => mapping(uint256 tokenId => bool)) proposalToGalaxyMemberToHasVoted;
-    // proposalId => nodeId => hasVoted (keeps track of whether a vechain node has been used while attached to a galaxy member NFT when voting for a proposal)
-    mapping(uint256 proposalId => mapping(uint256 nodeId => bool)) proposalToNodeToHasVoted;
   }
 
   // keccak256(abi.encode(uint256(keccak256("b3tr.storage.VoterRewards")) - 1)) & ~bytes32(uint256(0xff))
@@ -182,7 +170,7 @@ contract VoterRewards is AccessControlUpgradeable, ReentrancyGuardUpgradeable, U
 
     VoterRewardsStorage storage $ = _getVoterRewardsStorage();
 
-    $.galaxyMember = IGalaxyMember(_galaxyMember);
+    $.galaxyMember = IGalaxyMemberV1(_galaxyMember);
     $.b3tr = IB3TR(_b3tr);
     $.emissions = IEmissions(_emissions);
 
@@ -204,33 +192,35 @@ contract VoterRewards is AccessControlUpgradeable, ReentrancyGuardUpgradeable, U
 
   /// @notice Register the votes of a user for rewards calculation.
   /// @dev Quadratic rewarding is used to reward users with quadratic-weight based on their voting power and the level of their Galaxy Member NFT.
-  /// @param proposalId - The ID of the proposal.
+  /// @param proposalStart - The start time of the proposal.
   /// @param voter - The address of the voter.
   /// @param votes - The number of votes cast by the voter.
   /// @param votePower - The square root of the total votes cast by the voter.
   function registerVote(
-    uint256 proposalId,
+    uint256 proposalStart,
     address voter,
     uint256 votes,
     uint256 votePower
-  ) public virtual onlyRole(VOTE_REGISTRAR_ROLE) {
+  ) external onlyRole(VOTE_REGISTRAR_ROLE) {
     // If votePower is zero, exit the function to avoid unnecessary computations.
     if (votePower == 0) {
       return;
     }
 
-    require(proposalId != 0, "VoterRewards: proposalId cannot be 0");
+    // Ensure the proposal start time is valid and the voter address is not zero.
+    require(proposalStart > 0, "VoterRewards: proposalStart must be greater than 0");
     require(voter != address(0), "VoterRewards: voter cannot be the zero address");
 
     VoterRewardsStorage storage $ = _getVoterRewardsStorage();
 
-    uint256 selectedGMNFT = $.galaxyMember.getSelectedTokenId(voter);
-
     // Get the current cycle number.
     uint256 cycle = $.emissions.getCurrentCycle();
 
-    // Determine the reward multiplier based on the GM NFT level and if the GM NFT or Vechain node attached have already voted on this proposal.
-    uint256 multiplier = getMultiplier(selectedGMNFT, proposalId);
+    // Fetch the highest level achieved by the voter in Galaxy Member NFT up to the proposal start time.
+    uint256 gmNftLevel = $.galaxyMember.getPastHighestLevel(voter, proposalStart);
+
+    // Determine the reward multiplier based on the GM NFT level.
+    uint256 multiplier = $.levelToMultiplier[gmNftLevel]; // Percentage multiplier for the level of the GM NFT
 
     // Set the scaled vote power to the total votes cast by the voter.
     uint256 scaledVotePower = votes;
@@ -245,25 +235,13 @@ contract VoterRewards is AccessControlUpgradeable, ReentrancyGuardUpgradeable, U
 
     // Calculate the weighted vote power for rewards, adjusting vote power with the level-based multiplier.
     // votePower is the square root of the total votes cast by the voter.
-    uint256 rewardWeightedVote = scaledVotePower + ((scaledVotePower * multiplier) / 100); // Adjusted vote power used for rewards calculation.
+    uint256 rewardWeightedVote = scaledVotePower + (scaledVotePower * multiplier) / 100; // Adjusted vote power used for rewards calculation.
 
     // Update the total reward-weighted votes in the cycle.
     $.cycleToTotal[cycle] += rewardWeightedVote;
 
     // Record the reward-weighted vote power for the voter in the cycle.
     $.cycleToVoterToTotal[cycle][voter] += rewardWeightedVote;
-
-    // Record that the GM NFT has voted in the proposal, if it exists.
-    if (selectedGMNFT != 0) {
-      $.proposalToGalaxyMemberToHasVoted[proposalId][selectedGMNFT] = true;
-    }
-
-    uint256 nodeIdAttached = $.galaxyMember.getNodeIdAttached(selectedGMNFT);
-
-    // Record that the Vechain node attached to the GM NFT has voted in the proposal, if it exists.
-    if (nodeIdAttached != 0) {
-      $.proposalToNodeToHasVoted[proposalId][nodeIdAttached] = true;
-    }
 
     // Emit an event to log the registration of the votes.
     emit VoteRegistered(cycle, voter, votes, rewardWeightedVote);
@@ -273,7 +251,7 @@ contract VoterRewards is AccessControlUpgradeable, ReentrancyGuardUpgradeable, U
   /// @dev The rewards are claimed based on the reward-weighted votes of the user in the cycle.
   /// @param cycle - The cycle in which the rewards are claimed.
   /// @param voter - The address of the voter.
-  function claimReward(uint256 cycle, address voter) public virtual nonReentrant {
+  function claimReward(uint256 cycle, address voter) external nonReentrant {
     require(cycle > 0, "VoterRewards: cycle must be greater than 0");
     require(voter != address(0), "VoterRewards: voter cannot be the zero address");
     VoterRewardsStorage storage $ = _getVoterRewardsStorage();
@@ -299,70 +277,21 @@ contract VoterRewards is AccessControlUpgradeable, ReentrancyGuardUpgradeable, U
 
   // ----------------- Getters ----------------- //
 
-  /// @notice Get the reward multiplier for a user in a specific proposal.
-  /// @param tokenId Id of the Galaxy Member NFT
-  /// @param proposalId Id of the proposal
-  function getMultiplier(uint256 tokenId, uint256 proposalId) public view virtual returns (uint256) {
-    VoterRewardsStorage storage $ = _getVoterRewardsStorage();
-
-    if (hasTokenVoted(tokenId, proposalId)) return 0;
-
-    uint256 nodeIdAttached = $.galaxyMember.getNodeIdAttached(tokenId);
-
-    if (hasNodeVoted(nodeIdAttached, proposalId)) return 0;
-
-    uint256 gmNftLevel = $.galaxyMember.levelOf(tokenId);
-
-    return $.levelToMultiplier[gmNftLevel];
-  }
-
-  /// @notice Check if a Vechain Node has voted in a proposal
-  /// @param nodeId Id of the Vechain node
-  /// @param proposalId Id of the proposal
-  function hasNodeVoted(uint256 nodeId, uint256 proposalId) public view virtual returns (bool) {
-    VoterRewardsStorage storage $ = _getVoterRewardsStorage();
-
-    return $.proposalToNodeToHasVoted[proposalId][nodeId];
-  }
-
-  /// @notice Check if a Galaxy Member has voted in a proposal
-  /// @param tokenId Id of the Galaxy Member NFT
-  /// @param proposalId Id of the proposal
-  function hasTokenVoted(uint256 tokenId, uint256 proposalId) public view virtual returns (bool) {
-    VoterRewardsStorage storage $ = _getVoterRewardsStorage();
-
-    return $.proposalToGalaxyMemberToHasVoted[proposalId][tokenId];
-  }
-
   /// @notice Get the reward for a user in a specific cycle.
   /// @param cycle - The cycle in which the rewards are claimed.
   /// @param voter - The address of the voter.
-  function getReward(uint256 cycle, address voter) public view virtual returns (uint256) {
+  function getReward(uint256 cycle, address voter) public view returns (uint256) {
     VoterRewardsStorage storage $ = _getVoterRewardsStorage();
 
     // Get the total reward-weighted votes for the voter in the cycle.
     uint256 total = $.cycleToVoterToTotal[cycle][voter];
 
-    // If total is zero, return 0
-    if (total == 0) {
-      return 0;
-    }
-
     // Get the total reward-weighted votes in the cycle.
     uint256 totalCycle = $.cycleToTotal[cycle];
 
-    // If totalCycle is zero, return 0
-    if (totalCycle == 0) {
-      return 0;
-    }
-
     // Get the emissions for voter rewards in the cycle.
     uint256 emissionsAmount = $.emissions.getVote2EarnAmount(cycle);
-
-    // If emissionsAmount is zero, return 0
-    if (emissionsAmount == 0) {
-      return 0;
-    }
+    require(emissionsAmount > 0, "VoterRewards: emissionsAmount must be greater than 0");
 
     // Scale up the numerator before division to improve precision
     uint256 scaledNumerator = total * emissionsAmount * SCALING_FACTOR; // Scale by a factor of SCALING_FACTOR for precision
@@ -395,7 +324,7 @@ contract VoterRewards is AccessControlUpgradeable, ReentrancyGuardUpgradeable, U
   }
 
   /// @notice Get the Galaxy Member contract.
-  function galaxyMember() external view returns (IGalaxyMember) {
+  function galaxyMember() external view returns (IGalaxyMemberV1) {
     VoterRewardsStorage storage $ = _getVoterRewardsStorage();
     return $.galaxyMember;
   }
@@ -440,20 +369,20 @@ contract VoterRewards is AccessControlUpgradeable, ReentrancyGuardUpgradeable, U
 
   /// @notice Set the Galaxy Member contract.
   /// @param _galaxyMember - The address of the Galaxy Member contract.
-  function setGalaxyMember(address _galaxyMember) public virtual onlyRole(CONTRACTS_ADDRESS_MANAGER_ROLE) {
+  function setGalaxyMember(address _galaxyMember) external onlyRole(CONTRACTS_ADDRESS_MANAGER_ROLE) {
     require(_galaxyMember != address(0), "VoterRewards: _galaxyMember cannot be the zero address");
 
     VoterRewardsStorage storage $ = _getVoterRewardsStorage();
 
     emit GalaxyMemberAddressUpdated(_galaxyMember, address($.galaxyMember));
 
-    $.galaxyMember = IGalaxyMember(_galaxyMember);
+    $.galaxyMember = IGalaxyMemberV1(_galaxyMember);
   }
 
   /// @notice Set the Galaxy Member level to multiplier mapping.
   /// @param level - The level of the Galaxy Member NFT.
   /// @param multiplier - The percentage multiplier for the level of the Galaxy Member NFT.
-  function setLevelToMultiplier(uint256 level, uint256 multiplier) public virtual onlyRole(DEFAULT_ADMIN_ROLE) {
+  function setLevelToMultiplier(uint256 level, uint256 multiplier) external onlyRole(DEFAULT_ADMIN_ROLE) {
     require(level > 0, "VoterRewards: level must be greater than 0");
     require(multiplier > 0, "VoterRewards: multiplier must be greater than 0");
 
@@ -465,7 +394,7 @@ contract VoterRewards is AccessControlUpgradeable, ReentrancyGuardUpgradeable, U
 
   /// @notice Set the Emmissions contract.
   /// @param _emissions - The address of the emissions contract.
-  function setEmissions(address _emissions) public virtual onlyRole(CONTRACTS_ADDRESS_MANAGER_ROLE) {
+  function setEmissions(address _emissions) external onlyRole(CONTRACTS_ADDRESS_MANAGER_ROLE) {
     require(_emissions != address(0), "VoterRewards: emissions cannot be the zero address");
 
     VoterRewardsStorage storage $ = _getVoterRewardsStorage();
@@ -495,7 +424,7 @@ contract VoterRewards is AccessControlUpgradeable, ReentrancyGuardUpgradeable, U
   /// @dev This should be updated every time a new version of implementation is deployed
   /// @return string The version of the contract
   function version() external pure virtual returns (string memory) {
-    return "3";
+    return "2";
   }
 
   /// @dev Clock used for flagging checkpoints.

@@ -29,7 +29,7 @@ import { IB3TR } from "../../../../interfaces/IB3TR.sol";
 import { IVOT3 } from "../../../../interfaces/IVOT3.sol";
 import { TimelockControllerUpgradeable } from "@openzeppelin/contracts-upgradeable/governance/TimelockControllerUpgradeable.sol";
 
-library GovernorTypesV3 {
+library GovernorTypesV4 {
   /**
    * @dev Struct containing data to initialize the contract
    * @param vot3Token The address of the Vot3 token used for voting

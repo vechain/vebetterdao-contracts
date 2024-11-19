@@ -23,7 +23,7 @@
 
 pragma solidity 0.8.20;
 
-import { GovernorTypesV3 } from "./GovernorTypesV3.sol";
+import { GovernorTypesV4 } from "./GovernorTypesV4.sol";
 import { IVoterRewardsV2 } from "../../../V2/interfaces/IVoterRewardsV2.sol";
 import { IXAllocationVotingGovernorV2 } from "../../../V2/interfaces/IXAllocationVotingGovernorV2.sol";
 import { IB3TR } from "../../../../interfaces/IB3TR.sol";
@@ -31,16 +31,17 @@ import { IVOT3 } from "../../../../interfaces/IVOT3.sol";
 import { DoubleEndedQueue } from "@openzeppelin/contracts/utils/structs/DoubleEndedQueue.sol";
 import { TimelockControllerUpgradeable } from "@openzeppelin/contracts-upgradeable/governance/TimelockControllerUpgradeable.sol";
 import { Checkpoints } from "@openzeppelin/contracts/utils/structs/Checkpoints.sol";
+import { IVeBetterPassport } from "../../../../interfaces/IVeBetterPassport.sol";
 
-/// @title GovernorStorageTypesV3
+/// @title GovernorStorageTypesV4
 /// @notice Library for defining storage types used in the Governor contract.
-library GovernorStorageTypesV3 {
+library GovernorStorageTypesV4 {
   struct GovernorStorage {
     // ------------------------------- Version 1 -------------------------------
 
     // ------------------------------- General Storage -------------------------------
     string name; // name of the Governor
-    mapping(uint256 proposalId => GovernorTypesV3.ProposalCore) proposals;
+    mapping(uint256 proposalId => GovernorTypesV4.ProposalCore) proposals;
     // This queue keeps track of the governor operating on itself. Calls to functions protected by the {onlyGovernance}
     // modifier needs to be whitelisted in this queue. Whitelisting is set in {execute}, consumed by the
     // {onlyGovernance} modifier and eventually reset after {_executeOperations} completes. This ensures that the
@@ -77,18 +78,21 @@ library GovernorStorageTypesV3 {
     uint256 depositThresholdPercentage;
     // ------------------------------- Voting Storage -------------------------------
     // mapping to store the votes for a proposal
-    mapping(uint256 => GovernorTypesV3.ProposalVote) proposalVotes;
+    mapping(uint256 => GovernorTypesV4.ProposalVote) proposalVotes;
     // mapping to store that a user has voted at least one time
     mapping(address => bool) hasVotedOnce;
     // mapping to store the total votes for a proposal
     mapping(uint256 => uint256) proposalTotalVotes;
     // minimum amount of tokens needed to cast a vote
     uint256 votingThreshold;
-    
-    // ------------------------------- Version 2 -------------------------------
+    // ------------------------------- Version 3 -------------------------------
 
     // ------------------------------- Voting Storage -------------------------------
     // checkpoints for the quadratic voting status for each round
     Checkpoints.Trace208 quadraticVotingDisabled;
+    // ------------------------------- Version 2 -------------------------------
+
+    // ------------------------------- Passport -------------------------------
+    IVeBetterPassport veBetterPassport;
   }
 }

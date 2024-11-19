@@ -54,6 +54,9 @@ contract X2EarnCreator is
   /// @dev Error thrown when a user already owns an NFT
   error AlreadyOwnsNFT(address owner);
 
+  /// @dev Error thrown when a user is not authorized to perform an action
+  error X2EarnCreatorUnauthorizedUser(address user);
+
   // ---------------- Storage ----------------
   /// @notice Storage structure for X2EarnCreator
   /// @custom:storage-location erc7201:b3tr.storage.X2EarnCreator
@@ -80,18 +83,9 @@ contract X2EarnCreator is
   }
 
   /// @notice Initializes the contract with role-based access control
+  /// @param baseURI The base URI for the NFT metadata
   /// @param defaultAdmin Address to be assigned the default admin role
-  /// @param pauser Address to be assigned the pauser role
-  /// @param minter Address to be assigned the minter role
-  /// @param upgrader Address to be assigned the upgrader role
-  function initialize(
-    string calldata baseURI,
-    address defaultAdmin,
-    address pauser,
-    address minter,
-    address upgrader,
-    address burner
-  ) public initializer {
+  function initialize(string calldata baseURI, address defaultAdmin) public initializer {
     __ERC721_init("X2EarnCreator", "X2C");
     __ERC721Pausable_init();
     __AccessControl_init();
@@ -104,41 +98,49 @@ contract X2EarnCreator is
     $.baseURI = baseURI;
 
     require(defaultAdmin != address(0), "X2EarnCreator: zero address");
-    require(pauser != address(0), "X2EarnCreator: zero address");
-    require(minter != address(0), "X2EarnCreator: zero address");
-    require(upgrader != address(0), "X2EarnCreator: zero address");
-    require(burner != address(0), "X2EarnCreator: zero address");
 
     _grantRole(DEFAULT_ADMIN_ROLE, defaultAdmin);
-    _grantRole(PAUSER_ROLE, pauser);
-    _grantRole(MINTER_ROLE, minter);
-    _grantRole(UPGRADER_ROLE, upgrader);
-    _grantRole(BURNER_ROLE, burner);
+
+    // make token id start from 1
+    $.nextTokenId = 1;
   }
 
+  // ---------- Modifiers ------------ //
+
+  /// @notice Modifier to check if the user has the required role or is the DEFAULT_ADMIN_ROLE
+  /// @param role - the role to check
+  modifier onlyRoleOrAdmin(bytes32 role) {
+    if (!hasRole(role, msg.sender) && !hasRole(DEFAULT_ADMIN_ROLE, msg.sender)) {
+      revert X2EarnCreatorUnauthorizedUser(msg.sender);
+    }
+    _;
+  }
+
+  // ---------- Setters ---------- //
+
   /// @notice Pauses all token transfers and minting functions
-  /// @dev Only callable by accounts with the PAUSER_ROLE
-  function pause() public onlyRole(PAUSER_ROLE) {
+  /// @dev Only callable by accounts with the PAUSER_ROLE or the DEFAULT_ADMIN_ROLE
+  function pause() public onlyRoleOrAdmin(PAUSER_ROLE) {
     _pause();
   }
 
   /// @notice Unpauses the contract to resume token transfers and minting
-  /// @dev Only callable by accounts with the PAUSER_ROLE
-  function unpause() public onlyRole(PAUSER_ROLE) {
+  /// @dev Only callable by accounts with the PAUSER_ROLE or the DEFAULT_ADMIN_ROLE
+  function unpause() public onlyRoleOrAdmin(PAUSER_ROLE) {
     _unpause();
   }
 
   /// @notice Burns a specific token, removing it from circulation
   /// @param tokenId ID of the token to burn
-  /// @dev Only callable by accounts with the BURNER_ROLE
-  function burn(uint256 tokenId) public onlyRole(BURNER_ROLE) whenNotPaused {
+  /// @dev Only callable by accounts with the BURNER_ROLE or the DEFAULT_ADMIN_ROLE
+  function burn(uint256 tokenId) public onlyRoleOrAdmin(BURNER_ROLE) whenNotPaused {
     _burn(tokenId);
   }
 
   /// @notice Mints a new token to a specified address
   /// @param to Address that will receive the new token
-  /// @dev Only callable by accounts with the MINTER_ROLE. Ensures the address does not already own a token.
-  function safeMint(address to) public onlyRole(MINTER_ROLE) whenNotPaused {
+  /// @dev Only callable by accounts with the MINTER_ROLE or the DEFAULT_ADMIN_ROLE. Ensures the address does not already own a token.
+  function safeMint(address to) public onlyRoleOrAdmin(MINTER_ROLE) whenNotPaused {
     if (balanceOf(to) > 0) {
       revert AlreadyOwnsNFT(to);
     }
@@ -158,6 +160,13 @@ contract X2EarnCreator is
 
     string memory baseURI = _baseURI();
     return baseURI;
+  }
+
+  /// @notice Retrieves the base URI for the NFT metadata
+  /// @return The base URI for the NFT metadata
+  function baseURI() public view returns (string memory) {
+    X2EarnCreatorStorage storage $ = _getX2EarnCreatorStorage();
+    return $.baseURI;
   }
 
   /// @notice Retieves the version of the contract
@@ -191,6 +200,14 @@ contract X2EarnCreator is
     revert TransfersDisabled();
   }
 
+  /// @notice Sets the base URI for the NFT metadata
+  /// @param newBaseURI The new base URI for the NFT metadata
+  /// @dev Only callable by accounts with the DEFAULT_ADMIN_ROLE
+  function setBaseURI(string calldata newBaseURI) public onlyRole(DEFAULT_ADMIN_ROLE) {
+    X2EarnCreatorStorage storage $ = _getX2EarnCreatorStorage();
+    $.baseURI = newBaseURI;
+  }
+
   // ---------------- Internal Functions ----------------
 
   /// @notice Returns the base URI used for all token metadata URIs in the contract
@@ -201,7 +218,7 @@ contract X2EarnCreator is
   }
 
   // ---------------- Upgrade and Utility Overrides ----------------
-  function _authorizeUpgrade(address newImplementation) internal override onlyRole(UPGRADER_ROLE) {}
+  function _authorizeUpgrade(address newImplementation) internal override onlyRoleOrAdmin(UPGRADER_ROLE) {}
 
   function _update(
     address to,

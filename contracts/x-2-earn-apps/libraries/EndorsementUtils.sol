@@ -290,7 +290,7 @@ library EndorsementUtils {
     }
 
     // If the app has a grace period of 0, set the grace period
-    if (appGracePeriodStart[appId] == 0) {
+    if (appGracePeriodStart[appId] == 0 && isEligibleNow) {
       // Set the grace period start (current block number)
       appGracePeriodStart[appId] = clock;
 

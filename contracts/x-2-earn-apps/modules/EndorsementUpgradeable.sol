@@ -188,22 +188,13 @@ abstract contract EndorsementUpgradeable is Initializable, X2EarnAppsUpgradeable
     // Get the endorsement storage
     EndorsementStorage storage $ = _getEndorsementStorage();
 
-    // Check if the app exists
-    if (!_appSubmitted(appId)) {
-      revert X2EarnNonexistentApp(appId);
-    }
-
-    // Check if the caller is an endorser
-    if ($._nodeToEndorsedApp[nodeId] == bytes32(0)) {
-      revert X2EarnNonEndorser();
-    }
-
     // Check if the user is managing the specified nodeId either through delegation or ownership
     if (!$._nodeManagementContract.isNodeManager(msg.sender, nodeId)) {
       revert X2EarnNonNodeHolder();
     }
 
-    return _removeEndorsement(appId, nodeId);
+    // Remove nodes delegation
+    return _removeNodeEndorsement(appId, nodeId);
   }
 
   /**
@@ -238,15 +229,16 @@ abstract contract EndorsementUpgradeable is Initializable, X2EarnAppsUpgradeable
   function _getScoreAndRemoveEndorsement(bytes32 appId, uint256 endorserToRemove) internal returns (uint256) {
     // Retrieve the endorsement storage
     EndorsementStorage storage $ = _getEndorsementStorage();
-    return EndorsementUtils.getScoreAndRemoveEndorsement(
-      $._nodeEnodorsmentScore,
-      $._nodeToEndorsedApp,
-      $._appEndorsers,
-      $._appScores,
-      $._nodeManagementContract,
-      appId,
-      endorserToRemove
-    );
+    return
+      EndorsementUtils.getScoreAndRemoveEndorsement(
+        $._nodeEnodorsmentScore,
+        $._nodeToEndorsedApp,
+        $._appEndorsers,
+        $._appScores,
+        $._nodeManagementContract,
+        appId,
+        endorserToRemove
+      );
   }
 
   /**
@@ -321,25 +313,38 @@ abstract contract EndorsementUpgradeable is Initializable, X2EarnAppsUpgradeable
   }
 
   /**
+   * @dev Internal function to remove a nodes endorsement of an XAPP
    * @notice This function can be called by an XAPP admin that wishes to remove an endorserment from a specific node ID
    * @param appId The unique identifier of the app that wishes to be unendorsed.
    * @param nodeId The unique identifier of the node they wish to remove from their list of endorsers.
    */
-  function _removeNodeEndorsement(bytes32 appId, uint256 nodeId) internal virtual {
+  function _removeNodeEndorsement(bytes32 appId, uint256 nodeId) internal {
+    EndorsementStorage storage $ = _getEndorsementStorage();
+
     // Check if the app exists
     if (!_appSubmitted(appId)) {
       revert X2EarnNonexistentApp(appId);
     }
 
-    // Get the endorsement storage
-    EndorsementStorage storage $ = _getEndorsementStorage();
-
-    // Check if the nodeId is an endorser of the specified appId
+    // Check if the node ID is the apps endorser
     if ($._nodeToEndorsedApp[nodeId] != appId) {
       revert X2EarnNonEndorser();
     }
 
-    return _removeEndorsement(appId, nodeId);
+    // Calculate the new score of the app after removing the node ID's endorsement
+    uint256 score = _getScoreAndRemoveEndorsement(appId, nodeId);
+
+    // Check if the app is no longer in the voting allocation rounds due to lack of endorsement or from being blacklisted
+    if (!isEligibleNow(appId) || isBlacklisted(appId)) {
+      return;
+    }
+
+    // Check if the score is less than endorsement score threshold (100)
+    if (score < _endorsementScoreThreshold()) {
+      _updateStatusIfThresholdNotMet(appId);
+    }
+
+    return;
   }
 
   /**
@@ -409,28 +414,6 @@ abstract contract EndorsementUpgradeable is Initializable, X2EarnAppsUpgradeable
   }
 
   /**
-   * @notice Private function that removes a node IDs endorsement
-   * @param appId The unique identifier of the app that is to be unendorsed.
-   * @param nodeId The unique identifier of the node to remove from the XApps list of endorsers.
-   */
-  function _removeEndorsement(bytes32 appId, uint256 nodeId) private {
-    // Calculate the new score of the app after removing the node ID's endorsement
-    uint256 score = _getScoreAndRemoveEndorsement(appId, nodeId);
-
-    // Check if the app is no longer in the voting allocation rounds due to lack of endorsement or from being blacklisted
-    if (!isEligibleNow(appId) || isBlacklisted(appId)) {
-      return;
-    }
-
-    // Check if the score is less than endorsement score threshold (100)
-    if (score < _endorsementScoreThreshold()) {
-      _updateStatusIfThresholdNotMet(appId);
-    }
-
-    return;
-  }
-
-  /**
    * @dev Internal function to update the status of an app if the score threshold is not met.
    * @param appId The unique identifier of the app.
    * @return stillEligble True if the app is still eligible for voting.
@@ -460,7 +443,6 @@ abstract contract EndorsementUpgradeable is Initializable, X2EarnAppsUpgradeable
 
     return stillEligible;
   }
-
 
   // ---------- Getters ---------- //
 
