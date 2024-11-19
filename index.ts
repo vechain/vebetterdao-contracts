@@ -16,6 +16,7 @@ import {
   Treasury__factory,
   NodeManagement__factory,
   X2EarnCreator__factory,
+  VeBetterPassport__factory,
 } from "./typechain-types"
 
 export const B3TR = {
@@ -130,3 +131,11 @@ export const X2EarnCreator = {
   },
   interface: X2EarnCreator__factory.createInterface(),
 } 
+export const VeBetterPassport = {
+  abi: VeBetterPassport__factory.abi,
+  address: {
+    mainnet: mainnetAddresses.VeBetterPassport,
+    testnet: testnetAddresses.VeBetterPassport,
+  },
+  interface: VeBetterPassport__factory.createInterface(),
+}
