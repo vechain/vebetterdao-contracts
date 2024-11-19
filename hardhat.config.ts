@@ -49,6 +49,9 @@ module.exports = {
     timeout: 18000000,
     grep: process.env.SHARD || undefined,
   },
+  coverage: {
+    outputDirectory: "./coverage/",
+  },
   defaultNetwork: process.env.IS_TEST_COVERAGE ? "hardhat" : "vechain_solo",
   networks: {
     hardhat: {

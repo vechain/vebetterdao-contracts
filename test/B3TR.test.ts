@@ -4,7 +4,7 @@ import { catchRevert, getOrDeployContractInstances } from "./helpers"
 import { describe, it } from "mocha"
 import { createLocalConfig } from "../config/contracts/envs/local"
 
-describe("B3TR Token - @shard1t", function () {
+describe("B3TR Token - @shard1", function () {
   describe("Deployment", function () {
     it("should deploy the contract", async function () {
       const { b3tr } = await getOrDeployContractInstances({ forceDeploy: false })

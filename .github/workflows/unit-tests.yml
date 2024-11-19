@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [shard1t, shard2t, shard3t] # Define shard names
+        shard: [shard1, shard2, shard3]
 
     steps:
       - name: Checkout repository
@@ -40,13 +40,16 @@ jobs:
       - name: Run Coverage for ${{ matrix.shard }}
         run: yarn test:coverage:solidity
 
+      - name: Debug Coverage Output
+        run: ls -R coverage/
+
       - name: Upload Coverage for ${{ matrix.shard }}
         uses: actions/upload-artifact@v3
         with:
           name: coverage-${{ matrix.shard }}
-          path: coverage/
+          path: coverage/coverage-final.json
 
- combine-coverage:
+  combine-coverage:
     name: Combine Coverage Reports
     runs-on: ubuntu-latest
     needs: run-coverage-shards
@@ -54,34 +57,34 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Download Shard 1 Coverage
-        uses: actions/download-artifact@v3
-        with:
-          name: coverage-shard1
-          path: coverage-shards/shard1t
+      - name: Install Dependencies
+        run: yarn install --frozen-lockfile
 
-      - name: Download Shard 2 Coverage
-        uses: actions/download-artifact@v3
-        with:
-          name: coverage-shard2
-          path: coverage-shards/shard2t
-
-      - name: Download Shard 3 Coverage
-        uses: actions/download-artifact@v3
-        with:
-          name: coverage-shard3
-          path: coverage-shards/shard3t
+      - name: Download All Coverage Artifacts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for shard in shard1 shard2 shard3; do
+            echo "Downloading artifact coverage-$shard"
+            mkdir -p coverage-shards/$shard
+            gh run download --name "coverage-$shard" --dir coverage-shards/$shard
+          done
 
       - name: Merge Coverage Reports
         run: |
-          yarn add nyc
-          nyc merge coverage-shards/ coverage/
+          npx ts-node scripts/helpers/merge-coverage.ts
+
+      - name: Create .nyc_output Directory
+        run: mkdir -p .nyc_output
+
+      - name: Generate Final Coverage Report
+        run: |
           yarn coverage:report
 
       - name: Upload Unified Coverage Report to Codecov
         uses: codecov/codecov-action@v4
         with:
-          verbose: true
           directory: coverage/
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
