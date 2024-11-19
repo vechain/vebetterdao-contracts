@@ -84,3 +84,11 @@ jobs:
           directory: coverage/
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  report-unit-testing:
+    name: Unit Testing
+    runs-on: ubuntu-latest
+    needs: [run-coverage-shards, combine-coverage]
+    steps:
+      - name: Success Message
+        run: echo "All Unit Testing Jobs Completed!"
