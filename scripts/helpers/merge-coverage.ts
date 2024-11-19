@@ -1,8 +1,9 @@
 import * as fs from "fs";
 import * as path from "path";
 
-const coverageDir: string = "./coverage-shards";
-const outputPath: string = "./coverage/coverage-final.json";
+const coverageDir: string = path.resolve(__dirname, "../../coverage-shards");
+const outputDir: string = path.resolve(__dirname, "../../coverage");
+const outputPath: string = path.join(outputDir, "coverage-final.json");
 
 interface CoverageData {
   s: { [key: string]: number };
