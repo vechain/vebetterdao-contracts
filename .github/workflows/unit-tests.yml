@@ -1,4 +1,4 @@
-name: Unit Testing with Sharded Coverage
+name: Unit Testing
 
 on:
   workflow_dispatch:
