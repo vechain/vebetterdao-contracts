@@ -4554,6 +4554,9 @@ describe("X-Apps - @shard3", function () {
       // AppId that does not exist
       const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
 
+      // User should be a node holder to by pass first check
+      await createNodeHolder(7, otherAccounts[1])
+
       // Should revert as endorser is already endorsing an XApp
       await expect(x2EarnApps.connect(otherAccounts[1]).unendorseApp(app1Id, 1)).to.revertedWithCustomError(
         x2EarnApps,
@@ -4565,6 +4568,9 @@ describe("X-Apps - @shard3", function () {
       const { x2EarnApps, otherAccounts, owner } = await getOrDeployContractInstances({
         forceDeploy: true,
       })
+
+      // User should be a node holder to by pass first check
+      await createNodeHolder(7, otherAccounts[1])
 
       // Register XAPPs -> XAPP is pending endorsement
       await x2EarnApps
@@ -5662,6 +5668,49 @@ describe("X-Apps - @shard3", function () {
         otherAccounts[4].address,
         otherAccounts[4].address,
       ]) // TODO: Should be unique endorsers getting returned -> need efficient way to check for unique endorsers
+    })
+
+    it("Only XApp endorser can remove their XAPP and not other node holder thats not an endorser", async function () {
+      const { x2EarnApps, xAllocationVoting, otherAccounts, owner } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      expect(await x2EarnApps.hasRole(await x2EarnApps.GOVERNANCE_ROLE(), owner.address)).to.eql(true)
+
+      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
+      const app2Id = await x2EarnApps.hashAppName(otherAccounts[1].address)
+
+      // Register XAPP -> XAPP is pedning endorsement
+      await x2EarnApps
+        .connect(owner)
+        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
+
+      await x2EarnApps
+        .connect(owner)
+        .submitApp(otherAccounts[1].address, otherAccounts[1].address, otherAccounts[1].address, "metadataURI1")
+
+      // Create two Mjolnir node holders with an endorsement score of 100 each
+      await createNodeHolder(7, otherAccounts[1])
+      await createNodeHolder(7, otherAccounts[2])
+
+      await x2EarnApps.connect(otherAccounts[1]).endorseApp(app1Id, 1) // Node holder endorsement score is 100
+      await x2EarnApps.connect(otherAccounts[2]).endorseApp(app2Id, 2) // Node holder endorsement score is 50
+
+      expect(await x2EarnApps.nodeToEndorsedApp(1)).to.eql(app1Id) // Node ID 1 has endorsed app1Id
+
+      let round1 = await startNewAllocationRound()
+
+      // app should be eligible for the current round
+      let isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
+      expect(isEligibleForVote).to.eql(true)
+
+      // App is not pending endorsement
+      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(false)
+
+      // remove endorsement from one of the node holders
+      const tx = await expect(
+        x2EarnApps.connect(otherAccounts[2]).unendorseApp(app1Id, 2),
+      ).to.be.revertedWithCustomError(x2EarnApps, "X2EarnNonEndorser")
     })
 
     it("A user with multiple nodes delegated to them can endorse the same app multiple times", async function () {

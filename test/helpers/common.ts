@@ -10,6 +10,7 @@ import { ZERO_ADDRESS } from "./const"
 import { buildTxBody, signAndSendTx } from "../../scripts/helpers/txHelper"
 import { getTestKeys } from "../../scripts/helpers/seedAccounts"
 import { endorseApp } from "."
+import { time } from "@nomicfoundation/hardhat-network-helpers"
 
 export const waitForNextBlock = async () => {
   if (network.name === "hardhat") {
@@ -525,8 +526,12 @@ export const calculateUnallocatedAppAllocationOffChain = async (roundId: number,
   return (totalAvailable * appShares) / BigInt(100)
 }
 
-export const participateInAllocationVoting = async (user: HardhatEthersSigner, waitRoundToEnd: boolean = false) => {
-  const { xAllocationVoting, x2EarnApps, owner, veBetterPassport, otherAccounts } = await getOrDeployContractInstances({})
+export const participateInAllocationVoting = async (
+  user: HardhatEthersSigner,
+  waitRoundToEnd: boolean = false,
+  endorser?: HardhatEthersSigner,
+) => {
+  const { xAllocationVoting, x2EarnApps, owner, veBetterPassport } = await getOrDeployContractInstances({})
 
   await getVot3Tokens(user, "1")
   await getVot3Tokens(owner, "1000")
@@ -535,16 +540,15 @@ export const participateInAllocationVoting = async (user: HardhatEthersSigner, w
   if ((await veBetterPassport.isCheckEnabled(1)) === false) await veBetterPassport.toggleCheck(1)
 
   const appName = "App" + Math.random()
-  const appId = await x2EarnApps.hashAppName(appName)
 
   await x2EarnApps.connect(owner).submitApp(user.address, user.address, appName, "metadataURI")
-  await endorseApp(appId, user)
+  await endorseApp(await x2EarnApps.hashAppName(appName), endorser ? endorser : owner)
   const roundId = await startNewAllocationRound()
 
   // Vote
   await xAllocationVoting
     .connect(user)
-    .castVote(roundId, [appId], [ethers.parseEther("1")])
+    .castVote(roundId, [await x2EarnApps.hashAppName(appName)], [ethers.parseEther("1")])
 
   if (waitRoundToEnd) {
     await waitForRoundToEnd(roundId)
@@ -615,6 +619,35 @@ export const upgradeNFTtoLevel = async (
   for (let i = currentLevel; i < level; i++) {
     await upgradeNFTtoNextLevel(tokenId, nft, b3tr, owner, minter)
   }
+}
+
+export const addNodeToken = async (
+  level: number,
+  owner: HardhatEthersSigner,
+): Promise<[string, bigint, boolean, boolean, bigint, bigint, bigint]> => {
+  const { vechainNodesMock } = await getOrDeployContractInstances({})
+
+  if (!vechainNodesMock) throw new Error("VechainNodesMock not found")
+
+  const blockNumBefore = await ethers.provider.getBlockNumber()
+  const blockBefore = await ethers.provider.getBlock(blockNumBefore)
+  if (!blockBefore) throw new Error("Block before not found")
+
+  const timestampBefore = blockBefore.timestamp
+  const nextBlockTimestamp = timestampBefore + 1000
+  await time.setNextBlockTimestamp(nextBlockTimestamp)
+
+  await vechainNodesMock.addToken(owner.address, level, false, 0, 0)
+
+  return [
+    owner.address,
+    BigInt(level),
+    false,
+    false,
+    ethers.toBigInt(nextBlockTimestamp),
+    ethers.toBigInt(nextBlockTimestamp),
+    ethers.toBigInt(nextBlockTimestamp),
+  ]
 }
 
 export const upgradeNFTtoNextLevel = async (

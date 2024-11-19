@@ -11,7 +11,7 @@ import { describe, it } from "mocha"
 import { getImplementationAddress } from "@openzeppelin/upgrades-core"
 import { time } from "@nomicfoundation/hardhat-network-helpers"
 
-describe("Node Management -@shard4", function () {
+describe("Node Management - @shard4", function () {
   describe("Contract upgradeablity", () => {
     it("Cannot initialize twice", async function () {
       const { nodeManagement, vechainNodesMock, owner } = await getOrDeployContractInstances({ forceDeploy: true })

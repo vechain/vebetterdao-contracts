@@ -15,7 +15,6 @@ describe("X2EarnCreator - @shard7", () => {
       expect(await x2EarnCreator.hasRole(await x2EarnCreator.DEFAULT_ADMIN_ROLE(), await owner.getAddress())).to.equal(
         true,
       )
-      expect(await x2EarnCreator.hasRole(await x2EarnCreator.PAUSER_ROLE(), await owner.getAddress())).to.equal(true)
     })
 
     it("Should support ERC 165 interface", async () => {
@@ -26,23 +25,34 @@ describe("X2EarnCreator - @shard7", () => {
   })
 
   describe("Pausing", () => {
-    it("Only PAUSER_ROLE role should be able to pause and unpause the contract", async () => {
-      const { x2EarnCreator, otherAccount, owner } = await getOrDeployContractInstances({ forceDeploy: true })
+    it("Only PAUSER_ROLE or DEFAULT_ADMIN_ROLE should be able to pause and unpause the contract", async () => {
+      const { x2EarnCreator, otherAccount, otherAccounts, owner } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+      const pauser = otherAccounts[0]
+      await x2EarnCreator.grantRole(await x2EarnCreator.PAUSER_ROLE(), pauser.address)
 
       expect(await x2EarnCreator.hasRole(await x2EarnCreator.PAUSER_ROLE(), otherAccount.address)).to.eql(false)
-      expect(await x2EarnCreator.hasRole(await x2EarnCreator.PAUSER_ROLE(), owner.address)).to.eql(true)
+      expect(await x2EarnCreator.hasRole(await x2EarnCreator.PAUSER_ROLE(), pauser.address)).to.eql(true)
+      expect(await x2EarnCreator.hasRole(await x2EarnCreator.DEFAULT_ADMIN_ROLE(), owner.address)).to.eql(true)
 
       await catchRevert(x2EarnCreator.connect(otherAccount).pause())
 
+      // DEFAULT_ADMIN_ROLE
       await expect(x2EarnCreator.connect(owner).pause()).to.emit(x2EarnCreator, "Paused")
-
       expect(await x2EarnCreator.paused()).to.equal(true)
 
       await expect(x2EarnCreator.connect(owner).unpause()).to.emit(x2EarnCreator, "Unpaused")
-
       expect(await x2EarnCreator.paused()).to.equal(false)
 
       await catchRevert(x2EarnCreator.connect(otherAccount).unpause())
+
+      // PAUSER_ROLE
+      await x2EarnCreator.connect(pauser).pause()
+      expect(await x2EarnCreator.paused()).to.equal(true)
+
+      await x2EarnCreator.connect(pauser).unpause()
+      expect(await x2EarnCreator.paused()).to.equal(false)
     })
 
     it("Should not allow tokens to be minted when paused", async () => {
@@ -51,6 +61,20 @@ describe("X2EarnCreator - @shard7", () => {
       await x2EarnCreator.connect(owner).pause()
 
       await catchRevert(x2EarnCreator.connect(owner).safeMint(otherAccount.address))
+    })
+  })
+
+  describe("Base URI", () => {
+    it("Should be able to set the base URI", async () => {
+      const { x2EarnCreator, owner, otherAccount } = await getOrDeployContractInstances({ forceDeploy: true })
+
+      // normal user
+      await expect(x2EarnCreator.connect(otherAccount).setBaseURI("ipfs://BASE_URI")).to.be.reverted
+
+      // default admin
+      expect(await x2EarnCreator.hasRole(await x2EarnCreator.DEFAULT_ADMIN_ROLE(), owner.address)).to.equal(true)
+      await expect(x2EarnCreator.connect(owner).setBaseURI("ipfs://BASE_URI2")).to.not.be.reverted
+      expect(await x2EarnCreator.baseURI()).to.equal("ipfs://BASE_URI2")
     })
   })
 
@@ -66,6 +90,8 @@ describe("X2EarnCreator - @shard7", () => {
       await implementation.waitForDeployment()
 
       const currentImplAddress = await getImplementationAddress(ethers.provider, await x2EarnCreator.getAddress())
+
+      await x2EarnCreator.grantRole(await x2EarnCreator.UPGRADER_ROLE(), owner.address)
 
       const UPGRADER_ROLE = await x2EarnCreator.UPGRADER_ROLE()
       expect(await x2EarnCreator.hasRole(UPGRADER_ROLE, owner.address)).to.eql(true)
@@ -97,16 +123,7 @@ describe("X2EarnCreator - @shard7", () => {
         forceDeploy: true,
       })
 
-      await expect(
-        x2EarnCreator.initialize(
-          config.CREATOR_NFT_URI,
-          owner.address,
-          owner.address,
-          owner.address,
-          owner.address,
-          owner.address,
-        ),
-      ).to.be.reverted // already initialized
+      await expect(x2EarnCreator.initialize(config.CREATOR_NFT_URI, owner.address)).to.be.reverted // already initialized
     })
   })
 
@@ -134,13 +151,24 @@ describe("X2EarnCreator - @shard7", () => {
       await catchRevert(x2EarnCreator.connect(owner).safeMint(ZERO_ADDRESS))
     })
 
-    it("Only user with MINTER_ROLE should be able to mint tokens", async () => {
-      const { x2EarnCreator, owner, otherAccount } = await getOrDeployContractInstances({ forceDeploy: true })
+    it("Only user with MINTER_ROLE or DEFAULT_ADMIN_ROLE should be able to mint tokens", async () => {
+      const { x2EarnCreator, owner, otherAccount, otherAccounts } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+      const minter = otherAccounts[0]
+      await x2EarnCreator.grantRole(await x2EarnCreator.MINTER_ROLE(), minter.address)
 
       expect(await x2EarnCreator.hasRole(await x2EarnCreator.MINTER_ROLE(), otherAccount.address)).to.eql(false)
-      expect(await x2EarnCreator.hasRole(await x2EarnCreator.MINTER_ROLE(), owner.address)).to.eql(true)
+      expect(await x2EarnCreator.hasRole(await x2EarnCreator.MINTER_ROLE(), minter.address)).to.eql(true)
+      expect(await x2EarnCreator.hasRole(await x2EarnCreator.DEFAULT_ADMIN_ROLE(), owner.address)).to.eql(true)
 
       await catchRevert(x2EarnCreator.connect(otherAccount).safeMint(otherAccount.address))
+
+      // DEFAULT_ADMIN_ROLE
+      await expect(x2EarnCreator.connect(owner).safeMint(otherAccount.address)).to.not.be.reverted
+
+      // MINTER_ROLE
+      await expect(x2EarnCreator.connect(minter).safeMint(otherAccounts[2].address)).to.not.be.reverted
     })
 
     it("Should be able to get the token URI if token not minted", async () => {
@@ -217,18 +245,28 @@ describe("X2EarnCreator - @shard7", () => {
   })
 
   describe("Burning", () => {
-    it("Only user with BURNER_ROLE should be able to burn NFT", async () => {
-      const { x2EarnCreator, owner, otherAccount } = await getOrDeployContractInstances({ forceDeploy: true })
-
-      await x2EarnCreator.connect(owner).safeMint(otherAccount.address)
+    it("Only user with BURNER_ROLE or DEFAULT_ADMIN_ROLE should be able to burn NFT", async () => {
+      const { x2EarnCreator, owner, otherAccount, otherAccounts } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+      const burner = otherAccounts[0]
+      await x2EarnCreator.grantRole(await x2EarnCreator.BURNER_ROLE(), burner.address)
 
       expect(await x2EarnCreator.hasRole(await x2EarnCreator.BURNER_ROLE(), otherAccount.address)).to.eql(false)
+      expect(await x2EarnCreator.hasRole(await x2EarnCreator.BURNER_ROLE(), burner.address)).to.eql(true)
+      expect(await x2EarnCreator.hasRole(await x2EarnCreator.DEFAULT_ADMIN_ROLE(), owner.address)).to.eql(true)
 
+      await x2EarnCreator.connect(owner).safeMint(otherAccount.address)
+      await x2EarnCreator.connect(owner).safeMint(otherAccounts[2].address)
+
+      // normal user
       await expect(x2EarnCreator.connect(otherAccount).burn(0)).to.be.reverted
 
-      expect(await x2EarnCreator.hasRole(await x2EarnCreator.BURNER_ROLE(), owner.address)).to.eql(true)
-
+      // default admin
       await expect(x2EarnCreator.connect(owner).burn(0)).to.emit(x2EarnCreator, "Transfer")
+
+      // burner
+      await expect(x2EarnCreator.connect(burner).burn(1)).to.emit(x2EarnCreator, "Transfer")
     })
 
     it("Should not be able to burn a token when paused", async () => {

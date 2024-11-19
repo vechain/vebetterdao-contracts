@@ -233,7 +233,7 @@ describe("X-Allocation Pool - @shard3", async function () {
       config.X_ALLOCATION_POOL_BASE_ALLOCATION_PERCENTAGE = 0
       config.INITIAL_X_ALLOCATION = 10000n
       config.X_ALLOCATION_VOTING_QUORUM_PERCENTAGE = 0
-      config.EMISSIONS_CYCLE_DURATION = 50
+      config.EMISSIONS_CYCLE_DURATION = 60 // Increase cycle duration
       const {
         otherAccounts,
         owner,
