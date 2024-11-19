@@ -3,14 +3,22 @@ import * as path from "path";
 
 const coverageDir: string = path.resolve(__dirname, "../../coverage-shards");
 
-// Print all folders in coverage-shards for debugging
-console.log("Folders in coverage-shards:");
+console.log("Checking coverage-final.json in shard folders:");
+
 if (fs.existsSync(coverageDir)) {
   const folders = fs.readdirSync(coverageDir).filter((folder) => {
     const folderPath = path.join(coverageDir, folder);
     return fs.statSync(folderPath).isDirectory();
   });
-  console.log(folders);
+
+  folders.forEach((folder) => {
+    const coverageFilePath = path.join(coverageDir, folder, "coverage-final.json");
+    if (fs.existsSync(coverageFilePath)) {
+      console.log(`✅ Found coverage-final.json in ${folder}`);
+    } else {
+      console.log(`❌ Missing coverage-final.json in ${folder}`);
+    }
+  });
 } else {
-  console.log("coverage-shards directory does not exist.");
+  console.log("❌ coverage-shards directory does not exist.");
 }
