@@ -57,8 +57,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Install GitHub CLI
-        run: sudo apt-get install gh
+      - name: Install Dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Debug Repository Contents
+        run: ls -R
 
       - name: Download All Coverage Artifacts
         env:
@@ -72,7 +75,7 @@ jobs:
 
       - name: Merge Coverage Reports
         run: |
-          node merge-coverage.js
+          npx ts-node scripts/helpers/merge-coverage.ts
 
       - name: Generate Final Coverage Report
         run: |
@@ -84,3 +87,4 @@ jobs:
           directory: coverage/
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
