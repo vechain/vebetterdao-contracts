@@ -343,7 +343,7 @@ describe("Treasury - @shard2", () => {
         await expect(
           await galaxyMember
             .connect(otherAccount)
-            .transferFrom(otherAccount.address, await treasuryProxy.getAddress(), 0),
+            .transferFrom(otherAccount.address, await treasuryProxy.getAddress(), 1),
         ).not.to.be.reverted
         const MAGIC_ON_ERC721_RECEIVED = "0x150b7a02"
         expect(
@@ -352,7 +352,7 @@ describe("Treasury - @shard2", () => {
         expect(await galaxyMember.balanceOf(await treasuryProxy.getAddress())).to.equal(1)
 
         expect(await treasuryProxy.getCollectionNFTBalance(await galaxyMember.getAddress())).to.equal(1)
-        await expect(await treasuryProxy.transferNFT(await galaxyMember.getAddress(), otherAccount.address, 0)).not.to
+        await expect(await treasuryProxy.transferNFT(await galaxyMember.getAddress(), otherAccount.address, 1)).not.to
           .be.reverted
         expect(await treasuryProxy.getCollectionNFTBalance(await galaxyMember.getAddress())).to.equal(0)
       })

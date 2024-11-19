@@ -133,8 +133,8 @@ describe("X2EarnCreator - @shard2", () => {
 
       await expect(x2EarnCreator.connect(owner).safeMint(otherAccount.address)).to.emit(x2EarnCreator, "Transfer")
 
-      expect(await x2EarnCreator.ownerOf(1)).to.equal(otherAccount.address)
-      expect(await x2EarnCreator.tokenURI(1)).to.equal("ipfs://BASE_URI")
+      expect(await x2EarnCreator.ownerOf(2)).to.equal(otherAccount.address)
+      expect(await x2EarnCreator.tokenURI(2)).to.equal("ipfs://bafybeie2onvzl3xsod5becuswpdmi63gtq7wgjqhqjecehytt7wdeg4py4/metadata/1.json")
     })
 
     it("Should not allow minting when paused", async () => {
@@ -174,7 +174,7 @@ describe("X2EarnCreator - @shard2", () => {
     it("Should be able to get the token URI if token not minted", async () => {
       const { x2EarnCreator } = await getOrDeployContractInstances({ forceDeploy: true })
 
-      await expect(x2EarnCreator.tokenURI(1)).to.be.reverted
+      await expect(x2EarnCreator.tokenURI(2)).to.be.reverted
     })
 
     it("Should not be able to mint token to a user that already has a token", async () => {
@@ -260,13 +260,13 @@ describe("X2EarnCreator - @shard2", () => {
       await x2EarnCreator.connect(owner).safeMint(otherAccounts[2].address)
 
       // normal user
-      await expect(x2EarnCreator.connect(otherAccount).burn(0)).to.be.reverted
+      await expect(x2EarnCreator.connect(otherAccount).burn(1)).to.be.reverted
 
       // default admin
-      await expect(x2EarnCreator.connect(owner).burn(0)).to.emit(x2EarnCreator, "Transfer")
+      await expect(x2EarnCreator.connect(owner).burn(1)).to.emit(x2EarnCreator, "Transfer")
 
       // burner
-      await expect(x2EarnCreator.connect(burner).burn(1)).to.emit(x2EarnCreator, "Transfer")
+      await expect(x2EarnCreator.connect(burner).burn(2)).to.emit(x2EarnCreator, "Transfer")
     })
 
     it("Should not be able to burn a token when paused", async () => {
@@ -282,7 +282,7 @@ describe("X2EarnCreator - @shard2", () => {
     it("Should not be able to burn a token that does not exist", async () => {
       const { x2EarnCreator, owner } = await getOrDeployContractInstances({ forceDeploy: true })
 
-      await catchRevert(x2EarnCreator.connect(owner).burn(1))
+      await catchRevert(x2EarnCreator.connect(owner).burn(3))
     })
 
     it("Should not be able to get the token URI after burning", async () => {
@@ -302,15 +302,15 @@ describe("X2EarnCreator - @shard2", () => {
 
       await x2EarnCreator.connect(owner).safeMint(otherAccount.address)
 
-      expect(await x2EarnCreator.tokenURI(1)).to.equal("ipfs://BASE_URI")
+      expect(await x2EarnCreator.tokenURI(1)).to.equal("ipfs://bafybeie2onvzl3xsod5becuswpdmi63gtq7wgjqhqjecehytt7wdeg4py4/metadata/1.json")
     })
     it("Should return the correct token owner", async () => {
       const { x2EarnCreator, owner, otherAccount } = await getOrDeployContractInstances({ forceDeploy: true })
 
       await x2EarnCreator.connect(owner).safeMint(otherAccount.address)
 
-      expect(await x2EarnCreator.ownerOf(0)).to.equal(owner.address)
-      expect(await x2EarnCreator.ownerOf(1)).to.equal(otherAccount.address)
+      expect(await x2EarnCreator.ownerOf(1)).to.equal(owner.address)
+      expect(await x2EarnCreator.ownerOf(2)).to.equal(otherAccount.address)
     })
     it("Should return the correct token balance", async () => {
       const { x2EarnCreator, owner, otherAccount } = await getOrDeployContractInstances({ forceDeploy: true })
@@ -326,7 +326,7 @@ describe("X2EarnCreator - @shard2", () => {
       await x2EarnCreator.connect(owner).safeMint(otherAccounts[0].address)
       await x2EarnCreator.connect(owner).safeMint(otherAccounts[1].address)
 
-      await x2EarnCreator.connect(owner).burn(0)
+      await x2EarnCreator.connect(owner).burn(1)
 
       expect(await x2EarnCreator.totalSupply()).to.equal(2)
     })
@@ -336,9 +336,9 @@ describe("X2EarnCreator - @shard2", () => {
       await x2EarnCreator.connect(owner).safeMint(otherAccounts[0].address)
       await x2EarnCreator.connect(owner).safeMint(otherAccounts[1].address)
 
-      expect(await x2EarnCreator.tokenOfOwnerByIndex(owner.address, 0)).to.equal(0)
-      expect(await x2EarnCreator.tokenOfOwnerByIndex(otherAccounts[0].address, 0)).to.equal(1)
-      expect(await x2EarnCreator.tokenOfOwnerByIndex(otherAccounts[1].address, 0)).to.equal(2)
+      expect(await x2EarnCreator.tokenOfOwnerByIndex(owner.address, 0)).to.equal(1)
+      expect(await x2EarnCreator.tokenOfOwnerByIndex(otherAccounts[0].address, 0)).to.equal(2)
+      expect(await x2EarnCreator.tokenOfOwnerByIndex(otherAccounts[1].address, 0)).to.equal(3)
     })
   })
 })
