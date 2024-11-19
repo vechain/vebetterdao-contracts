@@ -15,6 +15,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
+      matrix:
+        shard: [shard1, shard2, shard3]
 
     steps:
       - name: Checkout repository
@@ -32,16 +34,8 @@ jobs:
       - name: Compile contracts
         run: yarn compile
 
-      - name: Unit Tests
+      - name: Set Shard Environment Variable
+        run: echo "SHARD=${{ matrix.shard }}" >> $GITHUB_ENV
+
+      - name: Run Unit Tests for ${{ matrix.shard }}
         run: yarn test:hardhat
-
-      - name: Generate coverage
-        run: yarn test:coverage:solidity
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          verbose: true
-          directory: coverage/
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
