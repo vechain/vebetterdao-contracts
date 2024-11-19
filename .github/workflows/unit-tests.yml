@@ -57,7 +57,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      - name: Install GitHub CLI
+        run: sudo apt-get install gh
+
       - name: Download All Coverage Artifacts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           for shard in shard1t shard2t shard3t; do
             echo "Downloading artifact coverage-$shard"
