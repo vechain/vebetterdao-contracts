@@ -17,7 +17,7 @@ import { deployProxy } from "../scripts/helpers"
 import { getEventName } from "./helpers/events"
 import { ZERO_ADDRESS } from "./helpers"
 
-describe("Treasury - @shard2", () => {
+describe("Treasury - @shard3t", () => {
   let treasuryProxy: Treasury
   let b3tr: B3TR
   let vot3: any

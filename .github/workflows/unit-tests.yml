@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [shard1, shard2, shard3] # Define shard names
+        shard: [shard1t, shard2t, shard3t] # Define shard names
 
     steps:
       - name: Checkout repository
@@ -46,7 +46,7 @@ jobs:
           name: coverage-${{ matrix.shard }}
           path: coverage/
 
-  combine-coverage:
+ combine-coverage:
     name: Combine Coverage Reports
     runs-on: ubuntu-latest
     needs: run-coverage-shards
@@ -54,11 +54,23 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Download Coverage Artifacts
+      - name: Download Shard 1 Coverage
         uses: actions/download-artifact@v3
         with:
-          name: coverage-*
-          path: coverage-shards/
+          name: coverage-shard1
+          path: coverage-shards/shard1t
+
+      - name: Download Shard 2 Coverage
+        uses: actions/download-artifact@v3
+        with:
+          name: coverage-shard2
+          path: coverage-shards/shard2t
+
+      - name: Download Shard 3 Coverage
+        uses: actions/download-artifact@v3
+        with:
+          name: coverage-shard3
+          path: coverage-shards/shard3t
 
       - name: Merge Coverage Reports
         run: |
