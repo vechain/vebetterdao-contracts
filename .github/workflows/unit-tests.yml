@@ -34,13 +34,14 @@ jobs:
       - name: Compile contracts
         run: yarn compile
 
+      - name: Set Shard Environment Variable
+        run: echo "SHARD=${{ matrix.shard }}" >> $GITHUB_ENV
+
       - name: Run Coverage for ${{ matrix.shard }}
         run: yarn test:coverage:solidity
 
       - name: Debug Coverage Output
-        run: |
-          echo "Listing contents of coverage/ directory:"
-          ls -R coverage/
+        run: ls -R coverage/
 
       - name: Upload Coverage for ${{ matrix.shard }}
         uses: actions/upload-artifact@v3
@@ -57,30 +58,20 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Download All Coverage Artifacts
-        uses: actions/download-artifact@v3
-        with:
-          name: coverage-*
-          path: coverage-shards/
-
-      - name: Debug Downloaded Files
         run: |
-          echo "Listing all files in coverage-shards/ directory:"
-          ls -R coverage-shards/
+          for shard in shard1t shard2t shard3t; do
+            echo "Downloading artifact coverage-$shard"
+            mkdir -p coverage-shards/$shard
+            gh run download --name "coverage-$shard" --dir coverage-shards/$shard
+          done
 
       - name: Merge Coverage Reports
         run: |
-          yarn add nyc
-          mkdir -p coverage
-          nyc merge coverage-shards/ coverage/coverage-final.json
-
-      - name: Debug Final Merged Coverage Report
-        run: |
-          echo "Contents of merged coverage-final.json:"
-          cat coverage/coverage-final.json
+          node merge-coverage.js
 
       - name: Generate Final Coverage Report
         run: |
-          nyc report --reporter=html --reporter=text --reporter=lcov
+          yarn coverage:report
 
       - name: Upload Unified Coverage Report to Codecov
         uses: codecov/codecov-action@v4
