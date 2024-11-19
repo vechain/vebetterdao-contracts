@@ -1,0 +1,5 @@
+{
+  "report-dir": "./coverage",
+  "temp-dir": "./coverage",
+  "all": true
+}

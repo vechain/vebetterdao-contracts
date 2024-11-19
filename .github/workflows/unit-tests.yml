@@ -74,6 +74,9 @@ jobs:
         run: |
           npx ts-node scripts/helpers/merge-coverage.ts
 
+      - name: Create .nyc_output Directory
+        run: mkdir -p .nyc_output
+
       - name: Generate Final Coverage Report
         run: |
           yarn coverage:report
