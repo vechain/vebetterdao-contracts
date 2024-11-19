@@ -60,9 +60,6 @@ jobs:
       - name: Install Dependencies
         run: yarn install --frozen-lockfile
 
-      - name: Debug Repository Contents
-        run: ls -R
-
       - name: Download All Coverage Artifacts
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
