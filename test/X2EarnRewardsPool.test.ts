@@ -15,7 +15,7 @@ import { X2EarnRewardsPoolV1 } from "../typechain-types/contracts/depreceated/V1
 import { endorseApp } from "./helpers/xnodes"
 import { createLocalConfig } from "../config/contracts/envs/local"
 
-describe("X2EarnRewardsPool - @shard7", function () {
+describe("X2EarnRewardsPool - @shard2", function () {
   // deployment
   describe("Deployment", function () {
     it("Cannot deploy contract with zero address", async function () {
@@ -555,7 +555,7 @@ describe("X2EarnRewardsPool - @shard7", function () {
       const receipt = await tx.wait()
       if (!receipt) throw new Error("No receipt")
 
-      let event = filterEventsByName(receipt.logs, "NewDeposit")
+      const event = filterEventsByName(receipt.logs, "NewDeposit")
       expect(event).not.to.eql([])
 
       expect(event[0].args[0]).to.equal(amount)
@@ -624,7 +624,7 @@ describe("X2EarnRewardsPool - @shard7", function () {
       const receipt = await tx.wait()
       if (!receipt) throw new Error("No receipt")
 
-      let event = filterEventsByName(receipt.logs, "TeamWithdrawal")
+      const event = filterEventsByName(receipt.logs, "TeamWithdrawal")
       expect(event).not.to.eql([])
       expect(event[0].args[0]).to.equal(ethers.parseEther("1"))
       expect(event[0].args[1]).to.equal(await x2EarnApps.hashAppName("My app"))
@@ -675,7 +675,7 @@ describe("X2EarnRewardsPool - @shard7", function () {
       const receipt = await tx.wait()
       if (!receipt) throw new Error("No receipt")
 
-      let event = filterEventsByName(receipt.logs, "TeamWithdrawal")
+      const event = filterEventsByName(receipt.logs, "TeamWithdrawal")
       expect(event).not.to.eql([])
       expect(event[0].args[0]).to.equal(ethers.parseEther("1"))
       expect(event[0].args[1]).to.equal(await x2EarnApps.hashAppName("My app"))
@@ -842,7 +842,7 @@ describe("X2EarnRewardsPool - @shard7", function () {
       // event emitted
       if (!receipt) throw new Error("No receipt")
 
-      let event = filterEventsByName(receipt.logs, "RewardDistributed")
+      const event = filterEventsByName(receipt.logs, "RewardDistributed")
 
       expect(event).not.to.eql([])
       expect(event[0].args[0]).to.equal(ethers.parseEther("1"))
@@ -1055,7 +1055,7 @@ describe("X2EarnRewardsPool - @shard7", function () {
       // event emitted
       if (!receipt) throw new Error("No receipt")
 
-      let event = filterEventsByName(receipt.logs, "RewardDistributed")
+      const event = filterEventsByName(receipt.logs, "RewardDistributed")
 
       expect(event).not.to.eql([])
       expect(event[0].args[0]).to.equal(ethers.parseEther("1"))
@@ -1119,7 +1119,7 @@ describe("X2EarnRewardsPool - @shard7", function () {
       // event emitted
       if (!receipt) throw new Error("No receipt")
 
-      let event = filterEventsByName(receipt.logs, "RewardDistributed")
+      const event = filterEventsByName(receipt.logs, "RewardDistributed")
 
       expect(event).not.to.eql([])
       expect(event[0].args[0]).to.equal(ethers.parseEther("1"))
@@ -1185,7 +1185,7 @@ describe("X2EarnRewardsPool - @shard7", function () {
       // event emitted
       if (!receipt) throw new Error("No receipt")
 
-      let event = filterEventsByName(receipt.logs, "RewardDistributed")
+      const event = filterEventsByName(receipt.logs, "RewardDistributed")
 
       expect(event).not.to.eql([])
       expect(event[0].args[0]).to.equal(ethers.parseEther("1"))
@@ -1251,7 +1251,7 @@ describe("X2EarnRewardsPool - @shard7", function () {
       // event emitted
       if (!receipt) throw new Error("No receipt")
 
-      let event = filterEventsByName(receipt.logs, "RewardDistributed")
+      const event = filterEventsByName(receipt.logs, "RewardDistributed")
 
       expect(event).not.to.eql([])
       expect(event[0].args[0]).to.equal(ethers.parseEther("1"))
@@ -1314,7 +1314,7 @@ describe("X2EarnRewardsPool - @shard7", function () {
       // event emitted
       if (!receipt) throw new Error("No receipt")
 
-      let event = filterEventsByName(receipt.logs, "RewardDistributed")
+      const event = filterEventsByName(receipt.logs, "RewardDistributed")
 
       expect(event).not.to.eql([])
       expect(event[0].args[0]).to.equal(ethers.parseEther("1"))
@@ -1368,7 +1368,7 @@ describe("X2EarnRewardsPool - @shard7", function () {
       // event emitted
       if (!receipt) throw new Error("No receipt")
 
-      let event = filterEventsByName(receipt.logs, "RewardDistributed")
+      const event = filterEventsByName(receipt.logs, "RewardDistributed")
 
       expect(event).not.to.eql([])
       expect(event[0].args[0]).to.equal(ethers.parseEther("1"))
@@ -1422,7 +1422,7 @@ describe("X2EarnRewardsPool - @shard7", function () {
       // event emitted
       if (!receipt) throw new Error("No receipt")
 
-      let event = filterEventsByName(receipt.logs, "RewardDistributed")
+      const event = filterEventsByName(receipt.logs, "RewardDistributed")
 
       expect(event).not.to.eql([])
       expect(event[0].args[0]).to.equal(ethers.parseEther("1"))
@@ -1762,7 +1762,7 @@ describe("X2EarnRewardsPool - @shard7", function () {
       // event emitted
       if (!receipt) throw new Error("No receipt")
 
-      let event = filterEventsByName(receipt.logs, "RewardDistributed")
+      const event = filterEventsByName(receipt.logs, "RewardDistributed")
 
       expect(event).not.to.eql([])
       expect(event[0].args[0]).to.equal(ethers.parseEther("1"))

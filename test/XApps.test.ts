@@ -916,7 +916,7 @@ describe("X-Apps - @shard3", function () {
 
       const testKeys = getTestKeys(50)
 
-      let eligibleAppIds: string[] = []
+      const eligibleAppIds: string[] = []
       APPS.forEach(async (app, index) => {
         const tx = await x2EarnAppsV1.addApp(app.teamWalletAddress, app.admin, app.name, app.metadataURI)
         await tx.wait()
@@ -1230,17 +1230,17 @@ describe("X-Apps - @shard3", function () {
       const { x2EarnApps, otherAccounts, owner } = await getOrDeployContractInstances({ forceDeploy: true })
       const app1Id = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[0].address))
 
-      let tx = await x2EarnApps
+      const tx = await x2EarnApps
         .connect(owner)
         .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
 
-      let receipt = await tx.wait()
+      const receipt = await tx.wait()
       if (!receipt) throw new Error("No receipt")
 
-      let appAdded = filterEventsByName(receipt.logs, "AppAdded")
+      const appAdded = filterEventsByName(receipt.logs, "AppAdded")
       expect(appAdded).not.to.eql([])
 
-      let { id, address } = await parseAppAddedEvent(appAdded[0])
+      const { id, address } = await parseAppAddedEvent(appAdded[0])
       expect(id).to.eql(app1Id)
       expect(address).to.eql(otherAccounts[0].address)
     })
@@ -1543,7 +1543,7 @@ describe("X-Apps - @shard3", function () {
       const appId = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[0].address))
       await endorseApp(appId, otherAccounts[0])
 
-      let roundId = await startNewAllocationRound()
+      const roundId = await startNewAllocationRound()
 
       const isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, roundId)
       expect(isEligibleForVote).to.eql(true)
@@ -1562,7 +1562,7 @@ describe("X-Apps - @shard3", function () {
         .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
       await endorseApp(app1Id, otherAccounts[0])
 
-      let round1 = await startNewAllocationRound()
+      const round1 = await startNewAllocationRound()
 
       await x2EarnApps.connect(owner).setVotingEligibility(app1Id, false)
 
@@ -1574,7 +1574,7 @@ describe("X-Apps - @shard3", function () {
       expect(appsVotedInSpecificRound.length).to.equal(1n)
 
       await waitForRoundToEnd(round1)
-      let round2 = await startNewAllocationRound()
+      const round2 = await startNewAllocationRound()
 
       // app should not be eligible from this round
       isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round2)
@@ -1606,7 +1606,7 @@ describe("X-Apps - @shard3", function () {
       await x2EarnApps.connect(owner).setVotingEligibility(app1Id, false)
       expect(await x2EarnApps.isEligibleNow(app1Id)).to.eql(false)
 
-      let round1 = await startNewAllocationRound()
+      const round1 = await startNewAllocationRound()
 
       // app should still be eligible for the current round
       let isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
@@ -1621,7 +1621,7 @@ describe("X-Apps - @shard3", function () {
 
       await waitForRoundToEnd(round1)
 
-      let round2 = await startNewAllocationRound()
+      const round2 = await startNewAllocationRound()
 
       // app should be eligible from this round
       isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round2)
@@ -1704,7 +1704,7 @@ describe("X-Apps - @shard3", function () {
 
       // start new round
       await emissions.distribute()
-      let round1 = await xAllocationVoting.currentRoundId()
+      const round1 = await xAllocationVoting.currentRoundId()
       let isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
       expect(isEligibleForVote).to.eql(true)
 
@@ -1733,7 +1733,7 @@ describe("X-Apps - @shard3", function () {
       await waitForCurrentRoundToEnd()
 
       await emissions.distribute()
-      let round2 = await xAllocationVoting.currentRoundId()
+      const round2 = await xAllocationVoting.currentRoundId()
 
       // app should not be eligible from this round
       isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round2)
@@ -1764,7 +1764,7 @@ describe("X-Apps - @shard3", function () {
 
       const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
 
-      let round1 = await startNewAllocationRound()
+      const round1 = await startNewAllocationRound()
 
       await veBetterPassport.whitelist(voter.address)
       await veBetterPassport.toggleCheck(1)
@@ -1784,11 +1784,11 @@ describe("X-Apps - @shard3", function () {
       let appVotes = await xAllocationVoting.getAppVotes(round1, app1Id)
       expect(appVotes).to.equal(0n)
 
-      let appsVotedInSpecificRound = await xAllocationVoting.getAppIdsOfRound(round1)
+      const appsVotedInSpecificRound = await xAllocationVoting.getAppIdsOfRound(round1)
       expect(appsVotedInSpecificRound.length).to.equal(0)
 
       await waitForRoundToEnd(round1)
-      let round2 = await startNewAllocationRound()
+      const round2 = await startNewAllocationRound()
 
       // app should be eligible from this round
       isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round2)
@@ -3135,7 +3135,7 @@ describe("X-Apps - @shard3", function () {
         .submitApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
       await x2EarnApps.connect(owner).setTeamAllocationPercentage(app1Id, 50)
 
-      let teamAllocationPercentage = await x2EarnApps.teamAllocationPercentage(app1Id)
+      const teamAllocationPercentage = await x2EarnApps.teamAllocationPercentage(app1Id)
       expect(teamAllocationPercentage).to.eql(50n)
     })
 
@@ -3185,7 +3185,7 @@ describe("X-Apps - @shard3", function () {
         .submitApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
       await x2EarnApps.connect(owner).setTeamAllocationPercentage(app1Id, 50)
 
-      let teamAllocationPercentage = await x2EarnApps.teamAllocationPercentage(app1Id)
+      const teamAllocationPercentage = await x2EarnApps.teamAllocationPercentage(app1Id)
       expect(teamAllocationPercentage).to.eql(50n)
     })
 
@@ -3377,7 +3377,7 @@ describe("X-Apps - @shard3", function () {
 
       expect(await x2EarnApps.nodeToEndorsedApp(1)).to.eql(app1Id) // Node ID 1 has endorsed app1Id
 
-      let round1 = await startNewAllocationRound()
+      const round1 = await startNewAllocationRound()
 
       // app should be eligible for the current round
       let isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
@@ -3394,9 +3394,9 @@ describe("X-Apps - @shard3", function () {
       const receipt = await tx.wait()
       if (!receipt) throw new Error("No receipt")
 
-      let events = receipt?.logs
+      const events = receipt?.logs
 
-      let decodedEvents = events?.map(event => {
+      const decodedEvents = events?.map(event => {
         return x2EarnApps.interface.parseLog({
           topics: event?.topics as string[],
           data: event?.data as string,
@@ -3416,7 +3416,7 @@ describe("X-Apps - @shard3", function () {
       await waitForCurrentRoundToEnd()
 
       // start new round
-      let round2 = await startNewAllocationRound()
+      const round2 = await startNewAllocationRound()
 
       // app should still be eligible for the current round as it is in the grace period
       isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round2)
@@ -3447,7 +3447,7 @@ describe("X-Apps - @shard3", function () {
       await x2EarnApps.connect(otherAccounts[1]).endorseApp(app1Id, 1) // Node holder endorsement score is 50
       await x2EarnApps.connect(otherAccounts[2]).endorseApp(app1Id, 2) // Node holder endorsement score is 50
 
-      let round1 = await startNewAllocationRound()
+      const round1 = await startNewAllocationRound()
 
       // app should be eligible for the current round
       let isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
@@ -3462,9 +3462,9 @@ describe("X-Apps - @shard3", function () {
       const receipt = await tx.wait()
       if (!receipt) throw new Error("No receipt")
 
-      let events = receipt?.logs
+      const events = receipt?.logs
 
-      let decodedEvents = events?.map(event => {
+      const decodedEvents = events?.map(event => {
         return x2EarnApps.interface.parseLog({
           topics: event?.topics as string[],
           data: event?.data as string,
@@ -3484,7 +3484,7 @@ describe("X-Apps - @shard3", function () {
       await waitForCurrentRoundToEnd()
 
       // start new round
-      let round2 = await startNewAllocationRound()
+      const round2 = await startNewAllocationRound()
 
       // app should still be eligible for the current round as it is in the grace period
       isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round2)
@@ -3515,7 +3515,7 @@ describe("X-Apps - @shard3", function () {
       await x2EarnApps.connect(otherAccounts[1]).endorseApp(app1Id, 1) // Node holder endorsement score is 50
       await x2EarnApps.connect(otherAccounts[2]).endorseApp(app1Id, 2) // Node holder endorsement score is 50
 
-      let round1 = await startNewAllocationRound()
+      const round1 = await startNewAllocationRound()
 
       // app should be eligible for the current round
       let isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
@@ -3547,7 +3547,7 @@ describe("X-Apps - @shard3", function () {
       await waitForCurrentRoundToEnd()
 
       // start new round -> 1st cycle unedorsed
-      let round2 = await startNewAllocationRound()
+      const round2 = await startNewAllocationRound()
 
       // app should still be eligible for the current round as it is in the grace period
       isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round2)
@@ -3560,7 +3560,7 @@ describe("X-Apps - @shard3", function () {
       await waitForCurrentRoundToEnd()
 
       // start new round -> 2nd cycle unendorsed
-      let round3 = await startNewAllocationRound()
+      const round3 = await startNewAllocationRound()
 
       // app should still be eligible for the current round as it is in the grace period
       isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round3)
@@ -3573,7 +3573,7 @@ describe("X-Apps - @shard3", function () {
       await waitForCurrentRoundToEnd()
 
       // start new round -> 3rd cycle unendorsed
-      let round4 = await startNewAllocationRound()
+      const round4 = await startNewAllocationRound()
 
       // app should not be eligible for the current round as it is not in the grace period
       isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round4)
@@ -3608,7 +3608,7 @@ describe("X-Apps - @shard3", function () {
       await x2EarnApps.connect(otherAccounts[1]).endorseApp(app1Id, 1) // Node holder endorsement score is 50
       await x2EarnApps.connect(otherAccounts[2]).endorseApp(app1Id, 2) // Node holder endorsement score is 50
 
-      let round1 = await startNewAllocationRound()
+      const round1 = await startNewAllocationRound()
 
       // app should be eligible for the current round
       let isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
@@ -3624,8 +3624,8 @@ describe("X-Apps - @shard3", function () {
       if (!receipt) throw new Error("No receipt")
 
       // check event emitted
-      let events = receipt?.logs
-      let decodedEvents = events?.map(event => {
+      const events = receipt?.logs
+      const decodedEvents = events?.map(event => {
         return x2EarnApps.interface.parseLog({
           topics: event?.topics as string[],
           data: event?.data as string,
@@ -3652,7 +3652,7 @@ describe("X-Apps - @shard3", function () {
       await waitForCurrentRoundToEnd()
 
       // start new round -> 1st cycle unedorsed
-      let round2 = await startNewAllocationRound()
+      const round2 = await startNewAllocationRound()
 
       // app should still be eligible for the current round as it is in the grace period
       isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round2)
@@ -3665,7 +3665,7 @@ describe("X-Apps - @shard3", function () {
       await waitForCurrentRoundToEnd()
 
       // start new round -> 2nd cycle unendorsed
-      let round3 = await startNewAllocationRound()
+      const round3 = await startNewAllocationRound()
 
       // app should still be eligible for the current round as it is in the grace period
       isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round3)
@@ -3678,7 +3678,7 @@ describe("X-Apps - @shard3", function () {
       await waitForCurrentRoundToEnd()
 
       // start new round -> 3rd cycle unendorsed
-      let round4 = await startNewAllocationRound()
+      const round4 = await startNewAllocationRound()
 
       // app should not be eligible for the current round as it is not in the grace period
       isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round4)
@@ -3710,7 +3710,7 @@ describe("X-Apps - @shard3", function () {
       await x2EarnApps.connect(otherAccounts[1]).endorseApp(app1Id, 1) // Node holder endorsement score is 50
       await x2EarnApps.connect(otherAccounts[2]).endorseApp(app1Id, 2) // Node holder endorsement score is 50
 
-      let round1 = await startNewAllocationRound()
+      const round1 = await startNewAllocationRound()
 
       // app should be eligible for the current round
       let isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
@@ -3726,8 +3726,8 @@ describe("X-Apps - @shard3", function () {
       if (!receipt) throw new Error("No receipt")
 
       // check event emitted
-      let events = receipt?.logs
-      let decodedEvents = events?.map(event => {
+      const events = receipt?.logs
+      const decodedEvents = events?.map(event => {
         return x2EarnApps.interface.parseLog({
           topics: event?.topics as string[],
           data: event?.data as string,
@@ -3754,7 +3754,7 @@ describe("X-Apps - @shard3", function () {
       await waitForCurrentRoundToEnd()
 
       // start new round -> 1st cycle unedorsed
-      let round2 = await startNewAllocationRound()
+      const round2 = await startNewAllocationRound()
 
       // app should still be eligible for the current round as it is in the grace period
       isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round2)
@@ -3767,7 +3767,7 @@ describe("X-Apps - @shard3", function () {
       await waitForCurrentRoundToEnd()
 
       // start new round -> 2nd cycle unendorsed
-      let round3 = await startNewAllocationRound()
+      const round3 = await startNewAllocationRound()
 
       // app should still be eligible for the current round as it is in the grace period
       isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round3)
@@ -3780,7 +3780,7 @@ describe("X-Apps - @shard3", function () {
       await waitForCurrentRoundToEnd()
 
       // start new round -> 3rd cycle unendorsed
-      let round4 = await startNewAllocationRound()
+      const round4 = await startNewAllocationRound()
 
       // app should not be eligible for the current round as it is not in the grace period
       isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round4)
@@ -3815,7 +3815,7 @@ describe("X-Apps - @shard3", function () {
       await x2EarnApps.connect(otherAccounts[1]).endorseApp(app1Id, 1) // Node holder endorsement score is 50
       await x2EarnApps.connect(otherAccounts[2]).endorseApp(app1Id, 2) // Node holder endorsement score is 50
 
-      let round1 = await startNewAllocationRound()
+      const round1 = await startNewAllocationRound()
 
       // app should be eligible for the current round
       let isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
@@ -3831,8 +3831,8 @@ describe("X-Apps - @shard3", function () {
       if (!receipt) throw new Error("No receipt")
 
       // check event emitted
-      let events = receipt?.logs
-      let decodedEvents = events?.map(event => {
+      const events = receipt?.logs
+      const decodedEvents = events?.map(event => {
         return x2EarnApps.interface.parseLog({
           topics: event?.topics as string[],
           data: event?.data as string,
@@ -3859,7 +3859,7 @@ describe("X-Apps - @shard3", function () {
       await waitForCurrentRoundToEnd()
 
       // start new round -> 1st cycle unedorsed
-      let round2 = await startNewAllocationRound()
+      const round2 = await startNewAllocationRound()
 
       // app should still be eligible for the current round as it is in the grace period
       isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round2)
@@ -3888,7 +3888,7 @@ describe("X-Apps - @shard3", function () {
       await waitForCurrentRoundToEnd()
 
       // start new round -> 2nd cycle unendorsed
-      let round3 = await startNewAllocationRound()
+      const round3 = await startNewAllocationRound()
 
       // app id not eligible for the current round
       isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round3)
@@ -3928,7 +3928,7 @@ describe("X-Apps - @shard3", function () {
       await x2EarnApps.connect(otherAccounts[1]).endorseApp(app1Id, 1) // Node holder endorsement score is 50
       await x2EarnApps.connect(otherAccounts[2]).endorseApp(app1Id, 2) // Node holder endorsement score is 50
 
-      let round1 = await startNewAllocationRound()
+      const round1 = await startNewAllocationRound()
 
       // app should be eligible for the current round
       let isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
@@ -3954,7 +3954,7 @@ describe("X-Apps - @shard3", function () {
       await waitForCurrentRoundToEnd()
 
       // start new round -> 1st cycle unedorsed
-      let round2 = await startNewAllocationRound()
+      const round2 = await startNewAllocationRound()
 
       // app should still be eligible for the current round as it is in the grace period
       isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round2)
@@ -3967,7 +3967,7 @@ describe("X-Apps - @shard3", function () {
       await waitForCurrentRoundToEnd()
 
       // start new round -> 2nd cycle unendorsed
-      let round3 = await startNewAllocationRound()
+      const round3 = await startNewAllocationRound()
 
       // app should still be eligible for the current round as it is in the grace period
       isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round3)
@@ -3983,7 +3983,7 @@ describe("X-Apps - @shard3", function () {
       await waitForCurrentRoundToEnd()
 
       // start new round -> 3rd cycle unendorsed
-      let round4 = await startNewAllocationRound()
+      const round4 = await startNewAllocationRound()
 
       // app should not be eligible for the current round as it is not in the grace period
       isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round4)
@@ -4005,7 +4005,7 @@ describe("X-Apps - @shard3", function () {
       await waitForCurrentRoundToEnd()
       // start new round -> 4th cycle reendorsed
 
-      let round5 = await startNewAllocationRound()
+      const round5 = await startNewAllocationRound()
       isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round5)
       expect(isEligibleForVote).to.eql(true)
     })
@@ -4035,10 +4035,10 @@ describe("X-Apps - @shard3", function () {
       await x2EarnApps.connect(otherAccounts[1]).endorseApp(app1Id, 1) // Node holder endorsement score is 50
       await x2EarnApps.connect(otherAccounts[2]).endorseApp(app1Id, 2) // Node holder endorsement score is 50
 
-      let round1 = await startNewAllocationRound()
+      const round1 = await startNewAllocationRound()
 
       // app should be eligible for the current round
-      let isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
+      const isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
       expect(isEligibleForVote).to.eql(true)
 
       // Skip ahead 1 day to be able to transfer node
@@ -4094,12 +4094,12 @@ describe("X-Apps - @shard3", function () {
       const tx = await x2EarnApps.connect(otherAccounts[1]).endorseApp(app1Id, 1) // Node holder endorsement score is 100
 
       // Check event emitted
-      let receipt = await tx.wait()
+      const receipt = await tx.wait()
       if (!receipt) throw new Error("No receipt")
 
-      let events = receipt?.logs
+      const events = receipt?.logs
 
-      let decodedEvents = events?.map(event => {
+      const decodedEvents = events?.map(event => {
         return x2EarnApps.interface.parseLog({
           topics: event?.topics as string[],
           data: event?.data as string,
@@ -4755,7 +4755,7 @@ describe("X-Apps - @shard3", function () {
       await x2EarnApps.connect(otherAccounts[1]).endorseApp(app1Id, 1) // Node holder endorsement score is 50
       await x2EarnApps.connect(otherAccounts[2]).endorseApp(app1Id, 2) // Node holder endorsement score is 50
 
-      let round1 = await startNewAllocationRound()
+      const round1 = await startNewAllocationRound()
 
       // app should be eligible for the current round
       let isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
@@ -4778,7 +4778,7 @@ describe("X-Apps - @shard3", function () {
       await waitForCurrentRoundToEnd()
 
       // start new round -> 1st cycle unedorsed
-      let round2 = await startNewAllocationRound()
+      const round2 = await startNewAllocationRound()
 
       // app should not be eligible for voting in current round
       isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round2)
@@ -4795,7 +4795,7 @@ describe("X-Apps - @shard3", function () {
       await waitForCurrentRoundToEnd()
 
       // start new round -> 2nd cycle unendorsed
-      let round3 = await startNewAllocationRound()
+      const round3 = await startNewAllocationRound()
 
       // app should still still not be eligible for the current round
       isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round3)
@@ -4974,7 +4974,7 @@ describe("X-Apps - @shard3", function () {
       await x2EarnApps.connect(otherAccounts[1]).endorseApp(app1Id, 1) // Node holder endorsement score is 50
       await x2EarnApps.connect(otherAccounts[2]).endorseApp(app1Id, 2) // Node holder endorsement score is 50
 
-      let round1 = await startNewAllocationRound()
+      const round1 = await startNewAllocationRound()
 
       // app should be eligible for the current round
       let isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
@@ -4997,7 +4997,7 @@ describe("X-Apps - @shard3", function () {
       await waitForCurrentRoundToEnd()
 
       // start new round -> 1st cycle unedorsed
-      let round2 = await startNewAllocationRound()
+      const round2 = await startNewAllocationRound()
 
       // app should not be eligible for voting in current round
       isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round2)
@@ -5016,7 +5016,7 @@ describe("X-Apps - @shard3", function () {
       expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(false)
 
       // start new round
-      let round3 = await startNewAllocationRound()
+      const round3 = await startNewAllocationRound()
 
       expect(await xAllocationVoting.isEligibleForVote(app1Id, round3)).to.eql(true)
 
@@ -5064,7 +5064,7 @@ describe("X-Apps - @shard3", function () {
       const appsInfo2 = await x2EarnApps.apps()
       expect(appsInfo2.length).to.eql(1)
 
-      let round1 = await startNewAllocationRound()
+      const round1 = await startNewAllocationRound()
 
       // app should be eligible for the current round
       let isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
@@ -5087,7 +5087,7 @@ describe("X-Apps - @shard3", function () {
       await waitForCurrentRoundToEnd()
 
       // start new round -> 1st cycle unedorsed
-      let round2 = await startNewAllocationRound()
+      const round2 = await startNewAllocationRound()
 
       // app should not be eligible for voting in current round
       isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round2)
@@ -5128,7 +5128,7 @@ describe("X-Apps - @shard3", function () {
       expect((await x2EarnApps.unendorsedAppIds()).length).to.eql(1)
 
       // start new round
-      let round3 = await startNewAllocationRound()
+      const round3 = await startNewAllocationRound()
 
       expect(await xAllocationVoting.isEligibleForVote(app1Id, round3)).to.eql(true)
 
@@ -5225,7 +5225,7 @@ describe("X-Apps - @shard3", function () {
       await waitForCurrentRoundToEnd()
 
       // start new round -> 1st cycle unedorsed
-      let round2 = await startNewAllocationRound()
+      const round2 = await startNewAllocationRound()
 
       // app should not be eligible for voting in current round
       expect(await xAllocationVoting.isEligibleForVote(app1Id, round2)).to.eql(false)
@@ -5247,7 +5247,7 @@ describe("X-Apps - @shard3", function () {
       expect(eligbleApps.length).to.eql(1)
 
       // start new round
-      let round3 = await startNewAllocationRound()
+      const round3 = await startNewAllocationRound()
 
       // app should be eligible for the current round
       expect(await xAllocationVoting.isEligibleForVote(app1Id, round3)).to.eql(true)
@@ -5698,10 +5698,10 @@ describe("X-Apps - @shard3", function () {
 
       expect(await x2EarnApps.nodeToEndorsedApp(1)).to.eql(app1Id) // Node ID 1 has endorsed app1Id
 
-      let round1 = await startNewAllocationRound()
+      const round1 = await startNewAllocationRound()
 
       // app should be eligible for the current round
-      let isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
+      const isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
       expect(isEligibleForVote).to.eql(true)
 
       // App is not pending endorsement
@@ -5897,10 +5897,10 @@ describe("X-Apps - @shard3", function () {
       // app should be eligible for voting
       expect(await x2EarnApps.isEligibleNow(app1Id)).to.eql(true)
 
-      let round1 = await startNewAllocationRound()
+      const round1 = await startNewAllocationRound()
 
       // app should be eligible for the current round
-      let isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
+      const isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
       expect(isEligibleForVote).to.eql(true)
 
       // App is not pending endorsement
@@ -5928,10 +5928,10 @@ describe("X-Apps - @shard3", function () {
       // app should be eligible for voting
       expect(await x2EarnApps.isEligibleNow(app1Id)).to.eql(true)
 
-      let round1 = await startNewAllocationRound()
+      const round1 = await startNewAllocationRound()
 
       // app should be eligible for the current round
-      let isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
+      const isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
       expect(isEligibleForVote).to.eql(true)
 
       await x2EarnApps.connect(owner).unendorseApp(app1Id, 1)

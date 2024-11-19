@@ -103,7 +103,7 @@ export async function deployAll(config: ContractsConfig) {
     GovernorVotesLogicLib,
     GovernorStateLogicLib,
   } = await governanceLibraries()
-  
+
   console.log("Deploying VeBetter Passport Libraries")
   // Deploy Passport Libraries
   const {
@@ -182,10 +182,7 @@ export async function deployAll(config: ContractsConfig) {
     true,
   )) as TimeLock
 
-  const x2EarnCreator = (await deployProxy("X2EarnCreator", [
-    TEMP_ADMIN,
-    TEMP_ADMIN,
-  ])) as X2EarnCreator
+  const x2EarnCreator = (await deployProxy("X2EarnCreator", [TEMP_ADMIN, TEMP_ADMIN])) as X2EarnCreator
 
   const treasury = (await deployProxy(
     "Treasury",

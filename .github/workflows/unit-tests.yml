@@ -15,6 +15,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
+      matrix:
+        shard: [shard1, shard2, shard3]
 
     steps:
       - name: Checkout repository
@@ -32,13 +34,30 @@ jobs:
       - name: Compile contracts
         run: yarn compile
 
-      - name: Unit Tests
+      - name: Run Unit Tests for ${{ matrix.shard }}
         run: yarn test:hardhat
 
-      - name: Generate coverage
+  generate-coverage:
+    name: Generate Coverage Report
+    runs-on: ubuntu-latest
+    needs: run-contract-tests
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Use Node v20
+        uses: actions/setup-node@v3
+        with:
+          node-version-file: .nvmrc
+          cache: "yarn"
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Run Full Test Suite for Coverage
         run: yarn test:coverage:solidity
 
-      - name: Upload coverage to Codecov
+      - name: Upload Coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
           verbose: true

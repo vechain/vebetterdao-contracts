@@ -68,7 +68,12 @@ const padNodeTypes = (nodeTypes: number[], requiredLength: number) => {
   return nodeTypes
 }
 
-export const setupLocalEnvironment = async (emissions: Emissions, treasury: Treasury, x2EarnApps: X2EarnApps, vechainNodesMock: TokenAuction) => {
+export const setupLocalEnvironment = async (
+  emissions: Emissions,
+  treasury: Treasury,
+  x2EarnApps: X2EarnApps,
+  vechainNodesMock: TokenAuction,
+) => {
   const start = performance.now()
   console.log("================ Setup local environment ================")
 
@@ -91,7 +96,7 @@ export const setupLocalEnvironment = async (emissions: Emissions, treasury: Trea
 
   await airdropB3trFromTreasury(treasuryAddress, admin, seedAccounts)
 
-    /**
+  /**
    * First seed account will have a Mjolnir X Node
    * Second seed account will have a Thunder X Node
    * Third seed account will have a Strength X Node
@@ -99,19 +104,22 @@ export const setupLocalEnvironment = async (emissions: Emissions, treasury: Trea
    * Fifth seed account will have a Thunder Economic Node
    * Remaining accounts with have a Mjolnir X Node -> These will have an endorsement score of 100
    */
-    await mintVechainNodes(vechainNodesMock, endorserAccounts, padNodeTypes([7, 6, 5, 3, 2], endorserAccounts.length))
+  await mintVechainNodes(vechainNodesMock, endorserAccounts, padNodeTypes([7, 6, 5, 3, 2], endorserAccounts.length))
 
-    // Get unendorsed XAPPs
-    const unedorsedApps = await x2EarnApps.unendorsedAppIds()
-    const appsToEndorse = unedorsedApps.slice(0, unedorsedApps.length / 2)
-    await endorseXApps(endorserAccounts, x2EarnApps, appsToEndorse, vechainNodesMock)
+  // Get unendorsed XAPPs
+  const unedorsedApps = await x2EarnApps.unendorsedAppIds()
+  const appsToEndorse = unedorsedApps.slice(0, unedorsedApps.length / 2)
+  await endorseXApps(endorserAccounts, x2EarnApps, appsToEndorse, vechainNodesMock)
 
   const end = new Date(performance.now() - start)
   console.log(`Setup complete in ${end.getMinutes()}m ${end.getSeconds()}s`)
 }
 
-export const setupTestEnvironment = async (emissions: Emissions, x2EarnApps: X2EarnApps, 
-  vechainNodesMock: TokenAuction) => {
+export const setupTestEnvironment = async (
+  emissions: Emissions,
+  x2EarnApps: X2EarnApps,
+  vechainNodesMock: TokenAuction,
+) => {
   console.log("================ Setup Testnet environment ================")
   const start = performance.now()
 

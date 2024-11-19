@@ -5,7 +5,7 @@ import { ethers } from "hardhat"
 import { createLocalConfig } from "../config/contracts/envs/local"
 import { getImplementationAddress } from "@openzeppelin/upgrades-core"
 
-describe("X2EarnCreator - @shard7", () => {
+describe("X2EarnCreator - @shard2", () => {
   describe("Contract parameters", () => {
     it("Should have correct parameters set on deployment", async () => {
       const { x2EarnCreator, owner } = await getOrDeployContractInstances({ forceDeploy: true })

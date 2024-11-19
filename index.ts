@@ -130,7 +130,7 @@ export const X2EarnCreator = {
     testnet: testnetAddresses.X2EarnCreator,
   },
   interface: X2EarnCreator__factory.createInterface(),
-} 
+}
 export const VeBetterPassport = {
   abi: VeBetterPassport__factory.abi,
   address: {

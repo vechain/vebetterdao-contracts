@@ -991,7 +991,7 @@ describe("Governor and TimeLock - @shard1", function () {
       await vot3.connect(otherAccount).approve(await governorV4.getAddress(), proposalThreshold)
       await governorV4.connect(otherAccount).deposit(proposalThreshold, proposalId)
 
-      let proposalState = await governorV4.state(proposalId) // proposal id of the proposal in the beforeAll step
+      const proposalState = await governorV4.state(proposalId) // proposal id of the proposal in the beforeAll step
 
       if (proposalState.toString() !== "1")
         await moveToCycle(parseInt((await governorV4.proposalStartRound(proposalId)).toString()) + 1)
@@ -4233,9 +4233,9 @@ describe("Governor and TimeLock - @shard1", function () {
       expect(await governor.quorumNumerator()).to.equal(4n)
 
       const checkUserSupplyPercentage = async (user: HardhatEthersSigner) => {
-        let totalSupply = await vot3.totalSupply()
-        let userBalance = await vot3.balanceOf(user.address)
-        let userPercentage = (userBalance * 100n) / totalSupply
+        const totalSupply = await vot3.totalSupply()
+        const userBalance = await vot3.balanceOf(user.address)
+        const userPercentage = (userBalance * 100n) / totalSupply
 
         return userPercentage
       }
@@ -4310,9 +4310,9 @@ describe("Governor and TimeLock - @shard1", function () {
       expect(await governor.quorumNumerator()).to.equal(4n)
 
       const checkUserSupplyPercentage = async (user: HardhatEthersSigner) => {
-        let totalSupply = await vot3.totalSupply()
-        let userBalance = await vot3.balanceOf(user.address)
-        let userPercentage = (userBalance * 100n) / totalSupply
+        const totalSupply = await vot3.totalSupply()
+        const userBalance = await vot3.balanceOf(user.address)
+        const userPercentage = (userBalance * 100n) / totalSupply
 
         return userPercentage
       }

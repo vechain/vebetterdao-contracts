@@ -40,7 +40,7 @@ import {
 import { time } from "@nomicfoundation/hardhat-network-helpers"
 import { endorseApp } from "./helpers/xnodes"
 
-describe("VoterRewards - @shard7", () => {
+describe("VoterRewards - @shard2", () => {
   describe("Contract parameters", () => {
     it("Should have correct parameters set on deployment", async () => {
       const { voterRewards, owner, galaxyMember, emissions } = await getOrDeployContractInstances({ forceDeploy: true })
@@ -209,9 +209,9 @@ describe("VoterRewards - @shard7", () => {
       const receipt = await tx.wait()
       if (!receipt) throw new Error("No receipt")
 
-      let events = receipt?.logs
+      const events = receipt?.logs
 
-      let decodedEvents = events?.map(event => {
+      const decodedEvents = events?.map(event => {
         return voterRewards.interface.parseLog({
           topics: event?.topics as string[],
           data: event?.data as string,
@@ -1067,7 +1067,7 @@ describe("VoterRewards - @shard7", () => {
       expect(totalVotes).to.eql(ethers.parseEther("1400"))
 
       // Total voters should be tracked correctly
-      let totalVoters = await xAllocationVoting.totalVoters(roundId)
+      const totalVoters = await xAllocationVoting.totalVoters(roundId)
       expect(totalVoters).to.eql(BigInt(3))
 
       // Voter rewards checks
@@ -1266,7 +1266,7 @@ describe("VoterRewards - @shard7", () => {
       expect(totalVotes).to.eql(ethers.parseEther("1400"))
 
       // Total voters should be tracked correctly
-      let totalVoters = await xAllocationVoting.totalVoters(roundId)
+      const totalVoters = await xAllocationVoting.totalVoters(roundId)
       expect(totalVoters).to.eql(BigInt(3))
 
       // Voter rewards checks
@@ -3471,18 +3471,18 @@ describe("VoterRewards - @shard7", () => {
 
       expect(await galaxyMember.levelOf(1)).to.equal(2) // Level 1
 
-      let nextCycle = await emissions.nextCycle() // next cycle round 2
+      const nextCycle = await emissions.nextCycle() // next cycle round 2
 
       await getVot3Tokens(voter1, "999")
       await getVot3Tokens(voter2, "1000")
       await getVot3Tokens(voter3, "1000")
 
       // Now we can create a new proposal
-      let tx = await createProposal(b3tr, B3trContract, voter1, description, functionToCall, [], nextCycle)
-      let proposalId = await getProposalIdFromTx(tx)
+      const tx = await createProposal(b3tr, B3trContract, voter1, description, functionToCall, [], nextCycle)
+      const proposalId = await getProposalIdFromTx(tx)
 
       const proposalState = await waitForProposalToBeActive(proposalId) // we are now in round 2
-      let xAllocationsRoundID = await xAllocationVoting.currentRoundId()
+      const xAllocationsRoundID = await xAllocationVoting.currentRoundId()
 
       expect(xAllocationsRoundID).to.equal(nextCycle)
       expect(proposalState).to.equal("1") // Active
@@ -3746,7 +3746,7 @@ describe("VoterRewards - @shard7", () => {
       expect(await voterRewards.getReward(xAllocationsRoundID, voter3.address)).to.equal(444444444444444444444444n)
 
       // Now we can create a new proposal
-      let tx = await createProposal(
+      const tx = await createProposal(
         b3tr,
         B3trContract,
         voter1,
@@ -3755,7 +3755,7 @@ describe("VoterRewards - @shard7", () => {
         [],
         xAllocationsRoundID + BigInt(2),
       )
-      let proposalId = await getProposalIdFromTx(tx)
+      const proposalId = await getProposalIdFromTx(tx)
 
       const proposalState = await waitForProposalToBeActive(proposalId)
 

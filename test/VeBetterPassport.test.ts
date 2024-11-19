@@ -36,7 +36,7 @@ import {
 } from "../typechain-types"
 import { endorseApp } from "./helpers/xnodes"
 
-describe("VeBetterPassport - @shard5", function () {
+describe("VeBetterPassport - @shard2", function () {
   describe("Contract parameters", function () {
     it("Should have contract addresses set correctly", async function () {
       const { veBetterPassport, x2EarnApps, xAllocationVoting, galaxyMember } = await getOrDeployContractInstances({
@@ -1955,7 +1955,7 @@ describe("VeBetterPassport - @shard5", function () {
         chainId: 1337,
         verifyingContract: await veBetterPassport.getAddress(),
       }
-      let types = {
+      const types = {
         LinkEntity: [
           { name: "entity", type: "address" },
           { name: "passport", type: "address" },
@@ -2467,7 +2467,7 @@ describe("VeBetterPassport - @shard5", function () {
       }
 
       // Make the signature invalid
-      let types = {
+      const types = {
         INVALID: [
           { name: "entity", type: "address" },
           { name: "passport", type: "address" },
@@ -2525,7 +2525,7 @@ describe("VeBetterPassport - @shard5", function () {
         verifyingContract: await veBetterPassport.getAddress(),
       }
 
-      let types = {
+      const types = {
         LinkEntity: [
           { name: "entity", type: "address" },
           { name: "passport", type: "address" },
@@ -3508,7 +3508,7 @@ describe("VeBetterPassport - @shard5", function () {
         chainId: 1337,
         verifyingContract: await veBetterPassport.getAddress(),
       }
-      let types = {
+      const types = {
         Delegation: [
           { name: "delegator", type: "address" },
           { name: "delegatee", type: "address" },
@@ -4592,7 +4592,7 @@ describe("VeBetterPassport - @shard5", function () {
         chainId: 1337,
         verifyingContract: await veBetterPassport.getAddress(),
       }
-      let types = {
+      const types = {
         Delegation: [
           { name: "wrong_field_1", type: "address" },
           { name: "wrong_field_2", type: "address" },

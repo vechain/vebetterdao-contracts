@@ -28,7 +28,7 @@ import { GalaxyMember, GalaxyMemberV1, MockERC721Receiver } from "../typechain-t
 import { time } from "@nomicfoundation/hardhat-network-helpers"
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers"
 
-describe("Galaxy Member - @shard6", () => {
+describe("Galaxy Member - @shard1", () => {
   describe("Contract parameters", () => {
     it("Should have correct parameters set on deployment", async () => {
       const { galaxyMember, owner } = await getOrDeployContractInstances({ forceDeploy: true })
@@ -1791,9 +1791,9 @@ describe("Galaxy Member - @shard6", () => {
       // participation in governance is a requirement for minting
       await participateInAllocationVoting(otherAccount, true)
 
-      let tx = await galaxyMember.connect(otherAccount).freeMint() // Token id 1
+      const tx = await galaxyMember.connect(otherAccount).freeMint() // Token id 1
 
-      let receipt = await tx.wait()
+      const receipt = await tx.wait()
 
       if (!receipt?.blockNumber) throw new Error("No receipt block number")
 
@@ -1920,17 +1920,17 @@ describe("Galaxy Member - @shard6", () => {
 
       expect(await galaxyMember.levelOf(2)).to.equal(2) // Level 2
 
-      let tx = await galaxyMember
+      const tx = await galaxyMember
         .connect(owner)
         .transferFrom(await owner.getAddress(), await otherAccount.getAddress(), 2)
 
-      let receipt = await tx.wait()
+      const receipt = await tx.wait()
 
       if (!receipt?.blockNumber) throw new Error("No receipt block number")
 
-      let events = receipt?.logs
+      const events = receipt?.logs
 
-      let decodedEvents = events?.map(event => {
+      const decodedEvents = events?.map(event => {
         return galaxyMember.interface.parseLog({
           topics: event?.topics as string[],
           data: event?.data as string,
