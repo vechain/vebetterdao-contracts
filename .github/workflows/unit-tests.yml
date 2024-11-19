@@ -1,4 +1,4 @@
-name: Unit Testing
+name: Unit Testing with Sharded Coverage
 
 on:
   workflow_dispatch:
@@ -10,13 +10,13 @@ on:
       - main
 
 jobs:
-  run-unit-tests:
-    name: Unit Testing
+  run-coverage-shards:
+    name: Run Coverage for Shards
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        shard: [shard1, shard2, shard3]
+        shard: [shard1, shard2, shard3] # Define shard names
 
     steps:
       - name: Checkout repository
@@ -37,5 +37,39 @@ jobs:
       - name: Set Shard Environment Variable
         run: echo "SHARD=${{ matrix.shard }}" >> $GITHUB_ENV
 
-      - name: Run Unit Tests for ${{ matrix.shard }}
-        run: yarn test:hardhat
+      - name: Run Coverage for ${{ matrix.shard }}
+        run: yarn test:coverage:shard
+
+      - name: Upload Coverage for ${{ matrix.shard }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-${{ matrix.shard }}
+          path: coverage/
+
+  combine-coverage:
+    name: Combine Coverage Reports
+    runs-on: ubuntu-latest
+    needs: run-coverage-shards
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Download Coverage Artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: coverage-*
+          path: coverage-shards/
+
+      - name: Merge Coverage Reports
+        run: |
+          yarn add nyc
+          nyc merge coverage-shards/ coverage/
+          yarn coverage:report
+
+      - name: Upload Unified Coverage Report to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          verbose: true
+          directory: coverage/
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
