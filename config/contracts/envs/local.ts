@@ -83,6 +83,21 @@ export function createLocalConfig() {
       25000000000000000000000000n,
     ],
 
+    /*
+      Vechain Node => Free Upgrade Level
+      None => 1
+      Strength => 2
+      Thunder => 4
+      Mjolnir => 6
+      VeThorX => 2
+      StrengthX => 4
+      ThunderX => 6
+      MjolnirX => 7
+    */
+    GM_NFT_NODE_TO_FREE_LEVEL: [1, 2, 4, 6, 2, 4, 6, 7],
+
+    GM_NFT_MAX_LEVEL: 1,
+
     VOTER_REWARDS_LEVELS: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
 
     /*
@@ -116,7 +131,7 @@ export function createLocalConfig() {
 
     // Version 2
     VECHAIN_NODES_CONTRACT_ADDRESS: "0xb81E9C5f9644Dec9e5e3Cac86b4461A222072302", // The contract address of the VeChainNodes contract on mainnet
-    XAPP_GRACE_PERIOD: 48, // 2 cycles - 8 minutes
+    XAPP_GRACE_PERIOD: 46, // 2 cycles - 8 minutes
     // X 2 Earn Rewards Pool
     X_2_EARN_INITIAL_IMPACT_KEYS: [
       "carbon",
@@ -138,6 +153,6 @@ export function createLocalConfig() {
     VEPASSPORT_PASSPORT_MAX_ENTITIES: 5,
     VEPASSPORT_DECAY_RATE: 0,
 
-    CREATOR_NFT_URI: "ipfs://BASE_URI",
+    CREATOR_NFT_URI: "ipfs://bafybeie2onvzl3xsod5becuswpdmi63gtq7wgjqhqjecehytt7wdeg4py4/metadata/1.json",
   })
 }
