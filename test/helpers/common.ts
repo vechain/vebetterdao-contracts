@@ -9,6 +9,8 @@ import { type TransactionClause, type TransactionBody } from "@vechain/sdk-core"
 import { ZERO_ADDRESS } from "./const"
 import { buildTxBody, signAndSendTx } from "../../scripts/helpers/txHelper"
 import { getTestKeys } from "../../scripts/helpers/seedAccounts"
+import { endorseApp } from "."
+import { time } from "@nomicfoundation/hardhat-network-helpers"
 
 export const waitForNextBlock = async () => {
   if (network.name === "hardhat") {
@@ -374,26 +376,6 @@ export const createProposalWithMultipleFunctionsAndExecuteIt = async (
   )
 }
 
-export const addAppThroughGovernance = async (
-  proposer: HardhatEthersSigner,
-  voter: HardhatEthersSigner,
-  appName: string = "Bike 4 Life" + Math.random(),
-  appAddress: string,
-  metadataURI: string = "metadataURI",
-) => {
-  const { xAllocationVoting } = await getOrDeployContractInstances({})
-
-  await createProposalAndExecuteIt(
-    proposer,
-    voter,
-    xAllocationVoting,
-    await ethers.getContractFactory("XAllocationVoting"),
-    "Add app to the list",
-    "addApp",
-    [appAddress, appAddress, appName, metadataURI],
-  )
-}
-
 export const waitForBlock = async (blockNumber: number) => {
   const currentBlock = await ethers.provider.getBlock(await ethers.provider.getBlockNumber())
 
@@ -469,10 +451,12 @@ export const voteOnApps = async (
 export const addAppsToAllocationVoting = async (apps: string[], owner: HardhatEthersSigner) => {
   const { x2EarnApps } = await getOrDeployContractInstances({})
 
-  let appIds: string[] = []
+  const appIds: string[] = []
   for (const app of apps) {
-    await x2EarnApps.connect(owner).addApp(app, app, app, "metadataURI")
-    appIds.push(ethers.keccak256(ethers.toUtf8Bytes(app)))
+    await x2EarnApps.connect(owner).submitApp(app, app, app, "metadataURI")
+    const appId = ethers.keccak256(ethers.toUtf8Bytes(app))
+    await endorseApp(appId, owner)
+    appIds.push(appId)
   }
 
   return appIds
@@ -497,15 +481,15 @@ export const calculateBaseAllocationOffChain = async (roundId: number) => {
   const { emissions, xAllocationVoting } = await getOrDeployContractInstances({})
 
   // Amount available for this round (assuming the amount is already scaled by 1e18 for precision)
-  let totalAmount = await emissions.getXAllocationAmount(roundId)
+  const totalAmount = await emissions.getXAllocationAmount(roundId)
 
-  let elegibleApps = await xAllocationVoting.getAppIdsOfRound(roundId)
+  const elegibleApps = await xAllocationVoting.getAppIdsOfRound(roundId)
 
   const baseAllcoationPercentage = await xAllocationVoting.getRoundBaseAllocationPercentage(roundId)
 
-  let remaining = (totalAmount * baseAllcoationPercentage) / BigInt(100)
+  const remaining = (totalAmount * baseAllcoationPercentage) / BigInt(100)
 
-  let amountPerApp = remaining / BigInt(elegibleApps.length)
+  const amountPerApp = remaining / BigInt(elegibleApps.length)
 
   return amountPerApp
 }
@@ -514,14 +498,14 @@ export const calculateVariableAppAllocationOffChain = async (roundId: number, ap
   const { emissions, xAllocationVoting, xAllocationPool } = await getOrDeployContractInstances({})
 
   // Amount available for this round (assuming the amount is already scaled by 1e18 for precision)
-  let totalAmount = await emissions.getXAllocationAmount(roundId)
+  const totalAmount = await emissions.getXAllocationAmount(roundId)
 
-  let totalAvailable =
+  const totalAvailable =
     (totalAmount * (BigInt(100) - (await xAllocationVoting.getRoundBaseAllocationPercentage(roundId)))) / BigInt(100)
 
   const roundAppShares = await xAllocationPool.getAppShares(roundId, appId)
 
-  let appShares = roundAppShares[0] / BigInt(100)
+  const appShares = roundAppShares[0] / BigInt(100)
 
   return (totalAvailable * appShares) / BigInt(100)
 }
@@ -530,19 +514,23 @@ export const calculateUnallocatedAppAllocationOffChain = async (roundId: number,
   const { emissions, xAllocationVoting, xAllocationPool } = await getOrDeployContractInstances({})
 
   // Amount available for this round (assuming the amount is already scaled by 1e18 for precision)
-  let totalAmount = await emissions.getXAllocationAmount(roundId)
+  const totalAmount = await emissions.getXAllocationAmount(roundId)
 
-  let totalAvailable =
+  const totalAvailable =
     (totalAmount * (BigInt(100) - (await xAllocationVoting.getRoundBaseAllocationPercentage(roundId)))) / BigInt(100)
 
   const roundAppShares = await xAllocationPool.getAppShares(roundId, appId)
 
-  let appShares = roundAppShares[1] / BigInt(100)
+  const appShares = roundAppShares[1] / BigInt(100)
 
   return (totalAvailable * appShares) / BigInt(100)
 }
 
-export const participateInAllocationVoting = async (user: HardhatEthersSigner, waitRoundToEnd: boolean = false) => {
+export const participateInAllocationVoting = async (
+  user: HardhatEthersSigner,
+  waitRoundToEnd: boolean = false,
+  endorser?: HardhatEthersSigner,
+) => {
   const { xAllocationVoting, x2EarnApps, owner, veBetterPassport } = await getOrDeployContractInstances({})
 
   await getVot3Tokens(user, "1")
@@ -553,7 +541,8 @@ export const participateInAllocationVoting = async (user: HardhatEthersSigner, w
 
   const appName = "App" + Math.random()
 
-  await x2EarnApps.connect(owner).addApp(user.address, user.address, appName, "metadataURI")
+  await x2EarnApps.connect(owner).submitApp(user.address, user.address, appName, "metadataURI")
+  await endorseApp(await x2EarnApps.hashAppName(appName), endorser ? endorser : owner)
   const roundId = await startNewAllocationRound()
 
   // Vote
@@ -632,6 +621,35 @@ export const upgradeNFTtoLevel = async (
   }
 }
 
+export const addNodeToken = async (
+  level: number,
+  owner: HardhatEthersSigner,
+): Promise<[string, bigint, boolean, boolean, bigint, bigint, bigint]> => {
+  const { vechainNodesMock } = await getOrDeployContractInstances({})
+
+  if (!vechainNodesMock) throw new Error("VechainNodesMock not found")
+
+  const blockNumBefore = await ethers.provider.getBlockNumber()
+  const blockBefore = await ethers.provider.getBlock(blockNumBefore)
+  if (!blockBefore) throw new Error("Block before not found")
+
+  const timestampBefore = blockBefore.timestamp
+  const nextBlockTimestamp = timestampBefore + 1000
+  await time.setNextBlockTimestamp(nextBlockTimestamp)
+
+  await vechainNodesMock.addToken(owner.address, level, false, 0, 0)
+
+  return [
+    owner.address,
+    BigInt(level),
+    false,
+    false,
+    ethers.toBigInt(nextBlockTimestamp),
+    ethers.toBigInt(nextBlockTimestamp),
+    ethers.toBigInt(nextBlockTimestamp),
+  ]
+}
+
 export const upgradeNFTtoNextLevel = async (
   tokenId: number,
   nft: GalaxyMember,
@@ -669,7 +687,7 @@ export const delegateWithSignature = async (
     chainId: 1337,
     verifyingContract: await veBetterPassport.getAddress(),
   }
-  let types = {
+  const types = {
     Delegation: [
       { name: "delegator", type: "address" },
       { name: "delegatee", type: "address" },
@@ -712,7 +730,7 @@ export const linkEntityToPassportWithSignature = async (
     chainId: 1337,
     verifyingContract: await veBetterPassport.getAddress(),
   }
-  let types = {
+  const types = {
     LinkEntity: [
       { name: "entity", type: "address" },
       { name: "passport", type: "address" },
@@ -732,4 +750,31 @@ export const linkEntityToPassportWithSignature = async (
 
   // Perform the delegation using the signature
   await veBetterPassport.connect(passport).linkEntityToPassportWithSignature(entity.address, deadline, signature)
+}
+
+/**
+ * Helper function to get storage slots.
+ * @param contractAddress The address of the contract.
+ * @param initialSlots The initial storage slots.
+ * @returns Array of storage slots.
+ */
+export const getStorageSlots = async (contractAddress: AddressLike, ...initialSlots: bigint[]) => {
+  const slots = []
+
+  for (const initialSlot of initialSlots) {
+    for (let i = initialSlot; i < initialSlot + BigInt(100); i++) {
+      slots.push(await ethers.provider.getStorage(contractAddress, i))
+    }
+  }
+
+  return slots.filter(slot => slot !== "0x0000000000000000000000000000000000000000000000000000000000000000") // Removing empty slots
+}
+
+export const getTwoUniqueRandomIndices = (max: number) => {
+  const firstIndex = Math.floor(Math.random() * max)
+  let secondIndex
+  do {
+    secondIndex = Math.floor(Math.random() * max)
+  } while (secondIndex === firstIndex)
+  return [firstIndex, secondIndex]
 }

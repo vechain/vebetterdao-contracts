@@ -14,6 +14,9 @@ import {
   X2EarnRewardsPool__factory,
   X2EarnApps__factory,
   Treasury__factory,
+  NodeManagement__factory,
+  X2EarnCreator__factory,
+  VeBetterPassport__factory,
 } from "./typechain-types"
 
 export const B3TR = {
@@ -111,4 +114,28 @@ export const XAllocationVoting = {
     testnet: testnetAddresses.XAllocationVoting,
   },
   interface: XAllocationVoting__factory.createInterface(),
+}
+export const NodeManagement = {
+  abi: NodeManagement__factory.abi,
+  address: {
+    mainnet: mainnetAddresses.NodeManagement,
+    testnet: testnetAddresses.NodeManagement,
+  },
+  interface: NodeManagement__factory.createInterface(),
+}
+export const X2EarnCreator = {
+  abi: X2EarnCreator__factory.abi,
+  address: {
+    mainnet: mainnetAddresses.X2EarnCreator,
+    testnet: testnetAddresses.X2EarnCreator,
+  },
+  interface: X2EarnCreator__factory.createInterface(),
+}
+export const VeBetterPassport = {
+  abi: VeBetterPassport__factory.abi,
+  address: {
+    mainnet: mainnetAddresses.VeBetterPassport,
+    testnet: testnetAddresses.VeBetterPassport,
+  },
+  interface: VeBetterPassport__factory.createInterface(),
 }

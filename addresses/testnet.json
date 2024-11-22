@@ -10,5 +10,8 @@
   "X2EarnApps": "0xcB23Eb1bBD5c07553795b9538b1061D0f4ABA153",
   "X2EarnRewardsPool": "0x5F8f86B8D0Fa93cdaE20936d150175dF0205fB38",
   "XAllocationPool": "0x9B9CA9D0C41Add1d204f90BA0E9a6844f1843A84",
-  "XAllocationVoting": "0x5859ff910d8b0c127364c98E24233b0af7443c1c"
+  "XAllocationVoting": "0x5859ff910d8b0c127364c98E24233b0af7443c1c",
+  "VeBetterPassport":"",
+  "NodeManagement": "",
+  "X2EarnCreator":""
 }

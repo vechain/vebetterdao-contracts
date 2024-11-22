@@ -25,8 +25,8 @@ pragma solidity 0.8.20;
 
 import { GovernorStorageTypesV3 } from "./GovernorStorageTypesV3.sol";
 import { IVOT3 } from "../../../../interfaces/IVOT3.sol";
-import { IVoterRewards } from "../../../../interfaces/IVoterRewards.sol";
-import { IXAllocationVotingGovernor } from "../../../../interfaces/IXAllocationVotingGovernor.sol";
+import { IVoterRewardsV2 } from "../../../V2/interfaces/IVoterRewardsV2.sol";
+import { IXAllocationVotingGovernorV2 } from "../../../V2/interfaces/IXAllocationVotingGovernorV2.sol";
 import { TimelockControllerUpgradeable } from "@openzeppelin/contracts-upgradeable/governance/TimelockControllerUpgradeable.sol";
 import { IB3TR } from "../../../../interfaces/IB3TR.sol";
 
@@ -84,7 +84,7 @@ library GovernorConfiguratorV3 {
    * @param self The storage reference for the GovernorStorage.
    * @param newVoterRewards The new voter rewards contract.
    */
-  function setVoterRewards(GovernorStorageTypesV3.GovernorStorage storage self, IVoterRewards newVoterRewards) external {
+  function setVoterRewards(GovernorStorageTypesV3.GovernorStorage storage self, IVoterRewardsV2 newVoterRewards) external {
     require(address(newVoterRewards) != address(0), "GovernorConfiguratorV3: voterRewards address cannot be zero");
     emit VoterRewardsSet(address(self.voterRewards), address(newVoterRewards));
     self.voterRewards = newVoterRewards;
@@ -98,7 +98,7 @@ library GovernorConfiguratorV3 {
    */
   function setXAllocationVoting(
     GovernorStorageTypesV3.GovernorStorage storage self,
-    IXAllocationVotingGovernor newXAllocationVoting
+    IXAllocationVotingGovernorV2 newXAllocationVoting
   ) external {
     require(
       address(newXAllocationVoting) != address(0),

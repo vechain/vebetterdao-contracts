@@ -35,7 +35,8 @@
     "compile": "yarn check-or-generate-local-config && npx hardhat compile",
     "test:thor-solo": "yarn check-or-generate-local-config && yarn start-solo && dotenv -v NEXT_PUBLIC_APP_ENV=local -e .env.example -- npx hardhat test",
     "test:hardhat": "yarn check-or-generate-local-config && dotenv -v NEXT_PUBLIC_APP_ENV=local -e .env.example -- hardhat test --network hardhat",
-    "test:coverage:solidity": "yarn check-or-generate-local-config && dotenv -v NEXT_PUBLIC_APP_ENV=local -v IS_TEST_COVERAGE=true -e .env.example -- hardhat coverage --testfiles ./test/**/*test.ts",
+    "test:coverage:solidity": "yarn check-or-generate-local-config && dotenv -v NEXT_PUBLIC_APP_ENV=local -v IS_TEST_COVERAGE=true -e .env.example -- hardhat coverage",
+    "coverage:report": "nyc report --reporter=lcov --reporter=text --reporter=html --temp-dir=./coverage",
     "deploy": "yarn check-or-generate-local-config && yarn start-solo && dotenv -v NEXT_PUBLIC_APP_ENV=local -e .env.example -- npx hardhat run scripts/checkContractsDeployment.ts",
     "deploy:hardhat": "dotenv -v NEXT_PUBLIC_APP_ENV=local -e .env.example -- npx hardhat run scripts/deploy --network hardhat",
     "deploy:simulation": "export RUN_SIMULATION=true; yarn deploy",
@@ -84,7 +85,8 @@
     "ts-node": ">=8.0.0",
     "tsup": "^8.1.0",
     "typechain": "^8.1.0",
-    "typescript": ">=4.5.0"
+    "typescript": ">=4.5.0",
+    "nyc": "^17.1.0"
   },
   "dependencies": {
     "@openzeppelin/contracts": "5.0.2",
