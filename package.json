@@ -1,6 +1,6 @@
 {
   "name": "@vechain/vebetterdao-contracts",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "description": "Vebetter DAO smart contracts, including their addresses, ABIs, and interfaces.",
   "keywords": [
     "vechain",
@@ -97,9 +97,9 @@
     "elliptic": "^6.6.0",
     "ws": "^8.17.1",
     "axios": "^1.7.4",
-    "tough-cookie":"^4.1.3",
+    "tough-cookie": "^4.1.3",
     "cookie": "^0.7.0",
-    "yargs-parser":"^5.0.1",
+    "yargs-parser": "^5.0.1",
     "tar": "^6.2.1"
   }
 }
