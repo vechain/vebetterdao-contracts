@@ -49,7 +49,7 @@ jobs:
 
       - name: Build HTML documentation
         run: |
-          chmod +x ./docs-template/md2html.sh \
+          chmod +x ./docs-template/md2html.sh
           ./docs-template/md2html.sh ${{ env.MARKDOWN_PATH }} ${{ env.HTML_PATH }}
 
       - name: Upload artifacts
