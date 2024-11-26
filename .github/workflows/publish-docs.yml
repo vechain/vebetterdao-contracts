@@ -44,12 +44,14 @@ jobs:
       - name: Generate markdown documentation
         run: yarn generate-docs
 
+      - name: Install Pandoc
+        run: sudo apt-get install pandoc
+
       - name: Build HTML documentation
-        uses: actions/jekyll-build-pages@v1
-        with:
-          source: ${{ env.MARKDOWN_PATH }}
-          destination: ./_site
-      
+        run: |
+          chmod +x ./docs-template/md2html.sh \
+          ./docs-template/md2html.sh ${{ env.MARKDOWN_PATH }} ${{ env.HTML_PATH }}
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
