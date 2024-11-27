@@ -16,3 +16,7 @@ docs
 config/local.ts
 .DS_Store
 .idea
+
+# github pages
+_site/
+

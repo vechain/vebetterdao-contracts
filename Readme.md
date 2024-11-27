@@ -155,6 +155,16 @@ Note that slither does not seem to be working with the repo as-is, resulting in 
 slither.solc_parsing.exceptions.ParsingError: Type not found struct Checkpoints.Trace208
 ```
 
+### Documentation
+
+To generate the solidity documentation:
+
+```bash
+yarn generate-docs
+```
+
+The same documentation is available at github pages: [GithubPages](https://vechain.github.io/vebetterdao-contracts/)
+
 # Disclaimer
 
 This repository is for educational and demonstration purposes. The maintainers are not liable for any misuse or faults within the code.
