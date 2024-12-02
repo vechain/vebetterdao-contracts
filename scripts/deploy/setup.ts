@@ -101,10 +101,10 @@ export const setupLocalEnvironment = async (
    * Second seed account will have a Thunder X Node
    * Third seed account will have a Strength X Node
    * Forth seed account will have a Mjölnir Economic Node
-   * Fifth seed account will have a Thunder Economic Node
+   * Fifth seed account will have a Strength Economic Node
    * Remaining accounts with have a Mjolnir X Node -> These will have an endorsement score of 100
    */
-  await mintVechainNodes(vechainNodesMock, endorserAccounts, padNodeTypes([7, 6, 5, 3, 2], endorserAccounts.length))
+  await mintVechainNodes(vechainNodesMock, endorserAccounts, padNodeTypes([7, 6, 5, 3, 1], endorserAccounts.length))
 
   // Get unendorsed XAPPs
   const unedorsedApps = await x2EarnApps.unendorsedAppIds()

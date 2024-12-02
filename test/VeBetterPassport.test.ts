@@ -18,6 +18,8 @@ import {
   moveBlocks,
   waitForBlock,
   waitForNextBlock,
+  upgradeNFTtoLevel,
+  participateInAllocationVoting,
 } from "./helpers"
 import { describe, it } from "mocha"
 import { getImplementationAddress } from "@openzeppelin/upgrades-core"
@@ -29,6 +31,7 @@ import {
   Emissions,
   VeBetterPassport,
   VeBetterPassportV1,
+  VeBetterPassportV2,
   VoterRewards,
   X2EarnRewardsPool,
   XAllocationPool,
@@ -132,7 +135,7 @@ describe("VeBetterPassport - @shard2", function () {
         forceDeploy: true,
       })
 
-      expect(await veBetterPassport.version()).to.equal("2")
+      expect(await veBetterPassport.version()).to.equal("3")
     })
     it("Should not be able to initialize twice", async function () {
       const config = createTestConfig()
@@ -312,7 +315,7 @@ describe("VeBetterPassport - @shard2", function () {
       expect(newImplAddress.toUpperCase()).to.eql((await implementation.getAddress()).toUpperCase())
     })
 
-    it("Should not have any state conflicts after upgrading to V2", async function () {
+    it("Should not have any state conflicts after upgrading to V3", async function () {
       const config = createTestConfig()
       config.VEPASSPORT_DECAY_RATE = 20
       config.EMISSIONS_CYCLE_DURATION = 20
@@ -335,6 +338,14 @@ describe("VeBetterPassport - @shard2", function () {
         passportSignalingLogicV1,
         passportEntityLogicV1,
         passportWhitelistBlacklistLogicV1,
+        passportChecksLogicV2,
+        passportConfiguratorV2,
+        passportDelegationLogicV2,
+        passportPersonhoodLogicV2,
+        passportPoPScoreLogicV2,
+        passportSignalingLogicV2,
+        passportEntityLogicV2,
+        passportWhitelistBlacklistLogicV2,
         passportChecksLogic,
         passportConfigurator,
         passportDelegationLogic,
@@ -654,8 +665,12 @@ describe("VeBetterPassport - @shard2", function () {
         .grantRole(roundStarterRole, owner.address)
         .then(async tx => await tx.wait())
 
+      // Set XAllocation address in GalaxyMember
+      await galaxyMember.connect(owner).setXAllocationsGovernorAddress(await xAllocationVoting.getAddress())
+
       await getVot3Tokens(otherAccount, "10000")
       await getVot3Tokens(owner, "10000")
+      await getVot3Tokens(otherAccounts[4], "10000")
 
       //Add apps
       const app1Id = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[2].address))
@@ -696,7 +711,7 @@ describe("VeBetterPassport - @shard2", function () {
 
       // Whitelist function
       const funcSig = B3trContract.interface.getFunction("tokenDetails")?.selector
-      await governor.connect(owner).setWhitelistFunction(await b3tr.getAddress(), funcSig, true)
+      await governor.connect(owner).setWhitelistFunction(await b3tr.getAddress(), funcSig as string, true)
 
       // Create a proposal for next round
       // create a new proposal active from round 2
@@ -738,6 +753,8 @@ describe("VeBetterPassport - @shard2", function () {
           [app1Id, app2Id, app3Id],
           [ethers.parseEther("0"), ethers.parseEther("900"), ethers.parseEther("100")],
         )
+
+      await xAllocationVoting.connect(otherAccounts[4]).castVote(1, [app1Id], [ethers.parseEther("1")])
 
       // Set minimum participation score to 500
       await veBetterPassportV1.setThresholdPoPScore(500)
@@ -791,11 +808,35 @@ describe("VeBetterPassport - @shard2", function () {
       // Increase participation score threshold to 1000
       await veBetterPassportV1.setThresholdPoPScore(1000)
 
+      // Toggle GM level check
+      await veBetterPassportV1.toggleCheck(5)
+
+      // Upgrade to V2
+      const veBetterPassportV2 = (await upgradeProxy(
+        "VeBetterPassportV1",
+        "VeBetterPassportV2",
+        await veBetterPassportV1.getAddress(),
+        [],
+        {
+          version: 2,
+          libraries: {
+            PassportChecksLogicV2: await passportChecksLogicV2.getAddress(),
+            PassportConfiguratorV2: await passportConfiguratorV2.getAddress(),
+            PassportEntityLogicV2: await passportEntityLogicV2.getAddress(),
+            PassportDelegationLogicV2: await passportDelegationLogicV2.getAddress(),
+            PassportPersonhoodLogicV2: await passportPersonhoodLogicV2.getAddress(),
+            PassportPoPScoreLogicV2: await passportPoPScoreLogicV2.getAddress(),
+            PassportSignalingLogicV2: await passportSignalingLogicV2.getAddress(),
+            PassportWhitelistAndBlacklistLogicV2: await passportWhitelistBlacklistLogicV2.getAddress(),
+          },
+        },
+      )) as VeBetterPassportV2
+
       blockNextCycle = await emissions.getNextCycleBlock()
       await waitForBlock(Number(blockNextCycle))
 
       // Increase participation score threshold to 1000
-      await veBetterPassportV1.setThresholdPoPScore(1000)
+      await veBetterPassportV2.setThresholdPoPScore(1000)
 
       await emissions.distribute()
 
@@ -813,7 +854,7 @@ describe("VeBetterPassport - @shard2", function () {
       ).to.be.revertedWithCustomError(xAllocationVoting, "GovernorPersonhoodVerificationFailed")
 
       // Register action for round 3
-      await veBetterPassportV1.connect(owner).registerAction(otherAccount, app1Id)
+      await veBetterPassportV2.connect(owner).registerAction(otherAccount, app1Id)
 
       /*
         User's cumulative score:
@@ -821,7 +862,7 @@ describe("VeBetterPassport - @shard2", function () {
         round 2 = 600 + (300 * 0.8) = 840
         round 3 = 100 + (840 * 0.8) = 772
         */
-      expect(await veBetterPassportV1.getCumulativeScoreWithDecay(otherAccount, 3)).to.equal(772)
+      expect(await veBetterPassportV2.getCumulativeScoreWithDecay(otherAccount, 3)).to.equal(772)
 
       // User still doesn't meet the participation score threshold and can't vote
       await expect(
@@ -835,8 +876,8 @@ describe("VeBetterPassport - @shard2", function () {
       ).to.be.revertedWithCustomError(xAllocationVoting, "GovernorPersonhoodVerificationFailed")
 
       // register more actions for round 3
-      await veBetterPassportV1.connect(owner).registerAction(otherAccount, app2Id)
-      await veBetterPassportV1.connect(owner).registerAction(otherAccount, app3Id)
+      await veBetterPassportV2.connect(owner).registerAction(otherAccount, app2Id)
+      await veBetterPassportV2.connect(owner).registerAction(otherAccount, app3Id)
 
       /*
         User's cumulative score:
@@ -844,7 +885,7 @@ describe("VeBetterPassport - @shard2", function () {
         round 2 = 600 + (300 * 0.8) = 840
         round 3 = 700 + (840 * 0.8) = 1072
         */
-      expect(await veBetterPassportV1.getCumulativeScoreWithDecay(otherAccount, 3)).to.equal(1372)
+      expect(await veBetterPassportV2.getCumulativeScoreWithDecay(otherAccount, 3)).to.equal(1372)
 
       // User now meets the participation score threshold and can vote
       await xAllocationVoting
@@ -856,27 +897,27 @@ describe("VeBetterPassport - @shard2", function () {
         )
 
       // "Before linking passport should have 0"
-      expect(await veBetterPassportV1.getCumulativeScoreWithDecay(owner, 3)).to.equal(0)
+      expect(await veBetterPassportV2.getCumulativeScoreWithDecay(owner, 3)).to.equal(0)
 
       // Before linking passport should not be considered person
       expect(
-        (await veBetterPassportV1.isPersonAtTimepoint(owner.address, await xAllocationVoting.roundSnapshot(3)))[0],
+        (await veBetterPassportV2.isPersonAtTimepoint(owner.address, await xAllocationVoting.roundSnapshot(3)))[0],
       ).to.be.equal(false)
 
       // Delegate passport to owner and try to vote
-      await linkEntityToPassportWithSignature(veBetterPassportV1, owner, otherAccount, 3600)
+      await linkEntityToPassportWithSignature(veBetterPassportV2, owner, otherAccount, 3600)
       // After linking "other account" should be entity
-      expect(await veBetterPassportV1.isEntity(otherAccount.address)).to.be.true
+      expect(await veBetterPassportV2.isEntity(otherAccount.address)).to.be.true
 
       // After linking owner should be passport
-      expect(await veBetterPassportV1.isPassport(owner.address)).to.be.true
+      expect(await veBetterPassportV2.isPassport(owner.address)).to.be.true
 
       // After linking passport should not be considered person at the beginning of the round
       expect(
-        (await veBetterPassportV1.isPersonAtTimepoint(owner.address, await xAllocationVoting.roundSnapshot(3)))[0],
+        (await veBetterPassportV2.isPersonAtTimepoint(owner.address, await xAllocationVoting.roundSnapshot(3)))[0],
       ).to.be.equal(false)
 
-      expect(await veBetterPassportV1.isPassport(owner.address)).to.be.true
+      expect(await veBetterPassportV2.isPassport(owner.address)).to.be.true
 
       // Owner can't vote yet because the delegation is checkpointed and is active from the next round
       await expect(
@@ -891,6 +932,18 @@ describe("VeBetterPassport - @shard2", function () {
 
       blockNextCycle = await emissions.getNextCycleBlock()
       await waitForBlock(Number(blockNextCycle))
+
+      // Mint user GM token
+      await galaxyMember.connect(otherAccounts[4]).freeMint()
+      await galaxyMember.setMaxLevel(2)
+      // Set user GM level to 2
+      await upgradeNFTtoLevel(1, 2, galaxyMember, b3tr, otherAccounts[4], minterAccount)
+
+      // Checking if user is person based on GM level will not work in V2 because the check is not implemented
+      expect(await veBetterPassportV2.isPerson(otherAccounts[4].address)).to.deep.equal([
+        false,
+        "User does not meet the criteria to be considered a person",
+      ])
 
       // Record contract storage state at this point
       let storageSlots = []
@@ -907,12 +960,12 @@ describe("VeBetterPassport - @shard2", function () {
 
       // Upgrade to V2
       const veBetterPassport = (await upgradeProxy(
-        "VeBetterPassportV1",
+        "VeBetterPassportV2",
         "VeBetterPassport",
-        await veBetterPassportV1.getAddress(),
+        await veBetterPassportV2.getAddress(),
         [],
         {
-          version: 2,
+          version: 3,
           libraries: {
             PassportChecksLogic: await passportChecksLogic.getAddress(),
             PassportConfigurator: await passportConfigurator.getAddress(),
@@ -945,6 +998,12 @@ describe("VeBetterPassport - @shard2", function () {
       await emissions.connect(minterAccount).distribute()
 
       expect(await xAllocationVoting.currentRoundId()).to.equal(4)
+
+      // Checking if user is person based on GM level will work in V3 because the check is implemented
+      expect(await veBetterPassport.isPerson(otherAccounts[4].address)).to.deep.equal([
+        true,
+        "User's selected Galaxy Member is above the minimum level",
+      ])
 
       // During linking points are not brought over, so we need to register some actions
       // on both the entity and the passport to see that they are grouped together and can vote
@@ -1955,7 +2014,7 @@ describe("VeBetterPassport - @shard2", function () {
         chainId: 1337,
         verifyingContract: await veBetterPassport.getAddress(),
       }
-      const types = {
+      let types = {
         LinkEntity: [
           { name: "entity", type: "address" },
           { name: "passport", type: "address" },
@@ -2467,7 +2526,7 @@ describe("VeBetterPassport - @shard2", function () {
       }
 
       // Make the signature invalid
-      const types = {
+      let types = {
         INVALID: [
           { name: "entity", type: "address" },
           { name: "passport", type: "address" },
@@ -2525,7 +2584,7 @@ describe("VeBetterPassport - @shard2", function () {
         verifyingContract: await veBetterPassport.getAddress(),
       }
 
-      const types = {
+      let types = {
         LinkEntity: [
           { name: "entity", type: "address" },
           { name: "passport", type: "address" },
@@ -3508,7 +3567,7 @@ describe("VeBetterPassport - @shard2", function () {
         chainId: 1337,
         verifyingContract: await veBetterPassport.getAddress(),
       }
-      const types = {
+      let types = {
         Delegation: [
           { name: "delegator", type: "address" },
           { name: "delegatee", type: "address" },
@@ -4592,7 +4651,7 @@ describe("VeBetterPassport - @shard2", function () {
         chainId: 1337,
         verifyingContract: await veBetterPassport.getAddress(),
       }
-      const types = {
+      let types = {
         Delegation: [
           { name: "wrong_field_1", type: "address" },
           { name: "wrong_field_2", type: "address" },
@@ -6598,6 +6657,411 @@ describe("VeBetterPassport - @shard2", function () {
         forceDeploy: true,
       })
 
+      expect(await veBetterPassport.isPerson(otherAccount.address)).to.deep.equal([
+        false,
+        "User does not meet the criteria to be considered a person",
+      ])
+    })
+  })
+
+  describe("Passport GM check", function () {
+    it("isPerson should return true if user has GM token above threshold level", async function () {
+      const config = createTestConfig()
+      config.VEPASSPORT_GALAXY_MEMBER_MINIMUM_LEVEL = 5
+      const { veBetterPassport, owner, otherAccount, galaxyMember, b3tr, minterAccount } =
+        await getOrDeployContractInstances({
+          forceDeploy: true,
+          config,
+        })
+
+      // Toggle GM check
+      await veBetterPassport.connect(owner).toggleCheck(5)
+
+      // Set GM token level to 5
+      await galaxyMember.connect(owner).setMaxLevel(5)
+
+      // Bootstrap emissions
+      await bootstrapEmissions()
+
+      // Should be able to free mint after participating in allocation voting -> User is whitelisted at this point
+      await participateInAllocationVoting(otherAccount)
+
+      // Check if user is whitelisted
+      expect(await veBetterPassport.isPerson(otherAccount.address)).to.deep.equal([true, "User is whitelisted"])
+
+      // Mint GM token
+      await galaxyMember.connect(otherAccount).freeMint()
+
+      // User should have GM token of level 1 at this point
+      expect(
+        await galaxyMember.levelOf(await galaxyMember.getSelectedTokenId(await otherAccount.getAddress())),
+      ).to.equal(1)
+
+      // Disable whitelist check
+      await veBetterPassport.connect(owner).toggleCheck(1)
+
+      // User should not be a person here as there GM totken level is below threshold of 5
+      expect(await veBetterPassport.isPerson(otherAccount.address)).to.deep.equal([
+        false,
+        "User does not meet the criteria to be considered a person",
+      ])
+
+      // Upgrade GM token to level 5
+      await upgradeNFTtoLevel(1, 5, galaxyMember, b3tr, otherAccount, minterAccount)
+
+      // User should have GM token of level 5 at this point
+      expect(
+        await galaxyMember.levelOf(await galaxyMember.getSelectedTokenId(await otherAccount.getAddress())),
+      ).to.equal(5) // Level 5
+
+      // User should be a person here as there GM token level is above threshold of 5
+      expect(await veBetterPassport.isPerson(otherAccount.address)).to.deep.equal([
+        true,
+        "User's selected Galaxy Member is above the minimum level",
+      ])
+    })
+
+    it("isPersonAtTimePoint should return true if user has GM token above threshold level", async function () {
+      const config = createTestConfig()
+      config.VEPASSPORT_GALAXY_MEMBER_MINIMUM_LEVEL = 5
+      const { veBetterPassport, owner, otherAccount, galaxyMember, b3tr, minterAccount } =
+        await getOrDeployContractInstances({
+          forceDeploy: true,
+          config,
+        })
+
+      // Toggle GM check
+      await veBetterPassport.connect(owner).toggleCheck(5)
+
+      // Set GM token level to 5
+      await galaxyMember.connect(owner).setMaxLevel(5)
+
+      // Bootstrap emissions
+      await bootstrapEmissions()
+
+      // Should be able to free mint after participating in allocation voting -> User is whitelisted at this point
+      await participateInAllocationVoting(otherAccount)
+
+      // Check if user is whitelisted
+      expect(await veBetterPassport.isPerson(otherAccount.address)).to.deep.equal([true, "User is whitelisted"])
+
+      // Mint GM token
+      await galaxyMember.connect(otherAccount).freeMint()
+
+      // User should have GM token of level 1 at this point
+      expect(
+        await galaxyMember.levelOf(await galaxyMember.getSelectedTokenId(await otherAccount.getAddress())),
+      ).to.equal(1)
+
+      // Disable whitelist check
+      await veBetterPassport.connect(owner).toggleCheck(1)
+
+      // User should not be a person here as there GM totken level is below threshold of 5
+      expect(await veBetterPassport.isPerson(otherAccount.address)).to.deep.equal([
+        false,
+        "User does not meet the criteria to be considered a person",
+      ])
+
+      // Upgrade GM token to level 5
+      await upgradeNFTtoLevel(1, 5, galaxyMember, b3tr, otherAccount, minterAccount)
+
+      // Get block number post upgrading GM token
+      const blockNumberPost = await ethers.provider.getBlockNumber()
+
+      // User should have GM token of level 5 at this point
+      expect(
+        await galaxyMember.levelOf(await galaxyMember.getSelectedTokenId(await otherAccount.getAddress())),
+      ).to.equal(5) // Level 5
+
+      // User should be a person here as there GM token level is above threshold of 5
+      expect(await veBetterPassport.isPersonAtTimepoint(otherAccount.address, blockNumberPost)).to.deep.equal([
+        true,
+        "User's selected Galaxy Member is above the minimum level",
+      ])
+    })
+
+    it("isPersonAtTimePoint should return true if user GM was upgraded since timepoint", async function () {
+      const config = createTestConfig()
+      config.VEPASSPORT_GALAXY_MEMBER_MINIMUM_LEVEL = 5
+      const { veBetterPassport, owner, otherAccount, galaxyMember, b3tr, minterAccount } =
+        await getOrDeployContractInstances({
+          forceDeploy: true,
+          config,
+        })
+
+      // Toggle GM check
+      await veBetterPassport.connect(owner).toggleCheck(5)
+
+      // Set GM token level to 5
+      await galaxyMember.connect(owner).setMaxLevel(5)
+
+      // Bootstrap emissions
+      await bootstrapEmissions()
+
+      // Should be able to free mint after participating in allocation voting -> User is whitelisted at this point
+      await participateInAllocationVoting(otherAccount)
+
+      // Check if user is whitelisted
+      expect(await veBetterPassport.isPerson(otherAccount.address)).to.deep.equal([true, "User is whitelisted"])
+
+      // Mint GM token
+      await galaxyMember.connect(otherAccount).freeMint()
+
+      // User should have GM token of level 1 at this point
+      expect(
+        await galaxyMember.levelOf(await galaxyMember.getSelectedTokenId(await otherAccount.getAddress())),
+      ).to.equal(1)
+
+      // Disable whitelist check
+      await veBetterPassport.connect(owner).toggleCheck(1)
+
+      // User should not be a person here as there GM totken level is below threshold of 5
+      expect(await veBetterPassport.isPerson(otherAccount.address)).to.deep.equal([
+        false,
+        "User does not meet the criteria to be considered a person",
+      ])
+
+      // Get block number prior to upgrading GM token
+      const blockNumberPre = await ethers.provider.getBlockNumber()
+
+      // Upgrade GM token to level 5
+      await upgradeNFTtoLevel(1, 5, galaxyMember, b3tr, otherAccount, minterAccount)
+
+      // Get block number post upgrading GM token
+      const blockNumberPost = await ethers.provider.getBlockNumber()
+
+      // User should have GM token of level 5 at this point
+      expect(
+        await galaxyMember.levelOf(await galaxyMember.getSelectedTokenId(await otherAccount.getAddress())),
+      ).to.equal(5) // Level 5
+
+      // User should be a person prior to upgrading GM token as token has since been upgraded
+      expect(await veBetterPassport.isPersonAtTimepoint(otherAccount.address, blockNumberPre)).to.deep.equal([
+        true,
+        "User's selected Galaxy Member is above the minimum level",
+      ])
+
+      // User should be a person here as there GM token level is above threshold of 5
+      expect(await veBetterPassport.isPersonAtTimepoint(otherAccount.address, blockNumberPost)).to.deep.equal([
+        true,
+        "User's selected Galaxy Member is above the minimum level",
+      ])
+    })
+
+    it("isPersonAtTimePoint should return false if user did not own GM at timepoint", async function () {
+      const config = createTestConfig()
+      config.VEPASSPORT_GALAXY_MEMBER_MINIMUM_LEVEL = 5
+      const { veBetterPassport, owner, otherAccount, galaxyMember, b3tr, minterAccount } =
+        await getOrDeployContractInstances({
+          forceDeploy: true,
+          config,
+        })
+
+      // Toggle GM check
+      await veBetterPassport.connect(owner).toggleCheck(5)
+
+      // Set GM token level to 5
+      await galaxyMember.connect(owner).setMaxLevel(5)
+
+      // Bootstrap emissions
+      await bootstrapEmissions()
+
+      // Should be able to free mint after participating in allocation voting -> User is whitelisted at this point
+      await participateInAllocationVoting(otherAccount)
+
+      // Check if user is whitelisted
+      expect(await veBetterPassport.isPerson(otherAccount.address)).to.deep.equal([true, "User is whitelisted"])
+
+      // Mint GM token
+      await galaxyMember.connect(otherAccount).freeMint()
+      // Upgrade GM token to level 5
+      await upgradeNFTtoLevel(1, 5, galaxyMember, b3tr, otherAccount, minterAccount)
+
+      // User should have GM token of level 5 at this point
+      expect(
+        await galaxyMember.levelOf(await galaxyMember.getSelectedTokenId(await otherAccount.getAddress())),
+      ).to.equal(5)
+
+      // Disable whitelist check
+      await veBetterPassport.connect(owner).toggleCheck(1)
+
+      // Get block number prior to transferring GM token
+      const blockNumberPre = await ethers.provider.getBlockNumber()
+
+      await galaxyMember.connect(otherAccount).transferFrom(otherAccount.address, owner.address, 1)
+
+      // Get block number post upgrading GM token
+      const blockNumberPost = await ethers.provider.getBlockNumber()
+
+      // User who no longer owns GM token be a person at timepoint pre transfer
+      expect(await veBetterPassport.isPersonAtTimepoint(otherAccount.address, blockNumberPre)).to.deep.equal([
+        true,
+        "User's selected Galaxy Member is above the minimum level",
+      ])
+
+      // User who no longer owns GM token be a person at timepoint post transfer
+      expect(await veBetterPassport.isPersonAtTimepoint(otherAccount.address, blockNumberPost)).to.deep.equal([
+        false,
+        "User does not meet the criteria to be considered a person",
+      ])
+
+      // User who received GM token be a person at timepoint post transfer
+      expect(await veBetterPassport.isPersonAtTimepoint(owner.address, blockNumberPost)).to.deep.equal([
+        true,
+        "User's selected Galaxy Member is above the minimum level",
+      ])
+
+      // User who received GM token shoould not be a person at timepoint pre transfer
+      expect(await veBetterPassport.isPersonAtTimepoint(owner.address, blockNumberPre)).to.deep.equal([
+        false,
+        "User does not meet the criteria to be considered a person",
+      ])
+
+      // They should be a person at the current block
+      expect(await veBetterPassport.isPerson(owner.address)).to.deep.equal([
+        true,
+        "User's selected Galaxy Member is above the minimum level",
+      ])
+
+      // User who no longer owns GM token should not be a person at the current block
+      expect(await veBetterPassport.isPerson(otherAccount.address)).to.deep.equal([
+        false,
+        "User does not meet the criteria to be considered a person",
+      ])
+    })
+
+    it("isPersonAtTimePoint should return false if user did have selected GM at timepoint", async function () {
+      const config = createTestConfig()
+      config.VEPASSPORT_GALAXY_MEMBER_MINIMUM_LEVEL = 5
+      const { veBetterPassport, owner, otherAccount, galaxyMember, b3tr, minterAccount } =
+        await getOrDeployContractInstances({
+          forceDeploy: true,
+          config,
+        })
+
+      // Toggle GM check
+      await veBetterPassport.connect(owner).toggleCheck(5)
+
+      // Set GM token level to 5
+      await galaxyMember.connect(owner).setMaxLevel(5)
+
+      // Bootstrap emissions
+      await bootstrapEmissions()
+
+      // Should be able to free mint after participating in allocation voting -> User is whitelisted at this point
+      await participateInAllocationVoting(otherAccount)
+
+      // Disable whitelist check
+      await veBetterPassport.connect(owner).toggleCheck(1)
+
+      // Mint 2 GM tokens
+      await galaxyMember.connect(otherAccount).freeMint()
+      await galaxyMember.connect(otherAccount).freeMint()
+
+      // User should own 2 GM tokens
+      expect(await galaxyMember.getTokensInfoByOwner(otherAccount.address, 0, 5)).to.have.lengthOf(2)
+
+      // Users selected GM token should be token 1
+      expect(await galaxyMember.getSelectedTokenId(otherAccount.address)).to.equal(1)
+
+      // Users selected should have GM token of level 1 at this point
+      expect(
+        await galaxyMember.levelOf(await galaxyMember.getSelectedTokenId(await otherAccount.getAddress())),
+      ).to.equal(1)
+
+      // Upgrade the users other GM token to level 5
+      await upgradeNFTtoLevel(2, 5, galaxyMember, b3tr, otherAccount, minterAccount)
+
+      // Get block number prior to changing selected GM token
+      const blockNumberPre = await ethers.provider.getBlockNumber()
+
+      // Change selected GM token to token 2
+      await galaxyMember.connect(otherAccount).select(2)
+
+      // Get block number post changing selected GM token
+      const blockNumberPost = await ethers.provider.getBlockNumber()
+
+      // Users selected GM token should be token 2
+      expect(await galaxyMember.getSelectedTokenId(otherAccount.address)).to.equal(2)
+
+      // User should not be a person at timepoint pre changing selected GM token
+      expect(await veBetterPassport.isPersonAtTimepoint(otherAccount.address, blockNumberPre)).to.deep.equal([
+        false,
+        "User does not meet the criteria to be considered a person",
+      ])
+
+      // User should be a person at timepoint post changing selected GM token
+      expect(await veBetterPassport.isPersonAtTimepoint(otherAccount.address, blockNumberPost)).to.deep.equal([
+        true,
+        "User's selected Galaxy Member is above the minimum level",
+      ])
+
+      // User should be a person at the current block
+      expect(await veBetterPassport.isPerson(otherAccount.address)).to.deep.equal([
+        true,
+        "User's selected Galaxy Member is above the minimum level",
+      ])
+    })
+
+    it("if GM check threshold is updated, should return correct personhood status", async function () {
+      const config = createTestConfig()
+      config.VEPASSPORT_GALAXY_MEMBER_MINIMUM_LEVEL = 5
+      const { veBetterPassport, owner, otherAccount, galaxyMember, b3tr, minterAccount } =
+        await getOrDeployContractInstances({
+          forceDeploy: true,
+          config,
+        })
+
+      // Toggle GM check
+      await veBetterPassport.connect(owner).toggleCheck(5)
+
+      // Set GM token level to 5
+      await galaxyMember.connect(owner).setMaxLevel(5)
+
+      // Bootstrap emissions
+      await bootstrapEmissions()
+
+      // Should be able to free mint after participating in allocation voting -> User is whitelisted at this point
+      await participateInAllocationVoting(otherAccount)
+
+      // Check if user is whitelisted
+      expect(await veBetterPassport.isPerson(otherAccount.address)).to.deep.equal([true, "User is whitelisted"])
+
+      // Mint GM token
+      await galaxyMember.connect(otherAccount).freeMint()
+
+      // User should have GM token of level 1 at this point
+      expect(
+        await galaxyMember.levelOf(await galaxyMember.getSelectedTokenId(await otherAccount.getAddress())),
+      ).to.equal(1)
+
+      // Disable whitelist check
+      await veBetterPassport.connect(owner).toggleCheck(1)
+
+      // User should not be a person here as there GM totken level is below threshold of 5
+      expect(await veBetterPassport.isPerson(otherAccount.address)).to.deep.equal([
+        false,
+        "User does not meet the criteria to be considered a person",
+      ])
+
+      // Upgrade GM token to level 5
+      await upgradeNFTtoLevel(1, 5, galaxyMember, b3tr, otherAccount, minterAccount)
+
+      // User should have GM token of level 5 at this point
+      expect(
+        await galaxyMember.levelOf(await galaxyMember.getSelectedTokenId(await otherAccount.getAddress())),
+      ).to.equal(5) // Level 5
+
+      // User should be a person here as there GM token level is above threshold of 5
+      expect(await veBetterPassport.isPerson(otherAccount.address)).to.deep.equal([
+        true,
+        "User's selected Galaxy Member is above the minimum level",
+      ])
+
+      //  Update GM check threshold to 100
+      await veBetterPassport.connect(owner).setMinimumGalaxyMemberLevel(100)
+
+      // User should not be a person here as there GM token level is below threshold of 100
       expect(await veBetterPassport.isPerson(otherAccount.address)).to.deep.equal([
         false,
         "User does not meet the criteria to be considered a person",

@@ -25,11 +25,11 @@ pragma solidity 0.8.20;
 
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
-import "./interfaces/IGalaxyMember.sol";
-import "./interfaces/IB3TRGovernor.sol";
-import "./interfaces/IXAllocationVotingGovernor.sol";
-import "./interfaces/IEmissions.sol";
-import "./interfaces/IB3TR.sol";
+import "../V2/interfaces/IGalaxyMemberV2.sol";
+import "../../interfaces/IB3TRGovernor.sol";
+import "../../interfaces/IXAllocationVotingGovernor.sol";
+import "../../interfaces/IEmissions.sol";
+import "../../interfaces/IB3TR.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "@openzeppelin/contracts/utils/structs/Checkpoints.sol";
@@ -65,11 +65,8 @@ import "@openzeppelin/contracts/utils/types/Time.sol";
  * - Added the ability to track if a Vechain node attached to a Galaxy Member NFT has voted in a proposal.
  * - Proposal Id is now required when registering votes instead of proposal snapshot.
  * - Core logic functions are now virtual allowing to be overridden through inheritance.
- *
- * ------------------ Version 4 Changes ------------------
- * - Update the contract to use new Galaxy Member interface.
  */
-contract VoterRewards is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPSUpgradeable {
+contract VoterRewardsV3 is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPSUpgradeable {
   using Checkpoints for Checkpoints.Trace208; // Checkpoints library for managing checkpoints of the selected level of the user
 
   /// @notice The role that can register votes for rewards calculation.
@@ -86,7 +83,7 @@ contract VoterRewards is AccessControlUpgradeable, ReentrancyGuardUpgradeable, U
 
   /// @custom:storage-location erc7201:b3tr.storage.VoterRewards
   struct VoterRewardsStorage {
-    IGalaxyMember galaxyMember;
+    IGalaxyMemberV2 galaxyMember;
     IB3TR b3tr;
     IEmissions emissions;
     // level => percentage multiplier for the level of the GM NFT
@@ -185,7 +182,7 @@ contract VoterRewards is AccessControlUpgradeable, ReentrancyGuardUpgradeable, U
 
     VoterRewardsStorage storage $ = _getVoterRewardsStorage();
 
-    $.galaxyMember = IGalaxyMember(_galaxyMember);
+    $.galaxyMember = IGalaxyMemberV2(_galaxyMember);
     $.b3tr = IB3TR(_b3tr);
     $.emissions = IEmissions(_emissions);
 
@@ -398,7 +395,7 @@ contract VoterRewards is AccessControlUpgradeable, ReentrancyGuardUpgradeable, U
   }
 
   /// @notice Get the Galaxy Member contract.
-  function galaxyMember() external view returns (IGalaxyMember) {
+  function galaxyMember() external view returns (IGalaxyMemberV2) {
     VoterRewardsStorage storage $ = _getVoterRewardsStorage();
     return $.galaxyMember;
   }
@@ -450,7 +447,7 @@ contract VoterRewards is AccessControlUpgradeable, ReentrancyGuardUpgradeable, U
 
     emit GalaxyMemberAddressUpdated(_galaxyMember, address($.galaxyMember));
 
-    $.galaxyMember = IGalaxyMember(_galaxyMember);
+    $.galaxyMember = IGalaxyMemberV2(_galaxyMember);
   }
 
   /// @notice Set the Galaxy Member level to multiplier mapping.
@@ -498,7 +495,7 @@ contract VoterRewards is AccessControlUpgradeable, ReentrancyGuardUpgradeable, U
   /// @dev This should be updated every time a new version of implementation is deployed
   /// @return string The version of the contract
   function version() external pure virtual returns (string memory) {
-    return "4";
+    return "3";
   }
 
   /// @dev Clock used for flagging checkpoints.

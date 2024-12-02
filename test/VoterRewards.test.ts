@@ -21,6 +21,7 @@ import {
   addNodeToken,
   bootstrapAndStartEmissions,
   payDeposit,
+  moveBlocks,
 } from "./helpers"
 import { expect } from "chai"
 import { ethers } from "hardhat"
@@ -32,9 +33,11 @@ import {
   B3TRGovernor,
   GalaxyMember,
   GalaxyMemberV1,
+  GalaxyMemberV2,
   VoterRewards,
   VoterRewardsV1,
   VoterRewardsV2,
+  VoterRewardsV3,
   XAllocationVoting,
 } from "../typechain-types"
 import { time } from "@nomicfoundation/hardhat-network-helpers"
@@ -441,10 +444,10 @@ describe("VoterRewards - @shard2", () => {
         forceDeploy: true,
       })
 
-      expect(await voterRewards.version()).to.equal("3")
+      expect(await voterRewards.version()).to.equal("4")
     })
 
-    it("Should not have state conflict after upgrading to V2 and V3", async () => {
+    it("Should not have state conflict after upgrading to V3 and V4", async () => {
       const config = createLocalConfig()
       const {
         otherAccounts,
@@ -892,26 +895,26 @@ describe("VoterRewards - @shard2", () => {
 
       ;(await upgradeProxy(
         "GalaxyMemberV1",
-        "GalaxyMember",
+        "GalaxyMemberV2",
         await galaxyMemberV1.getAddress(),
         [
           await vechainNodesMock.getAddress(),
           await nodeManagement.getAddress(),
           owner.address,
-          config.GM_NFT_NODE_TO_FREE_LEVEL
+          config.GM_NFT_NODE_TO_FREE_LEVEL,
         ],
         { version: 2 },
-      )) as unknown as GalaxyMember
+      )) as unknown as GalaxyMemberV2
 
       const voterRewardsV3 = (await upgradeProxy(
         "VoterRewardsV2",
-        "VoterRewards",
+        "VoterRewardsV3",
         await voterRewardsV1.getAddress(),
         [],
         {
           version: 3,
         },
-      )) as VoterRewards
+      )) as VoterRewardsV3
 
       await waitForNextCycle()
 
@@ -942,6 +945,55 @@ describe("VoterRewards - @shard2", () => {
       for (let i = 0; i < storageSlots.length; i++) {
         expect(storageSlots[i]).to.equal(storageSlotsAfter[i])
       }
+
+      // Upgrade to V4
+      await upgradeProxy("GalaxyMemberV2", "GalaxyMember", await galaxyMemberV1.getAddress(), [], {
+        version: 3,
+      })
+
+      const voterRewardsV4 = (await upgradeProxy(
+        "VoterRewardsV3",
+        "VoterRewards",
+        await voterRewardsV1.getAddress(),
+        [],
+        {
+          version: 3,
+        },
+      )) as VoterRewards
+
+      let storageSlotsV4 = []
+      for (let i = initialSlot; i < initialSlot + BigInt(100); i++) {
+        storageSlotsV4.push(await ethers.provider.getStorage(await voterRewardsV4.getAddress(), i))
+      }
+
+      // Check if storage slots are the same after upgrade
+      for (let i = 0; i < storageSlots.length; i++) {
+        expect(storageSlotsAfter[i]).to.equal(storageSlotsV4[i])
+      }
+
+      await waitForNextCycle()
+
+      // start round
+      await emissions.connect(voter1).distribute() // Anyone can distribute the cycle
+
+      const roundId4 = await xAllocationVoting.currentRoundId()
+
+      expect(roundId4).to.equal(4)
+
+      await xAllocationVoting
+        .connect(voter1)
+        .castVote(roundId4, [app1, app2], [ethers.parseEther("0"), ethers.parseEther("1000")])
+      await xAllocationVoting
+        .connect(voter2)
+        .castVote(roundId4, [app1, app2], [ethers.parseEther("100"), ethers.parseEther("500")])
+
+      // Wait for round to end
+      const deadline = await xAllocationVoting.roundDeadline(roundId4)
+      const currentBlock = await xAllocationVoting.clock()
+      await moveBlocks(parseInt((deadline - currentBlock + BigInt(1)).toString()))
+
+      await expect(voterRewardsV4.connect(voter1).claimReward(4, voter1)).to.emit(voterRewardsV4, "RewardClaimed")
+      await expect(voterRewardsV4.connect(voter2).claimReward(4, voter2)).to.emit(voterRewardsV4, "RewardClaimed")
     })
   })
 
@@ -1614,7 +1666,7 @@ describe("VoterRewards - @shard2", () => {
           await vechainNodesMock.getAddress(),
           await nodeManagement.getAddress(),
           owner.address,
-          config.GM_NFT_NODE_TO_FREE_LEVEL
+          config.GM_NFT_NODE_TO_FREE_LEVEL,
         ],
         { version: 2 },
       )) as unknown as GalaxyMember
@@ -1765,7 +1817,7 @@ describe("VoterRewards - @shard2", () => {
           await vechainNodesMock.getAddress(),
           await nodeManagement.getAddress(),
           owner.address,
-          config.GM_NFT_NODE_TO_FREE_LEVEL
+          config.GM_NFT_NODE_TO_FREE_LEVEL,
         ],
         { version: 2 },
       )) as unknown as GalaxyMember
@@ -1924,7 +1976,7 @@ describe("VoterRewards - @shard2", () => {
           await vechainNodesMock.getAddress(),
           await nodeManagement.getAddress(),
           owner.address,
-          config.GM_NFT_NODE_TO_FREE_LEVEL
+          config.GM_NFT_NODE_TO_FREE_LEVEL,
         ],
         { version: 2 },
       )) as unknown as GalaxyMember
@@ -2108,7 +2160,7 @@ describe("VoterRewards - @shard2", () => {
           await vechainNodesMock.getAddress(),
           await nodeManagement.getAddress(),
           owner.address,
-          config.GM_NFT_NODE_TO_FREE_LEVEL
+          config.GM_NFT_NODE_TO_FREE_LEVEL,
         ],
         { version: 2 },
       )) as unknown as GalaxyMember
@@ -2261,7 +2313,7 @@ describe("VoterRewards - @shard2", () => {
           await vechainNodesMock.getAddress(),
           await nodeManagement.getAddress(),
           owner.address,
-          config.GM_NFT_NODE_TO_FREE_LEVEL
+          config.GM_NFT_NODE_TO_FREE_LEVEL,
         ],
         { version: 2 },
       )) as unknown as GalaxyMember
@@ -2653,7 +2705,7 @@ describe("VoterRewards - @shard2", () => {
           await vechainNodesMock.getAddress(),
           await nodeManagement.getAddress(),
           owner.address,
-          config.GM_NFT_NODE_TO_FREE_LEVEL
+          config.GM_NFT_NODE_TO_FREE_LEVEL,
         ],
         { version: 2 },
       )) as unknown as GalaxyMember
@@ -2782,7 +2834,7 @@ describe("VoterRewards - @shard2", () => {
           await vechainNodesMock.getAddress(),
           await nodeManagement.getAddress(),
           owner.address,
-          config.GM_NFT_NODE_TO_FREE_LEVEL
+          config.GM_NFT_NODE_TO_FREE_LEVEL,
         ],
         { version: 2 },
       )) as unknown as GalaxyMember
