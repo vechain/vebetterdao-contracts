@@ -73,18 +73,38 @@ import {
   VoteEligibilityUtils,
   EndorsementUtils,
   X2EarnCreator,
-  B3TRGovernorV4,
-  VoterRewardsV2,
-  GalaxyMemberV1,
+  NodeManagementV1,
+  VeBetterPassportV2,
+  PassportConfiguratorV2,
+  PassportWhitelistAndBlacklistLogicV2,
+  PassportPoPScoreLogicV2,
+  PassportPersonhoodLogicV2,
+  PassportEntityLogicV2,
+  PassportDelegationLogicV2,
+  PassportChecksLogicV2,
+  PassportSignalingLogicV2,
+  VoterRewardsV3,
 } from "../../typechain-types"
 import { createLocalConfig } from "../../config/contracts/envs/local"
-import { deployProxy, deployProxyOnly, initializeProxy, upgradeProxy } from "../../scripts/helpers"
+import { deployAndUpgrade, deployProxy, deployProxyOnly, initializeProxy, upgradeProxy } from "../../scripts/helpers"
 import { bootstrapAndStartEmissions as callBootstrapAndStartEmissions } from "./common"
 import { governanceLibraries, passportLibraries } from "../../scripts/libraries"
 import { setWhitelistedFunctions } from "../../scripts/deploy/deploy"
+import { B3TRGovernorV4 } from "../../typechain-types/contracts/deprecated/V4"
+import { VoterRewardsV2 } from "../../typechain-types/contracts/deprecated/V2/VoterRewardsV2"
 import { XAllocationVotingV2 } from "../../typechain-types/contracts/deprecated/V2/XAllocationVotingV2"
 import { XAllocationPoolV2 } from "../../typechain-types/contracts/deprecated/V2/XAllocationPoolV2"
 import { X2EarnAppsV1 } from "../../typechain-types/contracts/deprecated/V1/X2EarnAppsV1"
+import {
+  GovernorClockLogicV4,
+  GovernorConfiguratorV4,
+  GovernorDepositLogicV4,
+  GovernorFunctionRestrictionsLogicV4,
+  GovernorProposalLogicV4,
+  GovernorQuorumLogicV4,
+  GovernorStateLogicV4,
+  GovernorVotesLogicV4,
+} from "../../typechain-types/contracts/deprecated/V4/governance/libraries"
 import { x2EarnLibraries } from "../../scripts/libraries/x2EarnLibraries"
 
 interface DeployInstance {
@@ -98,7 +118,6 @@ interface DeployInstance {
   governorV3: B3TRGovernorV3
   governorV4: B3TRGovernorV4
   galaxyMember: GalaxyMember
-  galaxyMemberV1: GalaxyMemberV1
   x2EarnApps: X2EarnApps
   xAllocationVoting: XAllocationVoting
   xAllocationPool: XAllocationPool
@@ -142,11 +161,11 @@ interface DeployInstance {
   governorStateLogicLibV3: GovernorStateLogicV3
   governorVotesLogicLibV3: GovernorVotesLogicV3
   governorClockLogicLibV4: GovernorClockLogicV4
-  governorConfiguratorLibV4: GovernorConfiguratorLibV4
-  governorDepositLogicLibV4: GovernorDepositLogicLibV4
-  governorFunctionRestrictionsLogicLibV4: GovernorFunctionRestrictionsLogicLibV4
-  governorProposalLogicLibV4: GovernorProposalLogicLibV4
-  governorQuorumLogicLibV4: GovernorQuorumLogicLibV4
+  governorConfiguratorLibV4: GovernorConfiguratorV4
+  governorDepositLogicLibV4: GovernorDepositLogicV4
+  governorFunctionRestrictionsLogicLibV4: GovernorFunctionRestrictionsLogicV4
+  governorProposalLogicLibV4: GovernorProposalLogicV4
+  governorQuorumLogicLibV4: GovernorQuorumLogicV4
   governorStateLogicLibV4: GovernorStateLogicV4
   governorVotesLogicLibV4: GovernorVotesLogicV4
   passportChecksLogic: PassportChecksLogic
@@ -164,6 +183,14 @@ interface DeployInstance {
   passportSignalingLogicV1: PassportSignalingLogicV1
   passportWhitelistBlacklistLogicV1: PassportWhitelistAndBlacklistLogicV1
   passportConfiguratorV1: PassportConfiguratorV1
+  passportChecksLogicV2: PassportChecksLogicV2
+  passportDelegationLogicV2: PassportDelegationLogicV2
+  passportEntityLogicV2: PassportEntityLogicV2
+  passportPersonhoodLogicV2: PassportPersonhoodLogicV2
+  passportPoPScoreLogicV2: PassportPoPScoreLogicV2
+  passportSignalingLogicV2: PassportSignalingLogicV2
+  passportWhitelistBlacklistLogicV2: PassportWhitelistAndBlacklistLogicV2
+  passportConfiguratorV2: PassportConfiguratorV2
   passportConfigurator: any // no abi for this library, which means a typechain is not generated
   administrationUtils: AdministrationUtils
   endorsementUtils: EndorsementUtils
@@ -234,6 +261,14 @@ export const getOrDeployContractInstances = async ({
 
   // Deploy Passport Libraries
   const {
+    PassportChecksLogicV2,
+    PassportConfiguratorV2,
+    PassportEntityLogicV2,
+    PassportDelegationLogicV2,
+    PassportPersonhoodLogicV2,
+    PassportPoPScoreLogicV2,
+    PassportSignalingLogicV2,
+    PassportWhitelistAndBlacklistLogicV2,
     PassportChecksLogicV1,
     PassportConfiguratorV1,
     PassportEntityLogicV1,
@@ -318,44 +353,55 @@ export const getOrDeployContractInstances = async ({
     config.TREASURY_TRANSFER_LIMIT_VTHO,
   ])) as Treasury
 
-  // Deploy GalaxyMember
-  const galaxyMemberV1 = (await deployProxy("GalaxyMemberV1", [
-    {
-      name: NFT_NAME,
-      symbol: NFT_SYMBOL,
-      admin: owner.address,
-      upgrader: owner.address,
-      pauser: owner.address,
-      minter: owner.address,
-      contractsAddressManager: owner.address,
-      maxLevel: maxMintableLevel,
-      baseTokenURI: config.GM_NFT_BASE_URI,
-      b3trToUpgradeToLevel: config.GM_NFT_B3TR_REQUIRED_TO_UPGRADE_TO_LEVEL,
-      b3tr: await b3tr.getAddress(),
-      treasury: await treasury.getAddress(),
-    },
-  ])) as GalaxyMemberV1
-
   const x2EarnCreator = (await deployProxy("X2EarnCreator", [config.CREATOR_NFT_URI, owner.address])) as X2EarnCreator
 
   // Deploy NodeManagement
-  const nodeManagement = (await deployProxy("NodeManagement", [
+  const nodeManagementV1 = (await deployProxy("NodeManagementV1", [
     await vechainNodesMock.getAddress(),
     owner.address,
     owner.address,
-  ])) as NodeManagement
+  ])) as NodeManagementV1
 
-  const galaxyMember = (await upgradeProxy(
-    "GalaxyMemberV1",
-    "GalaxyMember",
-    await galaxyMemberV1.getAddress(),
+  const nodeManagement = (await upgradeProxy(
+    "NodeManagementV1",
+    "NodeManagement",
+    await nodeManagementV1.getAddress(),
+    [],
+    {
+      version: 2,
+    },
+  )) as NodeManagement
+
+  const galaxyMember = (await deployAndUpgrade(
+    ["GalaxyMemberV1", "GalaxyMemberV2", "GalaxyMember"],
     [
-      await vechainNodesMock.getAddress(),
-      await nodeManagement.getAddress(),
-      owner.address,
-      config.GM_NFT_NODE_TO_FREE_LEVEL,
+      [
+        {
+          name: NFT_NAME,
+          symbol: NFT_SYMBOL,
+          admin: owner.address,
+          upgrader: owner.address,
+          pauser: owner.address,
+          minter: owner.address,
+          contractsAddressManager: owner.address,
+          maxLevel: maxMintableLevel,
+          baseTokenURI: config.GM_NFT_BASE_URI,
+          b3trToUpgradeToLevel: config.GM_NFT_B3TR_REQUIRED_TO_UPGRADE_TO_LEVEL,
+          b3tr: await b3tr.getAddress(),
+          treasury: await treasury.getAddress(),
+        },
+      ],
+      [
+        await vechainNodesMock.getAddress(),
+        await nodeManagement.getAddress(),
+        owner.address,
+        config.GM_NFT_NODE_TO_FREE_LEVEL,
+      ],
+      [],
     ],
-    { version: 2 },
+    {
+      versions: [undefined, 2, 3],
+    },
   )) as GalaxyMember
 
   // Initialization requires the address of the x2EarnRewardsPool, for this reason we will initialize it after
@@ -518,16 +564,19 @@ export const getOrDeployContractInstances = async ({
   ;(await upgradeProxy("VoterRewardsV1", "VoterRewardsV2", await voterRewardsV1.getAddress(), [], {
     version: 2,
   })) as VoterRewardsV2
-
-  const voterRewards = (await upgradeProxy("VoterRewardsV2", "VoterRewards", await voterRewardsV1.getAddress(), [], {
+  ;(await upgradeProxy("VoterRewardsV2", "VoterRewardsV3", await voterRewardsV1.getAddress(), [], {
     version: 3,
+  })) as VoterRewardsV3
+
+  const voterRewards = (await upgradeProxy("VoterRewardsV3", "VoterRewards", await voterRewardsV1.getAddress(), [], {
+    version: 4,
   })) as VoterRewards
 
   // Set vote 2 earn (VoterRewards deployed contract) address in emissions
   await emissions.connect(owner).setVote2EarnAddress(await voterRewardsV1.getAddress())
 
   // Deploy XAllocationVoting
-  const xAllocationVotingV1 = (await deployProxy("XAllocationVotingV1", [
+  let xAllocationVotingV1 = (await deployProxy("XAllocationVotingV1", [
     {
       vot3Token: await vot3.getAddress(),
       quorumPercentage: config.X_ALLOCATION_VOTING_QUORUM_PERCENTAGE, // quorum percentage
@@ -605,13 +654,33 @@ export const getOrDeployContractInstances = async ({
     },
   )) as VeBetterPassportV1
 
-  const veBetterPassport = (await upgradeProxy(
+  const veBetterPassportV2 = (await upgradeProxy(
     "VeBetterPassportV1",
-    "VeBetterPassport",
+    "VeBetterPassportV2",
     await veBetterPassportV1.getAddress(),
     [],
     {
       version: 2,
+      libraries: {
+        PassportChecksLogicV2: await PassportChecksLogicV2.getAddress(),
+        PassportConfiguratorV2: await PassportConfiguratorV2.getAddress(),
+        PassportEntityLogicV2: await PassportEntityLogicV2.getAddress(),
+        PassportDelegationLogicV2: await PassportDelegationLogicV2.getAddress(),
+        PassportPersonhoodLogicV2: await PassportPersonhoodLogicV2.getAddress(),
+        PassportPoPScoreLogicV2: await PassportPoPScoreLogicV2.getAddress(),
+        PassportSignalingLogicV2: await PassportSignalingLogicV2.getAddress(),
+        PassportWhitelistAndBlacklistLogicV2: await PassportWhitelistAndBlacklistLogicV2.getAddress(),
+      },
+    },
+  )) as VeBetterPassportV2
+
+  const veBetterPassport = (await upgradeProxy(
+    "VeBetterPassportV2",
+    "VeBetterPassport",
+    await veBetterPassportV1.getAddress(),
+    [],
+    {
+      version: 3,
       libraries: {
         PassportChecksLogic: await PassportChecksLogic.getAddress(),
         PassportConfigurator: await PassportConfigurator.getAddress(),
@@ -832,7 +901,6 @@ export const getOrDeployContractInstances = async ({
     governorV3,
     governorV4,
     galaxyMember,
-    galaxyMemberV1,
     x2EarnApps,
     xAllocationVoting,
     nodeManagement,
@@ -898,6 +966,14 @@ export const getOrDeployContractInstances = async ({
     passportPoPScoreLogicV1: PassportPoPScoreLogicV1,
     passportSignalingLogicV1: PassportSignalingLogicV1,
     passportWhitelistBlacklistLogicV1: PassportWhitelistAndBlacklistLogicV1,
+    passportChecksLogicV2: PassportChecksLogicV2,
+    passportDelegationLogicV2: PassportDelegationLogicV2,
+    passportEntityLogicV2: PassportEntityLogicV2,
+    passportPersonhoodLogicV2: PassportPersonhoodLogicV2,
+    passportPoPScoreLogicV2: PassportPoPScoreLogicV2,
+    passportSignalingLogicV2: PassportSignalingLogicV2,
+    passportWhitelistBlacklistLogicV2: PassportWhitelistAndBlacklistLogicV2,
+    passportConfiguratorV2: PassportConfiguratorV2,
     administrationUtils: AdministrationUtils,
     endorsementUtils: EndorsementUtils,
     voteEligibilityUtils: VoteEligibilityUtils,

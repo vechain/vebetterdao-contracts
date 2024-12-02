@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/utils/structs/Checkpoints.sol";
  * @notice Interface for the GalaxyMember contract which handles NFT membership and governance functionality
  * @dev Implements ERC721 with additional features for level upgrades, node attachments, and governance participation
  */
-interface IGalaxyMember {
+interface IGalaxyMemberV2 {
   // Custom errors
   error AccessControlBadConfirmation();
   error AccessControlUnauthorizedAccount(address account, bytes32 neededRole);
@@ -179,12 +179,6 @@ interface IGalaxyMember {
   /// @param owner Address to query
   /// @return Selected token ID
   function getSelectedTokenId(address owner) external view returns (uint256);
-
-  /// @notice Returns the selected token ID for an owner in a specific block number
-  /// @param owner Address to query
-  /// @param blockNumber Block number to query
-  /// @return Selected token ID
-  function getSelectedTokenIdAtBlock(address owner, uint48 blockNumber) external view returns (uint256);
 
   /// @notice Grants a role to an account
   /// @param role Role to grant
