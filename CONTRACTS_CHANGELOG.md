@@ -22,7 +22,7 @@ This document provides a detailed log of upgrades to the smart contract suite, e
 
 ---
 
-## Upgrade `VeBetterPassport` to Version 3, and `GalaxyMember` to Version 3
+## Upgrade `VeBetterPassport` to Version 3, `GalaxyMember` to Version 3, and `VoterRewards` version 4
 
 Added new personhood check in VeBetter passport, if a user owns a GM with a level greater than 1 they are considered a person.
 <br>
