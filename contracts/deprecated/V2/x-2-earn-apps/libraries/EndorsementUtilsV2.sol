@@ -23,11 +23,10 @@
 
 pragma solidity 0.8.20;
 
-import { VechainNodesDataTypes } from "../../libraries/VechainNodesDataTypes.sol";
-import { PassportTypes } from "../../ve-better-passport/libraries/PassportTypes.sol";
-import { INodeManagement } from "../../interfaces/INodeManagement.sol";
-import { IVeBetterPassport } from "../../interfaces/IVeBetterPassport.sol";
-import { IXAllocationVotingGovernor } from "../../interfaces/IXAllocationVotingGovernor.sol";
+import { VechainNodesDataTypes } from "../../../../libraries/VechainNodesDataTypes.sol";
+import { PassportTypes } from "../../../../ve-better-passport/libraries/PassportTypes.sol";
+import { INodeManagementV1 } from "../../../V1/interfaces/INodeManagementV1.sol";
+import { IVeBetterPassport } from "../../../../interfaces/IVeBetterPassport.sol";
 
 /**
  * @title EndorsementUtils
@@ -35,7 +34,7 @@ import { IXAllocationVotingGovernor } from "../../interfaces/IXAllocationVotingG
  * It manages endorsements, endorsement scores, endorsement status, and app eligibility
  * for voting by interacting with node levels and managing endorsement checkpoints.
  */
-library EndorsementUtils {
+library EndorsementUtilsV2 {
   /**
    * @dev Emitted when an app is endorsed or unendorsed.
    * @param appId The unique identifier of the app.
@@ -75,7 +74,7 @@ library EndorsementUtils {
    */
   function getEndorsers(
     mapping(bytes32 => uint256[]) storage _appEndorsers,
-    INodeManagement _nodeManagementContract,
+    INodeManagementV1 _nodeManagementContract,
     bytes32 appId
   ) external view returns (address[] memory) {
     uint256 length = _appEndorsers[appId].length;
@@ -106,7 +105,7 @@ library EndorsementUtils {
    */
   function getUsersEndorsementScore(
     mapping(VechainNodesDataTypes.NodeStrengthLevel => uint256) storage _nodeEnodorsmentScore,
-    INodeManagement _nodeManagementContract,
+    INodeManagementV1 _nodeManagementContract,
     address user
   ) external view returns (uint256) {
     VechainNodesDataTypes.NodeStrengthLevel[] memory nodeLevels = _nodeManagementContract.getUsersNodeLevels(user);
@@ -136,7 +135,7 @@ library EndorsementUtils {
     mapping(uint256 => bytes32) storage _nodeToEndorsedApp,
     mapping(bytes32 => uint256[]) storage _appEndorsers,
     mapping(bytes32 => uint256) storage _appScores,
-    INodeManagement _nodeManagementContract,
+    INodeManagementV1 _nodeManagementContract,
     bytes32 appId,
     uint256 endorserToRemove
   ) external returns (uint256) {
@@ -315,23 +314,5 @@ library EndorsementUtils {
 
     // Return true indicating the app is still eligible for voting
     return true;
-  }
-
-  /**
-   * @dev Ensures that the cooldown period for a node has elapsed before performing an action.
-   * @param nodeId The unique identifier of the node being checked.
-   * @return True if the cooldown period has not yet elapsed, false otherwise.
-   */
-  function checkCooldown(
-    mapping(uint256 => uint256) storage endorsementRound,
-    uint256 cooldownPeriod,
-    IXAllocationVotingGovernor xAllocationVotingGovernor,
-    uint256 nodeId
-  ) external view returns (bool) {
-    // Calculate the required round for the cooldown period
-    uint256 requiredRound = endorsementRound[nodeId] + cooldownPeriod;
-
-    // Return true if the required round has not yet been reached
-    return requiredRound > xAllocationVotingGovernor.currentRoundId();
   }
 }

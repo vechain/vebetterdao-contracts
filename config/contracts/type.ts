@@ -65,4 +65,6 @@ export type ContractsConfig = {
   VEPASSPORT_DECAY_RATE: number
 
   CREATOR_NFT_URI: string
+
+  X2EARN_NODE_COOLDOWN_PERIOD: number
 }

@@ -1,17 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.20;
 
-import { X2EarnAppsDataTypes } from "../libraries/X2EarnAppsDataTypes.sol";
-import { VechainNodesDataTypes } from "../libraries/VechainNodesDataTypes.sol";
-import { IX2EarnCreator } from "./IX2EarnCreator.sol";
-import { IXAllocationVotingGovernor } from "./IXAllocationVotingGovernor.sol";
+import { X2EarnAppsDataTypes } from "../../../libraries/X2EarnAppsDataTypes.sol";
+import { VechainNodesDataTypes } from "../../../libraries/VechainNodesDataTypes.sol";
+import { IX2EarnCreator } from "../../../interfaces/IX2EarnCreator.sol";
 
 /**
  * @title IX2EarnApps
  * @notice Interface for the X2EarnApps contract.
  * @dev The contract inheriting this interface should be able to manage the x2earn apps and their Eligibility for allocation voting.
  */
-interface IX2EarnApps {
+interface IX2EarnAppsV2 {
   /**
    * @dev The clock was incorrectly modified.
    */
@@ -22,7 +21,7 @@ interface IX2EarnApps {
    */
   error X2EarnNonexistentApp(bytes32 appId);
 
-  /**
+    /**
    * @dev The creator of the app doesn't exist.
    */
   error X2EarnNonexistentCreator(bytes32 appId, address creator);
@@ -56,11 +55,6 @@ interface IX2EarnApps {
    * @dev An app with the specified `appId` already exists.
    */
   error X2EarnAppAlreadyExists(bytes32 appId);
-
-  /**
-   * @dev The Vechain Node is in a cooldown period, and the action cannot be performed.
-   */
-  error X2EarnNodeCooldownActive();
 
   /**
    * @dev The user is not authorized to perform the action.
@@ -196,11 +190,6 @@ interface IX2EarnApps {
    * @dev Event fired when the base URI is updated.
    */
   event BaseURIUpdated(string oldBaseURI, string newBaseURI);
-
-  /**
-   * @dev Event fired when the cooldown period duration is updated.
-   */
-  event CooldownPeriodUpdated(uint256 oldCooldownPeriod, uint256 newCooldownPeriod);
 
   /**
    * @dev Event fired when the grace period duration is updated.
@@ -615,42 +604,4 @@ interface IX2EarnApps {
    * @dev Get the X2EarnCreator contract address.
    */
   function x2EarnCreatorContract() external view returns (IX2EarnCreator);
-
-  /**
-   * @dev Update the XAllocationVotingGovernor contract address.
-   *
-   * @param _xAllocationVotingGovernor the address of the XAllocationVotingGovernor contract
-   */
-  function setXAllocationVotingGovernor(address _xAllocationVotingGovernor) external;
-
-  /**
-   * @dev Get the cooldown period for a node in seconds.
-   */
-  function cooldownPeriod() external view returns (uint256);
-
-  /**
-   * @dev Get the XAllocationVotingGovernor contract address.
-   */
-  function getXAllocationVotingGovernor() external view returns (IXAllocationVotingGovernor);
-
-  /**
-   * @notice Check if a node is in a cooldown period. A node is in a cooldown period after it has endorsed an app.
-   * @param nodeId The unique identifier of the node.
-   * @return bool True if the node is in a cooldown period.
-   */
-  function checkCooldown(uint256 nodeId) external view returns (bool);
-
-  /**
-   * @notice Function to update the grace period.
-   * @param _newGracePeriod The new grace period.
-   * Emits a {GracePeriodUpdated} event.
-   */
-  function updateGracePeriod(uint48 _newGracePeriod) external;
-
-  /**
-   * @notice Function to update the cooldown period.
-   * @param _newCooldownPeriod The new cooldown period.
-   * Emits a {CooldownPeriodUpdated} event.
-   */
-  function updateCooldownPeriod(uint256 _newCooldownPeriod) external;
 }

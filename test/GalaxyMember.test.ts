@@ -24,7 +24,7 @@ import { createLocalConfig } from "../config/contracts/envs/local"
 import { createTestConfig } from "./helpers/config"
 import { getImplementationAddress } from "@openzeppelin/upgrades-core"
 import { deployProxy, upgradeProxy } from "../scripts/helpers"
-import { GalaxyMember, GalaxyMemberV1, MockERC721Receiver } from "../typechain-types"
+import { GalaxyMember, GalaxyMemberV1, GalaxyMemberV2, MockERC721Receiver } from "../typechain-types"
 import { time } from "@nomicfoundation/hardhat-network-helpers"
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers"
 
@@ -761,7 +761,7 @@ describe("Galaxy Member - @shard1", () => {
         await galaxyMember.getAddress(),
         [owner.address, await nodeManagement.getAddress(), owner.address, config.GM_NFT_NODE_TO_FREE_LEVEL],
         { version: 2 },
-      )) as unknown as GalaxyMember
+      )) as unknown as GalaxyMemberV2
 
       let storageSlotsAfter = []
 

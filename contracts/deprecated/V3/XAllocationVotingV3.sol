@@ -49,12 +49,9 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
  * - Added check to ensure that the vote weight for an XApp cast by a user is greater than the voting threshold
  *
  * ----- Version 3 -----
- * - Updated the X2EarnApps interface to support node endorsement feature
- *
- * ----- Version 4 -----
- * - Updated the X2EarnApps interface to support node cooldown functionality
+ * Updated the contract to use the new X2EarnApps interface
  */
-contract XAllocationVoting is
+contract XAllocationVotingV3 is
   XAllocationVotingGovernor,
   VotingSettingsUpgradeable,
   RoundVotesCountingUpgradeable,
@@ -102,7 +99,7 @@ contract XAllocationVoting is
     address[] admins;
     address upgrader;
     address contractsAddressManager;
-    IX2EarnApps x2EarnAppsAddress;
+    IX2EarnAppsV2 x2EarnAppsAddress;
     uint256 baseAllocationPercentage;
     uint256 appSharesCap;
     uint256 votingThreshold;
@@ -152,7 +149,7 @@ contract XAllocationVoting is
   /**
    * @dev Set the address of the X2EarnApps contract
    */
-  function setX2EarnAppsAddress(IX2EarnApps newX2EarnApps) external onlyRole(CONTRACTS_ADDRESS_MANAGER_ROLE) {
+  function setX2EarnAppsAddress(IX2EarnAppsV2 newX2EarnApps) external onlyRole(CONTRACTS_ADDRESS_MANAGER_ROLE) {
     _setX2EarnApps(newX2EarnApps);
   }
 

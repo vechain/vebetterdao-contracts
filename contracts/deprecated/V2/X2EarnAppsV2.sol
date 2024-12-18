@@ -29,10 +29,9 @@ import { AppsStorageUpgradeable } from "./x-2-earn-apps/modules/AppsStorageUpgra
 import { ContractSettingsUpgradeable } from "./x-2-earn-apps/modules/ContractSettingsUpgradeable.sol";
 import { VoteEligibilityUpgradeable } from "./x-2-earn-apps/modules//VoteEligibilityUpgradeable.sol";
 import { EndorsementUpgradeable } from "./x-2-earn-apps/modules/EndorsementUpgradeable.sol";
-import { VechainNodesDataTypes } from "./libraries/VechainNodesDataTypes.sol";
+import { VechainNodesDataTypes } from "../../libraries/VechainNodesDataTypes.sol";
 import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import { IXAllocationVotingGovernor } from "./interfaces/IXAllocationVotingGovernor.sol";
 
 /**
  * @title X2EarnApps
@@ -42,15 +41,8 @@ import { IXAllocationVotingGovernor } from "./interfaces/IXAllocationVotingGover
  * Only users with the DEFAULT_ADMIN_ROLE can add new apps, set the base URI and set the voting eligibility for an app.
  * Admins can also control the app metadata and management.
  * Each app has a set of admins and moderators that can manage the app and settings.
- *
- * -------------------- Version 2 --------------------
- * - The contract has been upgraded to version 2 to include the X2Earn endorsement system.
- * - Added libraries to reduce the contract size and improve readability.
- *
- * -------------------- Version 3 --------------------
- * - The contract has been upgraded to version 3 to add node cooldown period.
  */
-contract X2EarnApps is
+contract X2EarnAppsV2 is
   X2EarnAppsUpgradeable,
   AdministrationUpgradeable,
   ContractSettingsUpgradeable,
@@ -71,16 +63,24 @@ contract X2EarnApps is
   }
 
   /**
-   * @notice Initialize the version 3 contract
-   * @param _cooldownPeriod the cooldown period for the endorsement
+   * @notice Initialize the version 2 contract
+   * @param _gracePeriod the grace period to be reendorsed
+   * @param _nodeManagementContract the address of the vechain node management contract
+   * @param _veBetterPassportContract the address of the VeBetterPassport contract
    *
-   * @dev This function is called only once during the contract upgrade
+   * @dev This function is called only once during the contract deployment
    */
-  function initializeV3(
-    uint48 _cooldownPeriod,
-    address _xAllocationVotingGovernor
-  ) public reinitializer(3) {
-    __Endorsement_init_v3(_cooldownPeriod, _xAllocationVotingGovernor);
+  function initializeV2(
+    uint48 _gracePeriod,
+    address _nodeManagementContract,
+    address _veBetterPassportContract,
+    address _x2EarnCreatorContract
+  ) public reinitializer(2) {
+    require(_nodeManagementContract != address(0), "X2EarnApps: Invalid Node Managementcontract address");
+    require(_veBetterPassportContract != address(0), "X2EarnApps: Invalid VeBetterPassport contract address");
+    require(_x2EarnCreatorContract != address(0), "X2EarnApps: Invalid X2EarnCreator contract address");
+    __Endorsement_init(_gracePeriod, _nodeManagementContract, _veBetterPassportContract);
+    __Administration_init_v2(_x2EarnCreatorContract);
   }
 
   // ---------- Modifiers ------------ //
@@ -122,7 +122,7 @@ contract X2EarnApps is
    * @return sting The version of the contract
    */
   function version() public pure virtual returns (string memory) {
-    return "3";
+    return "2";
   }
 
   // ---------- Overrides ------------ //
@@ -270,13 +270,6 @@ contract X2EarnApps is
   }
 
   /**
-   * @dev See {IX2EarnApps-updateCooldownPeriod}.
-   */
-  function updateCooldownPeriod(uint256 _newCooldownPeriod) public virtual onlyRole(GOVERNANCE_ROLE) {
-    _setCooldownPeriod(_newCooldownPeriod);
-  }
-
-  /**
    * @dev See {IX2EarnApps-updateNodeEndorsementScores}.
    */
   function updateNodeEndorsementScores(
@@ -328,13 +321,6 @@ contract X2EarnApps is
    */
   function setVeBetterPassportContract(address _veBetterPassportContract) public virtual onlyRole(DEFAULT_ADMIN_ROLE) {
     _setVeBetterPassportContract(_veBetterPassportContract);
-  }
-
-  /**
-   * @dev See {IX2EarnApps-setXAllocationVotingGovernor}.
-   */
-  function setXAllocationVotingGovernor(address _xAllocationVotingGovernor) public virtual onlyRole(DEFAULT_ADMIN_ROLE) {
-    _setXAllocationVotingGovernor(_xAllocationVotingGovernor);
   }
 
   /**
