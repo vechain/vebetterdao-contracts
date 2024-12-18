@@ -154,5 +154,9 @@ export function createLocalConfig() {
     VEPASSPORT_DECAY_RATE: 0,
 
     CREATOR_NFT_URI: "ipfs://bafybeie2onvzl3xsod5becuswpdmi63gtq7wgjqhqjecehytt7wdeg4py4/metadata/1.json",
+
+    //WARNING: Cooldown depends on the current round. If the current round is 1, the cooldown cannot be greater than 1. Otherwise the endorsement will fail.
+    //Check `EndorsementUtils.sol` `checkCooldown` method for more details.
+    X2EARN_NODE_COOLDOWN_PERIOD: 0, // 0 cycles
   })
 }
