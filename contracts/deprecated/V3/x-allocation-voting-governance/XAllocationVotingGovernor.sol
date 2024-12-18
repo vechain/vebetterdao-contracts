@@ -26,13 +26,13 @@ pragma solidity 0.8.20;
 import { ERC165Upgradeable } from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
 import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
-import { IXAllocationVotingGovernor, IERC6372 } from "../interfaces/IXAllocationVotingGovernor.sol";
-import { IXAllocationPool } from "../interfaces/IXAllocationPool.sol";
+import { IXAllocationVotingGovernor, IERC6372 } from "../../../interfaces/IXAllocationVotingGovernor.sol";
+import { IXAllocationPool } from "../../../interfaces/IXAllocationPool.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import { IX2EarnApps } from "../interfaces/IX2EarnApps.sol";
-import { IEmissions } from "../interfaces/IEmissions.sol";
-import { IVoterRewards } from "../interfaces/IVoterRewards.sol";
-import { IVeBetterPassport } from "../interfaces/IVeBetterPassport.sol";
+import { IX2EarnAppsV2 } from "../../V2/interfaces/IX2EarnAppsV2.sol";
+import { IEmissions } from "../../../interfaces/IEmissions.sol";
+import { IVoterRewards } from "../../../interfaces/IVoterRewards.sol";
+import { IVeBetterPassport } from "../../../interfaces/IVeBetterPassport.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /**
@@ -167,7 +167,7 @@ abstract contract XAllocationVotingGovernor is
    * @dev Returns the version of the governor.
    */
   function version() public view virtual returns (string memory) {
-    return "4";
+    return "3";
   }
 
   /**
@@ -320,7 +320,7 @@ abstract contract XAllocationVotingGovernor is
   /**
    * @dev Returns the X2EarnApps contract.
    */
-  function x2EarnApps() public view virtual returns (IX2EarnApps);
+  function x2EarnApps() public view virtual returns (IX2EarnAppsV2);
 
   /**
    * @dev Returns the VeBetterPassport contract.
