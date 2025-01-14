@@ -33,7 +33,6 @@ contract NodeManagementV1 is INodeManagementV1, AccessControlUpgradeable, UUPSUp
   /**
    * @notice Retrieve the storage reference for node delegation data.
    * @dev Internal pure function to get the storage slot for node delegation data using inline assembly.
-   * @return $ The storage reference for node delegation data.
    */
   function _getNodeManagementStorage() internal pure returns (NodeManagementStorage storage $) {
     assembly {
