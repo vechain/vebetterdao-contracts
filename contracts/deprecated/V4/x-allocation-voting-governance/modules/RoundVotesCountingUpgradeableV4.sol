@@ -23,22 +23,19 @@
 
 pragma solidity 0.8.20;
 
-import { XAllocationVotingGovernor } from "../XAllocationVotingGovernor.sol";
+import { XAllocationVotingGovernorV4 } from "../XAllocationVotingGovernorV4.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /**
- * @title RoundVotesCountingUpgradeable
+ * @title RoundVotesCountingUpgradeableV4
  *
- * @dev Extension of {XAllocationVotingGovernor} for counting votes for allocation rounds.
+ * @dev Extension of {XAllocationVotingGovernorV4} for counting votes for allocation rounds.
  *
  * In every round users can vote a fraction of their balance for the eligible apps in that round.
- *
- * ----- Version 5 -----
- * - Fixed duplicate app voting in same transaction in {_countVote}
  */
-abstract contract RoundVotesCountingUpgradeable is Initializable, XAllocationVotingGovernor {
+abstract contract RoundVotesCountingUpgradeableV4 is Initializable, XAllocationVotingGovernorV4 {
   struct RoundVote {
     // Total votes received for each app
     mapping(bytes32 appId => uint256) votesReceived;
@@ -54,14 +51,14 @@ abstract contract RoundVotesCountingUpgradeable is Initializable, XAllocationVot
     uint256 totalVoters;
   }
 
-  /// @custom:storage-location erc7201:b3tr.storage.XAllocationVotingGovernor.RoundVotesCounting
+  /// @custom:storage-location erc7201:b3tr.storage.XAllocationVotingGovernorV4.RoundVotesCounting
   struct RoundVotesCountingStorage {
     mapping(address user => bool) _hasVotedOnce; // mapping to store that a user has voted at least one time
     mapping(uint256 roundId => RoundVote) _roundVotes; // mapping to store the votes for each round
     uint256 votingThreshold; // minimum number of tokens needed to cast a vote
   }
 
-  // keccak256(abi.encode(uint256(keccak256("b3tr.storage.XAllocationVotingGovernor.RoundVotesCounting")) - 1)) & ~bytes32(uint256(0xff))
+  // keccak256(abi.encode(uint256(keccak256("b3tr.storage.XAllocationVotingGovernorV4.RoundVotesCounting")) - 1)) & ~bytes32(uint256(0xff))
   bytes32 private constant RoundVotesCountingStorageLocation =
     0xa760c041d4a9fa3a2c67d0d325f3592ba2c7e4330f7ba2283ebf9fe63913d500;
 
@@ -73,9 +70,6 @@ abstract contract RoundVotesCountingUpgradeable is Initializable, XAllocationVot
 
   //@notice emitted when a the minimum number of tokens needed to cast a vote is updated
   event VotingThresholdSet(uint256 oldVotingThreshold, uint256 newVotingThreshold);
-
-  /// @dev Error thrown when trying to vote for the same app multiple times in one transaction
-  error DuplicateAppVote();
 
   /**
    * @dev Initializes the contract
@@ -166,13 +160,7 @@ abstract contract RoundVotesCountingUpgradeable is Initializable, XAllocationVot
 
     // Iterate through the apps and weights to calculate the total weight of votes cast by the voter
     for (uint256 i; i < apps.length; i++) {
-      // Check current app against ALL previous apps
-      for (uint256 j; j < i; j++) {
-        if (apps[i] == apps[j]) {
-          revert DuplicateAppVote();
-        }
-      }
-
+      // Update the total weight of votes cast by the voter
       totalWeight += weights[i];
 
       if (totalWeight > voterAvailableVotes) {

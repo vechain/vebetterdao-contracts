@@ -418,7 +418,7 @@ export async function deployAll(config: ContractsConfig) {
   )) as VoterRewards
 
   const xAllocationVoting = (await deployAndUpgrade(
-    ["XAllocationVotingV1", "XAllocationVotingV2", "XAllocationVotingV3", "XAllocationVoting"],
+    ["XAllocationVotingV1", "XAllocationVotingV2", "XAllocationVotingV3", "XAllocationVotingV4", "XAllocationVoting"],
     [
       [
         {
@@ -440,9 +440,10 @@ export async function deployAll(config: ContractsConfig) {
       [veBetterPassportContractAddress],
       [],
       [],
+      [],
     ],
     {
-      versions: [undefined, 2, 3, 4],
+      versions: [undefined, 2, 3, 4, 5],
       logOutput: true,
     },
   )) as XAllocationVoting
