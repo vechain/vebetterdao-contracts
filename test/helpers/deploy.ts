@@ -554,7 +554,7 @@ export const getOrDeployContractInstances = async ({
   await emissions.connect(owner).setVote2EarnAddress(await voterRewardsV1.getAddress())
 
   const xAllocationVoting = (await deployAndUpgrade(
-    ["XAllocationVotingV1", "XAllocationVotingV2", "XAllocationVotingV3", "XAllocationVoting"],
+    ["XAllocationVotingV1", "XAllocationVotingV2", "XAllocationVotingV3", "XAllocationVotingV4", "XAllocationVoting"],
     [
       [
         {
@@ -576,9 +576,10 @@ export const getOrDeployContractInstances = async ({
       [veBetterPassportContractAddress],
       [],
       [],
+      [],
     ],
     {
-      versions: [undefined, 2, 3, 4],
+      versions: [undefined, 2, 3, 4, 5],
       logOutput: false,
     },
   )) as XAllocationVoting

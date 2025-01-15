@@ -26,17 +26,17 @@ pragma solidity 0.8.20;
 import { ERC165Upgradeable } from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
 import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
-import { IXAllocationVotingGovernor, IERC6372 } from "../interfaces/IXAllocationVotingGovernor.sol";
-import { IXAllocationPool } from "../interfaces/IXAllocationPool.sol";
+import { IXAllocationVotingGovernorV4, IERC6372 } from "../interfaces/IXAllocationVotingGovernorV4.sol";
+import { IXAllocationPool } from "../../../interfaces/IXAllocationPool.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import { IX2EarnApps } from "../interfaces/IX2EarnApps.sol";
-import { IEmissions } from "../interfaces/IEmissions.sol";
-import { IVoterRewards } from "../interfaces/IVoterRewards.sol";
-import { IVeBetterPassport } from "../interfaces/IVeBetterPassport.sol";
+import { IX2EarnApps } from "../../../interfaces/IX2EarnApps.sol";
+import { IEmissions } from "../../../interfaces/IEmissions.sol";
+import { IVoterRewards } from "../../../interfaces/IVoterRewards.sol";
+import { IVeBetterPassport } from "../../../interfaces/IVeBetterPassport.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /**
- * @title XAllocationVotingGovernor
+ * @title XAllocationVotingGovernorV4
  * @dev Core of the voting system of allocation rounds, designed to be extended through various modules.
  *
  * This contract is abstract and requires several functions to be implemented in various modules:
@@ -50,24 +50,21 @@ import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
  *
  * ----- Version 2 -----
  * - Integrated VeBetterPassport
- *
- * ----- Version 5 -----
- * - Fixed duplicate app voting in same transaction in {RoundVotesCountingUpgradeable._countVote}
  */
-abstract contract XAllocationVotingGovernor is
+abstract contract XAllocationVotingGovernorV4 is
   Initializable,
   ContextUpgradeable,
   ERC165Upgradeable,
-  IXAllocationVotingGovernor
+  IXAllocationVotingGovernorV4
 {
   bytes32 private constant ALL_ROUND_STATES_BITMAP = bytes32((2 ** (uint8(type(RoundState).max) + 1)) - 1);
 
-  /// @custom:storage-location erc7201:b3tr.storage.XAllocationVotingGovernor
+  /// @custom:storage-location erc7201:b3tr.storage.XAllocationVotingGovernorV4
   struct XAllocationVotingGovernorStorage {
     string _name;
   }
 
-  // keccak256(abi.encode(uint256(keccak256("b3tr.storage.XAllocationVotingGovernor")) - 1)) & ~bytes32(uint256(0xff))
+  // keccak256(abi.encode(uint256(keccak256("b3tr.storage.XAllocationVotingGovernorV4")) - 1)) & ~bytes32(uint256(0xff))
   bytes32 private constant XAllocationVotingGovernorStorageLocation =
     0x7fb63bcd433c69110ad961bfbe38aef51814cbb9e11af6fe21011ae43fb4be00;
 
@@ -101,7 +98,7 @@ abstract contract XAllocationVotingGovernor is
     // but only do it after we have at least 1 round otherwise it will fail with `GovernorNonexistentRound`
     uint256 currentRound = currentRoundId();
     if (currentRound > 0) {
-      require(!isActive(currentRound), "XAllocationVotingGovernor: there can be only one round per time");
+      require(!isActive(currentRound), "XAllocationVotingGovernorV4: there can be only one round per time");
     }
 
     return _startNewRound(proposer);
@@ -114,8 +111,8 @@ abstract contract XAllocationVotingGovernor is
   function castVote(uint256 roundId, bytes32[] memory appIds, uint256[] memory voteWeights) public virtual {
     _validateStateBitmap(roundId, _encodeStateBitmap(RoundState.Active));
 
-    require(appIds.length == voteWeights.length, "XAllocationVotingGovernor: apps and weights length mismatch");
-    require(appIds.length > 0, "XAllocationVotingGovernor: no apps to vote for");
+    require(appIds.length == voteWeights.length, "XAllocationVotingGovernorV4: apps and weights length mismatch");
+    require(appIds.length > 0, "XAllocationVotingGovernorV4: no apps to vote for");
 
     uint256 _currentRoundSnapshot = currentRoundSnapshot();
 
@@ -155,7 +152,7 @@ abstract contract XAllocationVotingGovernor is
   function supportsInterface(
     bytes4 interfaceId
   ) public view virtual override(IERC165, ERC165Upgradeable) returns (bool) {
-    return interfaceId == type(IXAllocationVotingGovernor).interfaceId || super.supportsInterface(interfaceId);
+    return interfaceId == type(IXAllocationVotingGovernorV4).interfaceId || super.supportsInterface(interfaceId);
   }
 
   /**
@@ -170,7 +167,7 @@ abstract contract XAllocationVotingGovernor is
    * @dev Returns the version of the governor.
    */
   function version() public view virtual returns (string memory) {
-    return "5";
+    return "4";
   }
 
   /**
