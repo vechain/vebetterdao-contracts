@@ -45,7 +45,9 @@
     "clean": "rm -rf dist artifacts typechain-types cache node_modules",
     "lint": "eslint . --ext .ts",
     "format": "eslint . --ext .ts --fix",
-    "generate-docs": "npx hardhat docgen"
+    "generate-docs": "npx hardhat docgen",
+    "verify": "./scripts/verify/verify-contract.sh",
+    "verify-contract": "CONTRACT_NAME=$CONTRACT_NAME CONTRACT_ADDRESS=$CONTRACT_ADDRESS npx hardhat run scripts/verify/verifyContract.ts --network hardhat"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-chai-matchers": "^2.0.2",

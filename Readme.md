@@ -165,6 +165,27 @@ yarn generate-docs
 
 The same documentation is available at github pages: [GithubPages](https://vechain.github.io/vebetterdao-contracts/)
 
+### Verify contract
+
+To verify that the B3TR contract deployed at a specific address is the same as the one compiled in the repo, you can use the following command:
+
+```bash
+yarn verify B3TR <contract_address>
+```
+
+This command will check that the bytecode of the contract deployed at the given address is the same as the source code in the repo.
+
+To achieve this, it will:
+
+1. Deploy the contract on the hardhat network
+2. Fetch the bytecode of the deployed contract
+3. Compare the bytecode with the bytecode of the compiled contract
+
+Deploying the contract on the hardhat network is necessary because there is something wrong with the compiled bytecode,
+some bytes are different between the actual deployed contract, maybe due to the way VeChainThor is deploying contracts.
+
+This solution though is not perfect, it's just a quick way to verify that the contract deployed is the same as the one compiled in the repo.
+
 # Disclaimer
 
 This repository is for educational and demonstration purposes. The maintainers are not liable for any misuse or faults within the code.
