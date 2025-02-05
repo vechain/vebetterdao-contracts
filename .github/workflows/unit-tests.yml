@@ -41,7 +41,7 @@ jobs:
         run: yarn test:coverage:solidity
 
       - name: Upload Coverage for ${{ matrix.shard }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: coverage-${{ matrix.shard }}
           path: coverage/coverage-final.json
