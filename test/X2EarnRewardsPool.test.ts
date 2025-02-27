@@ -10,8 +10,7 @@ import {
 import { describe, it } from "mocha"
 import { getImplementationAddress } from "@openzeppelin/upgrades-core"
 import { deployProxy, upgradeProxy } from "../scripts/helpers"
-import { X2EarnRewardsPool, X2EarnRewardsPoolV2, X2EarnRewardsPoolV3 } from "../typechain-types"
-import { X2EarnRewardsPoolV1 } from "../typechain-types/contracts/depreceated/V1"
+import { X2EarnRewardsPool, X2EarnRewardsPoolV1, X2EarnRewardsPoolV2, X2EarnRewardsPoolV3, X2EarnRewardsPoolV4, X2EarnRewardsPoolV5 } from "../typechain-types"
 import { endorseApp } from "./helpers/xnodes"
 import { createLocalConfig } from "../config/contracts/envs/local"
 
@@ -58,7 +57,7 @@ describe("X2EarnRewardsPool - @shard12", function () {
       const { x2EarnRewardsPool } = await getOrDeployContractInstances({
         forceDeploy: false,
       })
-      expect(await x2EarnRewardsPool.version()).to.equal("5")
+      expect(await x2EarnRewardsPool.version()).to.equal("6")
     })
 
     it("X2EarnApps should be set correctly", async function () {
@@ -137,7 +136,7 @@ describe("X2EarnRewardsPool - @shard12", function () {
         forceDeploy: true,
       })
 
-      expect(await x2EarnRewardsPool.version()).to.equal("5")
+      expect(await x2EarnRewardsPool.version()).to.equal("6")
     })
 
     it("Storage should be preserved after upgrade", async () => {
@@ -223,19 +222,373 @@ describe("X2EarnRewardsPool - @shard12", function () {
       expect(await x2EarnRewardsPoolV4.availableFunds(await x2EarnApps.hashAppName("My app"))).to.equal(amount)
 
       // upgrade to new version
-      const x2EarnRewardsPool = (await upgradeProxy(
+      const x2EarnRewardsPoolV5 = (await upgradeProxy(
         "X2EarnRewardsPoolV4",
+        "X2EarnRewardsPoolV5",
+        await x2EarnRewardsPoolV1.getAddress(),
+        [],
+        {
+          version: 5,
+        },
+      )) as X2EarnRewardsPoolV5
+
+      expect(await x2EarnRewardsPoolV5.version()).to.equal("5")
+      expect(await x2EarnRewardsPoolV5.x2EarnApps()).to.equal(x2EarnAppsAddress)
+      expect(await x2EarnRewardsPoolV5.availableFunds(await x2EarnApps.hashAppName("My app"))).to.equal(amount)
+
+      // upgrade to new version
+      const x2EarnRewardsPool = (await upgradeProxy(
+        "X2EarnRewardsPoolV5",
         "X2EarnRewardsPool",
+        await x2EarnRewardsPoolV1.getAddress(),
+        [],
+        {
+          version: 6,
+        },
+      )) as X2EarnRewardsPool
+
+      expect(await x2EarnRewardsPool.version()).to.equal("6")
+      expect(await x2EarnRewardsPool.x2EarnApps()).to.equal(x2EarnAppsAddress)
+      expect(await x2EarnRewardsPool.availableFunds(await x2EarnApps.hashAppName("My app"))).to.equal(amount)
+    })
+
+    it("Should be able to distribute rewards without providing metadata", async () => {
+      const config = createLocalConfig()
+      const { owner, b3tr, x2EarnApps, minterAccount, veBetterPassport, otherAccounts } =
+        await getOrDeployContractInstances({
+          forceDeploy: true,
+          config,
+        })
+
+      const x2EarnRewardsPoolV1 = (await deployProxy("X2EarnRewardsPoolV1", [
+        owner.address,
+        owner.address,
+        owner.address,
+        await b3tr.getAddress(),
+        await x2EarnApps.getAddress(),
+      ])) as X2EarnRewardsPoolV1
+
+      expect(await x2EarnRewardsPoolV1.version()).to.equal("1")
+
+      // update x2EarnApps address
+      await x2EarnRewardsPoolV1.connect(owner).setX2EarnApps(await x2EarnApps.getAddress())
+      const x2EarnAppsAddress = await x2EarnRewardsPoolV1.x2EarnApps()
+
+      // deposit some funds
+      const amount = ethers.parseEther("100")
+
+      await b3tr.connect(minterAccount).mint(owner.address, amount)
+
+      // create app
+      await x2EarnApps.submitApp(owner.address, owner.address, "My app", "metadataURI")
+      await endorseApp(await x2EarnApps.hashAppName("My app"), owner)
+      await x2EarnApps.submitApp(owner.address, owner.address, "My app #2", "metadataURI")
+      await endorseApp(await x2EarnApps.hashAppName("My app #2"), minterAccount)
+
+      await b3tr.connect(owner).approve(await x2EarnRewardsPoolV1.getAddress(), amount)
+      await x2EarnRewardsPoolV1.connect(owner).deposit(amount, await x2EarnApps.hashAppName("My app"))
+
+      expect(await b3tr.balanceOf(await x2EarnRewardsPoolV1.getAddress())).to.equal(amount)
+
+      // upgrade to new version
+      const x2EarnRewardsPoolV2 = (await upgradeProxy(
+        "X2EarnRewardsPoolV1",
+        "X2EarnRewardsPoolV2",
+        await x2EarnRewardsPoolV1.getAddress(),
+        [owner.address, config.X_2_EARN_INITIAL_IMPACT_KEYS],
+        {
+          version: 2,
+        },
+      )) as X2EarnRewardsPoolV2
+
+      expect(await x2EarnRewardsPoolV2.version()).to.equal("2")
+      expect(await x2EarnRewardsPoolV2.x2EarnApps()).to.equal(x2EarnAppsAddress)
+      expect(await x2EarnRewardsPoolV2.availableFunds(await x2EarnApps.hashAppName("My app"))).to.equal(amount)
+
+      // upgrade to new version
+      const x2EarnRewardsPoolV3 = (await upgradeProxy(
+        "X2EarnRewardsPoolV2",
+        "X2EarnRewardsPoolV3",
+        await x2EarnRewardsPoolV1.getAddress(),
+        [await veBetterPassport.getAddress()],
+        {
+          version: 3,
+        },
+      )) as X2EarnRewardsPoolV3
+
+      expect(await x2EarnRewardsPoolV3.version()).to.equal("3")
+      expect(await x2EarnRewardsPoolV3.x2EarnApps()).to.equal(x2EarnAppsAddress)
+      expect(await x2EarnRewardsPoolV3.availableFunds(await x2EarnApps.hashAppName("My app"))).to.equal(amount)
+
+      // upgrade to new version
+      const x2EarnRewardsPoolV4 = (await upgradeProxy(
+        "X2EarnRewardsPoolV3",
+        "X2EarnRewardsPoolV4",
         await x2EarnRewardsPoolV1.getAddress(),
         [],
         {
           version: 4,
         },
+      )) as X2EarnRewardsPoolV4
+
+      expect(await x2EarnRewardsPoolV4.version()).to.equal("4")
+      expect(await x2EarnRewardsPoolV4.x2EarnApps()).to.equal(x2EarnAppsAddress)
+      expect(await x2EarnRewardsPoolV4.availableFunds(await x2EarnApps.hashAppName("My app"))).to.equal(amount)
+
+      // upgrade to new version
+      const x2EarnRewardsPoolV5 = (await upgradeProxy(
+        "X2EarnRewardsPoolV4",
+        "X2EarnRewardsPoolV5",
+        await x2EarnRewardsPoolV1.getAddress(),
+        [],
+        {
+          version: 5,
+        },
+      )) as X2EarnRewardsPoolV5
+
+      expect(await x2EarnRewardsPoolV5.version()).to.equal("5")
+      expect(await x2EarnRewardsPoolV5.x2EarnApps()).to.equal(x2EarnAppsAddress)
+      expect(await x2EarnRewardsPoolV5.availableFunds(await x2EarnApps.hashAppName("My app"))).to.equal(amount)
+
+      // upgrade to new version
+      const x2EarnRewardsPool = (await upgradeProxy(
+        "X2EarnRewardsPoolV5",
+        "X2EarnRewardsPool",
+        await x2EarnRewardsPoolV1.getAddress(),
+        [],
+        {
+          version: 6,
+        },
       )) as X2EarnRewardsPool
 
-      expect(await x2EarnRewardsPool.version()).to.equal("5")
+      expect(await x2EarnRewardsPool.version()).to.equal("6")
       expect(await x2EarnRewardsPool.x2EarnApps()).to.equal(x2EarnAppsAddress)
       expect(await x2EarnRewardsPool.availableFunds(await x2EarnApps.hashAppName("My app"))).to.equal(amount)
+
+      const user = otherAccounts[12]
+
+      await b3tr.connect(minterAccount).mint(owner.address, amount)
+
+      const appId = await x2EarnApps.hashAppName("My app")
+
+      // add reward distributor
+      await x2EarnApps.connect(owner).addRewardDistributor(appId, owner.address)
+      expect(await x2EarnApps.isRewardDistributor(appId, owner.address)).to.equal(true)
+
+      // distribute reward
+      const tx = await x2EarnRewardsPool
+        .connect(owner)
+        .distributeRewardWithProof(
+          appId,
+          ethers.parseEther("1"),
+          user.address,
+          ["image"],
+          ["https://image.png"],
+          ["carbon", "water"],
+          [100, 200],
+          "The description of the action",
+        )
+
+      const receipt = await tx.wait()
+
+      expect(await b3tr.balanceOf(user.address)).to.equal(ethers.parseEther("1"))
+      expect(await b3tr.balanceOf(await x2EarnRewardsPool.getAddress())).to.equal(ethers.parseEther("99"))
+
+      // event emitted
+      if (!receipt) throw new Error("No receipt")
+
+      let event = filterEventsByName(receipt.logs, "RewardDistributed")
+
+      expect(event).not.to.eql([])
+      expect(event[0].args[0]).to.equal(ethers.parseEther("1"))
+      expect(event[0].args[1]).to.equal(appId)
+      expect(event[0].args[2]).to.equal(user.address)
+
+      const emittedProof = JSON.parse(event[0].args[3])
+
+      expect(emittedProof).to.have.property("version")
+      expect(emittedProof.version).to.equal(2)
+      expect(emittedProof).to.have.deep.property("proof", { image: "https://image.png" })
+      expect(emittedProof).to.have.property("description")
+      expect(emittedProof.description).to.equal("The description of the action")
+      expect(emittedProof).to.have.deep.property("impact", { carbon: 100, water: 200 })
+
+      expect(event[0].args[4]).to.equal(owner.address)
+    })
+
+    it("Should be able to distribute rewards providing metadata", async () => {
+      const config = createLocalConfig()
+      const { owner, b3tr, x2EarnApps, minterAccount, veBetterPassport, otherAccounts } =
+        await getOrDeployContractInstances({
+          forceDeploy: true,
+          config,
+        })
+
+      const x2EarnRewardsPoolV1 = (await deployProxy("X2EarnRewardsPoolV1", [
+        owner.address,
+        owner.address,
+        owner.address,
+        await b3tr.getAddress(),
+        await x2EarnApps.getAddress(),
+      ])) as X2EarnRewardsPoolV1
+
+      expect(await x2EarnRewardsPoolV1.version()).to.equal("1")
+
+      // update x2EarnApps address
+      await x2EarnRewardsPoolV1.connect(owner).setX2EarnApps(await x2EarnApps.getAddress())
+      const x2EarnAppsAddress = await x2EarnRewardsPoolV1.x2EarnApps()
+
+      // deposit some funds
+      const amount = ethers.parseEther("100")
+
+      await b3tr.connect(minterAccount).mint(owner.address, amount)
+
+      // create app
+      await x2EarnApps.submitApp(owner.address, owner.address, "My app", "metadataURI")
+      await endorseApp(await x2EarnApps.hashAppName("My app"), owner)
+      await x2EarnApps.submitApp(owner.address, owner.address, "My app #2", "metadataURI")
+      await endorseApp(await x2EarnApps.hashAppName("My app #2"), minterAccount)
+
+      await b3tr.connect(owner).approve(await x2EarnRewardsPoolV1.getAddress(), amount)
+      await x2EarnRewardsPoolV1.connect(owner).deposit(amount, await x2EarnApps.hashAppName("My app"))
+
+      expect(await b3tr.balanceOf(await x2EarnRewardsPoolV1.getAddress())).to.equal(amount)
+
+      // upgrade to new version
+      const x2EarnRewardsPoolV2 = (await upgradeProxy(
+        "X2EarnRewardsPoolV1",
+        "X2EarnRewardsPoolV2",
+        await x2EarnRewardsPoolV1.getAddress(),
+        [owner.address, config.X_2_EARN_INITIAL_IMPACT_KEYS],
+        {
+          version: 2,
+        },
+      )) as X2EarnRewardsPoolV2
+
+      expect(await x2EarnRewardsPoolV2.version()).to.equal("2")
+      expect(await x2EarnRewardsPoolV2.x2EarnApps()).to.equal(x2EarnAppsAddress)
+      expect(await x2EarnRewardsPoolV2.availableFunds(await x2EarnApps.hashAppName("My app"))).to.equal(amount)
+
+      // upgrade to new version
+      const x2EarnRewardsPoolV3 = (await upgradeProxy(
+        "X2EarnRewardsPoolV2",
+        "X2EarnRewardsPoolV3",
+        await x2EarnRewardsPoolV1.getAddress(),
+        [await veBetterPassport.getAddress()],
+        {
+          version: 3,
+        },
+      )) as X2EarnRewardsPoolV3
+
+      expect(await x2EarnRewardsPoolV3.version()).to.equal("3")
+      expect(await x2EarnRewardsPoolV3.x2EarnApps()).to.equal(x2EarnAppsAddress)
+      expect(await x2EarnRewardsPoolV3.availableFunds(await x2EarnApps.hashAppName("My app"))).to.equal(amount)
+
+      // upgrade to new version
+      const x2EarnRewardsPoolV4 = (await upgradeProxy(
+        "X2EarnRewardsPoolV3",
+        "X2EarnRewardsPoolV4",
+        await x2EarnRewardsPoolV1.getAddress(),
+        [],
+        {
+          version: 4,
+        },
+      )) as X2EarnRewardsPoolV4
+
+      expect(await x2EarnRewardsPoolV4.version()).to.equal("4")
+      expect(await x2EarnRewardsPoolV4.x2EarnApps()).to.equal(x2EarnAppsAddress)
+      expect(await x2EarnRewardsPoolV4.availableFunds(await x2EarnApps.hashAppName("My app"))).to.equal(amount)
+
+      // upgrade to new version
+      const x2EarnRewardsPoolV5 = (await upgradeProxy(
+        "X2EarnRewardsPoolV4",
+        "X2EarnRewardsPoolV5",
+        await x2EarnRewardsPoolV1.getAddress(),
+        [],
+        {
+          version: 5,
+        },
+      )) as X2EarnRewardsPoolV5
+
+      expect(await x2EarnRewardsPoolV5.version()).to.equal("5")
+      expect(await x2EarnRewardsPoolV5.x2EarnApps()).to.equal(x2EarnAppsAddress)
+      expect(await x2EarnRewardsPoolV5.availableFunds(await x2EarnApps.hashAppName("My app"))).to.equal(amount)
+
+      // upgrade to new version
+      const x2EarnRewardsPool = (await upgradeProxy(
+        "X2EarnRewardsPoolV5",
+        "X2EarnRewardsPool",
+        await x2EarnRewardsPoolV1.getAddress(),
+        [],
+        {
+          version: 6,
+        },
+      )) as X2EarnRewardsPool
+
+      expect(await x2EarnRewardsPool.version()).to.equal("6")
+      expect(await x2EarnRewardsPool.x2EarnApps()).to.equal(x2EarnAppsAddress)
+      expect(await x2EarnRewardsPool.availableFunds(await x2EarnApps.hashAppName("My app"))).to.equal(amount)
+
+      const user = otherAccounts[12]
+
+      await b3tr.connect(minterAccount).mint(owner.address, amount)
+
+      const appId = await x2EarnApps.hashAppName("My app")
+
+      // add reward distributor
+      await x2EarnApps.connect(owner).addRewardDistributor(appId, owner.address)
+      expect(await x2EarnApps.isRewardDistributor(appId, owner.address)).to.equal(true)
+
+      // distribute reward
+      const tx = await x2EarnRewardsPool
+        .connect(owner)
+        .distributeRewardWithProofAndMetadata(
+          appId,
+          ethers.parseEther("1"),
+          user.address,
+          ["image"],
+          ["https://image.png"],
+          ["carbon", "water"],
+          [100, 200],
+          "The description of the action",
+          '{"country":"Brazil"}',
+        )
+
+      const receipt = await tx.wait()
+
+      expect(await b3tr.balanceOf(user.address)).to.equal(ethers.parseEther("1"))
+      expect(await b3tr.balanceOf(await x2EarnRewardsPool.getAddress())).to.equal(ethers.parseEther("99"))
+
+      // event emitted
+      if (!receipt) throw new Error("No receipt")
+
+      let event = filterEventsByName(receipt.logs, "RewardDistributed")
+
+      expect(event).not.to.eql([])
+      expect(event[0].args[0]).to.equal(ethers.parseEther("1"))
+      expect(event[0].args[1]).to.equal(appId)
+      expect(event[0].args[2]).to.equal(user.address)
+
+      const emittedProof = JSON.parse(event[0].args[3])
+
+      expect(emittedProof).to.have.property("version")
+      expect(emittedProof.version).to.equal(2)
+      expect(emittedProof).to.have.deep.property("proof", { image: "https://image.png" })
+      expect(emittedProof).to.have.property("description")
+      expect(emittedProof.description).to.equal("The description of the action")
+      expect(emittedProof).to.have.deep.property("impact", { carbon: 100, water: 200 })
+
+      let eventMetadata = filterEventsByName(receipt.logs, "RewardMetadata")
+
+      expect(eventMetadata).not.to.eql([])
+      expect(eventMetadata[0].args[0]).to.equal(ethers.parseEther("1"))
+      expect(eventMetadata[0].args[1]).to.equal(appId)
+      expect(eventMetadata[0].args[2]).to.equal(user.address)
+
+      const emittedMetadata = JSON.parse(eventMetadata[0].args[3])
+      expect(emittedMetadata).to.have.deep.property("country", "Brazil")
+
+      expect(event[0].args[4]).to.equal(owner.address)
     })
 
     it("Should not be able to upgrade if initial impact keys is empty", async () => {
@@ -570,7 +923,7 @@ describe("X2EarnRewardsPool - @shard12", function () {
       const receipt = await tx.wait()
       if (!receipt) throw new Error("No receipt")
 
-      const event = filterEventsByName(receipt.logs, "NewDeposit")
+      let event = filterEventsByName(receipt.logs, "NewDeposit")
       expect(event).not.to.eql([])
 
       expect(event[0].args[0]).to.equal(amount)
@@ -639,7 +992,7 @@ describe("X2EarnRewardsPool - @shard12", function () {
       const receipt = await tx.wait()
       if (!receipt) throw new Error("No receipt")
 
-      const event = filterEventsByName(receipt.logs, "TeamWithdrawal")
+      let event = filterEventsByName(receipt.logs, "TeamWithdrawal")
       expect(event).not.to.eql([])
       expect(event[0].args[0]).to.equal(ethers.parseEther("1"))
       expect(event[0].args[1]).to.equal(await x2EarnApps.hashAppName("My app"))
@@ -690,7 +1043,7 @@ describe("X2EarnRewardsPool - @shard12", function () {
       const receipt = await tx.wait()
       if (!receipt) throw new Error("No receipt")
 
-      const event = filterEventsByName(receipt.logs, "TeamWithdrawal")
+      let event = filterEventsByName(receipt.logs, "TeamWithdrawal")
       expect(event).not.to.eql([])
       expect(event[0].args[0]).to.equal(ethers.parseEther("1"))
       expect(event[0].args[1]).to.equal(await x2EarnApps.hashAppName("My app"))
@@ -857,7 +1210,7 @@ describe("X2EarnRewardsPool - @shard12", function () {
       // event emitted
       if (!receipt) throw new Error("No receipt")
 
-      const event = filterEventsByName(receipt.logs, "RewardDistributed")
+      let event = filterEventsByName(receipt.logs, "RewardDistributed")
 
       expect(event).not.to.eql([])
       expect(event[0].args[0]).to.equal(ethers.parseEther("1"))
@@ -1024,7 +1377,7 @@ describe("X2EarnRewardsPool - @shard12", function () {
     })
   })
 
-  describe("Proofs and Impact", async function () {
+  describe("Proofs, Impact and Metadata", async function () {
     it("Json proof is created by the contract", async function () {
       const { x2EarnRewardsPool, x2EarnApps, b3tr, owner, otherAccounts, minterAccount } =
         await getOrDeployContractInstances({
@@ -1070,7 +1423,7 @@ describe("X2EarnRewardsPool - @shard12", function () {
       // event emitted
       if (!receipt) throw new Error("No receipt")
 
-      const event = filterEventsByName(receipt.logs, "RewardDistributed")
+      let event = filterEventsByName(receipt.logs, "RewardDistributed")
 
       expect(event).not.to.eql([])
       expect(event[0].args[0]).to.equal(ethers.parseEther("1"))
@@ -1087,6 +1440,82 @@ describe("X2EarnRewardsPool - @shard12", function () {
       expect(emittedProof).to.have.deep.property("impact", { carbon: 100, water: 200 })
 
       expect(event[0].args[4]).to.equal(owner.address)
+    })
+
+    it("Json proof with Metadata is created by the contract", async function () {
+      const { x2EarnRewardsPool, x2EarnApps, b3tr, owner, otherAccounts, minterAccount } =
+        await getOrDeployContractInstances({
+          forceDeploy: true,
+          bootstrapAndStartEmissions: true,
+        })
+
+      const teamWallet = otherAccounts[10]
+      const user = otherAccounts[11]
+      const amount = ethers.parseEther("100")
+
+      await b3tr.connect(minterAccount).mint(owner.address, amount)
+
+      await x2EarnApps.submitApp(teamWallet.address, owner.address, "My app", "metadataURI")
+      const appId = await x2EarnApps.hashAppName("My app")
+      await endorseApp(appId, owner)
+
+      await x2EarnApps.connect(owner).addRewardDistributor(appId, owner.address)
+      expect(await x2EarnApps.isRewardDistributor(appId, owner.address)).to.equal(true)
+
+      // fill the pool
+      await b3tr.connect(owner).approve(await x2EarnRewardsPool.getAddress(), amount)
+      await x2EarnRewardsPool.connect(owner).deposit(amount, appId)
+
+      const tx = await x2EarnRewardsPool
+        .connect(owner)
+        .distributeRewardWithProofAndMetadata(
+          appId,
+          ethers.parseEther("1"),
+          user.address,
+          ["image"],
+          ["https://image.png"],
+          ["carbon", "water"],
+          [100, 200],
+          "The description of the action",
+          '{"country":"Brazil","city":"Brasília"}',
+        )
+
+      const receipt = await tx.wait()
+
+      expect(await b3tr.balanceOf(user.address)).to.equal(ethers.parseEther("1"))
+      expect(await b3tr.balanceOf(await x2EarnRewardsPool.getAddress())).to.equal(ethers.parseEther("99"))
+
+      // event emitted
+      if (!receipt) throw new Error("No receipt")
+
+      let event = filterEventsByName(receipt.logs, "RewardDistributed")
+
+      expect(event).not.to.eql([])
+      expect(event[0].args[0]).to.equal(ethers.parseEther("1"))
+      expect(event[0].args[1]).to.equal(appId)
+      expect(event[0].args[2]).to.equal(user.address)
+
+      const emittedProof = JSON.parse(event[0].args[3])
+
+      expect(emittedProof).to.have.property("version")
+      expect(emittedProof.version).to.equal(2)
+      expect(emittedProof).to.have.deep.property("proof", { image: "https://image.png" })
+      expect(emittedProof).to.have.property("description")
+      expect(emittedProof.description).to.equal("The description of the action")
+      expect(emittedProof).to.have.deep.property("impact", { carbon: 100, water: 200 })
+
+      expect(event[0].args[4]).to.equal(owner.address)
+
+      let eventMetadata = filterEventsByName(receipt.logs, "RewardMetadata")
+
+      expect(event).not.to.eql([])
+      expect(event[0].args[0]).to.equal(ethers.parseEther("1"))
+      expect(event[0].args[1]).to.equal(appId)
+      expect(event[0].args[2]).to.equal(user.address)
+
+      const emittedMetadata = JSON.parse(eventMetadata[0].args[3])
+      expect(emittedMetadata).to.have.deep.property("country", "Brazil")
+      expect(emittedMetadata).to.have.deep.property("city", "Brasília")
     })
 
     it("App can provide multiple proofs", async function () {
@@ -1134,7 +1563,7 @@ describe("X2EarnRewardsPool - @shard12", function () {
       // event emitted
       if (!receipt) throw new Error("No receipt")
 
-      const event = filterEventsByName(receipt.logs, "RewardDistributed")
+      let event = filterEventsByName(receipt.logs, "RewardDistributed")
 
       expect(event).not.to.eql([])
       expect(event[0].args[0]).to.equal(ethers.parseEther("1"))
@@ -1200,7 +1629,7 @@ describe("X2EarnRewardsPool - @shard12", function () {
       // event emitted
       if (!receipt) throw new Error("No receipt")
 
-      const event = filterEventsByName(receipt.logs, "RewardDistributed")
+      let event = filterEventsByName(receipt.logs, "RewardDistributed")
 
       expect(event).not.to.eql([])
       expect(event[0].args[0]).to.equal(ethers.parseEther("1"))
@@ -1266,7 +1695,7 @@ describe("X2EarnRewardsPool - @shard12", function () {
       // event emitted
       if (!receipt) throw new Error("No receipt")
 
-      const event = filterEventsByName(receipt.logs, "RewardDistributed")
+      let event = filterEventsByName(receipt.logs, "RewardDistributed")
 
       expect(event).not.to.eql([])
       expect(event[0].args[0]).to.equal(ethers.parseEther("1"))
@@ -1282,6 +1711,238 @@ describe("X2EarnRewardsPool - @shard12", function () {
       expect(emittedProof).to.have.deep.property("impact", { carbon: 100, water: 200 })
 
       expect(emittedProof).to.not.have.property("proof")
+    })
+
+    it("App can provide multiple proofs with metadata", async function () {
+      const { x2EarnRewardsPool, x2EarnApps, b3tr, owner, otherAccounts, minterAccount } =
+        await getOrDeployContractInstances({
+          forceDeploy: true,
+          bootstrapAndStartEmissions: true,
+        })
+
+      const teamWallet = otherAccounts[10]
+      const user = otherAccounts[11]
+      const amount = ethers.parseEther("100")
+
+      await b3tr.connect(minterAccount).mint(owner.address, amount)
+
+      await x2EarnApps.submitApp(teamWallet.address, owner.address, "My app", "metadataURI")
+      const appId = await x2EarnApps.hashAppName("My app")
+      await endorseApp(appId, owner)
+
+      await x2EarnApps.connect(owner).addRewardDistributor(appId, owner.address)
+      expect(await x2EarnApps.isRewardDistributor(appId, owner.address)).to.equal(true)
+
+      // fill the pool
+      await b3tr.connect(owner).approve(await x2EarnRewardsPool.getAddress(), amount)
+      await x2EarnRewardsPool.connect(owner).deposit(amount, appId)
+
+      const tx = await x2EarnRewardsPool
+        .connect(owner)
+        .distributeRewardWithProofAndMetadata(
+          appId,
+          ethers.parseEther("1"),
+          user.address,
+          ["image", "link"],
+          ["https://image.png", "https://twitter.com/tweet/1"],
+          ["carbon", "water"],
+          [100, 200],
+          "The description of the action",
+          '{"country":"Brazil","city":"Brasília"}',
+        )
+
+      const receipt = await tx.wait()
+
+      expect(await b3tr.balanceOf(user.address)).to.equal(ethers.parseEther("1"))
+      expect(await b3tr.balanceOf(await x2EarnRewardsPool.getAddress())).to.equal(ethers.parseEther("99"))
+
+      // event emitted
+      if (!receipt) throw new Error("No receipt")
+
+      let event = filterEventsByName(receipt.logs, "RewardDistributed")
+
+      expect(event).not.to.eql([])
+      expect(event[0].args[0]).to.equal(ethers.parseEther("1"))
+      expect(event[0].args[1]).to.equal(appId)
+      expect(event[0].args[2]).to.equal(user.address)
+
+      const emittedProof = JSON.parse(event[0].args[3])
+      expect(emittedProof).to.have.property("version")
+      expect(emittedProof.version).to.equal(2)
+      expect(emittedProof).to.have.deep.property("proof", {
+        image: "https://image.png",
+        link: "https://twitter.com/tweet/1",
+      })
+      expect(emittedProof).to.have.property("description")
+      expect(emittedProof.description).to.equal("The description of the action")
+      expect(emittedProof).to.have.deep.property("impact", { carbon: 100, water: 200 })
+
+      expect(event[0].args[4]).to.equal(owner.address)
+
+      let eventMetadata = filterEventsByName(receipt.logs, "RewardMetadata")
+
+      expect(eventMetadata).not.to.eql([])
+      expect(eventMetadata[0].args[0]).to.equal(ethers.parseEther("1"))
+      expect(eventMetadata[0].args[1]).to.equal(appId)
+      expect(eventMetadata[0].args[2]).to.equal(user.address)
+
+      const emittedMetadata = JSON.parse(eventMetadata[0].args[3])
+      expect(emittedMetadata).to.have.deep.property("country", "Brazil")
+      expect(emittedMetadata).to.have.deep.property("city", "Brasília")
+    })
+
+    it("App can provide multiple proofs with same metadata keys but only the latest is considered", async function () {
+      const { x2EarnRewardsPool, x2EarnApps, b3tr, owner, otherAccounts, minterAccount } =
+        await getOrDeployContractInstances({
+          forceDeploy: true,
+          bootstrapAndStartEmissions: true,
+        })
+
+      const teamWallet = otherAccounts[10]
+      const user = otherAccounts[11]
+      const amount = ethers.parseEther("100")
+
+      await b3tr.connect(minterAccount).mint(owner.address, amount)
+
+      await x2EarnApps.submitApp(teamWallet.address, owner.address, "My app", "metadataURI")
+      const appId = await x2EarnApps.hashAppName("My app")
+      await endorseApp(appId, owner)
+
+      await x2EarnApps.connect(owner).addRewardDistributor(appId, owner.address)
+      expect(await x2EarnApps.isRewardDistributor(appId, owner.address)).to.equal(true)
+
+      // fill the pool
+      await b3tr.connect(owner).approve(await x2EarnRewardsPool.getAddress(), amount)
+      await x2EarnRewardsPool.connect(owner).deposit(amount, appId)
+
+      const tx = await x2EarnRewardsPool
+        .connect(owner)
+        .distributeRewardWithProofAndMetadata(
+          appId,
+          ethers.parseEther("1"),
+          user.address,
+          ["image", "link"],
+          ["https://image.png", "https://twitter.com/tweet/1"],
+          ["carbon", "water"],
+          [100, 200],
+          "The description of the action",
+          '{"country":"Brazil","country":"Brazil2"}',
+        )
+
+      const receipt = await tx.wait()
+
+      expect(await b3tr.balanceOf(user.address)).to.equal(ethers.parseEther("1"))
+      expect(await b3tr.balanceOf(await x2EarnRewardsPool.getAddress())).to.equal(ethers.parseEther("99"))
+
+      // event emitted
+      if (!receipt) throw new Error("No receipt")
+
+      let event = filterEventsByName(receipt.logs, "RewardDistributed")
+
+      expect(event).not.to.eql([])
+      expect(event[0].args[0]).to.equal(ethers.parseEther("1"))
+      expect(event[0].args[1]).to.equal(appId)
+      expect(event[0].args[2]).to.equal(user.address)
+
+      const emittedProof = JSON.parse(event[0].args[3])
+
+      expect(emittedProof).to.have.property("version")
+      expect(emittedProof.version).to.equal(2)
+      expect(emittedProof).to.have.deep.property("proof", {
+        image: "https://image.png",
+        link: "https://twitter.com/tweet/1",
+      })
+      expect(emittedProof).to.have.property("description")
+      expect(emittedProof.description).to.equal("The description of the action")
+      expect(emittedProof).to.have.deep.property("impact", { carbon: 100, water: 200 })
+
+      expect(event[0].args[4]).to.equal(owner.address)
+
+      let eventMetadata = filterEventsByName(receipt.logs, "RewardMetadata")
+
+      expect(eventMetadata).not.to.eql([])
+      expect(eventMetadata[0].args[0]).to.equal(ethers.parseEther("1"))
+      expect(eventMetadata[0].args[1]).to.equal(appId)
+      expect(eventMetadata[0].args[2]).to.equal(user.address)
+
+      const emittedMetadata = JSON.parse(eventMetadata[0].args[3])
+      expect(emittedMetadata).to.have.deep.property("country", "Brazil2")
+    })
+
+    it("App can provide only proofs without impact and with metadata", async function () {
+      const { x2EarnRewardsPool, x2EarnApps, b3tr, owner, otherAccounts, minterAccount } =
+        await getOrDeployContractInstances({
+          forceDeploy: true,
+          bootstrapAndStartEmissions: true,
+        })
+
+      const teamWallet = otherAccounts[10]
+      const user = otherAccounts[11]
+      const amount = ethers.parseEther("100")
+
+      await b3tr.connect(minterAccount).mint(owner.address, amount)
+
+      await x2EarnApps.submitApp(teamWallet.address, owner.address, "My app", "metadataURI")
+      const appId = await x2EarnApps.hashAppName("My app")
+      await endorseApp(appId, owner)
+
+      await x2EarnApps.connect(owner).addRewardDistributor(appId, owner.address)
+      expect(await x2EarnApps.isRewardDistributor(appId, owner.address)).to.equal(true)
+
+      // fill the pool
+      await b3tr.connect(owner).approve(await x2EarnRewardsPool.getAddress(), amount)
+      await x2EarnRewardsPool.connect(owner).deposit(amount, appId)
+
+      const tx = await x2EarnRewardsPool
+        .connect(owner)
+        .distributeRewardWithProofAndMetadata(
+          appId,
+          ethers.parseEther("1"),
+          user.address,
+          ["image", "link"],
+          ["https://image.png", "https://twitter.com/tweet/1"],
+          [],
+          [],
+          "The description of the action",
+          '{"country":"Brazil","city":"Brasília"}',
+        )
+
+      const receipt = await tx.wait()
+
+      expect(await b3tr.balanceOf(user.address)).to.equal(ethers.parseEther("1"))
+      expect(await b3tr.balanceOf(await x2EarnRewardsPool.getAddress())).to.equal(ethers.parseEther("99"))
+
+      // event emitted
+      if (!receipt) throw new Error("No receipt")
+
+      let event = filterEventsByName(receipt.logs, "RewardDistributed")
+
+      expect(event).not.to.eql([])
+      expect(event[0].args[0]).to.equal(ethers.parseEther("1"))
+      expect(event[0].args[1]).to.equal(appId)
+      expect(event[0].args[2]).to.equal(user.address)
+
+      const emittedProof = JSON.parse(event[0].args[3])
+      expect(emittedProof).to.have.property("version")
+      expect(emittedProof.version).to.equal(2)
+      expect(emittedProof).to.have.deep.property("proof", {
+        image: "https://image.png",
+        link: "https://twitter.com/tweet/1",
+      })
+      expect(emittedProof).to.have.property("description")
+      expect(emittedProof.description).to.equal("The description of the action")
+      expect(emittedProof).to.not.have.property("impact")
+
+      let eventMetadata = filterEventsByName(receipt.logs, "RewardMetadata")
+
+      expect(eventMetadata).not.to.eql([])
+      expect(eventMetadata[0].args[0]).to.equal(ethers.parseEther("1"))
+      expect(eventMetadata[0].args[1]).to.equal(appId)
+      expect(eventMetadata[0].args[2]).to.equal(user.address)
+
+      const emittedMetadata = JSON.parse(eventMetadata[0].args[3])
+      expect(emittedMetadata).to.have.deep.property("country", "Brazil")
+      expect(emittedMetadata).to.have.deep.property("city", "Brasília")
     })
 
     it("If only description is passed, without proofs and impact, nothing is emitted", async function () {
@@ -1329,7 +1990,7 @@ describe("X2EarnRewardsPool - @shard12", function () {
       // event emitted
       if (!receipt) throw new Error("No receipt")
 
-      const event = filterEventsByName(receipt.logs, "RewardDistributed")
+      let event = filterEventsByName(receipt.logs, "RewardDistributed")
 
       expect(event).not.to.eql([])
       expect(event[0].args[0]).to.equal(ethers.parseEther("1"))
@@ -1383,7 +2044,7 @@ describe("X2EarnRewardsPool - @shard12", function () {
       // event emitted
       if (!receipt) throw new Error("No receipt")
 
-      const event = filterEventsByName(receipt.logs, "RewardDistributed")
+      let event = filterEventsByName(receipt.logs, "RewardDistributed")
 
       expect(event).not.to.eql([])
       expect(event[0].args[0]).to.equal(ethers.parseEther("1"))
@@ -1437,13 +2098,88 @@ describe("X2EarnRewardsPool - @shard12", function () {
       // event emitted
       if (!receipt) throw new Error("No receipt")
 
-      const event = filterEventsByName(receipt.logs, "RewardDistributed")
+      let event = filterEventsByName(receipt.logs, "RewardDistributed")
 
       expect(event).not.to.eql([])
       expect(event[0].args[0]).to.equal(ethers.parseEther("1"))
       expect(event[0].args[1]).to.equal(appId)
       expect(event[0].args[2]).to.equal(user.address)
       expect(event[0].args[3]).to.equal("")
+    })
+
+    it("If no metadata is passed, metadata event is not emitted", async function () {
+      const { x2EarnRewardsPool, x2EarnApps, b3tr, owner, otherAccounts, minterAccount } =
+        await getOrDeployContractInstances({
+          forceDeploy: true,
+          bootstrapAndStartEmissions: true,
+        })
+
+      const teamWallet = otherAccounts[10]
+      const user = otherAccounts[11]
+      const amount = ethers.parseEther("100")
+
+      await b3tr.connect(minterAccount).mint(owner.address, amount)
+
+      await x2EarnApps.submitApp(teamWallet.address, owner.address, "My app", "metadataURI")
+      const appId = await x2EarnApps.hashAppName("My app")
+      await endorseApp(appId, owner)
+
+      await x2EarnApps.connect(owner).addRewardDistributor(appId, owner.address)
+      expect(await x2EarnApps.isRewardDistributor(appId, owner.address)).to.equal(true)
+
+      // fill the pool
+      await b3tr.connect(owner).approve(await x2EarnRewardsPool.getAddress(), amount)
+      await x2EarnRewardsPool.connect(owner).deposit(amount, appId)
+
+      const tx = await x2EarnRewardsPool
+        .connect(owner)
+        .distributeRewardWithProofAndMetadata(
+          appId,
+          ethers.parseEther("1"),
+          user.address,
+          ["image", "link"],
+          ["https://image.png", "https://twitter.com/tweet/1"],
+          [],
+          [],
+          "The description of the action",
+          '{"":""}',
+        )
+
+      const receipt = await tx.wait()
+
+      expect(await b3tr.balanceOf(user.address)).to.equal(ethers.parseEther("1"))
+      expect(await b3tr.balanceOf(await x2EarnRewardsPool.getAddress())).to.equal(ethers.parseEther("99"))
+
+      // event emitted
+      if (!receipt) throw new Error("No receipt")
+
+      let event = filterEventsByName(receipt.logs, "RewardDistributed")
+
+      expect(event).not.to.eql([])
+      expect(event[0].args[0]).to.equal(ethers.parseEther("1"))
+      expect(event[0].args[1]).to.equal(appId)
+      expect(event[0].args[2]).to.equal(user.address)
+
+      const emittedProof = JSON.parse(event[0].args[3])
+
+      expect(emittedProof).to.have.property("version")
+      expect(emittedProof.version).to.equal(2)
+      expect(emittedProof).to.have.deep.property("proof", {
+        image: "https://image.png",
+        link: "https://twitter.com/tweet/1",
+      })
+      expect(emittedProof).to.have.property("description")
+      expect(emittedProof.description).to.equal("The description of the action")
+
+      let eventMetadata = filterEventsByName(receipt.logs, "RewardMetadata")
+
+      expect(eventMetadata).not.to.eql([])
+      expect(eventMetadata[0].args[0]).to.equal(ethers.parseEther("1"))
+      expect(eventMetadata[0].args[1]).to.equal(appId)
+      expect(eventMetadata[0].args[2]).to.equal(user.address)
+
+      const emittedMetadata = JSON.parse(eventMetadata[0].args[3])
+      expect(emittedMetadata).to.have.deep.property("", "")
     })
 
     it("If a non valid proof type is passed, it reverts", async function () {
@@ -1593,6 +2329,52 @@ describe("X2EarnRewardsPool - @shard12", function () {
             ["carbon"],
             [100, 200],
             "The description of the action",
+          ),
+      )
+    })
+
+    it("If a non valid metadata is passed, it reverts", async function () {
+      const { x2EarnRewardsPool, x2EarnApps, owner } = await getOrDeployContractInstances({
+        forceDeploy: true,
+        bootstrapAndStartEmissions: true,
+      })
+
+      await catchRevert(
+        x2EarnRewardsPool
+          .connect(owner)
+          .distributeRewardWithProofAndMetadata(
+            await x2EarnApps.hashAppName("My app"),
+            ethers.parseEther("1"),
+            owner.address,
+            ["image"],
+            ["https://image.png"],
+            ["carbon", "water"],
+            [100, 200],
+            "The description of the action",
+            '{"city":"InvalidValue""Brasilia"}',
+          ),
+      )
+    })
+
+    it("If metadata values length differs from metadata keys length, it reverts", async function () {
+      const { x2EarnRewardsPool, x2EarnApps, owner } = await getOrDeployContractInstances({
+        forceDeploy: true,
+        bootstrapAndStartEmissions: true,
+      })
+
+      await catchRevert(
+        x2EarnRewardsPool
+          .connect(owner)
+          .distributeRewardWithProofAndMetadata(
+            await x2EarnApps.hashAppName("My app"),
+            ethers.parseEther("1"),
+            owner.address,
+            ["image"],
+            ["https://image.png"],
+            ["carbon", "water"],
+            [100, 200],
+            "The description of the action",
+            '{"country":"Brazil","city":"Brasília"}',
           ),
       )
     })
@@ -1777,7 +2559,7 @@ describe("X2EarnRewardsPool - @shard12", function () {
       // event emitted
       if (!receipt) throw new Error("No receipt")
 
-      const event = filterEventsByName(receipt.logs, "RewardDistributed")
+      let event = filterEventsByName(receipt.logs, "RewardDistributed")
 
       expect(event).not.to.eql([])
       expect(event[0].args[0]).to.equal(ethers.parseEther("1"))
