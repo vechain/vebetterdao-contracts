@@ -28,7 +28,7 @@ import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/ac
 import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import { IB3TR } from "../../interfaces/IB3TR.sol";
 import { IX2EarnAppsV2 } from "../V2/interfaces/IX2EarnAppsV2.sol";
-import { IX2EarnRewardsPool } from "../../interfaces/IX2EarnRewardsPool.sol";
+import { IX2EarnRewardsPoolV5 } from "../V5/interfaces/IX2EarnRewardsPoolV5.sol";
 import { IERC1155Receiver } from "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 import { IERC721Receiver } from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
@@ -52,7 +52,7 @@ import { IVeBetterPassport } from "../../interfaces/IVeBetterPassport.sol";
  * - Use new X2EarnApps interface that supports node endorsement
  */
 contract X2EarnRewardsPoolV4 is
-  IX2EarnRewardsPool,
+  IX2EarnRewardsPoolV5,
   UUPSUpgradeable,
   AccessControlUpgradeable,
   ReentrancyGuardUpgradeable

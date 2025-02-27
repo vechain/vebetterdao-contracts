@@ -278,7 +278,14 @@ export async function deployAll(config: ContractsConfig) {
   )) as X2EarnApps
 
   const x2EarnRewardsPool = (await deployAndUpgrade(
-    ["X2EarnRewardsPoolV1", "X2EarnRewardsPoolV2", "X2EarnRewardsPoolV3", "X2EarnRewardsPoolV4", "X2EarnRewardsPool"],
+    [
+      "X2EarnRewardsPoolV1",
+      "X2EarnRewardsPoolV2",
+      "X2EarnRewardsPoolV3",
+      "X2EarnRewardsPoolV4",
+      "X2EarnRewardsPoolV5",
+      "X2EarnRewardsPool",
+    ],
     [
       [
         config.CONTRACTS_ADMIN_ADDRESS, // admin
@@ -294,10 +301,11 @@ export async function deployAll(config: ContractsConfig) {
       [veBetterPassportContractAddress],
       [],
       [],
+      [],
     ],
     {
       logOutput: true,
-      versions: [undefined, 2, 3, 4, 5],
+      versions: [undefined, 2, 3, 4, 5, 6],
     },
   )) as X2EarnRewardsPool
 

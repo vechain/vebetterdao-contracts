@@ -457,17 +457,26 @@ export const getOrDeployContractInstances = async ({
     },
   )) as X2EarnApps
 
+
   const x2EarnRewardsPool = (await deployAndUpgrade(
-    ["X2EarnRewardsPoolV1", "X2EarnRewardsPoolV2", "X2EarnRewardsPoolV3", "X2EarnRewardsPoolV4", "X2EarnRewardsPool"],
+    [
+      "X2EarnRewardsPoolV1",
+      "X2EarnRewardsPoolV2",
+      "X2EarnRewardsPoolV3",
+      "X2EarnRewardsPoolV4",
+      "X2EarnRewardsPoolV5",
+      "X2EarnRewardsPool",
+    ],
     [
       [owner.address, owner.address, owner.address, await b3tr.getAddress(), await x2EarnApps.getAddress()],
       [owner.address, config.X_2_EARN_INITIAL_IMPACT_KEYS],
       [veBetterPassportContractAddress],
       [],
       [],
+      [],
     ],
     {
-      versions: [undefined, 2, 3, 4, 5],
+      versions: [undefined, 2, 3, 4, 5, 6],
     },
   )) as X2EarnRewardsPool
 

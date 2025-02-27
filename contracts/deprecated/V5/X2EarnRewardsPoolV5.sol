@@ -26,13 +26,13 @@ pragma solidity 0.8.20;
 import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
-import { IB3TR } from "./interfaces/IB3TR.sol";
-import { IX2EarnApps } from "./interfaces/IX2EarnApps.sol";
-import { IX2EarnRewardsPool } from "./interfaces/IX2EarnRewardsPool.sol";
+import { IB3TR } from "../../interfaces/IB3TR.sol";
+import { IX2EarnApps } from "../../interfaces/IX2EarnApps.sol";
+import { IX2EarnRewardsPoolV5 } from "./interfaces/IX2EarnRewardsPoolV5.sol";
 import { IERC1155Receiver } from "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 import { IERC721Receiver } from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
-import { IVeBetterPassport } from "./interfaces/IVeBetterPassport.sol";
+import { IVeBetterPassport } from "../../interfaces/IVeBetterPassport.sol";
 
 /**
  * @title X2EarnRewardsPool
@@ -52,11 +52,9 @@ import { IVeBetterPassport } from "./interfaces/IVeBetterPassport.sol";
  * - Updated the X2EarnApps interface to support node endorsement feature
  * ----- Version 5 -----
  * - Updated the X2EarnApps interface to support node cooldown functionality
- * ----- Version 6 -----
- * - Added distribute with metadata functionality
  */
-contract X2EarnRewardsPool is
-  IX2EarnRewardsPool,
+contract X2EarnRewardsPoolV5 is
+  IX2EarnRewardsPoolV5,
   UUPSUpgradeable,
   AccessControlUpgradeable,
   ReentrancyGuardUpgradeable
@@ -205,8 +203,7 @@ contract X2EarnRewardsPool is
 
   /**
    * @dev Distribute rewards to a user with a self provided proof.
-   * @notice This function was initially planned for deprecation but has been retained due to its continued relevance and usage.
-   * It remains for backward compatibility and is not scheduled for removal at this time.
+   * @notice This function is deprecated and kept for backwards compatibility, will be removed in future versions.
    */
   function distributeRewardDeprecated(bytes32 appId, uint256 amount, address receiver, string memory proof) external {
     // emit event with provided json proof
@@ -240,25 +237,6 @@ contract X2EarnRewardsPool is
     string memory description
   ) external {
     _emitProof(appId, amount, receiver, proofTypes, proofValues, impactCodes, impactValues, description);
-    _distributeReward(appId, amount, receiver);
-  }
-
-  /**
-   * @dev See {IX2EarnRewardsPool-distributeRewardWithProofAndMetadata}
-   */
-  function distributeRewardWithProofAndMetadata(
-    bytes32 appId,
-    uint256 amount,
-    address receiver,
-    string[] memory proofTypes,
-    string[] memory proofValues,
-    string[] memory impactCodes,
-    uint256[] memory impactValues,
-    string memory description,
-    string memory metadata
-  ) external {
-    _emitProof(appId, amount, receiver, proofTypes, proofValues, impactCodes, impactValues, description);
-    _emitMetadata(appId, amount, receiver, metadata);
     _distributeReward(appId, amount, receiver);
   }
 
@@ -316,19 +294,6 @@ contract X2EarnRewardsPool is
     emit RewardDistributed(amount, appId, receiver, jsonProof, msg.sender);
   }
 
-
-  /**
-   * @dev Emits the RewardMetadata event with the provided metadata.
-   */
-  function _emitMetadata(
-    bytes32 appId,
-    uint256 amount,
-    address receiver,
-    string memory metadata
-  ) internal {
-    // emit event
-    emit RewardMetadata(amount, appId, receiver, metadata, msg.sender);
-  }
   /**
    * @dev see {IX2EarnRewardsPool-buildProof}
    */
@@ -531,7 +496,7 @@ contract X2EarnRewardsPool is
    * @dev See {IX2EarnRewardsPool-version}
    */
   function version() external pure virtual returns (string memory) {
-    return "6";
+    return "5";
   }
 
   /**
@@ -557,9 +522,6 @@ contract X2EarnRewardsPool is
     X2EarnRewardsPoolStorage storage $ = _getX2EarnRewardsPoolStorage();
     return $.allowedImpactKeys;
   }
-
-
-  
 
   /**
    * @dev Retrieves the VeBetterPassport contract.
