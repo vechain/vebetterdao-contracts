@@ -6,6 +6,7 @@ This document provides a detailed log of upgrades to the smart contract suite, e
 
 | Date                | Contract(s)                                                                                                                   | Summary                                                                                        |
 | ------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| 27th February 2025  | `X2EarnRewardsPool` version `6`                                                                                               | Added support for rewards distribution with metadata.                                          |
 | 13th January 2025   | `XAllocationVoting` version `5`                                                                                               | Fixed issue with duplicate app voting in the same transaction.                                 |
 | 4th December 2024   | `X2EarnApps` version `3`, `XAllocationVoting` version `4`, `XAllocationPool` version `4`, and `X2EarnRewardsPool` version `5` | Added endorsement cooldown feature to X2Earn contracts.                                        |
 | 29th November 2024  | `VeBetterPassport` version `3`, `GalaxyMember` version `3`, and `VoterRewards` version 4                                      | Added GM level as personhood check in VeBetter passport.                                       |
@@ -21,6 +22,44 @@ This document provides a detailed log of upgrades to the smart contract suite, e
 | 4th September 2024  | `X2EarnRewardsPool` version `2`                                                                                               | - Added impact key management and proof building                                               |
 | 31st August 2024    | `VoterRewards` version `2`                                                                                                    | - Added quadratic rewarding features                                                           |
 | 29th August 2024    | `B3TRGovernor` version `2`                                                                                                    | Updated access control modifiers                                                               |
+
+---
+
+## Upgrade `X2EarnRewardsPool` to Version 6
+
+This upgrade introduces the ability for XApps to include metadata in the reward distribution process, enabling richer and more context-specific information to be stored and emitted during events. A new function, `distributeRewardWithProofAndMetadata`, has been added for this purpose.
+
+### Key Updates
+
+- **Backward Compatibility Preserved**: The original `distributeRewardWithProof` function remains unchanged and continues to work as before for apps that do not wish to use metadata.
+- **New Metadata Functionality**: The `distributeRewardWithProofAndMetadata` function accepts a string intended to be a JSON representation. A dedicated event, `RewardMetadata`, is emitted to store this information, following the established internal standards of `_emitProof`.
+
+---
+
+### Changes 🚀
+
+- **Upgraded Contracts:**
+  - `X2EarnRewardsPool.sol` updated to version `6`.
+
+---
+
+### Storage Changes 📦
+
+- None.
+
+---
+
+### New Features 🚀
+
+- **`X2EarnRewardsPool`:**
+  - Added `distributeRewardWithProofAndMetadata()`, which accepts a string intended to be a JSON representation and emits a new event, `RewardMetadata`, containing this information.
+  - Updated internal logic with `_emitMetadata`, following the `_emitProof` pattern, to emit the event with the JSON data.
+
+---
+
+### Bug Fixes 🐛
+
+- None.
 
 ---
 
