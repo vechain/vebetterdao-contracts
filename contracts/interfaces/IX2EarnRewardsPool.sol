@@ -60,6 +60,23 @@ interface IX2EarnRewardsPool {
    */
   event RegisterActionFailed(string reason, bytes lowLevelData);
 
+
+/**
+  * @dev Event emitted when a reward is emitted by an app with proof and metadata.
+  * @param amount The amount of $B3TR rewarded.
+  * @param appId The ID of the app that emitted the reward.
+  * @param receiver The address of the user that received the reward.
+  * @param metadata The metadata of the sustainable action that was performed.
+  * @param distributor The address of the user that distributed the reward.
+ */
+  event RewardMetadata(
+    uint256 amount,
+    bytes32 indexed appId,
+    address indexed receiver,
+    string metadata,
+    address indexed distributor
+  );
+
   /**
    * @dev Retrieves the current version of the contract.
    *
@@ -133,6 +150,31 @@ interface IX2EarnRewardsPool {
     string[] memory impactCodes, // carbon, water, etc.
     uint256[] memory impactValues, // 100, 200, etc.,
     string memory description
+  ) external;
+
+  /**
+   * @dev Function used by x2earn apps to reward users that performed sustainable actions and emit metadata event.
+   *
+   * @param appId the app id that is emitting the reward
+   * @param amount the amount of B3TR token the user is rewarded with
+   * @param receiver the address of the user that performed the sustainable action and is rewarded
+   * @param proofTypes the types of the proof of the sustainable action
+   * @param proofValues the values of the proof of the sustainable action
+   * @param impactCodes the codes of the impacts of the sustainable action
+   * @param impactValues the values of the impacts of the sustainable action
+   * @param description the description of the sustainable action
+   * @param metadata the metadata of the sustainable action
+   */
+  function distributeRewardWithProofAndMetadata(
+    bytes32 appId,
+    uint256 amount,
+    address receiver,
+    string[] memory proofTypes, // link, image, video, text, etc.
+    string[] memory proofValues, // "https://...", "Qm...", etc.,
+    string[] memory impactCodes, // carbon, water, etc.
+    uint256[] memory impactValues, // 100, 200, etc.,
+    string memory description,
+    string memory metadata // "{'country': 'Brazil', 'city': 'Brasilia'}"
   ) external;
 
   /**

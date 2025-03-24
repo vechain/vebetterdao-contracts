@@ -44,6 +44,49 @@ export async function passportLibraries() {
   await PassportWhitelistAndBlacklistLogicV1Lib.waitForDeployment()
 
   /// ______________ VERSION 2 ______________
+
+  // Deploy Passport Checks Logic
+  const PassportChecksLogicV2 = await ethers.getContractFactory("PassportChecksLogicV2")
+  const PassportChecksLogicLibV2 = await PassportChecksLogicV2.deploy()
+  await PassportChecksLogicLibV2.waitForDeployment()
+
+  // Deploy Passport Configurator
+  const PassportConfiguratorV2 = await ethers.getContractFactory("PassportConfiguratorV2")
+  const PassportConfiguratorLibV2 = await PassportConfiguratorV2.deploy()
+  await PassportConfiguratorLibV2.waitForDeployment()
+
+  // Deploy Passport Delegation Logic
+  const PassportEntityLogicV2 = await ethers.getContractFactory("PassportEntityLogicV2")
+  const PassportEntityLogicLibV2 = await PassportEntityLogicV2.deploy()
+  await PassportEntityLogicLibV2.waitForDeployment()
+
+  // Deploy Passport Delegation Logic
+  const PassportDelegationLogicV2 = await ethers.getContractFactory("PassportDelegationLogicV2")
+  const PassportDelegationLogicLibV2 = await PassportDelegationLogicV2.deploy()
+  await PassportDelegationLogicLibV2.waitForDeployment()
+
+  // Deploy Passport PoP Score Logic
+  const PassportPoPScoreLogicV2 = await ethers.getContractFactory("PassportPoPScoreLogicV2")
+  const PassportPoPScoreLogicLibV2 = await PassportPoPScoreLogicV2.deploy()
+  await PassportPoPScoreLogicLibV2.waitForDeployment()
+
+  // Deploy Passport Signaling Logic
+  const PassportSignalingLogicV2 = await ethers.getContractFactory("PassportSignalingLogicV2")
+  const PassportSignalingLogicLibV2 = await PassportSignalingLogicV2.deploy()
+  await PassportSignalingLogicLibV2.waitForDeployment()
+
+  // Deploy Passport Personhood Logic
+  const PassportPersonhoodLogicV2 = await ethers.getContractFactory("PassportPersonhoodLogicV2")
+  const PassportPersonhoodLogicLibV2 = await PassportPersonhoodLogicV2.deploy()
+  await PassportPersonhoodLogicLibV2.waitForDeployment()
+
+  // Deploy Passport Whitelist and Blacklist Logic
+  const PassportWhitelistAndBlacklistLogicV2 = await ethers.getContractFactory("PassportWhitelistAndBlacklistLogicV2")
+  const PassportWhitelistAndBlacklistLogicLibV2 = await PassportWhitelistAndBlacklistLogicV2.deploy()
+  await PassportWhitelistAndBlacklistLogicLibV2.waitForDeployment()
+
+  //// ______________ VERSION 3 ______________
+
   // Deploy Passport Checks Logic
   const PassportChecksLogic = await ethers.getContractFactory("PassportChecksLogic")
   const PassportChecksLogicLib = await PassportChecksLogic.deploy()
@@ -93,6 +136,14 @@ export async function passportLibraries() {
     PassportPoPScoreLogicV1: PassportPoPScoreLogicV1Lib,
     PassportSignalingLogicV1: PassportSignalingLogicV1Lib,
     PassportWhitelistAndBlacklistLogicV1: PassportWhitelistAndBlacklistLogicV1Lib,
+    PassportChecksLogicV2: PassportChecksLogicLibV2,
+    PassportConfiguratorV2: PassportConfiguratorLibV2,
+    PassportEntityLogicV2: PassportEntityLogicLibV2,
+    PassportDelegationLogicV2: PassportDelegationLogicLibV2,
+    PassportPersonhoodLogicV2: PassportPersonhoodLogicLibV2,
+    PassportPoPScoreLogicV2: PassportPoPScoreLogicLibV2,
+    PassportSignalingLogicV2: PassportSignalingLogicLibV2,
+    PassportWhitelistAndBlacklistLogicV2: PassportWhitelistAndBlacklistLogicLibV2,
     PassportChecksLogic: PassportChecksLogicLib,
     PassportConfigurator: PassportConfiguratorLib,
     PassportEntityLogic: PassportEntityLogicLib,

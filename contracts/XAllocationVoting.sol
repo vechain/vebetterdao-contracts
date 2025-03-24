@@ -47,6 +47,12 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
  * ----- Version 2 -----
  * - Integrated VeBetterPassport
  * - Added check to ensure that the vote weight for an XApp cast by a user is greater than the voting threshold
+ *
+ * ----- Version 3 -----
+ * - Updated the X2EarnApps interface to support node endorsement feature
+ *
+ * ----- Version 4 -----
+ * - Updated the X2EarnApps interface to support node cooldown functionality
  */
 contract XAllocationVoting is
   XAllocationVotingGovernor,

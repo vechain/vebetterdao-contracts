@@ -50,6 +50,9 @@ import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
  *
  * ----- Version 2 -----
  * - Integrated VeBetterPassport
+ *
+ * ----- Version 5 -----
+ * - Fixed duplicate app voting in same transaction in {RoundVotesCountingUpgradeable._countVote}
  */
 abstract contract XAllocationVotingGovernor is
   Initializable,
@@ -167,7 +170,7 @@ abstract contract XAllocationVotingGovernor is
    * @dev Returns the version of the governor.
    */
   function version() public view virtual returns (string memory) {
-    return "3";
+    return "5";
   }
 
   /**

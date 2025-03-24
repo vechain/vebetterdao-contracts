@@ -48,6 +48,12 @@ import { IVeBetterPassport } from "./interfaces/IVeBetterPassport.sol";
  * - Added onchain proof and impact tracking
  * ----- Version 3 -----
  * - Added VeBetterPassport integration
+ * ----- Version 4 -----
+ * - Updated the X2EarnApps interface to support node endorsement feature
+ * ----- Version 5 -----
+ * - Updated the X2EarnApps interface to support node cooldown functionality
+ * ----- Version 6 -----
+ * - Added distribute with metadata functionality
  */
 contract X2EarnRewardsPool is
   IX2EarnRewardsPool,
@@ -199,7 +205,8 @@ contract X2EarnRewardsPool is
 
   /**
    * @dev Distribute rewards to a user with a self provided proof.
-   * @notice This function is deprecated and kept for backwards compatibility, will be removed in future versions.
+   * @notice This function was initially planned for deprecation but has been retained due to its continued relevance and usage.
+   * It remains for backward compatibility and is not scheduled for removal at this time.
    */
   function distributeRewardDeprecated(bytes32 appId, uint256 amount, address receiver, string memory proof) external {
     // emit event with provided json proof
@@ -233,6 +240,25 @@ contract X2EarnRewardsPool is
     string memory description
   ) external {
     _emitProof(appId, amount, receiver, proofTypes, proofValues, impactCodes, impactValues, description);
+    _distributeReward(appId, amount, receiver);
+  }
+
+  /**
+   * @dev See {IX2EarnRewardsPool-distributeRewardWithProofAndMetadata}
+   */
+  function distributeRewardWithProofAndMetadata(
+    bytes32 appId,
+    uint256 amount,
+    address receiver,
+    string[] memory proofTypes,
+    string[] memory proofValues,
+    string[] memory impactCodes,
+    uint256[] memory impactValues,
+    string memory description,
+    string memory metadata
+  ) external {
+    _emitProof(appId, amount, receiver, proofTypes, proofValues, impactCodes, impactValues, description);
+    _emitMetadata(appId, amount, receiver, metadata);
     _distributeReward(appId, amount, receiver);
   }
 
@@ -290,6 +316,19 @@ contract X2EarnRewardsPool is
     emit RewardDistributed(amount, appId, receiver, jsonProof, msg.sender);
   }
 
+
+  /**
+   * @dev Emits the RewardMetadata event with the provided metadata.
+   */
+  function _emitMetadata(
+    bytes32 appId,
+    uint256 amount,
+    address receiver,
+    string memory metadata
+  ) internal {
+    // emit event
+    emit RewardMetadata(amount, appId, receiver, metadata, msg.sender);
+  }
   /**
    * @dev see {IX2EarnRewardsPool-buildProof}
    */
@@ -492,7 +531,7 @@ contract X2EarnRewardsPool is
    * @dev See {IX2EarnRewardsPool-version}
    */
   function version() external pure virtual returns (string memory) {
-    return "4";
+    return "6";
   }
 
   /**
@@ -518,6 +557,9 @@ contract X2EarnRewardsPool is
     X2EarnRewardsPoolStorage storage $ = _getX2EarnRewardsPoolStorage();
     return $.allowedImpactKeys;
   }
+
+
+  
 
   /**
    * @dev Retrieves the VeBetterPassport contract.

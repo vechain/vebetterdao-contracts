@@ -16,6 +16,7 @@ import {
   VeBetterPassport,
   VeBetterPassportV1,
   X2EarnCreator,
+  VeBetterPassportV2,
 } from "../../typechain-types"
 import { ContractsConfig } from "../../config/contracts"
 import { HttpNetworkConfig } from "hardhat/types"
@@ -115,6 +116,14 @@ export async function deployAll(config: ContractsConfig) {
     PassportPoPScoreLogicV1,
     PassportSignalingLogicV1,
     PassportWhitelistAndBlacklistLogicV1,
+    PassportChecksLogicV2,
+    PassportConfiguratorV2,
+    PassportEntityLogicV2,
+    PassportDelegationLogicV2,
+    PassportPersonhoodLogicV2,
+    PassportPoPScoreLogicV2,
+    PassportSignalingLogicV2,
+    PassportWhitelistAndBlacklistLogicV2,
     PassportChecksLogic,
     PassportConfigurator,
     PassportEntityLogic,
@@ -126,7 +135,14 @@ export async function deployAll(config: ContractsConfig) {
   } = await passportLibraries()
 
   console.log("Deploying X2Earn App Libraries")
-  const { AdministrationUtils, EndorsementUtils, VoteEligibilityUtils } = await x2EarnLibraries()
+  const {
+    AdministrationUtils,
+    EndorsementUtils,
+    VoteEligibilityUtils,
+    AdministrationUtilsV2,
+    EndorsementUtilsV2,
+    VoteEligibilityUtilsV2,
+  } = await x2EarnLibraries()
 
   let vechainNodesAddress = "0xb81E9C5f9644Dec9e5e3Cac86b4461A222072302" // this is the mainnet address
 
@@ -203,11 +219,13 @@ export async function deployAll(config: ContractsConfig) {
   )) as Treasury
 
   // Deploy NodeManagement
-  const nodeManagement = (await deployProxy(
-    "NodeManagement",
-    [vechainNodesAddress, config.CONTRACTS_ADMIN_ADDRESS, config.CONTRACTS_ADMIN_ADDRESS],
-    undefined,
-    true,
+  const nodeManagement = (await deployAndUpgrade(
+    ["NodeManagementV1", "NodeManagement"],
+    [[vechainNodesAddress, config.CONTRACTS_ADMIN_ADDRESS, config.CONTRACTS_ADMIN_ADDRESS], []],
+    {
+      versions: [undefined, 2],
+      logOutput: true,
+    },
   )) as NodeManagement
 
   // Initialization requires the address of the x2EarnRewardsPool, for this reason we will initialize it after
@@ -222,8 +240,10 @@ export async function deployAll(config: ContractsConfig) {
     PassportWhitelistAndBlacklistLogicV1: await PassportWhitelistAndBlacklistLogicV1.getAddress(),
   })
 
+  // Set XAllocationVoting to temp address
+  const X_ALLOCATION_ADRESS_TEMP = TEMP_ADMIN
   const x2EarnApps = (await deployAndUpgrade(
-    ["X2EarnAppsV1", "X2EarnApps"],
+    ["X2EarnAppsV1", "X2EarnAppsV2", "X2EarnApps"],
     [
       [
         config.XAPP_BASE_URI,
@@ -237,11 +257,17 @@ export async function deployAll(config: ContractsConfig) {
         veBetterPassportContractAddress,
         await x2EarnCreator.getAddress(),
       ],
+      [config.X2EARN_NODE_COOLDOWN_PERIOD, X_ALLOCATION_ADRESS_TEMP],
     ],
     {
-      versions: [undefined, 2],
+      versions: [undefined, 2, 3],
       libraries: [
         undefined,
+        {
+          AdministrationUtilsV2: await AdministrationUtilsV2.getAddress(),
+          EndorsementUtilsV2: await EndorsementUtilsV2.getAddress(),
+          VoteEligibilityUtilsV2: await VoteEligibilityUtilsV2.getAddress(),
+        },
         {
           AdministrationUtils: await AdministrationUtils.getAddress(),
           EndorsementUtils: await EndorsementUtils.getAddress(),
@@ -252,7 +278,14 @@ export async function deployAll(config: ContractsConfig) {
   )) as X2EarnApps
 
   const x2EarnRewardsPool = (await deployAndUpgrade(
-    ["X2EarnRewardsPoolV1", "X2EarnRewardsPoolV2", "X2EarnRewardsPoolV3", "X2EarnRewardsPool"],
+    [
+      "X2EarnRewardsPoolV1",
+      "X2EarnRewardsPoolV2",
+      "X2EarnRewardsPoolV3",
+      "X2EarnRewardsPoolV4",
+      "X2EarnRewardsPoolV5",
+      "X2EarnRewardsPool",
+    ],
     [
       [
         config.CONTRACTS_ADMIN_ADDRESS, // admin
@@ -267,15 +300,17 @@ export async function deployAll(config: ContractsConfig) {
       ],
       [veBetterPassportContractAddress],
       [],
+      [],
+      [],
     ],
     {
       logOutput: true,
-      versions: [undefined, 2, 3, 4],
+      versions: [undefined, 2, 3, 4, 5, 6],
     },
   )) as X2EarnRewardsPool
 
   const xAllocationPool = (await deployAndUpgrade(
-    ["XAllocationPoolV1", "XAllocationPoolV2", "XAllocationPool"],
+    ["XAllocationPoolV1", "XAllocationPoolV2", "XAllocationPoolV3", "XAllocationPool"],
     [
       [
         TEMP_ADMIN, // admin
@@ -288,22 +323,23 @@ export async function deployAll(config: ContractsConfig) {
       ],
       [],
       [],
+      [],
     ],
     {
-      versions: [undefined, 2, 3],
+      versions: [undefined, 2, 3, 4],
       logOutput: true,
     },
   )) as XAllocationPool
 
   const galaxyMember = (await deployAndUpgrade(
-    ["GalaxyMemberV1", "GalaxyMember"],
+    ["GalaxyMemberV1", "GalaxyMemberV2", "GalaxyMember"],
     [
       [
         {
           name: name,
           symbol: symbol,
           admin: TEMP_ADMIN,
-          upgrader: TEMP_ADMIN,
+          upgrader: config.CONTRACTS_ADMIN_ADDRESS,
           pauser: config.CONTRACTS_ADMIN_ADDRESS,
           minter: config.CONTRACTS_ADMIN_ADDRESS,
           contractsAddressManager: TEMP_ADMIN,
@@ -320,9 +356,11 @@ export async function deployAll(config: ContractsConfig) {
         TEMP_ADMIN,
         config.GM_NFT_NODE_TO_FREE_LEVEL,
       ],
+      [],
     ],
     {
-      versions: [undefined, 2],
+      versions: [undefined, 2, 3],
+      logOutput: true,
     },
   )) as GalaxyMember
 
@@ -365,7 +403,7 @@ export async function deployAll(config: ContractsConfig) {
   )) as Emissions
 
   const voterRewards = (await deployAndUpgrade(
-    ["VoterRewardsV1", "VoterRewardsV2", "VoterRewards"],
+    ["VoterRewardsV1", "VoterRewardsV2", "VoterRewardsV3", "VoterRewards"],
     [
       [
         TEMP_ADMIN, // admin
@@ -379,15 +417,16 @@ export async function deployAll(config: ContractsConfig) {
       ],
       [],
       [],
+      [],
     ],
     {
-      versions: [undefined, 2, 3],
+      versions: [undefined, 2, 3, 4],
       logOutput: true,
     },
   )) as VoterRewards
 
   const xAllocationVoting = (await deployAndUpgrade(
-    ["XAllocationVotingV1", "XAllocationVotingV2", "XAllocationVoting"],
+    ["XAllocationVotingV1", "XAllocationVotingV2", "XAllocationVotingV3", "XAllocationVotingV4", "XAllocationVoting"],
     [
       [
         {
@@ -408,9 +447,11 @@ export async function deployAll(config: ContractsConfig) {
       ],
       [veBetterPassportContractAddress],
       [],
+      [],
+      [],
     ],
     {
-      versions: [undefined, 2, 3],
+      versions: [undefined, 2, 3, 4, 5],
       logOutput: true,
     },
   )) as XAllocationVoting
@@ -455,13 +496,33 @@ export async function deployAll(config: ContractsConfig) {
     },
   )) as VeBetterPassportV1
 
-  const veBetterPassport = (await upgradeProxy(
+  const veBetterPassportV2 = (await upgradeProxy(
     "VeBetterPassportV1",
-    "VeBetterPassport",
+    "VeBetterPassportV2",
     await veBetterPassportV1.getAddress(),
     [],
     {
       version: 2,
+      libraries: {
+        PassportChecksLogicV2: await PassportChecksLogicV2.getAddress(),
+        PassportConfiguratorV2: await PassportConfiguratorV2.getAddress(),
+        PassportEntityLogicV2: await PassportEntityLogicV2.getAddress(),
+        PassportDelegationLogicV2: await PassportDelegationLogicV2.getAddress(),
+        PassportPersonhoodLogicV2: await PassportPersonhoodLogicV2.getAddress(),
+        PassportPoPScoreLogicV2: await PassportPoPScoreLogicV2.getAddress(),
+        PassportSignalingLogicV2: await PassportSignalingLogicV2.getAddress(),
+        PassportWhitelistAndBlacklistLogicV2: await PassportWhitelistAndBlacklistLogicV2.getAddress(),
+      },
+    },
+  )) as VeBetterPassportV2
+
+  const veBetterPassport = (await upgradeProxy(
+    "VeBetterPassportV2",
+    "VeBetterPassportV3",
+    await veBetterPassportV2.getAddress(),
+    [],
+    {
+      version: 3,
       libraries: {
         PassportChecksLogic: await PassportChecksLogic.getAddress(),
         PassportConfigurator: await PassportConfigurator.getAddress(),
@@ -689,6 +750,12 @@ export async function deployAll(config: ContractsConfig) {
     .setVote2EarnAddress(await voterRewards.getAddress())
     .then(async tx => await tx.wait())
   console.log("XAllocationsGovernor and Vote2Earn address set in Emissions contract")
+
+  // Setup X2EarnApps addresses
+  await x2EarnApps
+    .connect(deployer)
+    .setXAllocationVotingGovernor(await xAllocationVoting.getAddress())
+    .then(async tx => await tx.wait())
 
   // Setup XAllocationPool addresses
   await xAllocationPool

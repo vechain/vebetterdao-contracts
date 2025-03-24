@@ -65,6 +65,9 @@ import "@openzeppelin/contracts/utils/types/Time.sol";
  * - Added the ability to track if a Vechain node attached to a Galaxy Member NFT has voted in a proposal.
  * - Proposal Id is now required when registering votes instead of proposal snapshot.
  * - Core logic functions are now virtual allowing to be overridden through inheritance.
+ *
+ * ------------------ Version 4 Changes ------------------
+ * - Update the contract to use new Galaxy Member interface.
  */
 contract VoterRewards is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPSUpgradeable {
   using Checkpoints for Checkpoints.Trace208; // Checkpoints library for managing checkpoints of the selected level of the user
@@ -495,7 +498,7 @@ contract VoterRewards is AccessControlUpgradeable, ReentrancyGuardUpgradeable, U
   /// @dev This should be updated every time a new version of implementation is deployed
   /// @return string The version of the contract
   function version() external pure virtual returns (string memory) {
-    return "3";
+    return "4";
   }
 
   /// @dev Clock used for flagging checkpoints.

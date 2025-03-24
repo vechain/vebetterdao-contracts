@@ -65,19 +65,6 @@ abstract contract AdministrationUpgradeable is Initializable, X2EarnAppsUpgradea
     }
   }
 
-  /**
-   * @dev Initializes the contract for version 2
-   * @notice This function adds initialization logic for the V2 upgrade.
-   */
-  function __Administration_init_v2(address _x2EarnCreatorContract) internal {
-    __Administration_init_v2_unchained(_x2EarnCreatorContract);
-  }
-
-  function __Administration_init_v2_unchained(address _x2EarnCreatorContract) internal onlyInitializing {
-    // Set the x2EarnCreator contract
-    _setX2EarnCreatorContract(_x2EarnCreatorContract);
-  }
-
   // ---------- Internal ---------- //
   /**
    * @dev Internal function to set the admin address of the app

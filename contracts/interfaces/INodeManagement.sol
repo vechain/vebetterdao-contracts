@@ -93,6 +93,34 @@ interface INodeManagement {
   function isNodeManager(address user, uint256 nodeId) external view returns (bool);
 
   /**
+   * @notice Check if a node is delegated.
+   * @param nodeId The node ID to check for.
+   * @return bool True if the node is delegated.
+   */
+  function isNodeDelegated(uint256 nodeId) external view returns (bool);
+
+  /**
+   * @notice Check if a user is a delegator.
+   * @param user The address of the user to check.
+   * @return bool True if the user is a delegator.
+   */
+  function isNodeDelegator(address user) external view returns (bool);
+
+  /**
+   * @notice Check if a user is a node holder (either directly or through delegation).
+   * @param user The address of the user to check.
+   * @return bool True if the user is a node holder.
+   */
+  function isNodeHolder(address user) external view returns (bool);
+
+  /**
+   * @notice Check if a user directly owns a node (not delegated).
+   * @param user The address of the user to check.
+   * @return uint256 The ID of the owned node (0 if none).
+   */
+  function getDirectNodeOwnership(address user) external view returns (uint256);
+
+  /**
    * @notice Retrieves the node level of a given node ID.
    * @param nodeId The token ID of the endorsing node.
    * @return VechainNodesDataTypes.NodeStrengthLevel The node level of the specified token ID.

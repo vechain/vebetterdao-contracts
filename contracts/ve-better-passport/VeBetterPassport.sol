@@ -463,7 +463,7 @@ contract VeBetterPassport is AccessControlUpgradeable, UUPSUpgradeable, IVeBette
 
   /// @notice Returns the version of the contract
   function version() external pure returns (string memory) {
-    return "2";
+    return "3";
   }
 
   // ---------- Setters ---------- //

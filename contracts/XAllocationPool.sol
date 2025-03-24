@@ -49,6 +49,8 @@ import { IX2EarnRewardsPool } from "./interfaces/IX2EarnRewardsPool.sol";
  * - Added the abilty to toggle quadratic funding on and off.
  * ---------------------- Version 3 ----------------------------------------
  * - Use new interface IX2EarnApps that supports endorsement.
+ * ---------------------- Version 4 ----------------------------------------
+ * - Updated the X2EarnApps interface to support node cooldown functionality
  */
 contract XAllocationPool is IXAllocationPool, AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPSUpgradeable {
   using Checkpoints for Checkpoints.Trace208; // Checkpoints library for managing the voting mechanism used in the XAllocationVoting contract
@@ -642,7 +644,7 @@ contract XAllocationPool is IXAllocationPool, AccessControlUpgradeable, Reentran
    * @return string The version of the contract
    */
   function version() external pure virtual returns (string memory) {
-    return "3";
+    return "4";
   }
 
   /**

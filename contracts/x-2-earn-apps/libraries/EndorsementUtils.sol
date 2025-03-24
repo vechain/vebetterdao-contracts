@@ -27,6 +27,7 @@ import { VechainNodesDataTypes } from "../../libraries/VechainNodesDataTypes.sol
 import { PassportTypes } from "../../ve-better-passport/libraries/PassportTypes.sol";
 import { INodeManagement } from "../../interfaces/INodeManagement.sol";
 import { IVeBetterPassport } from "../../interfaces/IVeBetterPassport.sol";
+import { IXAllocationVotingGovernor } from "../../interfaces/IXAllocationVotingGovernor.sol";
 
 /**
  * @title EndorsementUtils
@@ -314,5 +315,23 @@ library EndorsementUtils {
 
     // Return true indicating the app is still eligible for voting
     return true;
+  }
+
+  /**
+   * @dev Ensures that the cooldown period for a node has elapsed before performing an action.
+   * @param nodeId The unique identifier of the node being checked.
+   * @return True if the cooldown period has not yet elapsed, false otherwise.
+   */
+  function checkCooldown(
+    mapping(uint256 => uint256) storage endorsementRound,
+    uint256 cooldownPeriod,
+    IXAllocationVotingGovernor xAllocationVotingGovernor,
+    uint256 nodeId
+  ) external view returns (bool) {
+    // Calculate the required round for the cooldown period
+    uint256 requiredRound = endorsementRound[nodeId] + cooldownPeriod;
+
+    // Return true if the required round has not yet been reached
+    return requiredRound > xAllocationVotingGovernor.currentRoundId();
   }
 }

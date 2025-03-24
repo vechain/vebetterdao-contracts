@@ -1,0 +1,73 @@
+name: Pushlish docs
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - feat/publish-docs
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one instance of wf to run at once
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+env:
+  MARKDOWN_PATH: "./docs/"
+  HTML_PATH: "./_site/"
+
+jobs:
+  generate-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Use Node v20
+        uses: actions/setup-node@v3
+        with:
+          node-version-file: .nvmrc
+          cache: "yarn"
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Compile contracts
+        run: yarn compile
+
+      - name: Generate markdown documentation
+        run: yarn generate-docs
+
+      - name: Install Pandoc
+        run: sudo apt-get install pandoc
+
+      - name: Build HTML documentation
+        run: |
+          chmod +x ./docs-template/md2html.sh
+          ./docs-template/md2html.sh ${{ env.MARKDOWN_PATH }} ${{ env.HTML_PATH }}
+
+      - name: Setup pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifacts
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ${{ env.HTML_PATH }}
+
+  deploy-docs:
+    environment:
+        name: github-pages
+        url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: generate-docs
+    name: Deploy to GitHub Pages
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

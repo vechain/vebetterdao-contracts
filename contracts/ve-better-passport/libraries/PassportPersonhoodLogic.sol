@@ -130,11 +130,13 @@ library PassportPersonhoodLogic {
    * - Returns `(false, "User has been signaled too many times")` if the user has been signaled more than the threshold.
    * - Returns `(true, "User's participation score is above the threshold")` if the user's participation score meets or exceeds the threshold.
    * - Returns `(false, "User does not meet the criteria to be considered a person")` if none of the conditions are met.
+   * - Returns `(true, "User's selected Galaxy Member is above the minimum level")` if the user's selected Galaxy Member is above the minimum level.
    *
    * Additional considerations:
    * - Checks for delegation status: If the user has delegated their personhood, they are not considered a valid passport holder.
    * - Checks if the user is in the whitelist or blacklist, with priority given to whitelist status.
    * - Evaluates the user's signaling status, participation score, and node ownership to determine validity.
+   * - Checks if the user's selected Galaxy Member is above the minimum level.
    */
   function _checkPassport(
     PassportStorageTypes.PassportStorage storage self,
@@ -183,7 +185,17 @@ library PassportPersonhoodLogic {
       }
     }
 
-    // TODO: With `GalaxyMember` version 2, Check if user's selected `GalaxyMember` `tokenId` is greater than `getMinimumGalaxyMemberLevel(self)`
+    // Check if user's selected GalaxyMember, in the timepoint, was above the minimum level
+    if (PassportChecksLogic._isCheckEnabled(self, PassportTypes.CheckType.GM_OWNERSHIP_CHECK)) {
+      uint256 selectedTokenId = self.galaxyMember.getSelectedTokenIdAtBlock(user, timepoint);
+
+      if (
+        selectedTokenId != 0 &&
+        self.galaxyMember.levelOf(selectedTokenId) >= PassportChecksLogic.getMinimumGalaxyMemberLevel(self)
+      ) {
+        return (true, "User's selected Galaxy Member is above the minimum level");
+      }
+    }
 
     // If none of the conditions are met, return false with the default reason
     return (false, "User does not meet the criteria to be considered a person");
