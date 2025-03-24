@@ -73,6 +73,10 @@ import {
   VoteEligibilityUtils,
   EndorsementUtils,
   X2EarnCreator,
+  B3TRGovernorV4,
+  VoterRewardsV2,
+  GalaxyMemberV1,
+  B3TRMultiSig,
   NodeManagementV1,
   VeBetterPassportV2,
   PassportConfiguratorV2,
@@ -93,8 +97,6 @@ import { deployAndUpgrade, deployProxy, deployProxyOnly, initializeProxy, upgrad
 import { bootstrapAndStartEmissions as callBootstrapAndStartEmissions } from "./common"
 import { governanceLibraries, passportLibraries } from "../../scripts/libraries"
 import { setWhitelistedFunctions } from "../../scripts/deploy/deploy"
-import { B3TRGovernorV4 } from "../../typechain-types/contracts/deprecated/V4"
-import { VoterRewardsV2 } from "../../typechain-types/contracts/deprecated/V2/VoterRewardsV2"
 import {
   GovernorClockLogicV4,
   GovernorConfiguratorV4,
@@ -199,6 +201,7 @@ interface DeployInstance {
   myErc721: MyERC721 | undefined
   myErc1155: MyERC1155 | undefined
   vechainNodesMock: TokenAuction
+  b3trMultiSig: B3TRMultiSig
 }
 
 export const NFT_NAME = "GalaxyMember"
@@ -324,6 +327,11 @@ export const getOrDeployContractInstances = async ({
     myErc1155 = await MyERC1155.deploy(owner.address)
     await myErc1155.waitForDeployment()
   }
+
+  // ---------------------- Deploy MultiSig ----------------------
+
+  const B3TRMultiSig = await ethers.getContractFactory("B3TRMultiSig")
+  const b3trMultiSig = await B3TRMultiSig.deploy([owner.address, otherAccount.address, minterAccount.address], 2)
 
   // ---------------------- Deploy Contracts ----------------------
   // Deploy B3TR
@@ -963,6 +971,7 @@ export const getOrDeployContractInstances = async ({
     myErc721: myErc721,
     myErc1155: myErc1155,
     vechainNodesMock,
+    b3trMultiSig,
   }
   return cachedDeployInstance
 }
