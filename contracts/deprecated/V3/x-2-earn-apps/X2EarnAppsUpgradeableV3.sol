@@ -24,7 +24,7 @@
 pragma solidity 0.8.20;
 
 import { Time } from "@openzeppelin/contracts/utils/types/Time.sol";
-import { IX2EarnAppsV2 } from "../interfaces/IX2EarnAppsV2.sol";
+import { IX2EarnAppsV3 } from "../interfaces/IX2EarnAppsV3.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { X2EarnAppsDataTypes } from "../../../libraries/X2EarnAppsDataTypes.sol";
 import { IX2EarnCreator } from "../../../interfaces/IX2EarnCreator.sol";
@@ -39,7 +39,7 @@ import { IX2EarnCreator } from "../../../interfaces/IX2EarnCreator.sol";
  * - a module to handle the administration of the app (handle moderators, admin, metadata, team address and percentage)
  * - a module to handle the settings of the contract
  */
-abstract contract X2EarnAppsUpgradeable is Initializable, IX2EarnAppsV2 {
+abstract contract X2EarnAppsUpgradeableV3 is Initializable, IX2EarnAppsV3 {
 
   // ---------- Getters ---------- //
   /**
@@ -76,7 +76,7 @@ abstract contract X2EarnAppsUpgradeable is Initializable, IX2EarnAppsV2 {
   }
 
   /**
-   * @dev See {IX2EarnAppsV2-hashAppName}.
+   * @dev See {IX2EarnAppsV3-hashAppName}.
    */
   function hashAppName(string memory appName) public pure returns (bytes32) {
     return keccak256(abi.encodePacked(appName));
@@ -85,37 +85,37 @@ abstract contract X2EarnAppsUpgradeable is Initializable, IX2EarnAppsV2 {
   // --- To be implemented by the inheriting contract --- //
 
   /**
-   * @inheritdoc IX2EarnAppsV2
+   * @inheritdoc IX2EarnAppsV3
    */
   function appExists(bytes32 appId) public view virtual returns (bool);
 
   /**
-   * @inheritdoc IX2EarnAppsV2
+   * @inheritdoc IX2EarnAppsV3
    */
   function isBlacklisted(bytes32 appId) public view virtual returns (bool);
 
   /**
-   * @inheritdoc IX2EarnAppsV2
+   * @inheritdoc IX2EarnAppsV3
    */
   function baseURI() public view virtual returns (string memory);
 
   /**
-   * @inheritdoc IX2EarnAppsV2
+   * @inheritdoc IX2EarnAppsV3
    */
   function isAppUnendorsed(bytes32 appId) public view virtual returns (bool);
 
   /**
-   * @inheritdoc IX2EarnAppsV2
+   * @inheritdoc IX2EarnAppsV3
    */
   function teamWalletAddress(bytes32 appId) public view virtual returns (address);
 
   /**
-   * @dev See {IX2EarnAppsV2-appAdmin}
+   * @dev See {IX2EarnAppsV3-appAdmin}
    */
   function appAdmin(bytes32 appId) public view virtual returns (address);
 
   /**
-   * @dev See {IX2EarnAppsV2-teamAllocationPercentage}
+   * @dev See {IX2EarnAppsV3-teamAllocationPercentage}
    */
   function teamAllocationPercentage(bytes32 appId) public view virtual returns (uint256);
 

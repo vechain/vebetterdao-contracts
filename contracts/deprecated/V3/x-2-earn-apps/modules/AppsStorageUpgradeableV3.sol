@@ -24,16 +24,16 @@
 pragma solidity 0.8.20;
 
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import { X2EarnAppsUpgradeable } from "../X2EarnAppsUpgradeable.sol";
-import { X2EarnAppsDataTypes } from "../../libraries/X2EarnAppsDataTypes.sol";
-import { AppStorageUtils } from "../libraries/AppStorageUtils.sol";
+import { X2EarnAppsUpgradeableV3 } from "../X2EarnAppsUpgradeableV3.sol";
+import { X2EarnAppsDataTypes } from "../../../../libraries/X2EarnAppsDataTypes.sol";
+import { AppStorageUtilsV3 } from "../libraries/AppStorageUtilsV3.sol";
 
 /**
- * @title AppsStorageUpgradeable
+ * @title AppsStorageUpgradeableV3
  * @dev Contract to manage the x2earn apps storage.
  * Through this contract, the x2earn apps can be added, retrieved and indexed.
  */
-abstract contract AppsStorageUpgradeable is Initializable, X2EarnAppsUpgradeable {
+abstract contract AppsStorageUpgradeableV3 is Initializable, X2EarnAppsUpgradeableV3 {
   /// @custom:storage-location erc7201:b3tr.storage.X2EarnApps.AppsStorage
   struct AppsStorageStorage {
     // Mapping from app ID to app
@@ -133,7 +133,6 @@ abstract contract AppsStorageUpgradeable is Initializable, X2EarnAppsUpgradeable
     _setTeamAllocationPercentage(id, 0);
     _setEndorsementStatus(id, false);
     _addCreator(id, msg.sender);
-    _enableRewardsPoolForNewApp(id);
 
     emit AppAdded(id, teamWalletAddress, appName, false);
   }
@@ -231,7 +230,7 @@ abstract contract AppsStorageUpgradeable is Initializable, X2EarnAppsUpgradeable
   function getPaginatedApps(uint startIndex, uint count) external view returns (X2EarnAppsDataTypes.App[] memory) {
     AppsStorageStorage storage $ = _getAppsStorageStorage();
 
-    return AppStorageUtils.getPaginatedApps($._apps, $._appIds, startIndex, count);
+    return AppStorageUtilsV3.getPaginatedApps($._apps, $._appIds, startIndex, count);
   }
 
   /**

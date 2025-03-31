@@ -8,7 +8,7 @@ pragma solidity 0.8.20;
  * Funds can be deposited into this contract by specifying the app id that can access the funds.
  * Admins of x2EarnApps can withdraw funds from the rewards pool, whihc are sent to the team wallet.
  */
-interface IX2EarnRewardsPool {
+interface IX2EarnRewardsPoolV6 {
   /**
    * @dev Event emitted when a new deposit is made into the rewards pool.
    *
@@ -60,20 +60,6 @@ interface IX2EarnRewardsPool {
    */
   event RegisterActionFailed(string reason, bytes lowLevelData);
 
-  /**
-   * @dev Event emitted when an app's reward distribution is paused.
-   * @param appId The ID of the app that was paused.
-   * @param admin The address of the admin who paused the app.
-   */
-  event AppPaused(bytes32 indexed appId, address indexed admin);
-
-  /**
-   * @dev Event emitted when an app's reward distribution is unpaused.
-   * @param appId The ID of the app that was unpaused.
-   * @param admin The address of the admin who unpaused the app.
-   */
-  event AppUnpaused(bytes32 indexed appId, address indexed admin);
-
 
 /**
   * @dev Event emitted when a reward is emitted by an app with proof and metadata.
@@ -90,25 +76,6 @@ interface IX2EarnRewardsPool {
     string metadata,
     address indexed distributor
   );
-
-  /**
-   * @dev Event emitted when the admin configure the rewards pool balance
-   *
-   * @param appId - the app ID
-   * @param enable - true to enable, false to disable
-   */
-  event RewardsPoolBalanceEnabled(bytes32 indexed appId, bool enable);
-
-  /**
-   * @dev Event emitted when the balance of the rewards pool for an app is initialized or updated.
-   *
-   * @param appId The ID of the app for which the balance was updated.
-   * @param amount The amount being added or removed from the rewards pool.
-   * @param availableFunds The current balance of the available funds for the app.
-   * @param rewardsPoolBalance The current balance of the rewards pool for the app.
-   */
-  event RewardsPoolBalanceUpdated(bytes32 indexed appId, uint256 amount, uint256 availableFunds, uint256 rewardsPoolBalance);
-
 
   /**
    * @dev Retrieves the current version of the contract.
@@ -135,47 +102,12 @@ interface IX2EarnRewardsPool {
   function withdraw(uint256 amount, bytes32 appId, string memory reason) external;
 
   /**
-   * @dev Gets the amount of funds available for an app to withdraw and reward user if the dual-pool is disabled.
+   * @dev Gets the amount of funds available for an app to reward users.
    *
    * @param appId The ID of the app.
    */
   function availableFunds(bytes32 appId) external view returns (uint256);
 
-  /**
-   * @dev Gets the total of funds available for withdrawal and rewards distribution.
-   *
-   * @param appId The ID of the app.
-   */
-  function totalBalance(bytes32 appId) external view returns (uint256);
-
-  /**
-   * @dev Gets either the dual-pool rewards pool balance is enabled or not.
-   *
-   * @param appId The ID of the app.
-   */
-  function isRewardsPoolEnabled(bytes32 appId) external view returns (bool);
-
-  /**
-   * @dev Gets whether the distribution is paused or not for a specific xApp
-   *
-   * @param appId The ID of the app.
-   */
-  function isDistributionPaused(bytes32 appId) external view returns (bool);
-
-  /**
-   * @dev Enables the rewards pool for a newly created app.
-   * @param appId The ID of the app.
-   * @notice This function can only be called by the X2EarnApps contract during app submission
-   */
-  function enableRewardsPoolForNewApp(bytes32 appId) external;  
-
-  /**
-   * @dev Gets the amount of funds available for an app to reward users if the dual-pool is enabled.
-   *
-   * @param appId The ID of the app.
-   */
-  function rewardsPoolBalance(bytes32 appId) external view returns (uint256);
-  
   /**
    * @dev Function used by x2earn apps to reward users that performed sustainable actions.
    *

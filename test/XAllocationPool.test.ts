@@ -15,12 +15,12 @@ import {
 } from "./helpers"
 import { describe, it } from "mocha"
 import { getImplementationAddress } from "@openzeppelin/upgrades-core"
-import { createLocalConfig } from "../config/contracts/envs/local"
+import { createLocalConfig } from "@repo/config/contracts/envs/local"
 import { deployAndUpgrade, deployProxy, upgradeProxy } from "../scripts/helpers"
 import { XAllocationPool, XAllocationPoolV1 } from "../typechain-types"
 import { endorseApp } from "./helpers/xnodes"
 
-describe("X-Allocation Pool - @shard3", async function () {
+describe("X-Allocation Pool - @shard13", async function () {
   describe("Deployment", async function () {
     it("Contract is correctly initialized", async function () {
       const { xAllocationPool, owner, x2EarnApps, emissions, b3tr, treasury } = await getOrDeployContractInstances({
@@ -224,10 +224,10 @@ describe("X-Allocation Pool - @shard3", async function () {
         forceDeploy: true,
       })
 
-      expect(await xAllocationPool.version()).to.equal("4")
+      expect(await xAllocationPool.version()).to.equal("5")
     })
 
-    it("Should not have state conflict after upgrading to V4", async () => {
+    it("Should not have state conflict after upgrading to V5", async () => {
       const config = createLocalConfig()
       config.X_ALLOCATION_POOL_APP_SHARES_MAX_CAP = 100
       config.X_ALLOCATION_POOL_BASE_ALLOCATION_PERCENTAGE = 0
@@ -251,7 +251,7 @@ describe("X-Allocation Pool - @shard3", async function () {
 
       // Deploy XAllocationPool
       const xAllocationPoolV1 = (await deployAndUpgrade(
-        ["XAllocationPoolV1", "XAllocationPoolV2", "XAllocationPoolV3"],
+        ["XAllocationPoolV1", "XAllocationPoolV2", "XAllocationPoolV3", "XAllocationPoolV4"],
         [
           [
             owner.address,
@@ -264,9 +264,10 @@ describe("X-Allocation Pool - @shard3", async function () {
           ],
           [],
           [],
+          [],
         ],
         {
-          versions: [undefined, 2, 3],
+          versions: [undefined, 2, 3, 4],
         },
       )) as XAllocationPool
 
@@ -375,12 +376,12 @@ describe("X-Allocation Pool - @shard3", async function () {
       ) // removing empty slots
 
       const xAllocationPool = (await upgradeProxy(
-        "XAllocationPoolV3",
+        "XAllocationPoolV4",
         "XAllocationPool",
         await xAllocationPoolV1.getAddress(),
         [],
         {
-          version: 4,
+          version: 5,
         },
       )) as XAllocationPool
 
@@ -584,15 +585,16 @@ describe("X-Allocation Pool - @shard3", async function () {
         })
 
         const xAllocationPool = (await deployAndUpgrade(
-          ["XAllocationPoolV1", "XAllocationPoolV2", "XAllocationPoolV3", "XAllocationPool"],
+          ["XAllocationPoolV1", "XAllocationPoolV2", "XAllocationPoolV3", "XAllocationPoolV4", "XAllocationPool"],
           [
             [owner.address, owner.address, owner.address, owner.address, owner.address, owner.address, owner.address],
             [],
             [],
             [],
+            [],
           ],
           {
-            versions: [undefined, 2, 3, 4],
+            versions: [undefined, 2, 3, 4, 5],
           },
         )) as XAllocationPool
         await xAllocationPool.setXAllocationVotingAddress(owner.address)
@@ -654,15 +656,16 @@ describe("X-Allocation Pool - @shard3", async function () {
         })
 
         const xAllocationPool = (await deployAndUpgrade(
-          ["XAllocationPoolV1", "XAllocationPoolV2", "XAllocationPoolV3", "XAllocationPool"],
+          ["XAllocationPoolV1", "XAllocationPoolV2", "XAllocationPoolV3", "XAllocationPoolV4", "XAllocationPool"],
           [
             [owner.address, owner.address, owner.address, owner.address, owner.address, owner.address, owner.address],
             [],
             [],
             [],
+            [],
           ],
           {
-            versions: [undefined, 2, 3, 4],
+            versions: [undefined, 2, 3, 4, 5],
           },
         )) as XAllocationPool
         expect(await xAllocationPool.xAllocationVoting()).to.eql(ZERO_ADDRESS)
@@ -757,13 +760,13 @@ describe("X-Allocation Pool - @shard3", async function () {
         await waitForRoundToEnd(round1)
 
         // expect not to be cupped since it's lower than maxCapPercentage
-        const app1Shares = await xAllocationPool.getAppShares(round1, app1Id)
+        let app1Shares = await xAllocationPool.getAppShares(round1, app1Id)
         expect(app1Shares[0]).to.eql(1000n)
 
-        const app2Shares = await xAllocationPool.getAppShares(round1, app2Id)
+        let app2Shares = await xAllocationPool.getAppShares(round1, app2Id)
 
         // should be capped to 20%
-        const maxCapPercentage = await xAllocationPool.scaledAppSharesCap(round1)
+        let maxCapPercentage = await xAllocationPool.scaledAppSharesCap(round1)
         expect(app2Shares[0]).to.eql(maxCapPercentage)
         expect(app2Shares[1]).to.eql(7000n) // 100% - baseAllocation(10%) - app1Shares(20%) = 70%
       })
@@ -810,8 +813,8 @@ describe("X-Allocation Pool - @shard3", async function () {
         // CLAIMING
         const baseAllocationAmount = await xAllocationPool.baseAllocationAmount(round1)
 
-        const app1Revenue = await xAllocationPool.roundEarnings(round1, app1Id)
-        const app2Revenue = await xAllocationPool.roundEarnings(round1, app2Id)
+        let app1Revenue = await xAllocationPool.roundEarnings(round1, app1Id)
+        let app2Revenue = await xAllocationPool.roundEarnings(round1, app2Id)
         expect(app1Revenue[0]).to.eql(baseAllocationAmount)
         expect(app2Revenue[0]).to.eql(baseAllocationAmount)
 
@@ -905,12 +908,12 @@ describe("X-Allocation Pool - @shard3", async function () {
 
         const baseAllocationAmount = await xAllocationPool.baseAllocationAmount(round2)
 
-        const round1Votes = await xAllocationVoting.getAppVotes(round1, app3Id)
+        let round1Votes = await xAllocationVoting.getAppVotes(round1, app3Id)
         expect(round1Votes).to.eql(0n)
-        const round2Votes = await xAllocationVoting.getAppVotes(round2, app3Id)
+        let round2Votes = await xAllocationVoting.getAppVotes(round2, app3Id)
         expect(round2Votes).to.eql(ethers.parseEther("1"))
 
-        const app3Revenue = await xAllocationPool.roundEarnings(round2, app3Id)
+        let app3Revenue = await xAllocationPool.roundEarnings(round2, app3Id)
         expect(app3Revenue[0]).to.eql(baseAllocationAmount)
 
         let app3Balance = await b3tr.balanceOf(app3ReceiverAddress)
@@ -966,7 +969,7 @@ describe("X-Allocation Pool - @shard3", async function () {
         await xAllocationVoting.connect(voter1).castVote(round1, [app1Id], [ethers.parseEther("1000")])
 
         await waitForRoundToEnd(Number(round1))
-        const state = await xAllocationVoting.state(round1)
+        let state = await xAllocationVoting.state(round1)
         expect(state).to.eql(BigInt(2))
 
         // Update cap
@@ -984,38 +987,38 @@ describe("X-Allocation Pool - @shard3", async function () {
         await waitForRoundToEnd(Number(round2))
 
         const expectedBaseAllocationR1 = await calculateBaseAllocationOffChain(Number(round1))
-        const expectedVariableAllocationR1App1 = await calculateVariableAppAllocationOffChain(Number(round1), app1Id)
+        let expectedVariableAllocationR1App1 = await calculateVariableAppAllocationOffChain(Number(round1), app1Id)
         const expecteUnallocatedAllocationR1App1 = await calculateUnallocatedAppAllocationOffChain(
           Number(round1),
           app1Id,
         )
 
         // should be capped to 20%
-        const maxCapPercentageR1 = await xAllocationPool.scaledAppSharesCap(round1)
+        let maxCapPercentageR1 = await xAllocationPool.scaledAppSharesCap(round1)
         const appSharesR1A1 = await xAllocationPool.getAppShares(round1, app1Id)
         expect(appSharesR1A1[0]).to.eql(maxCapPercentageR1)
         // Unallocated amount should be 80%
         expect(appSharesR1A1[1]).to.eql(8000n) // 100% - appShareCap(20%) = 80%
 
         // should be capped to 50%
-        const maxCapPercentageR2 = await xAllocationPool.scaledAppSharesCap(round2)
+        let maxCapPercentageR2 = await xAllocationPool.scaledAppSharesCap(round2)
         const appSharesR2A1 = await xAllocationPool.getAppShares(round2, app1Id)
         expect(appSharesR2A1[0]).to.eql(maxCapPercentageR2)
         // Unallocated amount should be 50%
         expect(appSharesR2A1[1]).to.eql(5000n) // 100% - appShareCap(50%) = 50%
 
-        const claimableRewardsR1App1 = await xAllocationPool.roundEarnings(round1, app1Id)
+        let claimableRewardsR1App1 = await xAllocationPool.roundEarnings(round1, app1Id)
         expect(claimableRewardsR1App1[0]).to.eql(expectedVariableAllocationR1App1 + expectedBaseAllocationR1)
         expect(claimableRewardsR1App1[1]).to.eql(expecteUnallocatedAllocationR1App1)
 
         const expectedBaseAllocationR2 = await calculateBaseAllocationOffChain(Number(round2))
-        const expectedVariableAllocationR2App1 = await calculateVariableAppAllocationOffChain(Number(round2), app1Id)
+        let expectedVariableAllocationR2App1 = await calculateVariableAppAllocationOffChain(Number(round2), app1Id)
         const expecteUnallocatedAllocationR2App1 = await calculateUnallocatedAppAllocationOffChain(
           Number(round2),
           app1Id,
         )
 
-        const claimableRewardsR2App1 = await xAllocationPool.roundEarnings(round2, app1Id)
+        let claimableRewardsR2App1 = await xAllocationPool.roundEarnings(round2, app1Id)
         expect(claimableRewardsR2App1[0]).to.eql(expectedVariableAllocationR2App1 + expectedBaseAllocationR2)
         expect(claimableRewardsR2App1[1]).to.eql(expecteUnallocatedAllocationR2App1)
       })
@@ -1064,7 +1067,7 @@ describe("X-Allocation Pool - @shard3", async function () {
         await xAllocationVoting.connect(voter1).castVote(round1, [app1Id], [ethers.parseEther("1000")])
 
         await waitForRoundToEnd(Number(round1))
-        const state = await xAllocationVoting.state(round1)
+        let state = await xAllocationVoting.state(round1)
         expect(state).to.eql(BigInt(2))
 
         // Update BaseAllocationPercentage
@@ -1082,14 +1085,14 @@ describe("X-Allocation Pool - @shard3", async function () {
         await waitForRoundToEnd(Number(round2))
 
         const expectedBaseAllocationR1 = await calculateBaseAllocationOffChain(Number(round1))
-        const expectedVariableAllocationR1App1 = await calculateVariableAppAllocationOffChain(Number(round1), app1Id)
+        let expectedVariableAllocationR1App1 = await calculateVariableAppAllocationOffChain(Number(round1), app1Id)
 
-        const claimableRewardsR1App1 = await xAllocationPool.roundEarnings(round1, app1Id)
+        let claimableRewardsR1App1 = await xAllocationPool.roundEarnings(round1, app1Id)
         expect(claimableRewardsR1App1[0]).to.eql(expectedVariableAllocationR1App1 + expectedBaseAllocationR1)
 
         const expectedBaseAllocationR2 = await calculateBaseAllocationOffChain(Number(round2))
-        const expectedVariableAllocationR2App1 = await calculateVariableAppAllocationOffChain(Number(round2), app1Id)
-        const claimableRewardsR2App1 = await xAllocationPool.roundEarnings(round2, app1Id)
+        let expectedVariableAllocationR2App1 = await calculateVariableAppAllocationOffChain(Number(round2), app1Id)
+        let claimableRewardsR2App1 = await xAllocationPool.roundEarnings(round2, app1Id)
         expect(claimableRewardsR2App1[0]).to.eql(expectedVariableAllocationR2App1 + expectedBaseAllocationR2)
         expect(claimableRewardsR2App1[0]).to.eql(await xAllocationPool.getMaxAppAllocation(round2))
       })
@@ -1201,27 +1204,27 @@ describe("X-Allocation Pool - @shard3", async function () {
           .castVote(round1, [app1Id, app2Id], [ethers.parseEther("100"), ethers.parseEther("900")])
 
         await waitForRoundToEnd(Number(round1))
-        const state = await xAllocationVoting.state(round1)
+        let state = await xAllocationVoting.state(round1)
         expect(state).to.eql(BigInt(2))
 
-        const app1Shares = await xAllocationPool.getAppShares(round1, app1Id)
+        let app1Shares = await xAllocationPool.getAppShares(round1, app1Id)
         expect(app1Shares[0]).to.eql(1000n)
         expect(app1Shares[1]).to.eql(0n)
 
-        const app2Shares = await xAllocationPool.getAppShares(round1, app2Id)
+        let app2Shares = await xAllocationPool.getAppShares(round1, app2Id)
         // should be capped to 20%
         // Remaining 70% should be retuned as unallocated
-        const maxCapPercentage = await xAllocationPool.scaledAppSharesCap(round1)
+        let maxCapPercentage = await xAllocationPool.scaledAppSharesCap(round1)
         expect(app2Shares[0]).to.eql(maxCapPercentage)
         expect(app2Shares[1]).to.eql(7000n) // (alloctaedVotes)90% - app1Shares(20%) = 70%
 
         // Calculate base allocations
-        const baseAllocationAmount = await xAllocationPool.baseAllocationAmount(round1)
+        let baseAllocationAmount = await xAllocationPool.baseAllocationAmount(round1)
         const expectedBaseAllocation = await calculateBaseAllocationOffChain(Number(round1))
         expect(baseAllocationAmount).to.eql(expectedBaseAllocation)
 
         let expectedVariableAllcoation = await calculateVariableAppAllocationOffChain(Number(round1), app1Id)
-        const claimableRewards = await xAllocationPool.roundEarnings(round1, app1Id)
+        let claimableRewards = await xAllocationPool.roundEarnings(round1, app1Id)
         expect(claimableRewards[0]).to.eql(expectedVariableAllcoation + expectedBaseAllocation)
 
         // Calculate allocation rewards
@@ -1280,7 +1283,7 @@ describe("X-Allocation Pool - @shard3", async function () {
           .castVote(round1, [app1Id, app2Id], [ethers.parseEther("100"), ethers.parseEther("900")])
 
         await waitForRoundToEnd(Number(round1))
-        const state = await xAllocationVoting.state(round1)
+        let state = await xAllocationVoting.state(round1)
         expect(state).to.eql(2n)
 
         // Now we can go to round 2 and test our scenario
@@ -1424,7 +1427,7 @@ describe("X-Allocation Pool - @shard3", async function () {
         const xAllocationPool = await contract.deploy()
         await xAllocationPool.waitForDeployment()
 
-        const roundId = await startNewAllocationRound()
+        let roundId = await startNewAllocationRound()
 
         await expect(xAllocationPool.currentRoundEarnings(ethers.keccak256(ethers.toUtf8Bytes("My app")))).to.be
           .reverted
@@ -1557,8 +1560,8 @@ describe("X-Allocation Pool - @shard3", async function () {
         // ENDED SEEDING DATA
 
         // CLAIMING
-        const app1Revenue = await xAllocationPool.roundEarnings(round1, app1Id)
-        const app2Revenue = await xAllocationPool.roundEarnings(round1, app2Id)
+        let app1Revenue = await xAllocationPool.roundEarnings(round1, app1Id)
+        let app2Revenue = await xAllocationPool.roundEarnings(round1, app2Id)
 
         let app1Balance = await b3tr.balanceOf(app1ReceiverAddress)
         let app2Balance = await b3tr.balanceOf(app2ReceiverAddress)
@@ -1695,7 +1698,7 @@ describe("X-Allocation Pool - @shard3", async function () {
         // ENDED SEEDING DATA
 
         // CLAIMING
-        const app1Revenue = await xAllocationPool.roundEarnings(round1, app1Id)
+        let app1Revenue = await xAllocationPool.roundEarnings(round1, app1Id)
 
         let app1Balance = await b3tr.balanceOf(app1ReceiverAddress)
         expect(app1Balance).to.eql(0n)
@@ -1750,7 +1753,7 @@ describe("X-Allocation Pool - @shard3", async function () {
         await waitForRoundToEnd(round1)
 
         // expect it's failed
-        const state = await xAllocationVoting.state(round1)
+        let state = await xAllocationVoting.state(round1)
         expect(state).to.eql(1n)
 
         // ROUND IS NOT FINALIZED
@@ -1874,7 +1877,7 @@ describe("X-Allocation Pool - @shard3", async function () {
         await waitForRoundToEnd(round1)
 
         // expect it's failed
-        const state = await xAllocationVoting.state(round1)
+        let state = await xAllocationVoting.state(round1)
         expect(state).to.eql(1n)
 
         // ROUND IS FINALIZED
@@ -1915,7 +1918,7 @@ describe("X-Allocation Pool - @shard3", async function () {
         //Start allocation round
         const round1 = parseInt((await xAllocationVoting.currentRoundId()).toString())
 
-        const state = await xAllocationVoting.state(round1)
+        let state = await xAllocationVoting.state(round1)
         expect(state).to.eql(0n)
 
         // CLAIMING
@@ -1976,10 +1979,10 @@ describe("X-Allocation Pool - @shard3", async function () {
           .castVote(round1, [app1Id, app2Id], [ethers.parseEther("100"), ethers.parseEther("900")])
 
         await waitForRoundToEnd(Number(round1))
-        const state = await xAllocationVoting.state(round1)
+        let state = await xAllocationVoting.state(round1)
         expect(state).to.eql(2n)
 
-        const app1Shares = await xAllocationPool.getAppShares(round1, app1Id)
+        let app1Shares = await xAllocationPool.getAppShares(round1, app1Id)
         expect(app1Shares[0]).to.eql(1000n)
 
         const claimableAmount = await xAllocationPool.claimableAmount(round1, app1Id)
@@ -2056,7 +2059,7 @@ describe("X-Allocation Pool - @shard3", async function () {
           .connect(voter1)
           .castVote(round1, [app1Id, app2Id], [ethers.parseEther("100"), ethers.parseEther("900")])
 
-        const state = await xAllocationVoting.state(round1)
+        let state = await xAllocationVoting.state(round1)
         expect(state).to.eql(0n) //active
 
         const claimableAmount = await xAllocationPool.claimableAmount(round1, app1Id)
@@ -2111,7 +2114,7 @@ describe("X-Allocation Pool - @shard3", async function () {
         await xAllocationVoting.connect(voter1).castVote(round1, [app2Id], [ethers.parseEther("1000")])
 
         await waitForRoundToEnd(Number(round1))
-        const state = await xAllocationVoting.state(round1)
+        let state = await xAllocationVoting.state(round1)
         expect(state).to.eql(2n)
 
         const claimableAmount = await xAllocationPool.claimableAmount(round1, app1Id)
@@ -2326,8 +2329,8 @@ describe("X-Allocation Pool - @shard3", async function () {
         // ENDED SEEDING DATA
 
         // CLAIMING
-        const app1Revenue = await xAllocationPool.roundEarnings(round1, app1Id)
-        const app2Revenue = await xAllocationPool.roundEarnings(round1, app2Id)
+        let app1Revenue = await xAllocationPool.roundEarnings(round1, app1Id)
+        let app2Revenue = await xAllocationPool.roundEarnings(round1, app2Id)
 
         const treasuryBalanceBefore = await b3tr.balanceOf(await treasury.getAddress())
 

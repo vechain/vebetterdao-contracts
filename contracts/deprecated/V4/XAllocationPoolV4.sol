@@ -23,19 +23,19 @@
 
 pragma solidity 0.8.20;
 
-import { IXAllocationPool } from "./interfaces/IXAllocationPool.sol";
+import { IXAllocationPool } from "../../interfaces/IXAllocationPool.sol";
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import { Checkpoints } from "@openzeppelin/contracts/utils/structs/Checkpoints.sol";
 import { Time } from "@openzeppelin/contracts/utils/types/Time.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import { IXAllocationVotingGovernor } from "./interfaces/IXAllocationVotingGovernor.sol";
-import { ITreasury } from "./interfaces/ITreasury.sol";
-import { IEmissions } from "./interfaces/IEmissions.sol";
+import { IXAllocationVotingGovernor } from "../../interfaces/IXAllocationVotingGovernor.sol";
+import { ITreasury } from "../../interfaces/ITreasury.sol";
+import { IEmissions } from "../../interfaces/IEmissions.sol";
 import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
-import { IB3TR } from "./interfaces/IB3TR.sol";
+import { IB3TR } from "../../interfaces/IB3TR.sol";
 import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import { IX2EarnApps } from "./interfaces/IX2EarnApps.sol";
-import { IX2EarnRewardsPool } from "./interfaces/IX2EarnRewardsPool.sol";
+import { IX2EarnApps } from "../../interfaces/IX2EarnApps.sol";
+import { IX2EarnRewardsPool } from "../../interfaces/IX2EarnRewardsPool.sol";
 
 /**
  * @title XAllocationPool
@@ -51,10 +51,8 @@ import { IX2EarnRewardsPool } from "./interfaces/IX2EarnRewardsPool.sol";
  * - Use new interface IX2EarnApps that supports endorsement.
  * ---------------------- Version 4 ----------------------------------------
  * - Updated the X2EarnApps interface to support node cooldown functionality
- * ---------------------- Version 5 ----------------------------------------
- * - Updated the X2EarnRewardsPool and X2EarnApps interfaces to support app rewards management feature
  */
-contract XAllocationPool is IXAllocationPool, AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPSUpgradeable {
+contract XAllocationPoolV4 is IXAllocationPool, AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPSUpgradeable {
   using Checkpoints for Checkpoints.Trace208; // Checkpoints library for managing the voting mechanism used in the XAllocationVoting contract
 
   uint256 public constant PERCENTAGE_PRECISION_SCALING_FACTOR = 1e4;
@@ -646,7 +644,7 @@ contract XAllocationPool is IXAllocationPool, AccessControlUpgradeable, Reentran
    * @return string The version of the contract
    */
   function version() external pure virtual returns (string memory) {
-    return "5";
+    return "4";
   }
 
   /**

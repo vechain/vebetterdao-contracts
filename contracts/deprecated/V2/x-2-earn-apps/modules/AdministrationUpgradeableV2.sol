@@ -24,12 +24,12 @@
 pragma solidity 0.8.20;
 
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import { X2EarnAppsUpgradeable } from "../X2EarnAppsUpgradeable.sol";
+import { X2EarnAppsUpgradeableV2 } from "../X2EarnAppsUpgradeableV2.sol";
 import { AdministrationUtilsV2 } from "../libraries/AdministrationUtilsV2.sol";
 import { IX2EarnCreator } from "../../../../interfaces/IX2EarnCreator.sol";
 
 /**
- * @title AdministrationUpgradeable
+ * @title AdministrationUpgradeableV2
  * @dev Contract module that provides the administration functionalities of the x2earn apps.
  * Each app has one admin and can have many moderators, the use of those should be definied by the contract inheriting this module.
  * Each app has a metadataURI that returns the information of the app.
@@ -37,7 +37,7 @@ import { IX2EarnCreator } from "../../../../interfaces/IX2EarnCreator.sol";
  * The team allocation percentage is the percentage funds sent to the team at each distribution of allocation rewards.
  * The reward distributors are the addresses that can distribute rewards from the X2EarnRewardsPool.
  */
-abstract contract AdministrationUpgradeable is Initializable, X2EarnAppsUpgradeable {
+abstract contract AdministrationUpgradeableV2 is Initializable, X2EarnAppsUpgradeableV2 {
   uint256 public constant MAX_MODERATORS = 100;
   uint256 public constant MAX_REWARD_DISTRIBUTORS = 100;
   uint256 public constant MAX_CREATORS = 3;

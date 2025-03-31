@@ -24,10 +24,10 @@
 pragma solidity 0.8.20;
 
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import { X2EarnAppsUpgradeable } from "../X2EarnAppsUpgradeable.sol";
+import { X2EarnAppsUpgradeableV3 } from "../X2EarnAppsUpgradeableV3.sol";
 import { Checkpoints } from "@openzeppelin/contracts/utils/structs/Checkpoints.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import { VoteEligibilityUtilsV2 } from "../libraries/VoteEligibilityUtilsV2.sol";
+import { VoteEligibilityUtilsV3 } from "../libraries/VoteEligibilityUtilsV3.sol";
 
 /**
  * @title VoteEligibilityUpgradeable
@@ -37,7 +37,7 @@ import { VoteEligibilityUtilsV2 } from "../libraries/VoteEligibilityUtilsV2.sol"
  * we also have a checkpoint to track the changes for each single app (not for the array which is always up to date).
  * This is needed beacuse other contracts (like XAllocationPool) may want to know if a specific app was eligible for voting at a specific timepoint.
  */
-abstract contract VoteEligibilityUpgradeable is Initializable, X2EarnAppsUpgradeable {
+abstract contract VoteEligibilityUpgradeableV3 is Initializable, X2EarnAppsUpgradeableV3 {
   using Checkpoints for Checkpoints.Trace208; // Checkpoints used to track eligibility changes over time
 
   /// @custom:storage-location erc7201:b3tr.storage.X2EarnApps.VoteEligibility
@@ -66,8 +66,8 @@ abstract contract VoteEligibilityUpgradeable is Initializable, X2EarnAppsUpgrade
   function _setVotingEligibility(bytes32 appId, bool canBeVoted) internal override {
     VoteEligibilityStorage storage $ = _getVoteEligibilityStorage();
 
-    // Use VoteEligibilityUtilsV2 to update the eligibility checkpoint
-    VoteEligibilityUtilsV2.updateVotingEligibility(
+    // Use VoteEligibilityUtilsV3 to update the eligibility checkpoint
+    VoteEligibilityUtilsV3.updateVotingEligibility(
       $._eligibleApps,
       $._isAppEligibleCheckpoints,
       $._eligibleAppIndex,
@@ -114,8 +114,8 @@ abstract contract VoteEligibilityUpgradeable is Initializable, X2EarnAppsUpgrade
   function isEligible(bytes32 appId, uint256 timepoint) public view override returns (bool) {
     VoteEligibilityStorage storage $ = _getVoteEligibilityStorage();
 
-    // Use VoteEligibilityUtilsV2 to check if the app is eligible at the given timepoint
-    return VoteEligibilityUtilsV2.isEligible(
+    // Use VoteEligibilityUtilsV3 to check if the app is eligible at the given timepoint
+    return VoteEligibilityUtilsV3.isEligible(
       $._isAppEligibleCheckpoints,
       appId,
       timepoint,
