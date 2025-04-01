@@ -23,16 +23,16 @@
 
 pragma solidity 0.8.20;
 
-import { X2EarnAppsUpgradeable } from "./x-2-earn-apps/X2EarnAppsUpgradeable.sol";
-import { AdministrationUpgradeable } from "./x-2-earn-apps/modules/AdministrationUpgradeable.sol";
-import { AppsStorageUpgradeable } from "./x-2-earn-apps/modules/AppsStorageUpgradeable.sol";
-import { ContractSettingsUpgradeable } from "./x-2-earn-apps/modules/ContractSettingsUpgradeable.sol";
-import { VoteEligibilityUpgradeable } from "./x-2-earn-apps/modules//VoteEligibilityUpgradeable.sol";
-import { EndorsementUpgradeable } from "./x-2-earn-apps/modules/EndorsementUpgradeable.sol";
-import { VechainNodesDataTypes } from "./libraries/VechainNodesDataTypes.sol";
+import { X2EarnAppsUpgradeableV3 } from "./x-2-earn-apps/X2EarnAppsUpgradeableV3.sol";
+import { AdministrationUpgradeableV3 } from "./x-2-earn-apps/modules/AdministrationUpgradeableV3.sol";
+import { AppsStorageUpgradeableV3 } from "./x-2-earn-apps/modules/AppsStorageUpgradeableV3.sol";
+import { ContractSettingsUpgradeableV3 } from "./x-2-earn-apps/modules/ContractSettingsUpgradeableV3.sol";
+import { VoteEligibilityUpgradeableV3 } from "./x-2-earn-apps/modules/VoteEligibilityUpgradeableV3.sol";
+import { EndorsementUpgradeableV3 } from "./x-2-earn-apps/modules/EndorsementUpgradeableV3.sol";
+import { VechainNodesDataTypes } from "../../libraries/VechainNodesDataTypes.sol";
 import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import { IXAllocationVotingGovernor } from "./interfaces/IXAllocationVotingGovernor.sol";
+import { IXAllocationVotingGovernor } from "../../interfaces/IXAllocationVotingGovernor.sol";
 
 /**
  * @title X2EarnApps
@@ -49,17 +49,14 @@ import { IXAllocationVotingGovernor } from "./interfaces/IXAllocationVotingGover
  *
  * -------------------- Version 3 --------------------
  * - The contract has been upgraded to version 3 to add node cooldown period.
- * 
- * -------------------- Version 4 --------------------
- * - Enabling by default the rewards pool for new apps submitted.
  */
-contract X2EarnApps is
-  X2EarnAppsUpgradeable,
-  AdministrationUpgradeable,
-  ContractSettingsUpgradeable,
-  VoteEligibilityUpgradeable,
-  AppsStorageUpgradeable,
-  EndorsementUpgradeable,
+contract X2EarnAppsV3 is
+  X2EarnAppsUpgradeableV3,
+  AdministrationUpgradeableV3,
+  ContractSettingsUpgradeableV3,
+  VoteEligibilityUpgradeableV3,
+  AppsStorageUpgradeableV3,
+  EndorsementUpgradeableV3,
   AccessControlUpgradeable,
   UUPSUpgradeable
 {
@@ -74,15 +71,16 @@ contract X2EarnApps is
   }
 
   /**
-   * @notice Initialize the version 4 contract
-   * @param _x2EarnRewardsPoolContract the address of the x2EarnRewardsPool contract to enable the rewards pool for new apps
+   * @notice Initialize the version 3 contract
+   * @param _cooldownPeriod the cooldown period for the endorsement
    *
    * @dev This function is called only once during the contract upgrade
    */
-  function initializeV4(
-    address _x2EarnRewardsPoolContract
-  ) public reinitializer(4) {
-    __Administration_init_v4(_x2EarnRewardsPoolContract);
+  function initializeV3(
+    uint48 _cooldownPeriod,
+    address _xAllocationVotingGovernor
+  ) public reinitializer(3) {
+    __Endorsement_init_v3(_cooldownPeriod, _xAllocationVotingGovernor);
   }
 
   // ---------- Modifiers ------------ //
@@ -124,7 +122,7 @@ contract X2EarnApps is
    * @return sting The version of the contract
    */
   function version() public pure virtual returns (string memory) {
-    return "4";
+    return "3";
   }
 
   // ---------- Overrides ------------ //
@@ -225,13 +223,6 @@ contract X2EarnApps is
    */
   function removeAppCreator(bytes32 _appId, address _creator) public onlyRoleAndAppAdmin(DEFAULT_ADMIN_ROLE, _appId) {
     _removeAppCreator(_appId, _creator);
-  }
-
-  /**
-   * @dev See {IX2EarnApps-enableRewardsPoolForNewApp}.
-   */
-  function enableRewardsPoolForNewApp(bytes32 _appId) public onlyRole(DEFAULT_ADMIN_ROLE) {
-    _enableRewardsPoolForNewApp(_appId);
   }
 
   /**
@@ -351,12 +342,5 @@ contract X2EarnApps is
    */
   function setX2EarnCreatorContract(address _x2EarnCreatorContract) public onlyRole(DEFAULT_ADMIN_ROLE) {
     _setX2EarnCreatorContract(_x2EarnCreatorContract);
-  }
-
-  /**
-   * @dev See {IX2EarnApps-setX2EarnRewardsPool}.
-   */
-  function setX2EarnRewardsPoolContract(address  _x2EarnRewardsPoolContract) public onlyRole(DEFAULT_ADMIN_ROLE) {
-    _setX2EarnRewardsPoolContract( _x2EarnRewardsPoolContract);
   }
 }

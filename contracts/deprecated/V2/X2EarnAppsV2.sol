@@ -23,12 +23,12 @@
 
 pragma solidity 0.8.20;
 
-import { X2EarnAppsUpgradeable } from "./x-2-earn-apps/X2EarnAppsUpgradeable.sol";
-import { AdministrationUpgradeable } from "./x-2-earn-apps/modules/AdministrationUpgradeable.sol";
-import { AppsStorageUpgradeable } from "./x-2-earn-apps/modules/AppsStorageUpgradeable.sol";
-import { ContractSettingsUpgradeable } from "./x-2-earn-apps/modules/ContractSettingsUpgradeable.sol";
-import { VoteEligibilityUpgradeable } from "./x-2-earn-apps/modules//VoteEligibilityUpgradeable.sol";
-import { EndorsementUpgradeable } from "./x-2-earn-apps/modules/EndorsementUpgradeable.sol";
+import { X2EarnAppsUpgradeableV2 } from "./x-2-earn-apps/X2EarnAppsUpgradeableV2.sol";
+import { AdministrationUpgradeableV2 } from "./x-2-earn-apps/modules/AdministrationUpgradeableV2.sol";
+import { AppsStorageUpgradeableV2 } from "./x-2-earn-apps/modules/AppsStorageUpgradeableV2.sol";
+import { ContractSettingsUpgradeableV2 } from "./x-2-earn-apps/modules/ContractSettingsUpgradeableV2.sol";
+import { VoteEligibilityUpgradeableV2 } from "./x-2-earn-apps/modules//VoteEligibilityUpgradeableV2.sol";
+import { EndorsementUpgradeableV2 } from "./x-2-earn-apps/modules/EndorsementUpgradeableV2.sol";
 import { VechainNodesDataTypes } from "../../libraries/VechainNodesDataTypes.sol";
 import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
@@ -43,12 +43,12 @@ import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/ac
  * Each app has a set of admins and moderators that can manage the app and settings.
  */
 contract X2EarnAppsV2 is
-  X2EarnAppsUpgradeable,
-  AdministrationUpgradeable,
-  ContractSettingsUpgradeable,
-  VoteEligibilityUpgradeable,
-  AppsStorageUpgradeable,
-  EndorsementUpgradeable,
+  X2EarnAppsUpgradeableV2,
+  AdministrationUpgradeableV2,
+  ContractSettingsUpgradeableV2,
+  VoteEligibilityUpgradeableV2,
+  AppsStorageUpgradeableV2,
+  EndorsementUpgradeableV2,
   AccessControlUpgradeable,
   UUPSUpgradeable
 {

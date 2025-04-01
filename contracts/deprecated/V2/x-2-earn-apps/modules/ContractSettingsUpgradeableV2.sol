@@ -24,7 +24,7 @@
 pragma solidity 0.8.20;
 
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import { X2EarnAppsUpgradeable } from "../X2EarnAppsUpgradeable.sol";
+import { X2EarnAppsUpgradeableV2 } from "../X2EarnAppsUpgradeableV2.sol";
 
 /**
  * @title ContractSettingsUpgradeable
@@ -32,7 +32,7 @@ import { X2EarnAppsUpgradeable } from "../X2EarnAppsUpgradeable.sol";
  * One functionlity is the set of the baseURI: each app has a URI (baseURI/App.metdataURI) that
  * can be used to retrieve the metadata of the app. Eg: ipfs:// or some other gateway.
  */
-abstract contract ContractSettingsUpgradeable is Initializable, X2EarnAppsUpgradeable {
+abstract contract ContractSettingsUpgradeableV2 is Initializable, X2EarnAppsUpgradeableV2 {
   /// @custom:storage-location erc7201:b3tr.storage.X2EarnApps.Settings
   struct ContractSettingsStorage {
     string _baseURI;

@@ -1,18 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.20;
 
-import { X2EarnAppsDataTypes } from "../libraries/X2EarnAppsDataTypes.sol";
-import { VechainNodesDataTypes } from "../libraries/VechainNodesDataTypes.sol";
-import { IX2EarnCreator } from "./IX2EarnCreator.sol";
-import { IXAllocationVotingGovernor } from "./IXAllocationVotingGovernor.sol";
-import { IX2EarnRewardsPool } from "./IX2EarnRewardsPool.sol";
+import { X2EarnAppsDataTypes } from "../../../libraries/X2EarnAppsDataTypes.sol";
+import { VechainNodesDataTypes } from "../../../libraries/VechainNodesDataTypes.sol";
+import { IX2EarnCreator } from "../../../interfaces/IX2EarnCreator.sol";
+import { IXAllocationVotingGovernor } from "../../../interfaces/IXAllocationVotingGovernor.sol";
 
 /**
  * @title IX2EarnApps
  * @notice Interface for the X2EarnApps contract.
  * @dev The contract inheriting this interface should be able to manage the x2earn apps and their Eligibility for allocation voting.
  */
-interface IX2EarnApps {
+interface IX2EarnAppsV3 {
   /**
    * @dev The clock was incorrectly modified.
    */
@@ -162,11 +161,6 @@ interface IX2EarnApps {
    * @dev Event fired when the admin removes a moderator from the app.
    */
   event ModeratorRemovedFromApp(bytes32 indexed appId, address moderator);
-
-  /**
-   * @dev Event fired when the admin removes a creator from the app.
-   */
-  event CreatorRemovedFromApp(bytes32 indexed appId, address creator);
 
   /**
    * @dev Event fired when the admin adds a new creator to the app and new creator NFT is minted.
@@ -416,25 +410,6 @@ interface IX2EarnApps {
    * @param distributorAddress the address of the account
    */
   function isRewardDistributor(bytes32 appId, address distributorAddress) external view returns (bool);
-
-  /**
-   * @dev Enable the rewards pool for a new app.
-   *
-   * @param appId the id of the app
-   */
-  function enableRewardsPoolForNewApp(bytes32 appId) external;
-
-  /**
-   * @dev Update the X2EarnRewardsPool contract address.
-   *
-   * @param  _x2EarnRewardsPoolContract the address of the X2EarnRewardsPool contract
-   */
-  function setX2EarnRewardsPoolContract(address  _x2EarnRewardsPoolContract) external;
-
-  /**
-   * @dev Get the X2EarnRewardsPool contract address.
-   */
-  function x2EarnRewardsPoolContract() external view returns (IX2EarnRewardsPool);
 
   /**
    * @notice Checks endorsements for a given app and updates its voting eligibility based on the endorsements' scores.

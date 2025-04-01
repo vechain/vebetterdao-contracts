@@ -24,7 +24,7 @@
 pragma solidity 0.8.20;
 
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import { X2EarnAppsUpgradeable } from "../X2EarnAppsUpgradeable.sol";
+import { X2EarnAppsUpgradeableV2 } from "../X2EarnAppsUpgradeableV2.sol";
 import { X2EarnAppsDataTypes } from "../../../../libraries/X2EarnAppsDataTypes.sol";
 import { AppStorageUtilsV2 } from "../libraries/AppStorageUtilsV2.sol";
 
@@ -33,7 +33,7 @@ import { AppStorageUtilsV2 } from "../libraries/AppStorageUtilsV2.sol";
  * @dev Contract to manage the x2earn apps storage.
  * Through this contract, the x2earn apps can be added, retrieved and indexed.
  */
-abstract contract AppsStorageUpgradeable is Initializable, X2EarnAppsUpgradeable {
+abstract contract AppsStorageUpgradeableV2 is Initializable, X2EarnAppsUpgradeableV2 {
   /// @custom:storage-location erc7201:b3tr.storage.X2EarnApps.AppsStorage
   struct AppsStorageStorage {
     // Mapping from app ID to app
