@@ -4,7 +4,7 @@ import { getOrDeployContractInstances } from "./helpers"
 import { describe, it } from "mocha"
 import { ZeroAddress } from "ethers"
 
-describe.only("B3TR Multi Sig - @shard1", function () {
+describe("B3TR Multi Sig - @shard1", function () {
   describe("Constructor", function () {
     it("should deploy the contract", async function () {
       const { b3trMultiSig } = await getOrDeployContractInstances({ forceDeploy: false })
