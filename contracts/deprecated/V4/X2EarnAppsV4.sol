@@ -23,16 +23,16 @@
 
 pragma solidity 0.8.20;
 
-import { X2EarnAppsUpgradeable } from "./x-2-earn-apps/X2EarnAppsUpgradeable.sol";
-import { AdministrationUpgradeable } from "./x-2-earn-apps/modules/AdministrationUpgradeable.sol";
-import { AppsStorageUpgradeable } from "./x-2-earn-apps/modules/AppsStorageUpgradeable.sol";
-import { ContractSettingsUpgradeable } from "./x-2-earn-apps/modules/ContractSettingsUpgradeable.sol";
-import { VoteEligibilityUpgradeable } from "./x-2-earn-apps/modules//VoteEligibilityUpgradeable.sol";
-import { EndorsementUpgradeable } from "./x-2-earn-apps/modules/EndorsementUpgradeable.sol";
-import { VechainNodesDataTypes } from "./libraries/VechainNodesDataTypes.sol";
+import { X2EarnAppsUpgradeableV4 } from "./x-2-earn-apps/X2EarnAppsUpgradeableV4.sol";
+import { AdministrationUpgradeableV4 } from "./x-2-earn-apps/modules/AdministrationUpgradeableV4.sol";
+import { AppsStorageUpgradeableV4 } from "./x-2-earn-apps/modules/AppsStorageUpgradeableV4.sol";
+import { ContractSettingsUpgradeableV4 } from "./x-2-earn-apps/modules/ContractSettingsUpgradeableV4.sol";
+import { VoteEligibilityUpgradeableV4 } from "./x-2-earn-apps/modules/VoteEligibilityUpgradeableV4.sol";
+import { EndorsementUpgradeableV4 } from "./x-2-earn-apps/modules/EndorsementUpgradeableV4.sol";
+import { VechainNodesDataTypes } from "../../libraries/VechainNodesDataTypes.sol";
 import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import { IXAllocationVotingGovernor } from "./interfaces/IXAllocationVotingGovernor.sol";
+import { IXAllocationVotingGovernorV4 } from "./interfaces/IXAllocationVotingGovernorV4.sol";
 
 /**
  * @title X2EarnApps
@@ -52,19 +52,14 @@ import { IXAllocationVotingGovernor } from "./interfaces/IXAllocationVotingGover
  * 
  * -------------------- Version 4 --------------------
  * - Enabling by default the rewards pool for new apps submitted.
- *
- * -------------------- Version 5 --------------------
- * - Restricting one app per creator holding a creator NFT.
- * A check on submitApp is added to ensure that the number of creatorApps[creator] is 0.
- * This mapping is increased when a creator is added to an app, submit an app after approved by VBD, or got endorsed.
  */
-contract X2EarnApps is
-  X2EarnAppsUpgradeable,
-  AdministrationUpgradeable,
-  ContractSettingsUpgradeable,
-  VoteEligibilityUpgradeable,
-  AppsStorageUpgradeable,
-  EndorsementUpgradeable,
+contract X2EarnAppsV4 is
+  X2EarnAppsUpgradeableV4,
+  AdministrationUpgradeableV4,
+  ContractSettingsUpgradeableV4,
+  VoteEligibilityUpgradeableV4,
+  AppsStorageUpgradeableV4,
+  EndorsementUpgradeableV4,
   AccessControlUpgradeable,
   UUPSUpgradeable
 {
@@ -79,12 +74,16 @@ contract X2EarnApps is
   }
 
   /**
-   * @notice Initialize the version 5 contract
+   * @notice Initialize the version 4 contract
+   * @param _x2EarnRewardsPoolContract the address of the x2EarnRewardsPool contract to enable the rewards pool for new apps
    *
-   * @dev This function is called only once during the contract upgrade from V4 to V5.
-   * This upgrade adds a restriction on creator NFTs holder: they can only be attached to one app.
+   * @dev This function is called only once during the contract upgrade
    */
-  function initializeV5() public reinitializer(5) {}
+  function initializeV4(
+    address _x2EarnRewardsPoolContract
+  ) public reinitializer(4) {
+    __Administration_init_v4(_x2EarnRewardsPoolContract);
+  }
 
   // ---------- Modifiers ------------ //
 
@@ -125,7 +124,7 @@ contract X2EarnApps is
    * @return sting The version of the contract
    */
   function version() public pure virtual returns (string memory) {
-    return "5";
+    return "4";
   }
 
   // ---------- Overrides ------------ //

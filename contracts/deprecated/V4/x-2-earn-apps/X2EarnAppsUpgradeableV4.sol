@@ -24,11 +24,11 @@
 pragma solidity 0.8.20;
 
 import { Time } from "@openzeppelin/contracts/utils/types/Time.sol";
-import { IX2EarnApps } from "../interfaces/IX2EarnApps.sol";
+import { IX2EarnAppsV4 } from "../interfaces/IX2EarnAppsV4.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import { X2EarnAppsDataTypes } from "../libraries/X2EarnAppsDataTypes.sol";
-import { IX2EarnCreator } from "../interfaces/IX2EarnCreator.sol";
-import { IX2EarnRewardsPool } from "../interfaces/IX2EarnRewardsPool.sol";
+import { X2EarnAppsDataTypes } from "../../../libraries/X2EarnAppsDataTypes.sol";
+import { IX2EarnCreator } from "../../../interfaces/IX2EarnCreator.sol";
+import { IX2EarnRewardsPool } from "../../../interfaces/IX2EarnRewardsPool.sol";
 
 /**
  * @title X2EarnAppsUpgradeable
@@ -40,7 +40,7 @@ import { IX2EarnRewardsPool } from "../interfaces/IX2EarnRewardsPool.sol";
  * - a module to handle the administration of the app (handle moderators, admin, metadata, team address and percentage)
  * - a module to handle the settings of the contract
  */
-abstract contract X2EarnAppsUpgradeable is Initializable, IX2EarnApps {
+abstract contract X2EarnAppsUpgradeableV4 is Initializable, IX2EarnAppsV4 {
 
   // ---------- Getters ---------- //
   /**
@@ -77,7 +77,7 @@ abstract contract X2EarnAppsUpgradeable is Initializable, IX2EarnApps {
   }
 
   /**
-   * @dev See {IX2EarnApps-hashAppName}.
+   * @dev See {IX2EarnAppsV4-hashAppName}.
    */
   function hashAppName(string memory appName) public pure returns (bytes32) {
     return keccak256(abi.encodePacked(appName));
@@ -86,37 +86,37 @@ abstract contract X2EarnAppsUpgradeable is Initializable, IX2EarnApps {
   // --- To be implemented by the inheriting contract --- //
 
   /**
-   * @inheritdoc IX2EarnApps
+   * @inheritdoc IX2EarnAppsV4
    */
   function appExists(bytes32 appId) public view virtual returns (bool);
 
   /**
-   * @inheritdoc IX2EarnApps
+   * @inheritdoc IX2EarnAppsV4
    */
   function isBlacklisted(bytes32 appId) public view virtual returns (bool);
 
   /**
-   * @inheritdoc IX2EarnApps
+   * @inheritdoc IX2EarnAppsV4
    */
   function baseURI() public view virtual returns (string memory);
 
   /**
-   * @inheritdoc IX2EarnApps
+   * @inheritdoc IX2EarnAppsV4
    */
   function isAppUnendorsed(bytes32 appId) public view virtual returns (bool);
 
   /**
-   * @inheritdoc IX2EarnApps
+   * @inheritdoc IX2EarnAppsV4
    */
   function teamWalletAddress(bytes32 appId) public view virtual returns (address);
 
   /**
-   * @dev See {IX2EarnApps-appAdmin}
+   * @dev See {IX2EarnAppsV4-appAdmin}
    */
   function appAdmin(bytes32 appId) public view virtual returns (address);
 
   /**
-   * @dev See {IX2EarnApps-teamAllocationPercentage}
+   * @dev See {IX2EarnAppsV4-teamAllocationPercentage}
    */
   function teamAllocationPercentage(bytes32 appId) public view virtual returns (uint256);
 
@@ -124,11 +124,6 @@ abstract contract X2EarnAppsUpgradeable is Initializable, IX2EarnApps {
    * @dev Returns the list of moderators of the app
    */
   function appModerators(bytes32 appId) public view virtual returns (address[] memory);
-
-  /**
-   * @dev Returns true if the creator has already been used for another app.
-   */
-  function isCreatorOfAnyApp(address creator) public view virtual returns (bool);
 
   /**
    * @dev Function to get the metadataURI of an app.
