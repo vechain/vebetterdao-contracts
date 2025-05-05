@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.20;
 
-import { X2EarnAppsDataTypes } from "../libraries/X2EarnAppsDataTypes.sol";
-import { VechainNodesDataTypes } from "../libraries/VechainNodesDataTypes.sol";
-import { IX2EarnCreator } from "./IX2EarnCreator.sol";
-import { IXAllocationVotingGovernor } from "./IXAllocationVotingGovernor.sol";
-import { IX2EarnRewardsPool } from "./IX2EarnRewardsPool.sol";
+import { X2EarnAppsDataTypes } from "../../../libraries/X2EarnAppsDataTypes.sol";
+import { VechainNodesDataTypes } from "../../../libraries/VechainNodesDataTypes.sol";
+import { IX2EarnCreator } from "../../../interfaces/IX2EarnCreator.sol";
+import { IXAllocationVotingGovernor } from "../../../interfaces/IXAllocationVotingGovernor.sol";
+import { IX2EarnRewardsPool } from "../../../interfaces/IX2EarnRewardsPool.sol";
 
 /**
  * @title IX2EarnApps
  * @notice Interface for the X2EarnApps contract.
  * @dev The contract inheriting this interface should be able to manage the x2earn apps and their Eligibility for allocation voting.
  */
-interface IX2EarnApps {
+interface IX2EarnAppsV4 {
   /**
    * @dev The clock was incorrectly modified.
    */
@@ -82,11 +82,6 @@ interface IX2EarnApps {
    * @dev The caller is an unverified creator.
    */
   error X2EarnUnverifiedCreator(address creator);
-
-  /**
-   * @dev The creator NFT is already used for another app.
-   */
-  error CreatorNFTAlreadyUsed(address creator);
 
   /**
    * @dev Invalid start index for get apps pagination
@@ -314,13 +309,6 @@ interface IX2EarnApps {
    * Emits a {CreatorAddedToApp} event.
    */
   function addCreator(bytes32 appId, address creator) external;
-
-  /**
-   * @dev Check if a creator has already been used for another app.
-   *
-   * @param creator the address of the creator
-   */
-  function isCreatorOfAnyApp(address creator) external returns (bool);
 
   /**
    * @dev Remove a creator from the app.

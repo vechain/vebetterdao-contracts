@@ -129,12 +129,14 @@ describe("X2EarnCreator - @shard2", () => {
 
   describe("Minting", () => {
     it("Should mint a token to the caller", async () => {
-      const { x2EarnCreator, owner, otherAccount } = await getOrDeployContractInstances({ forceDeploy: true })
+      const { x2EarnCreator, owner, otherAccounts } = await getOrDeployContractInstances({ forceDeploy: true })
 
-      await expect(x2EarnCreator.connect(owner).safeMint(otherAccount.address)).to.emit(x2EarnCreator, "Transfer")
+      await expect(x2EarnCreator.connect(owner).safeMint(otherAccounts[14].address)).to.emit(x2EarnCreator, "Transfer")
 
-      expect(await x2EarnCreator.ownerOf(2)).to.equal(otherAccount.address)
-      expect(await x2EarnCreator.tokenURI(2)).to.equal("ipfs://bafybeie2onvzl3xsod5becuswpdmi63gtq7wgjqhqjecehytt7wdeg4py4/metadata/1.json")
+      expect(await x2EarnCreator.ownerOf(10)).to.equal(otherAccounts[14].address)
+      expect(await x2EarnCreator.tokenURI(10)).to.equal(
+        "ipfs://bafybeie2onvzl3xsod5becuswpdmi63gtq7wgjqhqjecehytt7wdeg4py4/metadata/1.json",
+      )
     })
 
     it("Should not allow minting when paused", async () => {
@@ -168,13 +170,14 @@ describe("X2EarnCreator - @shard2", () => {
       await expect(x2EarnCreator.connect(owner).safeMint(otherAccount.address)).to.not.be.reverted
 
       // MINTER_ROLE
-      await expect(x2EarnCreator.connect(minter).safeMint(otherAccounts[2].address)).to.not.be.reverted
+      await expect(x2EarnCreator.connect(minter).safeMint(otherAccounts[10].address)).to.not.be.reverted
     })
 
-    it("Should be able to get the token URI if token not minted", async () => {
+    it("Should not be able to get the token URI if token not minted", async () => {
       const { x2EarnCreator } = await getOrDeployContractInstances({ forceDeploy: true })
 
-      await expect(x2EarnCreator.tokenURI(2)).to.be.reverted
+      // x2earnApp v5: Token [2...5] are reserved for the creator NFTs
+      await expect(x2EarnCreator.tokenURI(10)).to.be.reverted
     })
 
     it("Should not be able to mint token to a user that already has a token", async () => {
@@ -257,7 +260,6 @@ describe("X2EarnCreator - @shard2", () => {
       expect(await x2EarnCreator.hasRole(await x2EarnCreator.DEFAULT_ADMIN_ROLE(), owner.address)).to.eql(true)
 
       await x2EarnCreator.connect(owner).safeMint(otherAccount.address)
-      await x2EarnCreator.connect(owner).safeMint(otherAccounts[2].address)
 
       // normal user
       await expect(x2EarnCreator.connect(otherAccount).burn(1)).to.be.reverted
@@ -282,7 +284,7 @@ describe("X2EarnCreator - @shard2", () => {
     it("Should not be able to burn a token that does not exist", async () => {
       const { x2EarnCreator, owner } = await getOrDeployContractInstances({ forceDeploy: true })
 
-      await catchRevert(x2EarnCreator.connect(owner).burn(3))
+      await catchRevert(x2EarnCreator.connect(owner).burn(10))
     })
 
     it("Should not be able to get the token URI after burning", async () => {
@@ -302,15 +304,18 @@ describe("X2EarnCreator - @shard2", () => {
 
       await x2EarnCreator.connect(owner).safeMint(otherAccount.address)
 
-      expect(await x2EarnCreator.tokenURI(1)).to.equal("ipfs://bafybeie2onvzl3xsod5becuswpdmi63gtq7wgjqhqjecehytt7wdeg4py4/metadata/1.json")
+      expect(await x2EarnCreator.tokenURI(1)).to.equal(
+        "ipfs://bafybeie2onvzl3xsod5becuswpdmi63gtq7wgjqhqjecehytt7wdeg4py4/metadata/1.json",
+      )
     })
     it("Should return the correct token owner", async () => {
-      const { x2EarnCreator, owner, otherAccount } = await getOrDeployContractInstances({ forceDeploy: true })
+      const { x2EarnCreator, owner, otherAccounts } = await getOrDeployContractInstances({ forceDeploy: true })
 
-      await x2EarnCreator.connect(owner).safeMint(otherAccount.address)
+      let creator10 = otherAccounts[10]
+      await x2EarnCreator.connect(owner).safeMint(creator10.address)
 
       expect(await x2EarnCreator.ownerOf(1)).to.equal(owner.address)
-      expect(await x2EarnCreator.ownerOf(2)).to.equal(otherAccount.address)
+      expect(await x2EarnCreator.ownerOf(10)).to.equal(creator10.address)
     })
     it("Should return the correct token balance", async () => {
       const { x2EarnCreator, owner, otherAccount } = await getOrDeployContractInstances({ forceDeploy: true })
@@ -323,22 +328,23 @@ describe("X2EarnCreator - @shard2", () => {
     it("Should return the correct token total supply", async () => {
       const { x2EarnCreator, owner, otherAccounts } = await getOrDeployContractInstances({ forceDeploy: true })
 
-      await x2EarnCreator.connect(owner).safeMint(otherAccounts[0].address)
-      await x2EarnCreator.connect(owner).safeMint(otherAccounts[1].address)
+      // Already minted 9 tokens to otherAccounts[0..7] and owner -> see deploy.ts
+      await x2EarnCreator.connect(owner).safeMint(otherAccounts[10].address)
+      await x2EarnCreator.connect(owner).safeMint(otherAccounts[11].address)
 
       await x2EarnCreator.connect(owner).burn(1)
 
-      expect(await x2EarnCreator.totalSupply()).to.equal(2)
+      expect(await x2EarnCreator.totalSupply()).to.equal(10)
     })
     it("Should return the correct token owner by index", async () => {
       const { x2EarnCreator, owner, otherAccounts } = await getOrDeployContractInstances({ forceDeploy: true })
 
-      await x2EarnCreator.connect(owner).safeMint(otherAccounts[0].address)
-      await x2EarnCreator.connect(owner).safeMint(otherAccounts[1].address)
+      await x2EarnCreator.connect(owner).safeMint(otherAccounts[10].address)
+      await x2EarnCreator.connect(owner).safeMint(otherAccounts[11].address)
 
       expect(await x2EarnCreator.tokenOfOwnerByIndex(owner.address, 0)).to.equal(1)
-      expect(await x2EarnCreator.tokenOfOwnerByIndex(otherAccounts[0].address, 0)).to.equal(2)
-      expect(await x2EarnCreator.tokenOfOwnerByIndex(otherAccounts[1].address, 0)).to.equal(3)
+      expect(await x2EarnCreator.tokenOfOwnerByIndex(otherAccounts[10].address, 0)).to.equal(10)
+      expect(await x2EarnCreator.tokenOfOwnerByIndex(otherAccounts[11].address, 0)).to.equal(11)
     })
   })
 })

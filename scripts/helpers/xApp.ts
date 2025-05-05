@@ -19,31 +19,31 @@ export type App = {
   metadataURI: string
 }
 
-export const registerXDapps = async (contractAddress: string, account: TestPk, apps: App[]) => {
+export const registerXDapps = async (contractAddress: string, accounts: TestPk[], apps: App[]) => {
   console.log("Adding x-apps...")
 
   const appChunks = chunk(apps, 50)
 
   for (const appChunk of appChunks) {
-    const clauses: TransactionClause[] = []
+    // For each apps
+    for (let i = 0; i < appChunk.length; i++) {
+      const app = appChunk[i]
+      const account = accounts[i % accounts.length] // Unique signer for each app
 
-    appChunk.map(app => {
-      clauses.push(
-        clauseBuilder.functionInteraction(
-          contractAddress,
-          coder.createInterface(JSON.stringify(X2EarnApps__factory.abi)).getFunction("submitApp") as FunctionFragment,
-          [app.teamWalletAddress, app.admin, app.name, app.metadataURI],
-        ),
+      const clause = clauseBuilder.functionInteraction(
+        contractAddress,
+        coder.createInterface(JSON.stringify(X2EarnApps__factory.abi)).getFunction("submitApp") as FunctionFragment,
+        [app.teamWalletAddress, app.admin, app.name, app.metadataURI],
       )
-    })
 
-    const body: TransactionBody = await buildTxBody(clauses, account.address, 32)
+      const body: TransactionBody = await buildTxBody([clause], account.address, 32)
 
-    if (!account.pk) {
-      throw new Error("Account does not have a private key")
+      if (!account.pk) {
+        throw new Error("Account does not have a private key")
+      }
+
+      await signAndSendTx(body, account.pk)
     }
-
-    await signAndSendTx(body, account.pk)
   }
 }
 
@@ -129,4 +129,14 @@ export const castVotesToXDapps = async (
     )
   }
   console.log("Votes cast.")
+}
+
+/**
+ * Returns an array of accounts that will be used to create xDapps
+ * @param accounts - The array of accounts
+ * @param numberOfCreators - The number of creators to return
+ * @returns array of accounts, admin includes as the first creator
+ */
+export const xDappsCreatorAccounts = (accounts: TestPk[], numberOfCreators: number) => {
+  return accounts.slice(0, numberOfCreators)
 }

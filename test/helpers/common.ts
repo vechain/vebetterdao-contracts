@@ -531,7 +531,9 @@ export const participateInAllocationVoting = async (
   waitRoundToEnd: boolean = false,
   endorser?: HardhatEthersSigner,
 ) => {
-  const { xAllocationVoting, x2EarnApps, owner, veBetterPassport } = await getOrDeployContractInstances({})
+  const { xAllocationVoting, x2EarnApps, owner, veBetterPassport, x2EarnCreator } = await getOrDeployContractInstances(
+    {},
+  )
 
   await getVot3Tokens(user, "1")
   await getVot3Tokens(owner, "1000")
@@ -539,16 +541,43 @@ export const participateInAllocationVoting = async (
   await veBetterPassport.whitelist(user.address)
   if ((await veBetterPassport.isCheckEnabled(1)) === false) await veBetterPassport.toggleCheck(1)
 
-  const appName = "App" + Math.random()
+  // Get or create app ID
+  let appId: string | undefined
+  const appsAlreadySubmitted = await x2EarnApps.isCreatorOfAnyApp(user.address)
 
-  await x2EarnApps.connect(owner).submitApp(user.address, user.address, appName, "metadataURI")
-  await endorseApp(await x2EarnApps.hashAppName(appName), endorser ? endorser : owner)
+  if (!appsAlreadySubmitted) {
+    // Create new app
+    const appName = "App" + Math.random()
+    if ((await x2EarnCreator.balanceOf(user.address)) === 0n) {
+      await x2EarnCreator.connect(owner).safeMint(user.address)
+    }
+    await x2EarnApps.connect(user).submitApp(user.address, user.address, appName, "metadataURI")
+    appId = await x2EarnApps.hashAppName(appName)
+    await endorseApp(appId, endorser || owner)
+  } else {
+    // We will work with the already submitted app
+    const allEligibleApps = await x2EarnApps.allEligibleApps()
+
+    for (const app of allEligibleApps) {
+      const creators = await x2EarnApps.appCreators(app)
+      if (creators.length > 0 && creators[0].toLowerCase() === user.address.toLowerCase()) {
+        appId = app
+        break
+      }
+    }
+    // If no app found for this user, use first eligible app as fallback
+    if (!appId && allEligibleApps.length > 0) {
+      appId = allEligibleApps[0]
+      console.log("Using fallback app:", appId)
+    } else if (!appId) {
+      console.warn("No eligible apps found for user")
+      return
+    }
+  }
+
+  // Start round and vote (common for both paths)
   const roundId = await startNewAllocationRound()
-
-  // Vote
-  await xAllocationVoting
-    .connect(user)
-    .castVote(roundId, [await x2EarnApps.hashAppName(appName)], [ethers.parseEther("1")])
+  await xAllocationVoting.connect(user).castVote(roundId, [appId], [ethers.parseEther("1")])
 
   if (waitRoundToEnd) {
     await waitForRoundToEnd(roundId)

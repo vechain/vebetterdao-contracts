@@ -33,6 +33,20 @@ export async function x2EarnLibraries() {
   await VoteEligibilityUtilsLibV3.waitForDeployment()
 
   // ---------------------- Version 4  ----------------------
+  const AdministrationUtilsV4 = await ethers.getContractFactory("AdministrationUtilsV4")
+  const AdministrationUtilsLibV4 = await AdministrationUtilsV4.deploy()
+  await AdministrationUtilsLibV4.waitForDeployment()
+
+  const EndorsementUtilsV4 = await ethers.getContractFactory("EndorsementUtilsV4")
+  const EndorsementUtilsLibV4 = await EndorsementUtilsV4.deploy()
+  await EndorsementUtilsLibV4.waitForDeployment()
+
+  const VoteEligibilityUtilsV4 = await ethers.getContractFactory("VoteEligibilityUtilsV4")
+  const VoteEligibilityUtilsLibV4 = await VoteEligibilityUtilsV4.deploy()
+  await VoteEligibilityUtilsLibV4.waitForDeployment()
+
+  // ---------------------- Version 5  ----------------------
+  // Latest version
   const AdministrationUtils = await ethers.getContractFactory("AdministrationUtils")
   const AdministrationUtilsLib = await AdministrationUtils.deploy()
   await AdministrationUtilsLib.waitForDeployment()
@@ -48,14 +62,17 @@ export async function x2EarnLibraries() {
   await VoteEligibilityUtilsLib.waitForDeployment()
 
   return {
+    AdministrationUtils: AdministrationUtilsLib,
+    EndorsementUtils: EndorsementUtilsLib,
+    VoteEligibilityUtils: VoteEligibilityUtilsLib,
     AdministrationUtilsV2: AdministrationUtilsLibV2,
     EndorsementUtilsV2: EndorsementUtilsLibV2,
     VoteEligibilityUtilsV2: VoteEligibilityUtilsLibV2,
     AdministrationUtilsV3: AdministrationUtilsLibV3,
     EndorsementUtilsV3: EndorsementUtilsLibV3,
     VoteEligibilityUtilsV3: VoteEligibilityUtilsLibV3,
-    AdministrationUtils: AdministrationUtilsLib,
-    EndorsementUtils: EndorsementUtilsLib,
-    VoteEligibilityUtils: VoteEligibilityUtilsLib,
+    AdministrationUtilsV4: AdministrationUtilsLibV4,
+    EndorsementUtilsV4: EndorsementUtilsLibV4,
+    VoteEligibilityUtilsV4: VoteEligibilityUtilsLibV4,
   }
 }

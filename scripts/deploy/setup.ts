@@ -2,10 +2,11 @@ import { Emissions, TokenAuction, Treasury, X2EarnApps } from "../../typechain-t
 import { SeedStrategy, getSeedAccounts, getTestKeys } from "../helpers/seedAccounts"
 import { bootstrapEmissions } from "../helpers/emissions"
 import { mintVechainNodes } from "../helpers/vechainNodes"
-import { endorseXApps, registerXDapps } from "../helpers/xApp"
+import { endorseXApps, registerXDapps, xDappsCreatorAccounts } from "../helpers/xApp"
 import { airdropB3trFromTreasury } from "../helpers/airdrop"
 
 const accounts = getTestKeys(13)
+const xDappCreatorAccounts = xDappsCreatorAccounts(accounts, 8)
 
 export const APPS = [
   {
@@ -86,7 +87,7 @@ export const setupLocalEnvironment = async (
 
   // Add x-apps to the XAllocationPool
   const x2EarnAppsAddress = await x2EarnApps.getAddress()
-  await registerXDapps(x2EarnAppsAddress, admin, APPS)
+  await registerXDapps(x2EarnAppsAddress, xDappCreatorAccounts, APPS)
 
   // Seed the first 5 accounts with some tokens
   const treasuryAddress = await treasury.getAddress()
@@ -134,7 +135,7 @@ export const setupTestEnvironment = async (
 
   // Add x-apps to the XAllocationPool
   const x2EarnAppsAddress = await x2EarnApps.getAddress()
-  await registerXDapps(x2EarnAppsAddress, admin, APPS)
+  await registerXDapps(x2EarnAppsAddress, xDappCreatorAccounts, APPS)
   console.log("x-apps added")
 
   // Creating NODE holders
