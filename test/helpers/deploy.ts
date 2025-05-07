@@ -72,7 +72,7 @@ import {
   AdministrationUtils,
   VoteEligibilityUtils,
   EndorsementUtils,
-    X2EarnCreator,
+  X2EarnCreator,
   B3TRGovernorV4,
   VoterRewardsV2,
   GalaxyMemberV1,
@@ -97,6 +97,15 @@ import {
   AdministrationUtilsV4,
   VoteEligibilityUtilsV4,
   EndorsementUtilsV4,
+  VeBetterPassportV3,
+  PassportPersonhoodLogicV3,
+  PassportEntityLogicV3,
+  PassportChecksLogicV3,
+  PassportConfiguratorV3,
+  PassportDelegationLogicV3,
+  PassportSignalingLogicV3,
+  PassportPoPScoreLogicV3,
+  PassportWhitelistAndBlacklistLogicV3,
 } from "../../typechain-types"
 import { createLocalConfig } from "../../config/contracts/envs/local"
 import { deployAndUpgrade, deployProxy, deployProxyOnly, initializeProxy, upgradeProxy } from "../../scripts/helpers"
@@ -176,6 +185,7 @@ interface DeployInstance {
   governorQuorumLogicLibV4: GovernorQuorumLogicV4
   governorStateLogicLibV4: GovernorStateLogicV4
   governorVotesLogicLibV4: GovernorVotesLogicV4
+  // Passport
   passportChecksLogic: PassportChecksLogic
   passportDelegationLogic: PassportDelegationLogic
   passportEntityLogic: PassportEntityLogic
@@ -199,6 +209,14 @@ interface DeployInstance {
   passportSignalingLogicV2: PassportSignalingLogicV2
   passportWhitelistBlacklistLogicV2: PassportWhitelistAndBlacklistLogicV2
   passportConfiguratorV2: PassportConfiguratorV2
+  passportChecksLogicV3: PassportChecksLogicV3
+  passportConfiguratorV3: PassportConfiguratorV3
+  passportEntityLogicV3: PassportEntityLogicV3
+  passportDelegationLogicV3: PassportDelegationLogicV3
+  passportPersonhoodLogicV3: PassportPersonhoodLogicV3
+  passportPoPScoreLogicV3: PassportPoPScoreLogicV3
+  passportSignalingLogicV3: PassportSignalingLogicV3
+  passportWhitelistBlacklistLogicV3: PassportWhitelistAndBlacklistLogicV3
   passportConfigurator: any // no abi for this library, which means a typechain is not generated
   administrationUtils: AdministrationUtils
   endorsementUtils: EndorsementUtils
@@ -279,6 +297,16 @@ export const getOrDeployContractInstances = async ({
 
   // Deploy Passport Libraries
   const {
+    // V3
+    PassportChecksLogicV3,
+    PassportConfiguratorV3,
+    PassportEntityLogicV3,
+    PassportDelegationLogicV3,
+    PassportPersonhoodLogicV3,
+    PassportPoPScoreLogicV3,
+    PassportSignalingLogicV3,
+    PassportWhitelistAndBlacklistLogicV3,
+    // V2
     PassportChecksLogicV2,
     PassportConfiguratorV2,
     PassportEntityLogicV2,
@@ -287,6 +315,7 @@ export const getOrDeployContractInstances = async ({
     PassportPoPScoreLogicV2,
     PassportSignalingLogicV2,
     PassportWhitelistAndBlacklistLogicV2,
+    // V1
     PassportChecksLogicV1,
     PassportConfiguratorV1,
     PassportEntityLogicV1,
@@ -295,6 +324,7 @@ export const getOrDeployContractInstances = async ({
     PassportPoPScoreLogicV1,
     PassportSignalingLogicV1,
     PassportWhitelistAndBlacklistLogicV1,
+    // V4 (latest)
     PassportChecksLogic,
     PassportConfigurator,
     PassportEntityLogic,
@@ -500,7 +530,6 @@ export const getOrDeployContractInstances = async ({
     },
   )) as X2EarnApps
 
-
   const x2EarnRewardsPool = (await deployAndUpgrade(
     [
       "X2EarnRewardsPoolV1",
@@ -699,13 +728,34 @@ export const getOrDeployContractInstances = async ({
     },
   )) as VeBetterPassportV2
 
-  const veBetterPassport = (await upgradeProxy(
+  const veBetterPassportV3 = (await upgradeProxy(
     "VeBetterPassportV2",
-    "VeBetterPassport",
-    await veBetterPassportV1.getAddress(),
+    "VeBetterPassportV3",
+    await veBetterPassportV1.getAddress(), // Proxy address remains the same
     [],
     {
       version: 3,
+      libraries: {
+        PassportChecksLogicV3: await PassportChecksLogicV3.getAddress(),
+        PassportConfiguratorV3: await PassportConfiguratorV3.getAddress(),
+        PassportEntityLogicV3: await PassportEntityLogicV3.getAddress(),
+        PassportDelegationLogicV3: await PassportDelegationLogicV3.getAddress(),
+        PassportPersonhoodLogicV3: await PassportPersonhoodLogicV3.getAddress(),
+        PassportPoPScoreLogicV3: await PassportPoPScoreLogicV3.getAddress(),
+        PassportSignalingLogicV3: await PassportSignalingLogicV3.getAddress(),
+        PassportWhitelistAndBlacklistLogicV3: await PassportWhitelistAndBlacklistLogicV3.getAddress(),
+      },
+    },
+  )) as VeBetterPassportV3
+
+  // V4 (latest version)
+  const veBetterPassport = (await upgradeProxy(
+    "VeBetterPassportV3",
+    "VeBetterPassport",
+    await veBetterPassportV1.getAddress(), // Proxy address remains the same
+    [],
+    {
+      version: 4,
       libraries: {
         PassportChecksLogic: await PassportChecksLogic.getAddress(),
         PassportConfigurator: await PassportConfigurator.getAddress(),
@@ -1007,6 +1057,14 @@ export const getOrDeployContractInstances = async ({
     passportSignalingLogicV2: PassportSignalingLogicV2,
     passportWhitelistBlacklistLogicV2: PassportWhitelistAndBlacklistLogicV2,
     passportConfiguratorV2: PassportConfiguratorV2,
+    passportChecksLogicV3: PassportChecksLogicV3,
+    passportConfiguratorV3: PassportConfiguratorV3,
+    passportEntityLogicV3: PassportEntityLogicV3,
+    passportDelegationLogicV3: PassportDelegationLogicV3,
+    passportPersonhoodLogicV3: PassportPersonhoodLogicV3,
+    passportPoPScoreLogicV3: PassportPoPScoreLogicV3,
+    passportSignalingLogicV3: PassportSignalingLogicV3,
+    passportWhitelistBlacklistLogicV3: PassportWhitelistAndBlacklistLogicV3,
     administrationUtils: AdministrationUtils,
     endorsementUtils: EndorsementUtils,
     voteEligibilityUtils: VoteEligibilityUtils,
