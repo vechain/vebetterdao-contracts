@@ -23,22 +23,22 @@
 
 pragma solidity 0.8.20;
 
-import { PassportStorageTypes } from "./PassportStorageTypes.sol";
-import { PassportClockLogic } from "./PassportClockLogic.sol";
-import { PassportEntityLogic } from "./PassportEntityLogic.sol";
-import { PassportEIP712SigningLogic } from "./PassportEIP712SigningLogic.sol";
-import { PassportTypes } from "./PassportTypes.sol";
+import { PassportStorageTypesV3 } from "./PassportStorageTypesV3.sol";
+import { PassportClockLogicV3 } from "./PassportClockLogicV3.sol";
+import { PassportEntityLogicV3 } from "./PassportEntityLogicV3.sol";
+import { PassportEIP712SigningLogicV3 } from "./PassportEIP712SigningLogicV3.sol";
+import { PassportTypesV3 } from "./PassportTypesV3.sol";
 import { Checkpoints } from "@openzeppelin/contracts/utils/structs/Checkpoints.sol";
 import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /**
- * @title PassportSignalingLogic
+ * @title PassportSignalingLogicV3
  * @dev A library that manages the signaling system within the Passport ecosystem.
  * Signaling is used to track negative or positive behavior for users based on interactions in specific apps.
  * This library allows for signaling users, assigning signalers to apps, resetting signals, and managing app-specific signals.
  */
-library PassportSignalingLogic {
+library PassportSignalingLogicV3 {
   // ---------- Events ---------- //
   /// @notice Emitted when a user is signaled.
   /// @param user  The address of the user that was signaled.
@@ -72,7 +72,7 @@ library PassportSignalingLogic {
 
   /// @notice Returns the number of times a user has been signaled
   function signaledCounter(
-    PassportStorageTypes.PassportStorage storage self,
+    PassportStorageTypesV3.PassportStorage storage self,
     address user
   ) internal view returns (uint256) {
     return self.signaledCounter[user];
@@ -80,7 +80,7 @@ library PassportSignalingLogic {
 
   /// @notice Returns the belonging app of a signaler
   function appOfSignaler(
-    PassportStorageTypes.PassportStorage storage self,
+    PassportStorageTypesV3.PassportStorage storage self,
     address signaler
   ) internal view returns (bytes32) {
     return self.appOfSignaler[signaler];
@@ -88,7 +88,7 @@ library PassportSignalingLogic {
 
   /// @notice Returns the number of times a user has been signaled by an app
   function appSignalsCounter(
-    PassportStorageTypes.PassportStorage storage self,
+    PassportStorageTypesV3.PassportStorage storage self,
     bytes32 app,
     address user
   ) internal view returns (uint256) {
@@ -97,27 +97,27 @@ library PassportSignalingLogic {
 
   /// @notice Returns the total number of signals for an app
   function appTotalSignalsCounter(
-    PassportStorageTypes.PassportStorage storage self,
+    PassportStorageTypesV3.PassportStorage storage self,
     bytes32 app
   ) internal view returns (uint256) {
     return self.appTotalSignalsCounter[app];
   }
 
   /// @notice Returns the signaling threshold
-  function signalingThreshold(PassportStorageTypes.PassportStorage storage self) internal view returns (uint256) {
+  function signalingThreshold(PassportStorageTypesV3.PassportStorage storage self) internal view returns (uint256) {
     return self.signalsThreshold;
   }
 
   // ---------- Setters ---------- //
 
   /// @notice Signals a user
-  function signalUser(PassportStorageTypes.PassportStorage storage self, address user) external {
+  function signalUser(PassportStorageTypesV3.PassportStorage storage self, address user) external {
     _signalUser(self, user, "");
   }
 
   /// @notice Signals a user with a reason
   function signalUserWithReason(
-    PassportStorageTypes.PassportStorage storage self,
+    PassportStorageTypesV3.PassportStorage storage self,
     address user,
     string memory reason
   ) external {
@@ -128,7 +128,7 @@ library PassportSignalingLogic {
   /// @param app - the app to assign the signaler to
   /// @param user - the signaler to assign to the app
   function assignSignalerToAppByAppAdmin(
-    PassportStorageTypes.PassportStorage storage self,
+    PassportStorageTypesV3.PassportStorage storage self,
     bytes32 app,
     address user
   ) external {
@@ -139,7 +139,7 @@ library PassportSignalingLogic {
 
   /// @notice this method allows an app admin to remove a signaler from an app
   /// @param user - the signaler to remove from the app
-  function removeSignalerFromAppByAppAdmin(PassportStorageTypes.PassportStorage storage self, address user) external {
+  function removeSignalerFromAppByAppAdmin(PassportStorageTypesV3.PassportStorage storage self, address user) external {
     bytes32 app = self.appOfSignaler[user];
     require(self.x2EarnApps.isAppAdmin(app, msg.sender), "BotSignaling: caller is not an admin of the app");
 
@@ -147,12 +147,12 @@ library PassportSignalingLogic {
   }
 
   /// @notice Sets the signaling threshold
-  function setSignalingThreshold(PassportStorageTypes.PassportStorage storage self, uint256 threshold) external {
+  function setSignalingThreshold(PassportStorageTypesV3.PassportStorage storage self, uint256 threshold) external {
     self.signalsThreshold = threshold;
   }
 
   /// @notice Private function to remove a signaler from an app
-  function removeSignalerFromApp(PassportStorageTypes.PassportStorage storage self, address user) public {
+  function removeSignalerFromApp(PassportStorageTypesV3.PassportStorage storage self, address user) public {
     require(user != address(0), "BotSignaling: user cannot be zero");
 
     // to emit in the event
@@ -164,7 +164,7 @@ library PassportSignalingLogic {
   }
 
   /// @notice Private function to assign a signaler to an app
-  function assignSignalerToApp(PassportStorageTypes.PassportStorage storage self, bytes32 app, address user) public {
+  function assignSignalerToApp(PassportStorageTypesV3.PassportStorage storage self, bytes32 app, address user) public {
     require(app != bytes32(0), "BotSignaling: app cannot be zero");
     require(user != address(0), "BotSignaling: user cannot be zero");
 
@@ -177,7 +177,7 @@ library PassportSignalingLogic {
   /// @param user - the user to reset the signals of
   /// @param reason - the reason for resetting the signals
   function resetUserSignals(
-    PassportStorageTypes.PassportStorage storage self,
+    PassportStorageTypesV3.PassportStorage storage self,
     address user,
     string memory reason
   ) external {
@@ -188,7 +188,7 @@ library PassportSignalingLogic {
     self.signaledCounter[user] = 0;
 
     // Get the passport address if the user has attached their entity to a passport
-    address passport = PassportEntityLogic._getPassportForEntity(self, user);
+    address passport = PassportEntityLogicV3._getPassportForEntity(self, user);
     if (user != passport) {
       self.signaledCounter[passport] -= signals;
     }
@@ -199,12 +199,13 @@ library PassportSignalingLogic {
   /// @notice Resets the signals of a user
   /// @param user - the user to reset the signals of
   /// @param reason - the reason for resetting the signals
-  function resetUserSignalsByAppWithReason(
-    PassportStorageTypes.PassportStorage storage self,
+  function resetUserSignalsByAppAdminWithReason(
+    PassportStorageTypesV3.PassportStorage storage self,
     address user,
     string memory reason
   ) external {
     bytes32 app = self.appOfSignaler[msg.sender];
+    require(self.x2EarnApps.isAppAdmin(app, msg.sender), "BotSignaling: caller is not an admin of the app");
 
     _resetUserSignalsOfApp(self, user, app, reason);
   }
@@ -212,7 +213,7 @@ library PassportSignalingLogic {
   // ---------- Private ---------- //
 
   /// @notice Private function to signal a user
-  function _signalUser(PassportStorageTypes.PassportStorage storage self, address user, string memory reason) private {
+  function _signalUser(PassportStorageTypesV3.PassportStorage storage self, address user, string memory reason) private {
     self.signaledCounter[user]++;
 
     bytes32 app = self.appOfSignaler[msg.sender];
@@ -220,7 +221,7 @@ library PassportSignalingLogic {
     self.appTotalSignalsCounter[app]++;
 
     // Check if the user has attached their entity to a passport, if so, also signal the passport
-    address passport = PassportEntityLogic._getPassportForEntity(self, user);
+    address passport = PassportEntityLogicV3._getPassportForEntity(self, user);
     if (user != passport) {
       self.signaledCounter[passport]++;
       self.appSignalsCounter[app][passport]++;
@@ -234,33 +235,22 @@ library PassportSignalingLogic {
   /// @param app - the app to reset the signals for
   /// @param reason - the reason for resetting the signals
   function _resetUserSignalsOfApp(
-    PassportStorageTypes.PassportStorage storage self,
+    PassportStorageTypesV3.PassportStorage storage self,
     address user,
     bytes32 app,
     string memory reason
   ) private {
     // Get the passport address if the user has attached their entity to a passport
-    address passport = PassportEntityLogic._getPassportForEntity(self, user);
+    address passport = PassportEntityLogicV3._getPassportForEntity(self, user);
 
     uint256 signals = self.appSignalsCounter[app][user];
 
     self.appSignalsCounter[app][user] = 0;
     self.appTotalSignalsCounter[app] -= signals;
-
-    // Check against underflow since resetUserSignals() may have already set signaledCounter to 0.
-    // This prevents errors when these functions are called in sequence (resetUserSignals first, then resetUserSignalsByAppWithReason)
-    if (self.signaledCounter[user] >= signals) {
-      self.signaledCounter[user] -= signals;
-    } else {
-      self.signaledCounter[user] = 0;
-    }
+    self.signaledCounter[user] -= signals;
 
     if (user != passport) {
-      if (self.signaledCounter[passport] >= signals) {
-        self.signaledCounter[passport] -= signals;
-      } else {
-        self.signaledCounter[passport] = 0;
-      }
+      self.signaledCounter[passport] -= signals;
       self.appSignalsCounter[app][passport] -= signals;
     }
 
@@ -276,7 +266,7 @@ library PassportSignalingLogic {
    * @param passport The address of the passport to which the entity's signals will be attached.
    */
   function attachEntitySignalsToPassport(
-    PassportStorageTypes.PassportStorage storage self,
+    PassportStorageTypesV3.PassportStorage storage self,
     address entity,
     address passport
   ) internal {
@@ -301,19 +291,12 @@ library PassportSignalingLogic {
    * @param passport The address of the passport that will have the signals removed.
    */
   function removeEntitySignalsFromPassport(
-    PassportStorageTypes.PassportStorage storage self,
+    PassportStorageTypesV3.PassportStorage storage self,
     address entity,
     address passport
   ) internal {
     // Remove the signals of the entity from the passport
-    uint256 entitySignals = self.signaledCounter[entity];
-
-    // Check against underflow since signals may have been reset separately
-    if (self.signaledCounter[passport] >= entitySignals) {
-      self.signaledCounter[passport] -= entitySignals;
-    } else {
-      self.signaledCounter[passport] = 0;
-    }
+    self.signaledCounter[passport] -= self.signaledCounter[entity];
 
     // Get the unique apps that the entity has interacted with
     bytes32[] memory apps = self.userInteractedApps[entity];
