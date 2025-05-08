@@ -85,7 +85,59 @@ export async function passportLibraries() {
   const PassportWhitelistAndBlacklistLogicLibV2 = await PassportWhitelistAndBlacklistLogicV2.deploy()
   await PassportWhitelistAndBlacklistLogicLibV2.waitForDeployment()
 
-  //// ______________ VERSION 3 ______________
+  /// ______________ VERSION 3 ______________
+
+  // Deploy Passport Checks Logic V3
+  const PassportChecksLogicV3 = await ethers.getContractFactory("PassportChecksLogicV3")
+  const PassportChecksLogicV3Lib = await PassportChecksLogicV3.deploy()
+  await PassportChecksLogicV3Lib.waitForDeployment()
+
+  // Deploy Passport Configurator V3
+  const PassportConfiguratorV3 = await ethers.getContractFactory("PassportConfiguratorV3")
+  const PassportConfiguratorV3Lib = await PassportConfiguratorV3.deploy()
+  await PassportConfiguratorV3Lib.waitForDeployment()
+
+  // Deploy Passport Entity Logic V3
+  const PassportEntityLogicV3 = await ethers.getContractFactory("PassportEntityLogicV3")
+  const PassportEntityLogicV3Lib = await PassportEntityLogicV3.deploy()
+  await PassportEntityLogicV3Lib.waitForDeployment()
+
+  // Deploy Passport Delegation Logic V3
+  const PassportDelegationLogicV3 = await ethers.getContractFactory("PassportDelegationLogicV3")
+  const PassportDelegationLogicV3Lib = await PassportDelegationLogicV3.deploy()
+  await PassportDelegationLogicV3Lib.waitForDeployment()
+
+  // Deploy Passport PoP Score Logic V3
+  const PassportPoPScoreLogicV3 = await ethers.getContractFactory("PassportPoPScoreLogicV3")
+  const PassportPoPScoreLogicV3Lib = await PassportPoPScoreLogicV3.deploy()
+  await PassportPoPScoreLogicV3Lib.waitForDeployment()
+
+  // Deploy Passport Signaling Logic V3
+  const PassportSignalingLogicV3 = await ethers.getContractFactory("PassportSignalingLogicV3")
+  const PassportSignalingLogicV3Lib = await PassportSignalingLogicV3.deploy()
+  await PassportSignalingLogicV3Lib.waitForDeployment()
+
+  // Deploy Passport Personhood Logic V3
+  const PassportPersonhoodLogicV3 = await ethers.getContractFactory("PassportPersonhoodLogicV3")
+  const PassportPersonhoodLogicV3Lib = await PassportPersonhoodLogicV3.deploy()
+  await PassportPersonhoodLogicV3Lib.waitForDeployment()
+
+  // Deploy Passport Whitelist and Blacklist Logic V3
+  const PassportWhitelistAndBlacklistLogicV3 = await ethers.getContractFactory("PassportWhitelistAndBlacklistLogicV3")
+  const PassportWhitelistAndBlacklistLogicV3Lib = await PassportWhitelistAndBlacklistLogicV3.deploy()
+  await PassportWhitelistAndBlacklistLogicV3Lib.waitForDeployment()
+
+  // Deploy Clock Logic V3
+  const PassportClockLogicV3 = await ethers.getContractFactory("PassportClockLogicV3")
+  const PassportClockLogicV3Lib = await PassportClockLogicV3.deploy()
+  await PassportClockLogicV3Lib.waitForDeployment()
+
+  // Deploy EIP712Signing Logic V3
+  const PassportEIP712SigningLogicV3 = await ethers.getContractFactory("PassportEIP712SigningLogicV3")
+  const PassportEIP712SigningLogicV3Lib = await PassportEIP712SigningLogicV3.deploy()
+  await PassportEIP712SigningLogicV3Lib.waitForDeployment()
+
+  /// ______________ VERSION 4 ______________
 
   // Deploy Passport Checks Logic
   const PassportChecksLogic = await ethers.getContractFactory("PassportChecksLogic")
@@ -136,6 +188,7 @@ export async function passportLibraries() {
     PassportPoPScoreLogicV1: PassportPoPScoreLogicV1Lib,
     PassportSignalingLogicV1: PassportSignalingLogicV1Lib,
     PassportWhitelistAndBlacklistLogicV1: PassportWhitelistAndBlacklistLogicV1Lib,
+
     PassportChecksLogicV2: PassportChecksLogicLibV2,
     PassportConfiguratorV2: PassportConfiguratorLibV2,
     PassportEntityLogicV2: PassportEntityLogicLibV2,
@@ -144,6 +197,17 @@ export async function passportLibraries() {
     PassportPoPScoreLogicV2: PassportPoPScoreLogicLibV2,
     PassportSignalingLogicV2: PassportSignalingLogicLibV2,
     PassportWhitelistAndBlacklistLogicV2: PassportWhitelistAndBlacklistLogicLibV2,
+
+    PassportChecksLogicV3: PassportChecksLogicV3Lib,
+    PassportConfiguratorV3: PassportConfiguratorV3Lib,
+    PassportEntityLogicV3: PassportEntityLogicV3Lib,
+    PassportDelegationLogicV3: PassportDelegationLogicV3Lib,
+    PassportPersonhoodLogicV3: PassportPersonhoodLogicV3Lib,
+    PassportPoPScoreLogicV3: PassportPoPScoreLogicV3Lib,
+    PassportSignalingLogicV3: PassportSignalingLogicV3Lib,
+    PassportWhitelistAndBlacklistLogicV3: PassportWhitelistAndBlacklistLogicV3Lib,
+
+    // V4 (latest)
     PassportChecksLogic: PassportChecksLogicLib,
     PassportConfigurator: PassportConfiguratorLib,
     PassportEntityLogic: PassportEntityLogicLib,

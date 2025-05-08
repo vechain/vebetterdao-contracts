@@ -135,8 +135,9 @@ describe("VeBetterPassport - @shard2", function () {
         forceDeploy: true,
       })
 
-      expect(await veBetterPassport.version()).to.equal("3")
+      expect(await veBetterPassport.version()).to.equal("4")
     })
+
     it("Should not be able to initialize twice", async function () {
       const config = createTestConfig()
       const { veBetterPassport, owner, x2EarnApps, xAllocationVoting, galaxyMember } =
@@ -168,6 +169,7 @@ describe("VeBetterPassport - @shard2", function () {
             whitelister: owner.address, // whitelistManager
             actionRegistrar: owner.address, // actionRegistrar
             actionScoreManager: owner.address, // actionScoreManager
+            resetSignaler: owner.address, // resetSignaler
           },
         ),
       ).to.be.reverted
@@ -1257,468 +1259,6 @@ describe("VeBetterPassport - @shard2", function () {
 
       await veBetterPassport.connect(owner).setThresholdPoPScore(0)
       expect(await veBetterPassport.thresholdPoPScore()).to.equal(0n)
-    })
-  })
-
-  describe("Passport Signaling", function () {
-    it("Admin of App can assigner and revoker a signaler", async function () {
-      const { x2EarnApps, otherAccounts, otherAccount, owner, veBetterPassport } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      const appAdmin = otherAccounts[0]
-
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, appAdmin, otherAccounts[0].address, "metadataURI")
-
-      const appId = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[0].address))
-
-      await endorseApp(appId, otherAccount)
-
-      await expect(veBetterPassport.connect(appAdmin).assignSignalerToAppByAppAdmin(appId, otherAccount.address))
-        .to.emit(veBetterPassport, "SignalerAssignedToApp")
-        .withArgs(otherAccount.address, appId)
-
-      expect(await veBetterPassport.appOfSignaler(otherAccount.address)).to.equal(appId)
-
-      await expect(veBetterPassport.connect(appAdmin).removeSignalerFromAppByAppAdmin(otherAccount.address))
-        .to.emit(veBetterPassport, "SignalerRemovedFromApp")
-        .withArgs(otherAccount.address, appId)
-
-      expect(await veBetterPassport.appOfSignaler(otherAccount.address)).to.equal(ethers.ZeroHash)
-    })
-
-    it("Non-Admin of an app cannot add a signaler", async function () {
-      const { x2EarnApps, otherAccounts, otherAccount, owner, veBetterPassport } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      const appAdmin = otherAccounts[0]
-
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, appAdmin, otherAccounts[0].address, "metadataURI")
-
-      const appId = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[0].address))
-
-      await endorseApp(appId, otherAccounts[0])
-
-      await expect(veBetterPassport.connect(otherAccount).assignSignalerToAppByAppAdmin(appId, otherAccount.address)).to
-        .be.reverted
-    })
-
-    it("ROLE_GRANTER can add and remove app signalers", async function () {
-      const { x2EarnApps, otherAccounts, otherAccount, owner, veBetterPassport } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      const appAdmin = otherAccounts[0]
-
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, appAdmin, otherAccounts[0].address, "metadataURI")
-
-      const appId = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[0].address))
-
-      await endorseApp(appId, otherAccounts[0])
-
-      await expect(veBetterPassport.connect(owner).assignSignalerToApp(appId, otherAccount.address)) // Differs from `assignSignalerToAppByAppAdmin`
-        .to.emit(veBetterPassport, "SignalerAssignedToApp")
-        .withArgs(otherAccount.address, appId)
-
-      expect(await veBetterPassport.appOfSignaler(otherAccount.address)).to.equal(appId)
-
-      await expect(veBetterPassport.connect(owner).removeSignalerFromApp(otherAccount.address)) // Differs from `removeSignalerFromAppByAppAdmin`
-        .to.emit(veBetterPassport, "SignalerRemovedFromApp")
-        .withArgs(otherAccount.address, appId)
-
-      expect(await veBetterPassport.appOfSignaler(otherAccount.address)).to.equal(ethers.ZeroHash)
-    })
-
-    it("Signaler can signal a user", async function () {
-      const { veBetterPassport, otherAccount, owner, otherAccounts, x2EarnApps } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      const appAdmin = otherAccounts[0]
-
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, appAdmin, otherAccounts[0].address, "metadataURI")
-
-      const appId = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[0].address))
-
-      await endorseApp(appId, otherAccounts[0])
-
-      await expect(veBetterPassport.connect(appAdmin).assignSignalerToAppByAppAdmin(appId, otherAccount.address))
-        .to.emit(veBetterPassport, "SignalerAssignedToApp")
-        .withArgs(otherAccount.address, appId)
-
-      expect(await veBetterPassport.hasRole(await veBetterPassport.SIGNALER_ROLE(), otherAccount.address)).to.be.true
-
-      await expect(veBetterPassport.connect(otherAccount).signalUser(owner.address))
-        .to.emit(veBetterPassport, "UserSignaled")
-        .withArgs(owner.address, otherAccount.address, appId, "")
-
-      expect(await veBetterPassport.signaledCounter(owner.address)).to.equal(1)
-      expect(await veBetterPassport.appSignalsCounter(appId, owner.address)).to.equal(1)
-
-      await expect(veBetterPassport.connect(appAdmin).removeSignalerFromAppByAppAdmin(otherAccount.address))
-        .to.emit(veBetterPassport, "SignalerRemovedFromApp")
-        .withArgs(otherAccount.address, appId)
-
-      await expect(veBetterPassport.connect(otherAccount).signalUser(owner.address)).to.be.reverted
-    })
-
-    it("Signaler can signal a user with reason", async function () {
-      const { veBetterPassport, otherAccount, owner, otherAccounts, x2EarnApps } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      const appAdmin = otherAccounts[0]
-
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, appAdmin, otherAccounts[0].address, "metadataURI")
-
-      const appId = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[0].address))
-
-      await endorseApp(appId, otherAccounts[0])
-
-      await expect(veBetterPassport.connect(appAdmin).assignSignalerToAppByAppAdmin(appId, otherAccount.address))
-        .to.emit(veBetterPassport, "SignalerAssignedToApp")
-        .withArgs(otherAccount.address, appId)
-
-      expect(await veBetterPassport.hasRole(await veBetterPassport.SIGNALER_ROLE(), otherAccount.address)).to.be.true
-
-      await expect(veBetterPassport.connect(otherAccount).signalUserWithReason(owner.address, "Some reason"))
-        .to.emit(veBetterPassport, "UserSignaled")
-        .withArgs(owner.address, otherAccount.address, appId, "Some reason")
-
-      expect(await veBetterPassport.signaledCounter(owner.address)).to.equal(1)
-      expect(await veBetterPassport.appSignalsCounter(appId, owner.address)).to.equal(1)
-    })
-
-    it("Admin can update the signaling threshold", async function () {
-      const config = createTestConfig()
-      config.VEPASSPORT_BOT_SIGNALING_THRESHOLD = 5
-      const { veBetterPassport, otherAccount, owner, otherAccounts, x2EarnApps } = await getOrDeployContractInstances({
-        forceDeploy: true,
-        config,
-      })
-
-      // Enable score check
-      await veBetterPassport.connect(owner).toggleCheck(4)
-
-      // score check should be enabled
-      expect(await veBetterPassport.isCheckEnabled(4)).to.be.true
-
-      // Expect score threshold to be 0
-      expect(await veBetterPassport.thresholdPoPScore()).to.equal(0)
-
-      const appAdmin = otherAccounts[0]
-
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, appAdmin, otherAccounts[0].address, "metadataURI")
-
-      const appId = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[0].address))
-
-      await endorseApp(appId, otherAccounts[0])
-
-      await expect(veBetterPassport.connect(appAdmin).assignSignalerToAppByAppAdmin(appId, otherAccount.address))
-        .to.emit(veBetterPassport, "SignalerAssignedToApp")
-        .withArgs(otherAccount.address, appId)
-
-      expect(await veBetterPassport.hasRole(await veBetterPassport.SIGNALER_ROLE(), otherAccount.address)).to.be.true
-
-      await expect(veBetterPassport.connect(otherAccount).signalUserWithReason(owner.address, "Some reason"))
-        .to.emit(veBetterPassport, "UserSignaled")
-        .withArgs(owner.address, otherAccount.address, appId, "Some reason")
-
-      expect(await veBetterPassport.signaledCounter(owner.address)).to.equal(1)
-      expect(await veBetterPassport.appSignalsCounter(appId, owner.address)).to.equal(1)
-
-      // User should be a person as there score is 0 and participation score check is enabled with threshold of 0, even if they have been signaled as signaling threshold is 5
-      expect(await veBetterPassport.isPerson(owner.address)).to.deep.equal([
-        true,
-        "User's participation score is above the threshold",
-      ])
-
-      // Update the signaling threshold
-      await veBetterPassport.connect(owner).setSignalingThreshold(1)
-
-      // Enable signaling check
-      await veBetterPassport.connect(owner).toggleCheck(3)
-
-      // User should be a bot as they have been signaled and signaling threshold is 1
-      expect(await veBetterPassport.isPerson(owner.address)).to.deep.equal([
-        false,
-        "User has been signaled too many times",
-      ])
-    })
-
-    it("DEFAULT_ADMIN_ROLE can reset signals of a user", async function () {
-      const { veBetterPassport, otherAccount, owner, otherAccounts, x2EarnApps } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      const appAdmin = otherAccounts[0]
-
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, appAdmin, otherAccounts[0].address, "metadataURI")
-
-      const appId = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[0].address))
-
-      await endorseApp(appId, otherAccounts[0])
-
-      await expect(veBetterPassport.connect(appAdmin).assignSignalerToAppByAppAdmin(appId, otherAccount.address))
-        .to.emit(veBetterPassport, "SignalerAssignedToApp")
-        .withArgs(otherAccount.address, appId)
-
-      expect(await veBetterPassport.hasRole(await veBetterPassport.SIGNALER_ROLE(), otherAccount.address)).to.be.true
-
-      await expect(veBetterPassport.connect(otherAccount).signalUser(owner.address))
-        .to.emit(veBetterPassport, "UserSignaled")
-        .withArgs(owner.address, otherAccount.address, appId, "")
-
-      expect(await veBetterPassport.signaledCounter(owner.address)).to.equal(1)
-      expect(await veBetterPassport.appSignalsCounter(appId, owner.address)).to.equal(1)
-
-      await expect(
-        veBetterPassport
-          .connect(owner)
-          .resetUserSignalsWithReason(owner.address, "User demonstrated erroneous signaling"),
-      )
-        .to.emit(veBetterPassport, "UserSignalsReset")
-        .withArgs(owner.address, "User demonstrated erroneous signaling")
-
-      expect(await veBetterPassport.signaledCounter(owner.address)).to.equal(0)
-
-      // App signals remains 1 so we keep stored the number of signals occurred in the past
-      expect(await veBetterPassport.appSignalsCounter(appId, owner.address)).to.equal(1)
-    })
-
-    it("Passport signals should be updated when an enitys signals get reset", async function () {
-      const {
-        veBetterPassport,
-        otherAccount: entity,
-        owner: passport,
-        otherAccounts,
-        x2EarnApps,
-      } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      const appAdmin = otherAccounts[0]
-
-      await x2EarnApps
-        .connect(passport)
-        .submitApp(otherAccounts[0].address, appAdmin, otherAccounts[0].address, "metadataURI")
-
-      // Link entity to passport
-      await linkEntityToPassportWithSignature(veBetterPassport, passport, entity, 100000)
-
-      const appId = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[0].address))
-
-      await endorseApp(appId, otherAccounts[0])
-
-      await expect(veBetterPassport.connect(appAdmin).assignSignalerToAppByAppAdmin(appId, passport.address))
-        .to.emit(veBetterPassport, "SignalerAssignedToApp")
-        .withArgs(passport.address, appId)
-
-      expect(await veBetterPassport.hasRole(await veBetterPassport.SIGNALER_ROLE(), passport.address)).to.be.true
-
-      await expect(veBetterPassport.connect(passport).signalUser(entity.address))
-        .to.emit(veBetterPassport, "UserSignaled")
-        .withArgs(entity.address, passport.address, appId, "")
-
-      expect(await veBetterPassport.signaledCounter(entity.address)).to.equal(1)
-      expect(await veBetterPassport.appSignalsCounter(appId, entity.address)).to.equal(1)
-
-      // Passports signals should be same as entity signals
-      expect(await veBetterPassport.signaledCounter(passport.address)).to.equal(1)
-      // App signals counter for passport should be 0
-      expect(await veBetterPassport.appSignalsCounter(appId, passport.address)).to.equal(1)
-
-      await expect(
-        veBetterPassport
-          .connect(passport)
-          .resetUserSignalsWithReason(entity.address, "User demonstrated erroneous signaling"),
-      )
-        .to.emit(veBetterPassport, "UserSignalsReset")
-        .withArgs(entity.address, "User demonstrated erroneous signaling")
-
-      expect(await veBetterPassport.signaledCounter(entity.address)).to.equal(0)
-      // Passports signals should be same as entity signals
-      expect(await veBetterPassport.signaledCounter(passport.address)).to.equal(0)
-
-      // App signals remains 1 so we keep stored the number of signals occurred in the past
-      expect(await veBetterPassport.appSignalsCounter(appId, entity.address)).to.equal(1)
-
-      // App signals counter for passport should be 0
-      expect(await veBetterPassport.appSignalsCounter(appId, passport.address)).to.equal(1)
-    })
-
-    it("Passport signals should be updated when an enitys apps signals get reset", async function () {
-      const {
-        veBetterPassport,
-        otherAccount: entity,
-        owner: passport,
-        otherAccounts,
-        x2EarnApps,
-      } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      const appAdmin = otherAccounts[0]
-
-      await x2EarnApps
-        .connect(passport)
-        .submitApp(otherAccounts[0].address, appAdmin, otherAccounts[0].address, "metadataURI")
-
-      // Link entity to passport
-      await linkEntityToPassportWithSignature(veBetterPassport, passport, entity, 100000)
-
-      const appId = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[0].address))
-
-      await endorseApp(appId, otherAccounts[0])
-
-      await expect(veBetterPassport.connect(appAdmin).assignSignalerToAppByAppAdmin(appId, appAdmin.address))
-        .to.emit(veBetterPassport, "SignalerAssignedToApp")
-        .withArgs(appAdmin.address, appId)
-
-      await expect(veBetterPassport.connect(appAdmin).signalUser(entity.address))
-        .to.emit(veBetterPassport, "UserSignaled")
-        .withArgs(entity.address, appAdmin.address, appId, "")
-
-      expect(await veBetterPassport.signaledCounter(entity.address)).to.equal(1)
-      expect(await veBetterPassport.appSignalsCounter(appId, entity.address)).to.equal(1)
-
-      // Passports signals should be same as entity signals
-      expect(await veBetterPassport.signaledCounter(passport.address)).to.equal(1)
-      // App signals counter for passport should be 0
-      expect(await veBetterPassport.appSignalsCounter(appId, passport.address)).to.equal(1)
-
-      await expect(
-        veBetterPassport
-          .connect(appAdmin)
-          .resetUserSignalsByAppAdminWithReason(entity.address, "User demonstrated erroneous signaling"),
-      )
-        .to.emit(veBetterPassport, "UserSignalsResetForApp")
-        .withArgs(entity.address, appId, "User demonstrated erroneous signaling")
-
-      expect(await veBetterPassport.signaledCounter(entity.address)).to.equal(0)
-      // Passports signals should be same as entity signals
-      expect(await veBetterPassport.signaledCounter(passport.address)).to.equal(0)
-
-      expect(await veBetterPassport.appSignalsCounter(appId, entity.address)).to.equal(0)
-
-      expect(await veBetterPassport.appSignalsCounter(appId, passport.address)).to.equal(0)
-    })
-
-    it("Should not be able to reset signals without DEFAULT_ADMIN_ROLE", async function () {
-      const { veBetterPassport, otherAccount, owner, otherAccounts, x2EarnApps } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      const appAdmin = otherAccounts[0]
-
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, appAdmin, otherAccounts[0].address, "metadataURI")
-
-      const appId = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[0].address))
-
-      await endorseApp(appId, otherAccount)
-
-      await expect(veBetterPassport.connect(appAdmin).assignSignalerToAppByAppAdmin(appId, otherAccount.address))
-        .to.emit(veBetterPassport, "SignalerAssignedToApp")
-        .withArgs(otherAccount.address, appId)
-
-      expect(await veBetterPassport.hasRole(await veBetterPassport.SIGNALER_ROLE(), otherAccount.address)).to.be.true
-
-      await expect(veBetterPassport.connect(otherAccount).signalUser(owner.address))
-        .to.emit(veBetterPassport, "UserSignaled")
-        .withArgs(owner.address, otherAccount.address, appId, "")
-
-      expect(await veBetterPassport.signaledCounter(owner.address)).to.equal(1)
-      expect(await veBetterPassport.appSignalsCounter(appId, owner.address)).to.equal(1)
-
-      await expect(
-        veBetterPassport
-          .connect(otherAccount)
-          .resetUserSignalsWithReason(owner.address, "User demonstrated erroneous signaling"),
-      ).to.be.reverted
-    })
-
-    it("App admin should be able to reset signals of a user and total signals should be tracked correctly", async function () {
-      const { veBetterPassport, otherAccount, owner, otherAccounts, x2EarnApps, creators } =
-        await getOrDeployContractInstances({
-          forceDeploy: true,
-        })
-      const creator1 = creators[0]
-
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccount, otherAccounts[0].address, "metadataURI")
-
-      await x2EarnApps
-        .connect(creator1)
-        .submitApp(otherAccounts[1].address, owner, otherAccounts[1].address, "metadataURI")
-
-      const app1Id = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[0].address))
-      const app2Id = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[1].address))
-
-      await endorseApp(app1Id, otherAccount)
-      await endorseApp(app2Id, owner)
-
-      await expect(veBetterPassport.connect(otherAccount).assignSignalerToAppByAppAdmin(app1Id, otherAccount.address))
-        .to.emit(veBetterPassport, "SignalerAssignedToApp")
-        .withArgs(otherAccount.address, app1Id)
-      expect(await veBetterPassport.hasRole(await veBetterPassport.SIGNALER_ROLE(), otherAccount.address)).to.be.true
-
-      await expect(veBetterPassport.connect(owner).assignSignalerToAppByAppAdmin(app2Id, owner.address))
-        .to.emit(veBetterPassport, "SignalerAssignedToApp")
-        .withArgs(owner.address, app2Id)
-      expect(await veBetterPassport.hasRole(await veBetterPassport.SIGNALER_ROLE(), owner.address)).to.be.true
-
-      // Signal user with app1Id
-      await expect(veBetterPassport.connect(otherAccount).signalUser(owner.address))
-        .to.emit(veBetterPassport, "UserSignaled")
-        .withArgs(owner.address, otherAccount.address, app1Id, "")
-      await expect(veBetterPassport.connect(otherAccount).signalUser(owner.address))
-        .to.emit(veBetterPassport, "UserSignaled")
-        .withArgs(owner.address, otherAccount.address, app1Id, "")
-
-      // Signal user with app2Id
-      await expect(veBetterPassport.connect(owner).signalUser(owner.address))
-        .to.emit(veBetterPassport, "UserSignaled")
-        .withArgs(owner.address, owner.address, app2Id, "")
-
-      expect(await veBetterPassport.signaledCounter(owner.address)).to.equal(3) // 2 signals from app1Id and 1 signal from app2Id
-      expect(await veBetterPassport.appSignalsCounter(app1Id, owner.address)).to.equal(2) // 2 signals from app1Id
-      expect(await veBetterPassport.appSignalsCounter(app2Id, owner.address)).to.equal(1) // 1 signal from app2Id
-
-      expect(await veBetterPassport.appTotalSignalsCounter(app1Id)).to.equal(2) // 2 signals from app1Id
-      expect(await veBetterPassport.appTotalSignalsCounter(app2Id)).to.equal(1) // 1 signal from app2Id
-
-      // Reset signals of user by app1Id
-      await expect(
-        veBetterPassport
-          .connect(otherAccount)
-          .resetUserSignalsByAppAdminWithReason(owner.address, "User demonstrated erroneous signaling"),
-      )
-        .to.emit(veBetterPassport, "UserSignalsResetForApp")
-        .withArgs(owner.address, app1Id, "User demonstrated erroneous signaling")
-
-      expect(await veBetterPassport.signaledCounter(owner.address)).to.equal(1) // 1 signal from app2Id
-      expect(await veBetterPassport.appSignalsCounter(app1Id, owner.address)).to.equal(0) // 0 signals from app1Id
-
-      expect(await veBetterPassport.appTotalSignalsCounter(app1Id)).to.equal(0) // 0 signals from app1Id
-      expect(await veBetterPassport.appTotalSignalsCounter(app2Id)).to.equal(1) // 1 signal from app2Id
     })
   })
 
@@ -2987,7 +2527,6 @@ describe("VeBetterPassport - @shard2", function () {
       expect(await veBetterPassport.userAppTotalScore(user2.address, app3Id)).to.equal(200n)
     })
 
-
     it("Should remove an enities score correctly", async function () {
       const config = createTestConfig()
       config.VEPASSPORT_DECAY_RATE = 20
@@ -3179,9 +2718,9 @@ describe("VeBetterPassport - @shard2", function () {
 
       expect(await veBetterPassport.hasRole(await veBetterPassport.SIGNALER_ROLE(), otherAccount.address)).to.be.true
 
-      await expect(veBetterPassport.connect(otherAccount).signalUser(owner.address))
+      await expect(veBetterPassport.connect(otherAccount).signalUserWithReason(owner.address, "reason"))
         .to.emit(veBetterPassport, "UserSignaled")
-        .withArgs(owner.address, otherAccount.address, appId, "")
+        .withArgs(owner.address, otherAccount.address, appId, "reason")
 
       expect(await veBetterPassport.signaledCounter(owner.address)).to.equal(1)
       expect(await veBetterPassport.appSignalsCounter(appId, owner.address)).to.equal(1)
@@ -3196,9 +2735,9 @@ describe("VeBetterPassport - @shard2", function () {
       expect(await veBetterPassport.signaledCounter(passport.address)).to.equal(1)
       expect(await veBetterPassport.appSignalsCounter(appId, passport.address)).to.equal(1)
 
-      await expect(veBetterPassport.connect(otherAccount).signalUser(owner.address))
+      await expect(veBetterPassport.connect(otherAccount).signalUserWithReason(owner.address, "reason"))
         .to.emit(veBetterPassport, "UserSignaled")
-        .withArgs(owner.address, otherAccount.address, appId, "")
+        .withArgs(owner.address, otherAccount.address, appId, "reason")
 
       expect(await veBetterPassport.signaledCounter(owner.address)).to.equal(2)
       expect(await veBetterPassport.appSignalsCounter(appId, owner.address)).to.equal(2)
@@ -3234,9 +2773,9 @@ describe("VeBetterPassport - @shard2", function () {
 
       expect(await veBetterPassport.hasRole(await veBetterPassport.SIGNALER_ROLE(), otherAccount.address)).to.be.true
 
-      await expect(veBetterPassport.connect(otherAccount).signalUser(owner.address))
+      await expect(veBetterPassport.connect(otherAccount).signalUserWithReason(owner.address, "reason"))
         .to.emit(veBetterPassport, "UserSignaled")
-        .withArgs(owner.address, otherAccount.address, appId, "")
+        .withArgs(owner.address, otherAccount.address, appId, "reason")
 
       expect(await veBetterPassport.signaledCounter(owner.address)).to.equal(1)
       expect(await veBetterPassport.appSignalsCounter(appId, owner.address)).to.equal(1)
@@ -3251,9 +2790,9 @@ describe("VeBetterPassport - @shard2", function () {
       expect(await veBetterPassport.signaledCounter(passport.address)).to.equal(1)
       expect(await veBetterPassport.appSignalsCounter(appId, passport.address)).to.equal(1)
 
-      await expect(veBetterPassport.connect(otherAccount).signalUser(owner.address))
+      await expect(veBetterPassport.connect(otherAccount).signalUserWithReason(owner.address, "reason"))
         .to.emit(veBetterPassport, "UserSignaled")
-        .withArgs(owner.address, otherAccount.address, appId, "")
+        .withArgs(owner.address, otherAccount.address, appId, "reason")
 
       expect(await veBetterPassport.signaledCounter(owner.address)).to.equal(2)
       expect(await veBetterPassport.appSignalsCounter(appId, owner.address)).to.equal(2)
@@ -5472,7 +5011,7 @@ describe("VeBetterPassport - @shard2", function () {
       })
 
       expect(await veBetterPassport.CLOCK_MODE()).to.be.equal("mode=blocknumber&from=default")
-  })
+    })
   })
 })
 

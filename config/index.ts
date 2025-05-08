@@ -19,6 +19,7 @@ export type AppConfig = {
   x2EarnAppsContractAddress: string
   nodeUrl: string
   network: Network
+  veBetterPassportContractAddress: string
 }
 
 export const getConfig = (env?: EnvConfig): AppConfig => {

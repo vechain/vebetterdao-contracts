@@ -23,17 +23,17 @@
 
 pragma solidity 0.8.20;
 
-import { IXAllocationVotingGovernor } from "../../interfaces/IXAllocationVotingGovernor.sol";
-import { IX2EarnApps } from "../../interfaces/IX2EarnApps.sol";
-import { IGalaxyMember } from "../../interfaces/IGalaxyMember.sol";
+import { IXAllocationVotingGovernor } from "../../../../interfaces/IXAllocationVotingGovernor.sol";
+import { IX2EarnApps } from "../../../../interfaces/IX2EarnApps.sol";
+import { IGalaxyMember } from "../../../../interfaces/IGalaxyMember.sol";
 
 /**
- * @title PassportTypes
+ * @title PassportTypesV3
  * @notice This library defines various data types, enumerations, and initialization parameters used within the Passport contract.
  * It includes the `InitializationData` struct, which contains references to external contracts and configurations for personhood checks,
  * proof of participation, signaling, and passport delegation. It also includes role-based configuration settings.
  */
-library PassportTypes {
+library PassportTypesV3 {
   /**
    * @dev Struct containing data to initialize the contract
    * @param xAllocationVoting The address of the xAllocationVoting
@@ -74,7 +74,6 @@ library PassportTypes {
     address whitelister;
     address actionRegistrar;
     address actionScoreManager;
-    address resetSignaler;
   }
 
   enum CheckType {
