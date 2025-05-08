@@ -17,7 +17,7 @@ import {
   waitForCurrentRoundToEnd,
   waitForRoundToEnd,
 } from "./helpers"
-import { describe, it } from "mocha"
+import { describe, it, beforeEach } from "mocha"
 import { getImplementationAddress } from "@openzeppelin/upgrades-core"
 import { createLocalConfig } from "../config/contracts/envs/local"
 import { createNodeHolder, endorseApp } from "./helpers/xnodes"
