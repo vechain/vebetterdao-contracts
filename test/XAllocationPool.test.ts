@@ -13,11 +13,11 @@ import {
   startNewAllocationRound,
   waitForRoundToEnd,
 } from "./helpers"
-import { describe, it } from "mocha"
+import { describe, it, beforeEach } from "mocha"
 import { getImplementationAddress } from "@openzeppelin/upgrades-core"
 import { createLocalConfig } from "../config/contracts/envs/local"
 import { deployAndUpgrade, deployProxy, upgradeProxy } from "../scripts/helpers"
-import { XAllocationPool, XAllocationPoolV1 } from "../typechain-types"
+import { XAllocationPool, XAllocationPoolV1, XAllocationPoolV5 } from "../typechain-types"
 import { endorseApp } from "./helpers/xnodes"
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers"
 
@@ -234,10 +234,10 @@ describe("X-Allocation Pool - @shard13", async function () {
         forceDeploy: true,
       })
 
-      expect(await xAllocationPool.version()).to.equal("5")
+      expect(await xAllocationPool.version()).to.equal("6")
     })
 
-    it("Should not have state conflict after upgrading to V5", async () => {
+    it("Should not have state conflict after upgrading to V6", async () => {
       const config = createLocalConfig()
       config.X_ALLOCATION_POOL_APP_SHARES_MAX_CAP = 100
       config.X_ALLOCATION_POOL_BASE_ALLOCATION_PERCENTAGE = 0
@@ -261,7 +261,7 @@ describe("X-Allocation Pool - @shard13", async function () {
 
       // Deploy XAllocationPool
       const xAllocationPoolV1 = (await deployAndUpgrade(
-        ["XAllocationPoolV1", "XAllocationPoolV2", "XAllocationPoolV3", "XAllocationPoolV4"],
+        ["XAllocationPoolV1", "XAllocationPoolV2", "XAllocationPoolV3", "XAllocationPoolV4", "XAllocationPoolV5"],
         [
           [
             owner.address,
@@ -275,11 +275,12 @@ describe("X-Allocation Pool - @shard13", async function () {
           [],
           [],
           [],
+          [],
         ],
         {
-          versions: [undefined, 2, 3, 4],
+          versions: [undefined, 2, 3, 4, 5],
         },
-      )) as XAllocationPool
+      )) as XAllocationPoolV5
 
       await xAllocationPoolV1.connect(owner).setXAllocationVotingAddress(await xAllocationVoting.getAddress())
       await xAllocationPoolV1.connect(owner).setEmissionsAddress(await emissions.getAddress())
@@ -386,12 +387,12 @@ describe("X-Allocation Pool - @shard13", async function () {
       ) // removing empty slots
 
       const xAllocationPool = (await upgradeProxy(
-        "XAllocationPoolV4",
+        "XAllocationPoolV5",
         "XAllocationPool",
         await xAllocationPoolV1.getAddress(),
         [],
         {
-          version: 5,
+          version: 6,
         },
       )) as XAllocationPool
 

@@ -49,7 +49,20 @@ interface IEmissions {
 
   event EmissionCycleDurationUpdated(uint256 indexed newDuration, uint256 indexed oldDuration);
 
-  event EmissionDistributed(uint256 indexed cycle, uint256 xAllocations, uint256 vote2Earn, uint256 treasury);
+  event EmissionDistributedV2(
+    uint256 indexed cycle,
+    uint256 xAllocations,
+    uint256 vote2Earn,
+    uint256 treasury,
+    uint256 gm
+  );
+
+  event EmissionDistributed(
+    uint256 indexed cycle,
+    uint256 xAllocations,
+    uint256 vote2Earn,
+    uint256 treasury
+  );
 
   event Initialized(uint64 version);
 
@@ -64,6 +77,8 @@ interface IEmissions {
   event TreasuryAddressUpdated(address indexed newAddress, address indexed oldAddress);
 
   event TreasuryPercentageUpdated(uint256 indexed newPercentage, uint256 indexed oldPercentage);
+
+  event GMPercentageUpdated(uint256 indexed newPercentage, uint256 indexed oldPercentage);
 
   event Upgraded(address indexed implementation);
 
@@ -103,7 +118,12 @@ interface IEmissions {
 
   function distribute() external;
 
-  function emissions(uint256 cycle) external view returns (Emission memory);
+  function emissions(
+    uint256 cycle
+  )
+    external
+    view
+    returns (uint256 xAllocationsAmount, uint256 vote2EarnAmount, uint256 treasuryAmount, uint256 gmAmount);
 
   function getCurrentCycle() external view returns (uint256);
 
@@ -118,6 +138,8 @@ interface IEmissions {
   function getVote2EarnAmount(uint256 cycle) external view returns (uint256);
 
   function getXAllocationAmount(uint256 cycle) external view returns (uint256);
+
+  function getGMAmount(uint256 cycle) external view returns (uint256);
 
   function grantRole(bytes32 role, address account) external;
 
@@ -156,6 +178,8 @@ interface IEmissions {
   function setTreasuryAddress(address treasuryAddress) external;
 
   function setTreasuryPercentage(uint256 _percentage) external;
+
+  function setGmPercentage(uint256 _percentage) external;
 
   function setVote2EarnAddress(address vote2EarnAddress) external;
 
