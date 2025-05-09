@@ -1326,7 +1326,7 @@ describe("VoterRewards - @shard2", () => {
       const app1 = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[0].address))
       await endorseApp(app1, otherAccounts[0])
       await x2EarnApps
-        .connect(owner)
+        .connect(creator1)
         .submitApp(otherAccounts[1].address, otherAccounts[1].address, otherAccounts[1].address, "metadataURI")
       const app2 = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[1].address))
       await endorseApp(app2, otherAccounts[1])
@@ -2113,8 +2113,6 @@ describe("VoterRewards - @shard2", () => {
         minterAccount,
         x2EarnApps,
         veBetterPassport,
-        vechainNodesMock,
-        nodeManagement,
       } = await getOrDeployContractInstances({
         forceDeploy: true,
       })

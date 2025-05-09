@@ -664,7 +664,7 @@ describe("Galaxy Member - @shard1", () => {
         forceDeploy: true,
       })
 
-      expect(await galaxyMember.version()).to.equal("3")
+      expect(await galaxyMember.version()).to.equal("4")
     })
 
     it("Should not have state conflict after upgrading to V3", async () => {
@@ -831,7 +831,7 @@ describe("Galaxy Member - @shard1", () => {
 
       const galaxyMemberV3 = (await upgradeProxy(
         "GalaxyMemberV2",
-        "GalaxyMember",
+        "GalaxyMemberV3",
         await galaxyMember.getAddress(),
         [],
         { version: 3 },
@@ -906,18 +906,49 @@ describe("Galaxy Member - @shard1", () => {
         ),
       ).to.equal(4n)
 
+      storageSlots = []
+      for (let i = initialSlot; i < initialSlot + BigInt(100); i++) {
+        storageSlots.push(await ethers.provider.getStorage(await galaxyMemberV2.getAddress(), i))
+      }
+
+      storageSlots = storageSlots.filter(
+        slot => slot !== "0x0000000000000000000000000000000000000000000000000000000000000000",
+      )
+
+      const galaxyMemberV4 = (await upgradeProxy(
+        "GalaxyMemberV3",
+        "GalaxyMember",
+        await galaxyMember.getAddress(),
+        [],
+        { version: 4 },
+      )) as unknown as GalaxyMember
+
+      storageSlotsAfter = []
+      for (let i = initialSlot; i < initialSlot + BigInt(100); i++) {
+        storageSlotsAfter.push(await ethers.provider.getStorage(await galaxyMemberV3.getAddress(), i))
+      }
+
+      storageSlotsAfter = storageSlotsAfter.filter(
+        slot => slot !== "0x0000000000000000000000000000000000000000000000000000000000000000",
+      )
+
+      // Check if storage slots are the same after upgrade
+      for (let i = 0; i < storageSlots.length; i++) {
+        expect(storageSlots[i]).to.equal(storageSlotsAfter[i])
+      }
+
       // Transfer the token
-      await galaxyMemberV3.connect(owner).transferFrom(owner.address, otherAccounts[6].address, 6)
-      await galaxyMemberV3.connect(owner).transferFrom(owner.address, otherAccounts[6].address, 5)
+      await galaxyMemberV4.connect(owner).transferFrom(owner.address, otherAccounts[6].address, 6)
+      await galaxyMemberV4.connect(owner).transferFrom(owner.address, otherAccounts[6].address, 5)
 
       // Check if the token is transferred
-      expect(await galaxyMemberV3.ownerOf(4)).to.equal(await otherAccounts[6].getAddress())
+      expect(await galaxyMemberV4.ownerOf(4)).to.equal(await otherAccounts[6].getAddress())
 
-      expect(await galaxyMemberV3.getSelectedTokenId(owner.getAddress())).to.equal(0n)
+      expect(await galaxyMemberV4.getSelectedTokenId(owner.getAddress())).to.equal(0n)
 
       // Get checkpointed token Id
       expect(
-        await galaxyMemberV3.getSelectedTokenIdAtBlock(
+        await galaxyMemberV4.getSelectedTokenIdAtBlock(
           otherAccounts[6].address,
           await ethers.provider.getBlockNumber(),
         ),
@@ -4107,8 +4138,8 @@ describe("Galaxy Member - @shard1", () => {
       // Set up X2EarnApps
       const app1Id = await x2EarnApps.hashAppName("App 1")
       const app2Id = await x2EarnApps.hashAppName("App 2")
-      await x2EarnApps.connect(owner).submitApp(endorser1.address, endorser1.address, "App 1", "metadataURI 1")
-      await x2EarnApps.connect(owner).submitApp(endorser2.address, endorser2.address, "App 2", "metadataURI 2")
+      await x2EarnApps.connect(endorser1).submitApp(endorser1.address, endorser1.address, "App 1", "metadataURI 1")
+      await x2EarnApps.connect(endorser2).submitApp(endorser2.address, endorser2.address, "App 2", "metadataURI 2")
       await endorseApp(app1Id, endorser1)
       await endorseApp(app2Id, endorser2)
 
@@ -4235,3 +4266,4 @@ describe("Galaxy Member - @shard1", () => {
     })
   })
 })
+

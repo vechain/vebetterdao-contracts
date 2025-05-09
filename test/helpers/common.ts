@@ -236,8 +236,8 @@ export const updateGMMultipliers = async () => {
   const config = createLocalConfig()
   const { voterRewards, owner } = await getOrDeployContractInstances({})
 
-  for (let i = 0; i < config.VOTER_REWARDS_LEVELS.length; i++) {
-    const level = config.VOTER_REWARDS_LEVELS[i]
+  for (let i = 0; i < config.VOTER_REWARDS_LEVELS_V2.length; i++) {
+    const level = config.VOTER_REWARDS_LEVELS_V2[i]
     const multiplier = config.GM_MULTIPLIERS_V2[i]
 
     // Update the multiplier for the level
