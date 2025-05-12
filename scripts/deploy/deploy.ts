@@ -79,6 +79,14 @@ export async function deployAll(config: ContractsConfig) {
     GovernorQuorumLogicLibV1,
     GovernorVotesLogicLibV1,
     GovernorStateLogicLibV1,
+    GovernorClockLogicLib,
+    GovernorConfiguratorLib,
+    GovernorDepositLogicLib,
+    GovernorFunctionRestrictionsLogicLib,
+    GovernorProposalLogicLib,
+    GovernorQuorumLogicLib,
+    GovernorVotesLogicLib,
+    GovernorStateLogicLib,
     GovernorClockLogicLibV3,
     GovernorConfiguratorLibV3,
     GovernorFunctionRestrictionsLogicLibV3,
@@ -95,27 +103,29 @@ export async function deployAll(config: ContractsConfig) {
     GovernorVotesLogicLibV4,
     GovernorDepositLogicLibV4,
     GovernorStateLogicLibV4,
-    GovernorClockLogicLib,
-    GovernorConfiguratorLib,
-    GovernorDepositLogicLib,
-    GovernorFunctionRestrictionsLogicLib,
-    GovernorProposalLogicLib,
-    GovernorQuorumLogicLib,
-    GovernorVotesLogicLib,
-    GovernorStateLogicLib,
+    GovernorClockLogicLibV5,
+    GovernorConfiguratorLibV5,
+    GovernorFunctionRestrictionsLogicLibV5,
+    GovernorQuorumLogicLibV5,
+    GovernorProposalLogicLibV5,
+    GovernorVotesLogicLibV5,
+    GovernorDepositLogicLibV5,
+    GovernorStateLogicLibV5,
   } = await governanceLibraries()
 
+
   console.log("Deploying VeBetter Passport Libraries")
-  // Deploy Passport Libraries
   const {
-    PassportChecksLogicV1,
-    PassportConfiguratorV1,
-    PassportEntityLogicV1,
-    PassportDelegationLogicV1,
-    PassportPersonhoodLogicV1,
-    PassportPoPScoreLogicV1,
-    PassportSignalingLogicV1,
-    PassportWhitelistAndBlacklistLogicV1,
+    // V3
+    PassportChecksLogicV3,
+    PassportConfiguratorV3,
+    PassportEntityLogicV3,
+    PassportDelegationLogicV3,
+    PassportPersonhoodLogicV3,
+    PassportPoPScoreLogicV3,
+    PassportSignalingLogicV3,
+    PassportWhitelistAndBlacklistLogicV3,
+    // V2
     PassportChecksLogicV2,
     PassportConfiguratorV2,
     PassportEntityLogicV2,
@@ -124,6 +134,16 @@ export async function deployAll(config: ContractsConfig) {
     PassportPoPScoreLogicV2,
     PassportSignalingLogicV2,
     PassportWhitelistAndBlacklistLogicV2,
+    // V1
+    PassportChecksLogicV1,
+    PassportConfiguratorV1,
+    PassportEntityLogicV1,
+    PassportDelegationLogicV1,
+    PassportPersonhoodLogicV1,
+    PassportPoPScoreLogicV1,
+    PassportSignalingLogicV1,
+    PassportWhitelistAndBlacklistLogicV1,
+    // V4 (latest)
     PassportChecksLogic,
     PassportConfigurator,
     PassportEntityLogic,
@@ -133,6 +153,7 @@ export async function deployAll(config: ContractsConfig) {
     PassportSignalingLogic,
     PassportWhitelistAndBlacklistLogic,
   } = await passportLibraries()
+
 
   console.log("Deploying X2Earn App Libraries")
   const {
@@ -145,6 +166,9 @@ export async function deployAll(config: ContractsConfig) {
     AdministrationUtilsV3,
     EndorsementUtilsV3,
     VoteEligibilityUtilsV3,
+    AdministrationUtilsV4,
+    EndorsementUtilsV4,
+    VoteEligibilityUtilsV4,
   } = await x2EarnLibraries()
 
   let vechainNodesAddress = "0xb81E9C5f9644Dec9e5e3Cac86b4461A222072302" // this is the mainnet address
@@ -243,16 +267,17 @@ export async function deployAll(config: ContractsConfig) {
     PassportWhitelistAndBlacklistLogicV1: await PassportWhitelistAndBlacklistLogicV1.getAddress(),
   })
 
+  console.log("VeBetterPassport deployed at: ", veBetterPassportContractAddress)
   // Set XAllocationVoting to temp address
   const X_ALLOCATION_ADRESS_TEMP = TEMP_ADMIN
   const X2EARNREWARDSPOOL_ADDRESS_TEMP = TEMP_ADMIN
   const x2EarnApps = (await deployAndUpgrade(
-    ["X2EarnAppsV1", "X2EarnAppsV2", "X2EarnAppsV3", "X2EarnApps"],
+    ["X2EarnAppsV1", "X2EarnAppsV2", "X2EarnAppsV3", "X2EarnAppsV4", "X2EarnApps"],
     [
       [
         config.XAPP_BASE_URI,
         [TEMP_ADMIN], //admins
-        config.CONTRACTS_ADMIN_ADDRESS, // upgrader
+        deployer.address, // upgrader - use deployer address for initial upgrade
         TEMP_ADMIN, // governance role
       ],
       [
@@ -263,9 +288,10 @@ export async function deployAll(config: ContractsConfig) {
       ],
       [config.X2EARN_NODE_COOLDOWN_PERIOD, X_ALLOCATION_ADRESS_TEMP],
       [X2EARNREWARDSPOOL_ADDRESS_TEMP],
+      [],
     ],
     {
-      versions: [undefined, 2, 3, 4],
+      versions: [undefined, 2, 3, 4, 5],
       libraries: [
         undefined,
         {
@@ -277,6 +303,11 @@ export async function deployAll(config: ContractsConfig) {
           AdministrationUtilsV3: await AdministrationUtilsV3.getAddress(),
           EndorsementUtilsV3: await EndorsementUtilsV3.getAddress(),
           VoteEligibilityUtilsV3: await VoteEligibilityUtilsV3.getAddress(),
+        },
+        {
+          AdministrationUtilsV4: await AdministrationUtilsV4.getAddress(),
+          EndorsementUtilsV4: await EndorsementUtilsV4.getAddress(),
+          VoteEligibilityUtilsV4: await VoteEligibilityUtilsV4.getAddress(),
         },
         {
           AdministrationUtils: await AdministrationUtils.getAddress(),
@@ -320,7 +351,14 @@ export async function deployAll(config: ContractsConfig) {
   )) as X2EarnRewardsPool
 
   const xAllocationPool = (await deployAndUpgrade(
-    ["XAllocationPoolV1", "XAllocationPoolV2", "XAllocationPoolV3", "XAllocationPoolV4", "XAllocationPool"],
+    [
+      "XAllocationPoolV1",
+      "XAllocationPoolV2",
+      "XAllocationPoolV3",
+      "XAllocationPoolV4",
+      "XAllocationPoolV5",
+      "XAllocationPool",
+    ],
     [
       [
         TEMP_ADMIN, // admin
@@ -335,15 +373,16 @@ export async function deployAll(config: ContractsConfig) {
       [],
       [],
       [],
+      [],
     ],
     {
-      versions: [undefined, 2, 3, 4, 5],
+      versions: [undefined, 2, 3, 4, 5, 6],
       logOutput: true,
     },
   )) as XAllocationPool
 
   const galaxyMember = (await deployAndUpgrade(
-    ["GalaxyMemberV1", "GalaxyMemberV2", "GalaxyMember"],
+    ["GalaxyMemberV1", "GalaxyMemberV2", "GalaxyMemberV3", "GalaxyMember"],
     [
       [
         {
@@ -368,15 +407,16 @@ export async function deployAll(config: ContractsConfig) {
         config.GM_NFT_NODE_TO_FREE_LEVEL,
       ],
       [],
+      [],
     ],
     {
-      versions: [undefined, 2, 3],
+      versions: [undefined, 2, 3, 4],
       logOutput: true,
     },
   )) as GalaxyMember
 
   const emissions = (await deployAndUpgrade(
-    ["EmissionsV1", "Emissions"],
+    ["EmissionsV1", "EmissionsV2", "Emissions"],
     [
       [
         {
@@ -406,15 +446,16 @@ export async function deployAll(config: ContractsConfig) {
         },
       ],
       [config.EMISSIONS_IS_NOT_ALIGNED],
+      [config.GM_PERCENTAGE_OF_TREASURY],
     ],
     {
-      versions: [undefined, 2],
+      versions: [undefined, 2, 3],
       logOutput: true,
     },
   )) as Emissions
 
   const voterRewards = (await deployAndUpgrade(
-    ["VoterRewardsV1", "VoterRewardsV2", "VoterRewardsV3", "VoterRewards"],
+    ["VoterRewardsV1", "VoterRewardsV2", "VoterRewardsV3", "VoterRewardsV4", "VoterRewards"],
     [
       [
         TEMP_ADMIN, // admin
@@ -429,15 +470,23 @@ export async function deployAll(config: ContractsConfig) {
       [],
       [],
       [],
+      [],
     ],
     {
-      versions: [undefined, 2, 3, 4],
+      versions: [undefined, 2, 3, 4, 5],
       logOutput: true,
     },
   )) as VoterRewards
 
   const xAllocationVoting = (await deployAndUpgrade(
-    ["XAllocationVotingV1", "XAllocationVotingV2", "XAllocationVotingV3", "XAllocationVotingV4", "XAllocationVoting"],
+    [
+      "XAllocationVotingV1",
+      "XAllocationVotingV2",
+      "XAllocationVotingV3",
+      "XAllocationVotingV4",
+      "XAllocationVotingV5",
+      "XAllocationVoting",
+    ],
     [
       [
         {
@@ -460,9 +509,10 @@ export async function deployAll(config: ContractsConfig) {
       [],
       [],
       [],
+      [],
     ],
     {
-      versions: [undefined, 2, 3, 4, 5],
+      versions: [undefined, 2, 3, 4, 5, 6],
       logOutput: true,
     },
   )) as XAllocationVoting
@@ -527,13 +577,33 @@ export async function deployAll(config: ContractsConfig) {
     },
   )) as VeBetterPassportV2
 
-  const veBetterPassport = (await upgradeProxy(
+  (await upgradeProxy(
     "VeBetterPassportV2",
     "VeBetterPassportV3",
     await veBetterPassportV2.getAddress(),
     [],
     {
       version: 3,
+      libraries: {
+        PassportChecksLogicV3: await PassportChecksLogicV3.getAddress(),
+        PassportConfiguratorV3: await PassportConfiguratorV3.getAddress(),
+        PassportEntityLogicV3: await PassportEntityLogicV3.getAddress(),
+        PassportDelegationLogicV3: await PassportDelegationLogicV3.getAddress(),
+        PassportPersonhoodLogicV3: await PassportPersonhoodLogicV3.getAddress(),
+        PassportPoPScoreLogicV3: await PassportPoPScoreLogicV3.getAddress(),
+        PassportSignalingLogicV3: await PassportSignalingLogicV3.getAddress(),
+        PassportWhitelistAndBlacklistLogicV3: await PassportWhitelistAndBlacklistLogicV3.getAddress(),
+      },
+    },
+  )) as VeBetterPassport
+
+  const veBetterPassport = (await upgradeProxy(
+    "VeBetterPassportV3",
+    "VeBetterPassport",
+    await veBetterPassportV1.getAddress(), // Proxy address remains unchanged for transparent proxy upgrades
+    [config.CONTRACTS_ADMIN_ADDRESS], // Include as part of v4 initialization upgrade
+    {
+      version: 4,
       libraries: {
         PassportChecksLogic: await PassportChecksLogic.getAddress(),
         PassportConfigurator: await PassportConfigurator.getAddress(),
@@ -547,8 +617,9 @@ export async function deployAll(config: ContractsConfig) {
     },
   )) as VeBetterPassport
 
+
   const governor = (await deployAndUpgrade(
-    ["B3TRGovernorV1", "B3TRGovernorV2", "B3TRGovernorV3", "B3TRGovernorV4", "B3TRGovernor"],
+    ["B3TRGovernorV1", "B3TRGovernorV2", "B3TRGovernorV3", "B3TRGovernorV4", "B3TRGovernorV5", "B3TRGovernor"],
     [
       [
         {
@@ -575,9 +646,10 @@ export async function deployAll(config: ContractsConfig) {
       [],
       [veBetterPassportContractAddress],
       [],
+      [], // [levels, config.GM_MULTIPLIERS_V2] -> Will revert if emissions is not bootstrapped
     ],
     {
-      versions: [undefined, 2, 3, 4, 5],
+      versions: [undefined, 2, 3, 4, 5, 6],
       libraries: [
         {
           GovernorClockLogicV1: await GovernorClockLogicLibV1.getAddress(),
@@ -618,6 +690,16 @@ export async function deployAll(config: ContractsConfig) {
           GovernorQuorumLogicV4: await GovernorQuorumLogicLibV4.getAddress(),
           GovernorStateLogicV4: await GovernorStateLogicLibV4.getAddress(),
           GovernorVotesLogicV4: await GovernorVotesLogicLibV4.getAddress(),
+        },
+        {
+          GovernorClockLogicV5: await GovernorClockLogicLibV5.getAddress(),
+          GovernorConfiguratorV5: await GovernorConfiguratorLibV5.getAddress(),
+          GovernorDepositLogicV5: await GovernorDepositLogicLibV5.getAddress(),
+          GovernorFunctionRestrictionsLogicV5: await GovernorFunctionRestrictionsLogicLibV5.getAddress(),
+          GovernorQuorumLogicV5: await GovernorQuorumLogicLibV5.getAddress(),
+          GovernorProposalLogicV5: await GovernorProposalLogicLibV5.getAddress(),
+          GovernorStateLogicV5: await GovernorStateLogicLibV5.getAddress(),
+          GovernorVotesLogicV5: await GovernorVotesLogicLibV5.getAddress(),
         },
         {
           GovernorClockLogic: await GovernorClockLogicLib.getAddress(),
