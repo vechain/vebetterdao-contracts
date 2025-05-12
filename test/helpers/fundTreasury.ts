@@ -35,7 +35,7 @@ export const fundTreasuryVTHO = async (address: string, amount: bigint) => {
 }
 
 export const fundTreasuryVET = async (to: string, value: number) => {
-  const [owner, ...otherAccounts] = await ethers.getSigners()
+  const [owner] = await ethers.getSigners()
   await owner.sendTransaction({
     to,
     value: ethers.parseEther(value.toString()),
