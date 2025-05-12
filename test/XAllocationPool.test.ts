@@ -21,7 +21,7 @@ import { XAllocationPool, XAllocationPoolV1, XAllocationPoolV5 } from "../typech
 import { endorseApp } from "./helpers/xnodes"
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers"
 
-describe("X-Allocation Pool - @shard13", async function () {
+describe("X-Allocation Pool - @shard4", async function () {
   // Environment params
   let creator1: HardhatEthersSigner
   let creator2: HardhatEthersSigner

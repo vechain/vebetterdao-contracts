@@ -49,7 +49,7 @@ import { clauseBuilder, unitsUtils, type TransactionBody, coder, FunctionFragmen
 import { airdropVTHO } from "../scripts/helpers/airdrop"
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers"
 
-describe("X-Apps - @shard15", function () {
+describe("X-Apps - @shard3", function () {
   // We prepare the environment for 4 creators
   let creator1: HardhatEthersSigner
   let creator2: HardhatEthersSigner

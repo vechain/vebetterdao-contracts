@@ -21,7 +21,7 @@ import b3trAllocationsEmissionsDisaligned from "./fixture/full-allocations-round
 import b3trAllocationsGMPool from "./fixture/updated-full-allocations-with-gm.json"
 import { Emissions, EmissionsV2 } from "../typechain-types"
 
-describe("Emissions - @shard1", () => {
+describe("Emissions - @shard4", () => {
   describe("Contract parameters", () => {
     it("Should have correct parameters set on deployment", async () => {
       const config = createLocalConfig()

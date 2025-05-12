@@ -30,7 +30,7 @@ import { time } from "@nomicfoundation/hardhat-network-helpers"
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers"
 import { endorseApp } from "./helpers/xnodes"
 
-describe("Galaxy Member - @shard1", () => {
+describe("Galaxy Member - @shard4", () => {
   describe("Contract parameters", () => {
     it("Should have correct parameters set on deployment", async () => {
       const { galaxyMember, owner } = await getOrDeployContractInstances({ forceDeploy: true })
