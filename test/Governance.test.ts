@@ -34,7 +34,7 @@ import {
   B3TRGovernorV3,
   B3TRGovernor__factory,
 } from "../typechain-types"
-import { deployAndUpgrade, deployProxy } from "../scripts/helpers"
+import { deployAndUpgrade, deployProxy, getInitializerData } from "../scripts/helpers"
 
 describe("Governor and TimeLock - @shard1", function () {
   describe("Governor deployment", function () {
@@ -83,7 +83,7 @@ describe("Governor and TimeLock - @shard1", function () {
 
       // check version
       const version = await governor.version()
-      expect(version).to.eql("5")
+      expect(version).to.eql("6")
 
       // deposit threshold is set correctly
       const depositThreshold = await governor.depositThresholdPercentage()
@@ -850,6 +850,14 @@ describe("Governor and TimeLock - @shard1", function () {
         governorQuorumLogicLibV4,
         governorStateLogicLibV4,
         governorVotesLogicLibV4,
+        governorClockLogicLibV5,
+        governorConfiguratorLibV5,
+        governorDepositLogicLibV5,
+        governorFunctionRestrictionsLogicLibV5,
+        governorProposalLogicLibV5,
+        governorQuorumLogicLibV5,
+        governorStateLogicLibV5,
+        governorVotesLogicLibV5,
         veBetterPassport,
       } = await getOrDeployContractInstances({
         forceDeploy: true,
@@ -859,7 +867,7 @@ describe("Governor and TimeLock - @shard1", function () {
 
       // Deploy Governor
       const governorV4 = (await deployAndUpgrade(
-        ["B3TRGovernorV1", "B3TRGovernorV2", "B3TRGovernorV3", "B3TRGovernorV4"],
+        ["B3TRGovernorV1", "B3TRGovernorV2", "B3TRGovernorV3", "B3TRGovernorV4", "B3TRGovernorV5"],
         [
           [
             {
@@ -885,9 +893,10 @@ describe("Governor and TimeLock - @shard1", function () {
           [],
           [],
           [await veBetterPassport.getAddress()],
+          [],
         ],
         {
-          versions: [undefined, 2, 3, 4],
+          versions: [undefined, 2, 3, 4, 5],
           libraries: [
             {
               GovernorClockLogicV1: await governorClockLogicLibV1.getAddress(),
@@ -929,20 +938,30 @@ describe("Governor and TimeLock - @shard1", function () {
               GovernorStateLogicV4: await governorStateLogicLibV4.getAddress(),
               GovernorVotesLogicV4: await governorVotesLogicLibV4.getAddress(),
             },
+            {
+              GovernorClockLogicV5: await governorClockLogicLibV5.getAddress(),
+              GovernorConfiguratorV5: await governorConfiguratorLibV5.getAddress(),
+              GovernorDepositLogicV5: await governorDepositLogicLibV5.getAddress(),
+              GovernorFunctionRestrictionsLogicV5: await governorFunctionRestrictionsLogicLibV5.getAddress(),
+              GovernorProposalLogicV5: await governorProposalLogicLibV5.getAddress(),
+              GovernorQuorumLogicV5: await governorQuorumLogicLibV5.getAddress(),
+              GovernorStateLogicV5: await governorStateLogicLibV5.getAddress(),
+              GovernorVotesLogicV5: await governorVotesLogicLibV5.getAddress(),
+            },
           ],
         },
       )) as B3TRGovernorV3
 
-      const b3trGovernorFactory = await ethers.getContractFactory("B3TRGovernorV4", {
+      const b3trGovernorFactory = await ethers.getContractFactory("B3TRGovernorV5", {
         libraries: {
-          GovernorClockLogicV4: await governorClockLogicLibV4.getAddress(),
-          GovernorConfiguratorV4: await governorConfiguratorLibV4.getAddress(),
-          GovernorDepositLogicV4: await governorDepositLogicLibV4.getAddress(),
-          GovernorFunctionRestrictionsLogicV4: await governorFunctionRestrictionsLogicLibV4.getAddress(),
-          GovernorProposalLogicV4: await governorProposalLogicLibV4.getAddress(),
-          GovernorQuorumLogicV4: await governorQuorumLogicLibV4.getAddress(),
-          GovernorStateLogicV4: await governorStateLogicLibV4.getAddress(),
-          GovernorVotesLogicV4: await governorVotesLogicLibV4.getAddress(),
+          GovernorClockLogicV5: await governorClockLogicLibV5.getAddress(),
+          GovernorConfiguratorV5: await governorConfiguratorLibV5.getAddress(),
+          GovernorDepositLogicV5: await governorDepositLogicLibV5.getAddress(),
+          GovernorFunctionRestrictionsLogicV5: await governorFunctionRestrictionsLogicLibV5.getAddress(),
+          GovernorProposalLogicV5: await governorProposalLogicLibV5.getAddress(),
+          GovernorQuorumLogicV5: await governorQuorumLogicLibV5.getAddress(),
+          GovernorStateLogicV5: await governorStateLogicLibV5.getAddress(),
+          GovernorVotesLogicV5: await governorVotesLogicLibV5.getAddress(),
         },
       })
 
@@ -991,7 +1010,7 @@ describe("Governor and TimeLock - @shard1", function () {
       await vot3.connect(otherAccount).approve(await governorV4.getAddress(), proposalThreshold)
       await governorV4.connect(otherAccount).deposit(proposalThreshold, proposalId)
 
-      const proposalState = await governorV4.state(proposalId) // proposal id of the proposal in the beforeAll step
+      let proposalState = await governorV4.state(proposalId) // proposal id of the proposal in the beforeAll step
 
       if (proposalState.toString() !== "1")
         await moveToCycle(parseInt((await governorV4.proposalStartRound(proposalId)).toString()) + 1)
@@ -1034,8 +1053,8 @@ describe("Governor and TimeLock - @shard1", function () {
           slot !== "0x0000000000000000000000000000000200000000000000000000000000000002",
       ) // removing empty slots and slots that track governance proposals getting executed on the governor
 
-      // Upgrade to V5
-      const ContractV5 = await ethers.getContractFactory("B3TRGovernor", {
+      // Upgrade to V6
+      const ContractV6 = await ethers.getContractFactory("B3TRGovernor", {
         libraries: {
           GovernorClockLogic: await governorClockLogicLib.getAddress(),
           GovernorConfigurator: await governorConfiguratorLib.getAddress(),
@@ -1047,19 +1066,19 @@ describe("Governor and TimeLock - @shard1", function () {
           GovernorVotesLogic: await governorVotesLogicLib.getAddress(),
         },
       })
-      const implementationv5 = await ContractV5.deploy()
+      const implementationv5 = await ContractV6.deploy()
       await implementationv5.waitForDeployment()
 
       // Now we can create a proposal
       const tx5 = await governorV4.upgradeToAndCall(await implementationv5.getAddress(), "0x")
       await tx5.wait()
 
-      const governorV5 = ContractV5.attach(await governorV4.getAddress()) as B3TRGovernor
+      const governorV6 = ContractV6.attach(await governorV4.getAddress()) as B3TRGovernor
 
       let storageSlotsAfter = []
 
       for (let i = initialSlot; i < initialSlot + BigInt(100); i++) {
-        storageSlotsAfter.push(await ethers.provider.getStorage(await governorV5.getAddress(), i))
+        storageSlotsAfter.push(await ethers.provider.getStorage(await governorV6.getAddress(), i))
       }
 
       storageSlotsAfter = storageSlotsAfter.filter(
@@ -1073,7 +1092,7 @@ describe("Governor and TimeLock - @shard1", function () {
         expect(storageSlots[i]).to.equal(storageSlotsAfter[i])
       }
 
-      expect(await governorV5.version()).to.equal("5")
+      expect(await governorV6.version()).to.equal("6")
     })
   })
 
@@ -4233,9 +4252,9 @@ describe("Governor and TimeLock - @shard1", function () {
       expect(await governor.quorumNumerator()).to.equal(4n)
 
       const checkUserSupplyPercentage = async (user: HardhatEthersSigner) => {
-        const totalSupply = await vot3.totalSupply()
-        const userBalance = await vot3.balanceOf(user.address)
-        const userPercentage = (userBalance * 100n) / totalSupply
+        let totalSupply = await vot3.totalSupply()
+        let userBalance = await vot3.balanceOf(user.address)
+        let userPercentage = (userBalance * 100n) / totalSupply
 
         return userPercentage
       }
@@ -4310,9 +4329,9 @@ describe("Governor and TimeLock - @shard1", function () {
       expect(await governor.quorumNumerator()).to.equal(4n)
 
       const checkUserSupplyPercentage = async (user: HardhatEthersSigner) => {
-        const totalSupply = await vot3.totalSupply()
-        const userBalance = await vot3.balanceOf(user.address)
-        const userPercentage = (userBalance * 100n) / totalSupply
+        let totalSupply = await vot3.totalSupply()
+        let userBalance = await vot3.balanceOf(user.address)
+        let userPercentage = (userBalance * 100n) / totalSupply
 
         return userPercentage
       }
