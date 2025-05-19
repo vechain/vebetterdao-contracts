@@ -166,7 +166,7 @@ export function createLocalConfig() {
       "0x0F872421Dc479F3c11eDd89512731814D0598dB5",
     ],
 
-    GM_PERCENTAGE_OF_TREASURY: 0, // 0 (should be 25% of the treasury will be used for GM Holder Rewards)
+    GM_PERCENTAGE_OF_TREASURY: 2500, // 25% of the treasury will be used for GM Holder Rewards
 
     GM_MULTIPLIERS_V2: [110, 120, 150, 200, 250, 300, 500, 1000, 2500], // GM multipiers scaled -> [1.1x, 1.2x, 1.5x, 2x, 2.5x, 3x, 5x, 10x, 25x]
     VOTER_REWARDS_LEVELS_V2: [2, 3, 4, 5, 6, 7, 8, 9, 10], // Voter rewards levels for the new GM multipliers
