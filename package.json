@@ -1,6 +1,6 @@
 {
   "name": "@vechain/vebetterdao-contracts",
-  "version": "4.1.0",
+  "version": "5.0.0",
   "description": "Vebetter DAO smart contracts, including their addresses, ABIs, and interfaces.",
   "keywords": [
     "vechain",
