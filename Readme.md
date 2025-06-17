@@ -165,6 +165,22 @@ yarn generate-docs
 
 The same documentation is available at github pages: [GithubPages](https://vechain.github.io/vebetterdao-contracts/)
 
+### Publish package
+
+Publish all the ABIs on NPM so we can do `yarn install @vechain/vebetter-contracts` and then have all the ABIs and contract addresses there.
+
+To publish the package to npm first increase the version in the `package.json` file and then run the following command:
+
+```bash
+yarn prepublishOnly
+```
+
+then run:
+
+```bash
+npm publish
+```
+
 ### Verify contract
 
 To verify that the B3TR contract deployed at a specific address is the same as the one compiled in the repo, you can use the following command:
