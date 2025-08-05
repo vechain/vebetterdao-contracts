@@ -165,3 +165,6 @@ coverage
 
 **/media/media
 **/media/media.zip
+
+# github pages
+_site/
