@@ -175,4 +175,6 @@ cd packages/contracts
 npm publish
 ```
 
-run again
+# Disclaimer
+
+This repository is for educational and demonstration purposes. The maintainers are not liable for any misuse or faults within the code.

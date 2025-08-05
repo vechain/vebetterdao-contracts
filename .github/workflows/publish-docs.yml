@@ -39,9 +39,13 @@ jobs:
         run: yarn install --frozen-lockfile
 
       - name: Compile contracts
+        env:
+          MNEMONIC: "denial kitchen pet squirrel other broom bar gas better priority spoil cross"
         run: yarn contracts:compile
 
       - name: Generate markdown documentation
+        env:
+          MNEMONIC: "denial kitchen pet squirrel other broom bar gas better priority spoil cross"
         run: yarn contracts:generate-docs
 
       - name: Install Pandoc
