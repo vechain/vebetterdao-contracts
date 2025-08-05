@@ -61,6 +61,9 @@ import { Time } from "@openzeppelin/contracts/utils/types/Time.sol";
  * - Added `selectFor` function to allow the admin to select a token for the user
  * - Added checkpoints for the selected token ID of the user
  * - Added `clock()` and `CLOCK_MODE()` functions to allow for custom time tracking
+ *
+ * -------------------------------- VERSION 4 ---------------------------------
+ *  - Added events to track the level of the token when attaching and detaching nodes
  */
 contract GalaxyMember is
   ERC721Upgradeable,
@@ -138,7 +141,7 @@ contract GalaxyMember is
   event BaseURIUpdated(string indexed newBaseURI, string indexed oldBaseURI);
 
   /// @dev Emitted when B3TR required to upgrade to each level is updated
-  event B3TRtoUpgradeToLevelUpdated(uint256[] indexed b3trToUpgradeToLevel);
+  event B3TRtoUpgradeToLevelUpdated(uint256[] b3trToUpgradeToLevel);
 
   /// @dev Emitted when public minting is paused
   event PublicMintingPaused(bool isPaused);
@@ -148,6 +151,12 @@ contract GalaxyMember is
 
   /// @dev Emitted when a node is detached from a token
   event NodeDetached(uint256 indexed nodeTokenId, uint256 indexed tokenId);
+
+  /// @dev Emitted when node is attached to a token
+  event LevelWhenAttached(uint256 indexed tokenId, uint256 indexed nodeTokenId, uint256 level);
+
+  /// @dev Emitted when node is detached from a token
+  event LevelWhenDetached(uint256 indexed tokenId, uint256 indexed nodeTokenId, uint256 level);
 
   /// @notice Modifier to check if public minting is not paused
   modifier whenPublicMintingNotPaused() {
@@ -365,6 +374,10 @@ contract GalaxyMember is
     $._tokenIdToNode[tokenId] = nodeTokenId;
 
     emit NodeAttached(nodeTokenId, tokenId);
+
+    // Get the level of the token after attaching the node
+    (uint256 level, ) = _getLevelOfAndB3TRleft(tokenId, nodeTokenId);
+    emit LevelWhenAttached(tokenId, nodeTokenId, level);
   }
 
   function detachNode(uint256 nodeTokenId, uint256 tokenId) public virtual whenNotPaused {
@@ -383,6 +396,10 @@ contract GalaxyMember is
     delete $._tokenIdToNode[tokenId];
 
     emit NodeDetached(nodeTokenId, tokenId);
+
+    // Get the level of the token after detaching the node
+    (uint256 level, ) = _getLevelOfAndB3TRleft(tokenId, 0);
+    emit LevelWhenDetached(tokenId, nodeTokenId, level);
   }
 
   // ----------- Internal & Private ----------- //
@@ -708,7 +725,7 @@ contract GalaxyMember is
   /// @dev This function is used to identify the version of the contract and should be updated in each new version
   /// @return string The version of the contract
   function version() external pure virtual returns (string memory) {
-    return "3";
+    return "4";
   }
 
   struct TokenInfo {
