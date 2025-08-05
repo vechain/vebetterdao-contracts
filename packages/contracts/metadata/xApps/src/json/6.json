@@ -1,0 +1,18 @@
+{
+  "name": "GreenCart",
+  "description": "Shop, Scan, Earn!  Turn your grocery receipts into rewards with our sustainable shopping app. Make every purchase count for a greener future",
+  "external_url": "http://greencart.vet/",
+  "logo": "",
+  "banner": "",
+  "screenshots": [],
+  "social_urls": [
+    {
+      "name": "Twitter",
+      "url": "https://twitter.com/greencart_vet"
+    }
+  ],
+  "app_urls": [],
+  "ve_world": {
+    "banner": ""
+  }
+}

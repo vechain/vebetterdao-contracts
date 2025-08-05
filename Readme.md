@@ -26,6 +26,7 @@
 Welcome to the VeBetterDAO Smart Contracts repository! This open-source repository houses the smart contracts powering the decentralized VeBetterDAO on the VeChain Thor blockchain. Dive into a world of transparent and auditable governance mechanisms, leveraging Solidity, Hardhat, and more to ensure robust decentralized operations.
 
 The complete documentation for the VeBetterDAO and the contracts can be found [here](https://docs.vebetterdao.org).
+Or visit the [Github Pages](https://vechain.github.io/vebetterdao-contracts) for the latest documentation extracted from the contracts source code.
 
 Our contracts are upgradeable and versioned. See the [contracts changelog](CONTRACTS_CHANGELOG.md) for more information on the changes introduced in each of new upgraded version.
 
@@ -89,25 +90,23 @@ Before contributing or deploying, ensure your environment meets the following sp
 
 ## Repository Structure
 
-### Contracts (contracts/) 📜
+This is a turbo monorepo setup, and the contracts are located in the `packages/contracts` directory.
+
+### Contracts (/packages/contracts) 📜
 
 Core smart contracts written in Solidity. Managed with Hardhat, these contracts are ready for deployment on the VeChain Thor blockchain.
 
-### Artifacts (artifacts/) 🏺
+### Artifacts (/packages/contracts/artifacts) 🏺
 
 Automatically generated contract artifacts post-compilation. Contains ABI and contract bytecode.
 
-### TypeChain Types (typechain-types/) 📚
+### TypeChain Types (/packages/contracts/typechain-types) 📚
 
 TypeScript typings for smart contracts, generated to enhance developer experience by providing strong typing for contract interactions.
 
-## Environment Setup ⚙️
-
-Set up your environment to integrate smoothly with the blockchain:
-
-- **MNEMONIC:** Store the mnemonic for the deploying wallet in a `.env` file at the root to maintain security and ease of use.
-
 ## Getting Started 🏁
+
+Note: all commands should be run from the root of the project.
 
 Clone the repository and install dependencies with ease:
 
@@ -115,24 +114,32 @@ Clone the repository and install dependencies with ease:
 yarn install # Run this at the root level of the project
 ```
 
+If you encounter any issues with the installation related to your node version look in the `.nvmrc` file to see which version of node is required, or if you use nvm you can run `nvm use`.
+
+Create a `.env` file at the root of the project and add the following variables:
+
+```bash
+cp .env.example .env
+```
+
 ## Compilation and Testing 🛠️
 
 Compile contracts and generate necessary artifacts and types:
 
 ```bash
-yarn compile
+yarn contracts:compile
 ```
 
 ### Testing on Hardhat Network
 
 ```bash
-yarn test:hardhat
+yarn contracts:test
 ```
 
 ### Testing on Thor Solo Network
 
 ```bash
-yarn test:thor-solo
+yarn contracts:test:thor-solo
 ```
 
 ### Code coverage
@@ -143,24 +150,16 @@ You can generate code coverage reports using the following command:
 yarn test:coverage:solidity
 ```
 
-A folder named `coverage` will be created in the root directory with the coverage report. Open `index.html` in your browser to view the report.
+A folder named `coverage` will be created in the `packages/contracts` directory with the coverage report. Open `index.html` in your browser to view the report.
 
 Additionally a report is generated each time a PR is merged on main and can be found [here](https://app.codecov.io/gh/vechain/vebetterdao-contracts).
-
-### Slither
-
-Note that slither does not seem to be working with the repo as-is, resulting in an enum type not found error:
-
-```bash
-slither.solc_parsing.exceptions.ParsingError: Type not found struct Checkpoints.Trace208
-```
 
 ### Documentation
 
 To generate the solidity documentation:
 
 ```bash
-yarn generate-docs
+yarn contracts:generate-docs
 ```
 
 The same documentation is available at github pages: [GithubPages](https://vechain.github.io/vebetterdao-contracts/)
@@ -172,36 +171,6 @@ Publish all the ABIs on NPM so we can do `yarn install @vechain/vebetter-contrac
 To publish the package to npm first increase the version in the `package.json` file and then run the following command:
 
 ```bash
-yarn prepublishOnly
-```
-
-then run:
-
-```bash
+cd packages/contracts
 npm publish
 ```
-
-### Verify contract
-
-To verify that the B3TR contract deployed at a specific address is the same as the one compiled in the repo, you can use the following command:
-
-```bash
-yarn verify B3TR <contract_address>
-```
-
-This command will check that the bytecode of the contract deployed at the given address is the same as the source code in the repo.
-
-To achieve this, it will:
-
-1. Deploy the contract on the hardhat network
-2. Fetch the bytecode of the deployed contract
-3. Compare the bytecode with the bytecode of the compiled contract
-
-Deploying the contract on the hardhat network is necessary because there is something wrong with the compiled bytecode,
-some bytes are different between the actual deployed contract, maybe due to the way VeChainThor is deploying contracts.
-
-This solution though is not perfect, it's just a quick way to verify that the contract deployed is the same as the one compiled in the repo.
-
-# Disclaimer
-
-This repository is for educational and demonstration purposes. The maintainers are not liable for any misuse or faults within the code.

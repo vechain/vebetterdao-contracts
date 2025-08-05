@@ -1,0 +1,22 @@
+{
+  "name": "Vyvo",
+  "description": "Experience the health revolution with Vyvo Smart Chain, where blockchain, IoT, and AI unite to transform how we manage well-being. We inspire individuals to actively monitor their health and, in return, reward them.",
+  "external_url": "https://www.vyvo.com/",
+  "logo": "",
+  "banner": "",
+  "screenshots": [],
+  "social_urls": [
+    {
+      "name": "Discord",
+      "url": "https://discord.com/invite/vyvosmartchain"
+    },
+    {
+      "name": "Telegram",
+      "url": "https://t.me/VyvoSmartChainEN"
+    }
+  ],
+  "app_urls": [],
+  "ve_world": {
+    "banner": ""
+  }
+}
