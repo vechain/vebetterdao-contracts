@@ -51,7 +51,8 @@
     "solo-up": "make solo-up",
     "solo-down": "make solo-down",
     "contracts:verify:testnet": "dotenv -v NEXT_PUBLIC_APP_ENV=testnet -- turbo run verify:testnet --filter=@vechain/vebetterdao-contracts -- ",
-    "contracts:verify:mainnet": "dotenv -v NEXT_PUBLIC_APP_ENV=mainnet -- turbo run verify:mainnet --filter=@vechain/vebetterdao-contracts -- "
+    "contracts:verify:mainnet": "dotenv -v NEXT_PUBLIC_APP_ENV=mainnet -- turbo run verify:mainnet --filter=@vechain/vebetterdao-contracts -- ",
+    "coverage:report": "nyc report --reporter=lcov --reporter=text --reporter=html --temp-dir=./packages/contracts/coverage"
   },
   "devDependencies": {
     "@datadog/browser-rum": "^5.23.0",
