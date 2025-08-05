@@ -174,3 +174,5 @@ To publish the package to npm first increase the version in the `package.json` f
 cd packages/contracts
 npm publish
 ```
+
+run again
