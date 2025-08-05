@@ -20,6 +20,9 @@ INDEX_MD="$INPUT_DIR/index.md"
 # Ensure the output directory exists
 mkdir -p "$OUTPUT_DIR"
 
+# Copy CSS file to output directory
+cp "$CSS_FILE" "$OUTPUT_DIR/"
+
 # Check if the CSS file exists
 if [ ! -f "$CSS_FILE" ]; then
     echo "Error: CSS file '$CSS_FILE' not found!"
@@ -35,7 +38,7 @@ fi
 # Create an index.md file
 echo "# VeBetterDao Contracts" > "$INDEX_MD"
 echo "" >> "$INDEX_MD"
-for file in ./docs/*.md; do
+for file in "$INPUT_DIR"/*.md; do
     base_name="$(basename "${file%.md}")"
     echo "- [${base_name}](./${base_name}.html)" >> "$INDEX_MD"
 done
@@ -46,7 +49,7 @@ for file in "$INPUT_DIR"/*.md; do
     output_file="$OUTPUT_DIR/$(basename "${file%.md}.html")"
     
     # Convert the Markdown file to HTML with a Table of Contents
-    pandoc "$file" -o "$output_file" --toc --toc-depth=3 --css="$CSS_FILE" --standalone --template="$TEMPLATE_HTML"
+    pandoc "$file" -o "$output_file" --toc --toc-depth=3 --css="style.css" --standalone --template="$TEMPLATE_HTML"
 
     # Print the file being processed
     echo "Converted: $file -> $output_file"
