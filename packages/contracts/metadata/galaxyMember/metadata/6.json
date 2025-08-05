@@ -1,0 +1,11 @@
+{
+  "name": "Jupiter",
+  "description": "Galaxy Member is a membership NFT to the VeBetterDAO ecosystem. It grants you access to exclusive features and benefits.",
+  "image": "ipfs://bafybeigdppmbhazhmukd4kmpaat7574njzdreif2aaqojq3si24zljhbgu",
+  "attributes": [
+    {
+      "trait_type": "Level",
+      "value": 6
+    }
+  ]
+}

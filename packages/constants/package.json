@@ -1,0 +1,12 @@
+{
+  "name": "@repo/constants",
+  "version": "0.0.0",
+  "private": true,
+  "files": [
+    "network",
+    "ipfs"
+  ],
+  "dependencies": {
+    "@vechain/connex-types": "^2.1.0"
+  }
+}

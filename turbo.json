@@ -1,0 +1,322 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": ["**/.env.*local", ".env"],
+  "globalEnv": [
+    "NEXT_PUBLIC_APP_ENV",
+    "MNEMONIC",
+    "TESTNET_STAGING_MNEMONIC",
+    "GALACTICA_TEST_MNEMONIC",
+    "NEXT_PUBLIC_DATADOG_APP_TOKEN",
+    "NEXT_PUBLIC_DATADOG_CLIENT_TOKEN",
+    "NEXT_PUBLIC_IPFS_PINNING_SERVICE",
+    "IS_TEST_COVERAGE",
+    "ENDORSE_XAPPS",
+    "DO_NOT_UPGRADE",
+    "SHARD",
+    "CONTRACT_TO_UPGRADE",
+    "CONTRACT_TO_DEPLOY",
+    "CONTRACT_VERSION",
+    "FUNCTION_TO_CALL",
+    "NEXT_DEPLOY_LATEST_ONLY"
+  ],
+  "tasks": {
+    "install": {
+      "dependsOn": ["@vechain/vebetterdao-contracts#install", "^compile"]
+    },
+    "@vechain/vebetterdao-contracts#install": {
+      "cache": false
+    },
+    "build": {
+      "dependsOn": ["^compile", "@repo/config#check-or-generate-local-config"],
+      "outputs": [".next/**", "!.next/cache/**"]
+    },
+    "lint": {
+      "cache": false
+    },
+    "//#solo-up": {
+      "cache": false
+    },
+    "dev": {
+      "cache": false,
+      "dependsOn": ["^setup-contracts"]
+    },
+    "dev:staging": {
+      "cache": false,
+      "persistent": true,
+      "dependsOn": ["^setup-contracts:staging"]
+    },
+    "dev:testnet": {
+      "cache": false,
+      "persistent": true,
+      "dependsOn": ["^setup-contracts:testnet"]
+    },
+    "dev:mainnet": {
+      "cache": false,
+      "persistent": true,
+      "dependsOn": ["^setup-contracts:mainnet"]
+    },
+    "dev:galactica-test": {
+      "cache": false,
+      "persistent": true,
+      "dependsOn": ["^setup-contracts:galactica-test"]
+    },
+    "dev:simulation": {
+      "cache": false,
+      "persistent": true,
+      "dependsOn": ["@vechain/vebetterdao-contracts#simulation"]
+    },
+    "start": {
+      "cache": false,
+      "dependsOn": ["^setup-contracts"]
+    },
+    "start:staging": {
+      "cache": false,
+      "persistent": true,
+      "dependsOn": ["^setup-contracts:staging"]
+    },
+    "start:testnet": {
+      "cache": false,
+      "persistent": true,
+      "dependsOn": ["^setup-contracts:testnet"]
+    },
+    "start:mainnet": {
+      "cache": false,
+      "persistent": true,
+      "dependsOn": ["^setup-contracts:mainnet"]
+    },
+    "start:galactica-test": {
+      "cache": false,
+      "persistent": true,
+      "dependsOn": ["^setup-contracts:galactica-test"]
+    },
+    "setup-contracts": {
+      "cache": false,
+      "persistent": true,
+      "dependsOn": ["^compile", "@vechain/vebetterdao-contracts#check-contracts-deployment"]
+    },
+    "setup-contracts:staging": {
+      "cache": false,
+      "persistent": true,
+      "dependsOn": ["^compile", "@vechain/vebetterdao-contracts#check-contracts-deployment:staging"]
+    },
+    "setup-contracts:testnet": {
+      "cache": false,
+      "persistent": true,
+      "dependsOn": ["^compile", "@vechain/vebetterdao-contracts#check-contracts-deployment:testnet"]
+    },
+    "setup-contracts:mainnet": {
+      "cache": false,
+      "persistent": true,
+      "dependsOn": ["^compile", "@vechain/vebetterdao-contracts#check-contracts-deployment:mainnet"]
+    },
+    "setup-contracts:galactica-test": {
+      "cache": false,
+      "persistent": true,
+      "dependsOn": ["^compile", "@vechain/vebetterdao-contracts#check-contracts-deployment:galactica-test"]
+    },
+    "@repo/config#check-or-generate-local-config": {
+      "cache": false
+    },
+    "@vechain/vebetterdao-contracts#check-contracts-deployment": {
+      "cache": false,
+      "dependsOn": ["^compile", "@repo/config#check-or-generate-local-config"]
+    },
+    "@vechain/vebetterdao-contracts#check-contracts-deployment:staging": {
+      "cache": false,
+      "dependsOn": ["^compile", "@repo/config#check-or-generate-local-config"]
+    },
+    "@vechain/vebetterdao-contracts#check-contracts-deployment:testnet": {
+      "cache": false,
+      "dependsOn": ["^compile", "@repo/config#check-or-generate-local-config"]
+    },
+    "@vechain/vebetterdao-contracts#check-contracts-deployment:mainnet": {
+      "cache": false,
+      "dependsOn": ["^compile", "@repo/config#check-or-generate-local-config"]
+    },
+    "@vechain/vebetterdao-contracts#check-contracts-deployment:galactica-test": {
+      "cache": false
+    },
+    "@vechain/vebetterdao-contracts#simulation": {
+      "cache": false,
+      "dependsOn": ["^setup-contracts"]
+    },
+    "@vechain/vebetterdao-contracts#simulation-galactica": {
+      "cache": false,
+      "dependsOn": ["^setup-contracts:galactica-test"]
+    },
+    "clean": {
+      "cache": false
+    },
+    "compile": {
+      "cache": false,
+      "dependsOn": ["@repo/config#check-or-generate-local-config"]
+    },
+    "deploy": {
+      "dependsOn": ["^deploy", "@repo/config#check-or-generate-local-config"]
+    },
+    "deploy:local": {
+      "dependsOn": ["^deploy:local"]
+    },
+    "deploy:testnet-staging": {
+      "dependsOn": ["^deploy:testnet-staging"]
+    },
+    "deploy:testnet": {
+      "dependsOn": ["^deploy:testnet"]
+    },
+    "deploy:mainnet": {
+      "dependsOn": ["^deploy:mainnet"]
+    },
+    "deploy:galactica-test": {
+      "dependsOn": ["^deploy:galactica-test"]
+    },
+    "deploy:hardhat": {
+      "dependsOn": ["^deploy:hardhat"]
+    },
+    "upgrade:contract": {
+      "dependsOn": ["@repo/config#check-or-generate-local-config"],
+      "outputs": [],
+      "cache": false
+    },
+    "upgrade:contract:local": {
+      "dependsOn": ["upgrade:contract"]
+    },
+    "upgrade:contract:testnet-staging": {
+      "dependsOn": ["upgrade:contract"]
+    },
+    "upgrade:contract:testnet": {
+      "dependsOn": ["upgrade:contract"]
+    },
+    "upgrade:contract:mainnet": {
+      "dependsOn": ["upgrade:contract"]
+    },
+    "deploy:contract": {
+      "dependsOn": ["@repo/config#check-or-generate-local-config"],
+      "outputs": [],
+      "cache": false
+    },
+    "deploy:contract:local": {
+      "dependsOn": ["deploy:contract"]
+    },
+    "deploy:contract:testnet-staging": {
+      "dependsOn": ["deploy:contract"]
+    },
+    "deploy:contract:testnet": {
+      "dependsOn": ["deploy:contract"]
+    },
+    "deploy:contract:mainnet": {
+      "dependsOn": ["deploy:contract"]
+    },
+    "call:contract": {
+      "dependsOn": ["@repo/config#check-or-generate-local-config"],
+      "outputs": [],
+      "cache": false
+    },
+    "call:contract:local": {
+      "dependsOn": ["call:contract"]
+    },
+    "call:contract:testnet-staging": {
+      "dependsOn": ["call:contract"]
+    },
+    "call:contract:testnet": {
+      "dependsOn": ["call:contract"]
+    },
+    "call:contract:mainnet": {
+      "dependsOn": ["call:contract"]
+    },
+    "start-round:testnet": {
+      "dependsOn": ["@repo/config#check-or-generate-local-config"],
+      "cache": false
+    },
+    "start-round": {
+      "dependsOn": ["@repo/config#check-or-generate-local-config"],
+      "cache": false
+    },
+    "get-galaxy-member-owners": {
+      "dependsOn": ["@repo/config#check-or-generate-local-config"],
+      "cache": false
+    },
+    "get-galaxy-member-owners:staging": {
+      "dependsOn": ["@repo/config#check-or-generate-local-config"],
+      "cache": false
+    },
+    "get-galaxy-member-selected-tokens": {
+      "dependsOn": ["@repo/config#check-or-generate-local-config"],
+      "cache": false
+    },
+    "get-app-shares": {
+      "dependsOn": ["@repo/config#check-or-generate-local-config"],
+      "cache": false
+    },
+    "test": {
+      "cache": false,
+      "dependsOn": ["^compile", "@repo/config#check-or-generate-local-config"]
+    },
+    "test:watch": {
+      "cache": false,
+      "dependsOn": ["^compile", "@repo/config#check-or-generate-local-config"]
+    },
+    "test:coverage:fe": {
+      "cache": false,
+      "dependsOn": ["^compile", "@repo/config#check-or-generate-local-config"]
+    },
+    "test:coverage:solidity": {
+      "cache": false,
+      "dependsOn": ["^@repo/config#check-or-generate-local-config"]
+    },
+    "test:thor-solo": {
+      "cache": false
+    },
+    "test:hardhat": {
+      "cache": false,
+      "dependsOn": ["@repo/config#check-or-generate-local-config"]
+    },
+    "test:hardhat:shard": {
+      "cache": false,
+      "dependsOn": ["@repo/config#check-or-generate-local-config"]
+    },
+    "generate-galaxy-member-metadata": {
+      "cache": false,
+      "dependsOn": ["@repo/config#check-or-generate-local-config"]
+    },
+    "upload-galaxy-member-metadata": {
+      "cache": false,
+      "dependsOn": ["@repo/config#check-or-generate-local-config"]
+    },
+    "generate-creator-nft-metadata": {
+      "cache": false,
+      "dependsOn": ["@repo/config#check-or-generate-local-config"]
+    },
+    "generate-xapp-metadata": {
+      "cache": false,
+      "dependsOn": ["@repo/config#check-or-generate-local-config"]
+    },
+    "upload-xapp-metadata": {
+      "cache": false,
+      "dependsOn": ["@repo/config#check-or-generate-local-config"]
+    },
+    "upload-creator-nft-metadata": {
+      "cache": false,
+      "dependsOn": ["@repo/config#check-or-generate-local-config"]
+    },
+    "playwright:e2e": {
+      "cache": false
+    },
+    "generate-docs": {
+      "cache": false
+    },
+    "generate-translations": {
+      "cache": false
+    },
+    "complete-translations": {
+      "cache": false
+    },
+    "verify:testnet": {
+      "cache": false,
+      "dependsOn": ["^compile"]
+    },
+    "verify:mainnet": {
+      "cache": false,
+      "dependsOn": ["^compile"]
+    }
+  }
+}

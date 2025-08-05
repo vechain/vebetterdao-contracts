@@ -10,14 +10,31 @@ on:
       - main
 
 jobs:
-  run-coverage-shards:
-    name: Run Coverage for Shards
+  check-changes:
     runs-on: ubuntu-latest
+    outputs:
+      contracts-changed: ${{ steps.changes.outputs.contracts }}
+      utils-changed: ${{ steps.changes.outputs.utils }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Check for Changes
+        id: changes
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            contracts:
+              - 'packages/contracts/**'
+            utils:
+              - 'packages/utils/**'
+
+  run-unit-tests:
+    name: Unit Testing
+    runs-on: ubuntu-latest
+    needs: check-changes
     strategy:
       fail-fast: false
-      matrix:
-        shard: [shard1, shard2, shard3]
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -31,64 +48,193 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
-      - name: Compile contracts
-        run: yarn compile
+      - name: Cache Solidity compilers
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/hardhat-nodejs
+          key: ${{ runner.os }}-solc-${{ hashFiles('./packages/contracts/hardhat.config.ts') }}
+          restore-keys: |
+            ${{ runner.os }}-solc-
+
+      # Disabled Global and Frontend unit tests for now as they are not working
+      # Contract tests should be run separately for each shard on the next step
+
+      # Run global unit tests if contract or utils changes are detected
+      # - name: Global Unit Tests
+      #   if: needs.check-changes.outputs.contracts-changed == 'true' || needs.check-changes.outputs.utils-changed == 'true'
+      #   run: yarn test
+
+  run-contract-tests:
+    name: Contract Testing
+    runs-on: ubuntu-latest
+    needs: check-changes
+    if: needs.check-changes.outputs.contracts-changed == 'true'
+    env:
+      NODE_OPTIONS: --max-old-space-size=8192
+    strategy:
+      fail-fast: false
+      matrix:
+        shard:
+          [
+            shard0,
+            shard2,
+            shard3a,
+            shard3b,
+            shard4,
+            shard5,
+            shard6,
+            shard7,
+            shard8,
+            shard8a,
+            shard8b,
+            shard8c,
+            shard9,
+            shard10,
+            shard11,
+            shard12,
+            shard13,
+            shard14,
+            shard15,
+            shard16,
+            shard17a,
+            shard17b,
+          ]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Use Node v20
+        uses: actions/setup-node@v3
+        with:
+          node-version-file: .nvmrc
+          cache: "yarn"
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Cache Solidity compilers
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/hardhat-nodejs
+          key: ${{ runner.os }}-solc-${{ hashFiles('./packages/contracts/hardhat.config.ts') }}
+          restore-keys: |
+            ${{ runner.os }}-solc-
 
       - name: Set Shard Environment Variable
         run: echo "SHARD=${{ matrix.shard }}" >> $GITHUB_ENV
 
-      - name: Run Coverage for ${{ matrix.shard }}
+      - name: Run Unit Tests and Check Coverage for ${{ matrix.shard }}
         run: yarn test:coverage:solidity
 
       - name: Upload Coverage for ${{ matrix.shard }}
         uses: actions/upload-artifact@v4
         with:
           name: coverage-${{ matrix.shard }}
-          path: coverage/coverage-final.json
+          path: packages/contracts/coverage/coverage-final.json
 
   combine-coverage:
     name: Combine Coverage Reports
     runs-on: ubuntu-latest
-    needs: run-coverage-shards
+    needs: run-contract-tests
     steps:
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v3
 
-      - name: Install Dependencies
+      - name: Use Node v20
+        uses: actions/setup-node@v3
+        with:
+          node-version-file: .nvmrc
+          cache: "yarn"
+
+      - name: Install Dependencies at Root
         run: yarn install --frozen-lockfile
 
       - name: Download All Coverage Artifacts
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          for shard in shard1 shard2 shard3; do
+          mkdir -p packages/contracts/coverage-shards
+          for shard in shard0 shard2 shard3 shard4 shard5 shard6 shard7 shard8 shard8a shard8b shard8c shard9 shard10 shard11 shard12 shard13 shard14 shard15 shard16 shard17a shard17b; do
             echo "Downloading artifact coverage-$shard"
-            mkdir -p coverage-shards/$shard
-            gh run download --name "coverage-$shard" --dir coverage-shards/$shard
+            gh run download --name "coverage-$shard" --dir packages/contracts/coverage-shards/$shard
           done
 
+      - name: Debug Downloaded Artifacts
+        run: ls -la packages/contracts/coverage-shards
+
       - name: Merge Coverage Reports
-        run: |
-          npx ts-node scripts/helpers/merge-coverage.ts
+        working-directory: packages/contracts
+        run: npx ts-node scripts/helpers/merge-coverage.ts
 
       - name: Create .nyc_output Directory
-        run: mkdir -p .nyc_output
+        run: mkdir -p packages/contracts/.nyc_output
 
       - name: Generate Final Coverage Report
-        run: |
-          yarn coverage:report
+        working-directory: packages/contracts
+        run: yarn coverage:report
 
       - name: Upload Unified Coverage Report to Codecov
         uses: codecov/codecov-action@v4
         with:
-          directory: coverage/
+          directory: packages/contracts/coverage/
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
-  report-unit-testing:
-    name: Unit Testing
+  run-slither:
+    name: Slither Analysis
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
-    needs: [run-coverage-shards, combine-coverage]
+    needs: check-changes
+    if: false
     steps:
-      - name: Success Message
-        run: echo "All Unit Testing Jobs Completed!"
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Use Node v20
+        uses: actions/setup-node@v3
+        with:
+          node-version-file: .nvmrc
+          cache: "yarn"
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Cache Solidity compilers
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/hardhat-nodejs
+          key: ${{ runner.os }}-solc-${{ hashFiles('./packages/contracts/hardhat.config.ts') }}
+          restore-keys: |
+            ${{ runner.os }}-solc-
+
+      - name: Compile contracts
+        run: yarn contracts:compile
+
+      - name: Run Slither
+        uses: crytic/slither-action@v0.4.0
+        id: slither
+        with:
+          ignore-compile: true
+          target: "packages/contracts/"
+          solc-version: "0.8.20"
+          fail-on: none
+          slither-args: --filter-paths "(openzeppelin|mocks|interfaces|deprecated|templates)" --exclude-informational --exclude-optimization --checklist --markdown-root ${{ github.server_url }}/${{ github.repository }}/blob/${{ github.sha }}/
+
+      - name: Upload Slither report
+        uses: actions/upload-artifact@v4
+        with:
+          name: slither-report
+          path: slither-report.md
+
+      - name: Create/update checklist as PR comment
+        uses: actions/github-script@v7
+        if: github.event_name == 'pull_request'
+        env:
+          REPORT: ${{ steps.slither.outputs.stdout }}
+        with:
+          script: |
+            const script = require('.github/scripts/comment')
+            const header = '# Slither report'
+            const body = process.env.REPORT
+            await script({ github, context, header, body })
