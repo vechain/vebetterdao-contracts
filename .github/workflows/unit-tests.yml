@@ -93,7 +93,7 @@ jobs:
 
       - name: Merge Coverage Reports
         run: |
-          npx ts-node scripts/helpers/merge-coverage.ts
+          npx ts-node packages/contracts/scripts/helpers/merge-coverage.ts
 
       - name: Create .nyc_output Directory
         run: mkdir -p .nyc_output
