@@ -23,9 +23,9 @@
 
 pragma solidity 0.8.20;
 
-import { VechainNodesDataTypes } from "../../../../libraries/VechainNodesDataTypes.sol";
+import { VechainNodesDataTypes } from "../../../V2/node-management-libraries/VechainNodesDataTypes.sol";
 import { PassportTypes } from "../../../../ve-better-passport/libraries/PassportTypes.sol";
-import { INodeManagement } from "../../../../interfaces/INodeManagement.sol";
+import { INodeManagementV2 } from "../../../V2/interfaces/INodeManagementV2.sol";
 import { IVeBetterPassport } from "../../../../interfaces/IVeBetterPassport.sol";
 import { IXAllocationVotingGovernor } from "../../../../interfaces/IXAllocationVotingGovernor.sol";
 
@@ -75,7 +75,7 @@ library EndorsementUtilsV4 {
    */
   function getEndorsers(
     mapping(bytes32 => uint256[]) storage _appEndorsers,
-    INodeManagement _nodeManagementContract,
+    INodeManagementV2 _nodeManagementContract,
     bytes32 appId
   ) external view returns (address[] memory) {
     uint256 length = _appEndorsers[appId].length;
@@ -106,7 +106,7 @@ library EndorsementUtilsV4 {
    */
   function getUsersEndorsementScore(
     mapping(VechainNodesDataTypes.NodeStrengthLevel => uint256) storage _nodeEnodorsmentScore,
-    INodeManagement _nodeManagementContract,
+    INodeManagementV2 _nodeManagementContract,
     address user
   ) external view returns (uint256) {
     VechainNodesDataTypes.NodeStrengthLevel[] memory nodeLevels = _nodeManagementContract.getUsersNodeLevels(user);
@@ -136,7 +136,7 @@ library EndorsementUtilsV4 {
     mapping(uint256 => bytes32) storage _nodeToEndorsedApp,
     mapping(bytes32 => uint256[]) storage _appEndorsers,
     mapping(bytes32 => uint256) storage _appScores,
-    INodeManagement _nodeManagementContract,
+    INodeManagementV2 _nodeManagementContract,
     bytes32 appId,
     uint256 endorserToRemove
   ) external returns (uint256) {

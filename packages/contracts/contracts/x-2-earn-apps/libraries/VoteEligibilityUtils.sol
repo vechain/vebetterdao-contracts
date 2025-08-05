@@ -23,9 +23,7 @@
 
 pragma solidity 0.8.20;
 
-import { VechainNodesDataTypes } from "../../libraries/VechainNodesDataTypes.sol";
 import { PassportTypes } from "../../ve-better-passport/libraries/PassportTypes.sol";
-import { INodeManagement } from "../../interfaces/INodeManagement.sol";
 import { IVeBetterPassport } from "../../interfaces/IVeBetterPassport.sol";
 import { Checkpoints } from "@openzeppelin/contracts/utils/structs/Checkpoints.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";

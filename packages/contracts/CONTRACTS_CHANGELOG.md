@@ -6,7 +6,8 @@ This document provides a detailed log of upgrades to the smart contract suite, e
 
 | Date                | Contract(s)                                                                                                                   | Summary                                                                                        |
 | ------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| 9 May 2025          | `Emissions` version `3`, `GalaxyMember` version `4`, `VoterRewards` version `5`                                               | Restoring the GM NFT System - Proposal Execution
+| 1 July 2025         | `GalaxyMember` version `5`, `NodeManagement` version `3`                                                                      | Use NodeManagementV3, avoid calls to legacy VeChain Nodes contract                             |
+| 9 May 2025          | `Emissions` version `3`, `GalaxyMember` version `4`, `VoterRewards` version `5`                                               | Restoring the GM NFT System - Proposal Execution                                               |
 | 2 May 2025          | `X2EarnApps` version `5`                                                                                                      | Restricting to submit one app for each creator NFT received>                                   |
 | 02 May 2025         | `VeBetterPassport` version `4`                                                                                                | Added RESET_SIGNALER_ROLE and fixed arithmetic underflow when resetting signals.               |
 | 25 March 2025       | `X2EarnRewardsPool` version `7`, `X2EarnApps` version `4`, `XAllocationPool` version `5`                                      | Added optional dual-pool balance to manage rewards and app treasury separately                 |
@@ -29,6 +30,18 @@ This document provides a detailed log of upgrades to the smart contract suite, e
 
 ---
 
+## Upgrade `GalaxyMember` to version `5`, `NodeManagement` to version `3`
+
+Use NodeManagementV3, avoid calls to legacy VeChain Nodes contract
+
+### Changes 🚀
+
+- **Upgraded Contract(s):**
+  - `GalaxyMember.sol` to version `5`
+  - `NodeManagement.sol` to version `3`
+
+---
+
 ## Upgrade `Emissions` to version `3`, `GalaxyMember` to version `4`, `VoterRewards` to version `5`
 
 Added new emissions pool called for GM rewards, that takes 25% of the treasury emissions each round. GM Holders will now be rewarded directly from this pool and GM multipliers are no longer taken into account for regular vote2Earn rewards.
@@ -45,6 +58,7 @@ Updated `XAllocationPool`, `XAllocationVoting` and `B3TRGovernor` to use version
 ### Storage Changes 📦
 
 - **`Emissions`**:
+
   - Added `gmPercentage` to store percentage of the treasury that will be used for GM Holder Rewards.
   - Added `gmEmissions` to store GM emissions for each cycle.
 
@@ -56,14 +70,15 @@ Updated `XAllocationPool`, `XAllocationVoting` and `B3TRGovernor` to use version
 ### New Features 🚀
 
 - **`Emissions`**:
-  - `_calculateTreasuryAmount()` is now `_calculateTreasuryAndGMAmount()` and is used to calculate Treasury and GM Emissions for cycle. 
-  - Added `getGMAmount()` to get the GM Pool amount for cycle. 
-  - Added `gmPercentage()` to get the GM Percentage of the Treasury pool. 
+
+  - `_calculateTreasuryAmount()` is now `_calculateTreasuryAndGMAmount()` and is used to calculate Treasury and GM Emissions for cycle.
+  - Added `getGMAmount()` to get the GM Pool amount for cycle.
+  - Added `gmPercentage()` to get the GM Percentage of the Treasury pool.
   - Updated `emissions()` to return GM pool too.
   - Added `setGmPercentage()` to update GM Percentage of the Treasury pool.
 
 - **`Emissions`**:
-  - Added `getGMReward()` to get the GM reward for a user for a cycle. 
+  - Added `getGMReward()` to get the GM reward for a user for a cycle.
   - Added `cycleToVoterToGMWeight()` to get the total GM Weight for a user in a specific cycle.
   - Updated `cycleToTotalGMWeight()` to get the total GM Weight in a specific cycle.
   - Added `setLevelToMultiplierNow()` to update GM Multipliers on the spot.

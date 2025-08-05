@@ -662,6 +662,11 @@ export async function deployLatest(config: ContractsConfig) {
     .setX2EarnRewardsPoolContract(await x2EarnRewardsPool.getAddress())
     .then(async tx => await tx.wait())
 
+  await x2EarnApps
+    .connect(deployer)
+    .setVeBetterPassportContract(await veBetterPassport.getAddress())
+    .then(async tx => await tx.wait())
+
   // Setup XAllocationPool addresses
   await xAllocationPool
     .connect(deployer)

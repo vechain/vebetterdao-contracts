@@ -21,11 +21,12 @@ import {
   GovernorStateLogicV1,
   GovernorVotesLogicV1,
   X2EarnRewardsPool,
+  MyERC20,
   MyERC721,
   MyERC1155,
   TokenAuction,
   B3TRGovernor,
-  NodeManagement,
+  NodeManagementV3,
   B3TRGovernorV1,
   B3TRGovernorV2,
   VoterRewardsV1,
@@ -83,8 +84,10 @@ import {
   AdministrationUtilsV4,
   VoteEligibilityUtilsV4,
   EndorsementUtilsV4,
+  AdministrationUtilsV5,
+  VoteEligibilityUtilsV5,
+  EndorsementUtilsV5,
   X2EarnCreator,
-  NodeManagementV1,
   VeBetterPassportV2,
   PassportConfiguratorV2,
   PassportWhitelistAndBlacklistLogicV2,
@@ -105,9 +108,17 @@ import {
   PassportSignalingLogicV3,
   PassportPoPScoreLogicV3,
   PassportWhitelistAndBlacklistLogicV3,
+  StargateNFT,
 } from "../../typechain-types"
 import { createLocalConfig } from "@repo/config/contracts/envs/local"
-import { deployAndUpgrade, deployProxy, deployProxyOnly, initializeProxy, upgradeProxy } from "../../scripts/helpers"
+import {
+  deployAndUpgrade,
+  deployProxy,
+  deployProxyOnly,
+  initializeProxy,
+  upgradeProxy,
+  deployStargateProxyWithoutInitialization,
+} from "../../scripts/helpers"
 import { bootstrapAndStartEmissions as callBootstrapAndStartEmissions } from "./common"
 import { governanceLibraries, passportLibraries } from "../../scripts/libraries"
 import { setWhitelistedFunctions } from "../../scripts/deploy/deployAll"
@@ -123,6 +134,8 @@ import {
 } from "../../typechain-types/contracts/deprecated/V4/governance/libraries"
 import { x2EarnLibraries } from "../../scripts/libraries/x2EarnLibraries"
 import { APPS } from "../../scripts/deploy/setup"
+import { deployStargateNFTLibraries } from "../../scripts/deploy/deploys/deployStargateNftLibraries"
+import { initialTokenLevels, vthoRewardPerBlock } from "../../contracts/mocks/const"
 
 interface DeployInstance {
   B3trContract: ContractFactory
@@ -137,7 +150,7 @@ interface DeployInstance {
   emissions: Emissions
   voterRewards: VoterRewards
   treasury: Treasury
-  nodeManagement: NodeManagement
+  nodeManagement: NodeManagementV3
   x2EarnCreator: X2EarnCreator
   x2EarnRewardsPool: X2EarnRewardsPool
   veBetterPassport: VeBetterPassport
@@ -225,7 +238,7 @@ interface DeployInstance {
   passportSignalingLogicV3: PassportSignalingLogicV3
   passportWhitelistBlacklistLogicV3: PassportWhitelistAndBlacklistLogicV3
   passportConfigurator: any // no abi for this library, which means a typechain is not generated
-
+  // X2Earn Libraries
   administrationUtils: AdministrationUtils
   endorsementUtils: EndorsementUtils
   voteEligibilityUtils: VoteEligibilityUtils
@@ -238,10 +251,18 @@ interface DeployInstance {
   administrationUtilsV4: AdministrationUtilsV4
   endorsementUtilsV4: EndorsementUtilsV4
   voteEligibilityUtilsV4: VoteEligibilityUtilsV4
+  administrationUtilsV5: AdministrationUtilsV5
+  endorsementUtilsV5: EndorsementUtilsV5
+  voteEligibilityUtilsV5: VoteEligibilityUtilsV5
+
   myErc721: MyERC721 | undefined
   myErc1155: MyERC1155 | undefined
   vechainNodesMock: TokenAuction
   b3trMultiSig: B3TRMultiSig
+
+  // StarGate
+  stargateNftMock: StargateNFT
+  vthoTokenMock: MyERC20
 }
 
 export const NFT_NAME = "GalaxyMember"
@@ -352,19 +373,28 @@ export const getOrDeployContractInstances = async ({
     PassportWhitelistAndBlacklistLogic,
   } = await passportLibraries()
 
+  // Deploy X2Earn AppLibraries
   const {
+    // Latest
     AdministrationUtils,
     EndorsementUtils,
     VoteEligibilityUtils,
+    // V2
     AdministrationUtilsV2,
     EndorsementUtilsV2,
     VoteEligibilityUtilsV2,
+    // V3
     AdministrationUtilsV3,
     EndorsementUtilsV3,
     VoteEligibilityUtilsV3,
+    // V4
     AdministrationUtilsV4,
     EndorsementUtilsV4,
     VoteEligibilityUtilsV4,
+    // V5
+    AdministrationUtilsV5,
+    EndorsementUtilsV5,
+    VoteEligibilityUtilsV5,
   } = await x2EarnLibraries()
 
   // ---------------------- Deploy Mocks ----------------------
@@ -383,6 +413,100 @@ export const getOrDeployContractInstances = async ({
   await vechainNodesMock.setSaleAuctionAddress(await clockAuctionContract.getAddress())
 
   await vechainNodesMock.addOperator(await owner.getAddress())
+
+  // deploy Stargate Mocks
+  // Deploy VTHO token
+  const VTHOFactory = await ethers.getContractFactory("MyERC20")
+  const vthoTokenMock = await VTHOFactory.deploy(owner.address, owner.address)
+  await vthoTokenMock.waitForDeployment()
+  const vthoAddress = await vthoTokenMock.getAddress()
+
+  // Deploy StargateNFT libraries
+  const {
+    StargateNFTClockLib,
+    StargateNFTSettingsLib,
+    StargateNFTTokenLib,
+    StargateNFTMintingLib,
+    StargateNFTVetGeneratedVthoLib,
+    StargateNFTLevelsLib,
+  } = await deployStargateNFTLibraries({ logOutput: false })
+
+  // Deploy StargateNFT proxy
+  const stargateNftAddress = await deployStargateProxyWithoutInitialization(
+    "StargateNFT",
+    {
+      Clock: await StargateNFTClockLib.getAddress(),
+      MintingLogic: await StargateNFTMintingLib.getAddress(),
+      Settings: await StargateNFTSettingsLib.getAddress(),
+      Token: await StargateNFTTokenLib.getAddress(),
+      VetGeneratedVtho: await StargateNFTVetGeneratedVthoLib.getAddress(),
+      Levels: await StargateNFTLevelsLib.getAddress(),
+    },
+    false,
+  )
+
+  // Deploy StargateDelegation proxy
+  const stargateDelegateAddress = await deployStargateProxyWithoutInitialization("StargateDelegation", {}, false)
+
+  // Initialize StargateNFT proxy
+  const stargateNftMock = (await initializeProxy(
+    stargateNftAddress,
+    "StargateNFT",
+    [
+      {
+        tokenCollectionName: "VeChain Node Token",
+        tokenCollectionSymbol: "VNT",
+        baseTokenURI: "ipfs://mock/",
+        admin: owner.address,
+        upgrader: owner.address,
+        pauser: owner.address,
+        levelOperator: owner.address,
+        legacyNodes: await vechainNodesMock.getAddress(), // from TokenAuction mock
+        stargateDelegation: stargateDelegateAddress,
+        legacyLastTokenId: 13, // see setup.ts, seeding for 5 + APPS.length accounts
+        levelsAndSupplies: initialTokenLevels, // TODO: review implementation
+        vthoToken: vthoAddress,
+      },
+    ],
+    {
+      Clock: await StargateNFTClockLib.getAddress(),
+      MintingLogic: await StargateNFTMintingLib.getAddress(),
+      Settings: await StargateNFTSettingsLib.getAddress(),
+      Token: await StargateNFTTokenLib.getAddress(),
+      VetGeneratedVtho: await StargateNFTVetGeneratedVthoLib.getAddress(),
+      Levels: await StargateNFTLevelsLib.getAddress(),
+    },
+  )) as StargateNFT
+
+  // Initialize StargateDelegation proxy
+  const stargateDelegateMock = await initializeProxy(
+    stargateDelegateAddress,
+    "StargateDelegation",
+    [
+      {
+        upgrader: owner.address,
+        admin: owner.address,
+        stargateNFT: stargateNftAddress,
+        vthoToken: vthoAddress,
+        vthoRewardPerBlock, // CHECK - as per stargate local config
+        delegationPeriod: 10, // CHECK - as per stargate local config
+        operator: owner.address,
+      },
+    ],
+    {},
+  )
+
+  // Add stargateNftMock as operator to vechainNodesMock, so that it can destroy legacy nodes
+  await vechainNodesMock.addOperator(await stargateNftMock.getAddress())
+
+  const nodeManagementMock = await deployAndUpgrade(
+    ["NodeManagementV1", "NodeManagementV2", "NodeManagementV3"],
+    [[await vechainNodesMock.getAddress(), owner.address, owner.address], [], [stargateNftAddress]],
+    {
+      versions: [undefined, 2, 3],
+      logOutput: false,
+    },
+  )
 
   let myErc1155, myErc721
   if (deployMocks) {
@@ -438,25 +562,25 @@ export const getOrDeployContractInstances = async ({
 
   const x2EarnCreator = (await deployProxy("X2EarnCreator", [config.CREATOR_NFT_URI, owner.address])) as X2EarnCreator
 
-  // Deploy NodeManagement
-  const nodeManagementV1 = (await deployProxy("NodeManagementV1", [
-    await vechainNodesMock.getAddress(),
-    owner.address,
-    owner.address,
-  ])) as NodeManagementV1
+  // Deploy NodeManagement - deprecating...
+  // const nodeManagementV1 = (await deployProxy("NodeManagementV1", [
+  //   await vechainNodesMock.getAddress(),
+  //   owner.address,
+  //   owner.address,
+  // ])) as NodeManagementV1
 
-  const nodeManagement = (await upgradeProxy(
-    "NodeManagementV1",
-    "NodeManagement",
-    await nodeManagementV1.getAddress(),
-    [],
-    {
-      version: 2,
-    },
-  )) as NodeManagement
+  // const nodeManagement = (await upgradeProxy(
+  //   "NodeManagementV1",
+  //   "NodeManagement",
+  //   await nodeManagementV1.getAddress(),
+  //   [],
+  //   {
+  //     version: 2,
+  //   },
+  // )) as NodeManagement
 
   const galaxyMember = (await deployAndUpgrade(
-    ["GalaxyMemberV1", "GalaxyMemberV2", "GalaxyMemberV3", "GalaxyMember"],
+    ["GalaxyMemberV1", "GalaxyMemberV2", "GalaxyMemberV3", "GalaxyMemberV4", "GalaxyMember"],
     [
       [
         {
@@ -476,15 +600,16 @@ export const getOrDeployContractInstances = async ({
       ],
       [
         await vechainNodesMock.getAddress(),
-        await nodeManagement.getAddress(),
+        await nodeManagementMock.getAddress(),
         owner.address,
         config.GM_NFT_NODE_TO_FREE_LEVEL,
       ],
       [],
       [],
+      [],
     ],
     {
-      versions: [undefined, 2, 3, 4],
+      versions: [undefined, 2, 3, 4, 5],
     },
   )) as GalaxyMember
 
@@ -507,21 +632,22 @@ export const getOrDeployContractInstances = async ({
   const x2EarnRewardsPoolAddress = otherAccounts[11].address
 
   const x2EarnApps = (await deployAndUpgrade(
-    ["X2EarnAppsV1", "X2EarnAppsV2", "X2EarnAppsV3", "X2EarnAppsV4", "X2EarnApps"],
+    ["X2EarnAppsV1", "X2EarnAppsV2", "X2EarnAppsV3", "X2EarnAppsV4", "X2EarnAppsV5", "X2EarnApps"],
     [
       ["ipfs://", [await timeLock.getAddress(), owner.address], owner.address, owner.address],
       [
         config.XAPP_GRACE_PERIOD,
-        await nodeManagement.getAddress(),
+        await nodeManagementMock.getAddress(),
         veBetterPassportContractAddress,
         await x2EarnCreator.getAddress(),
       ],
       [config.X2EARN_NODE_COOLDOWN_PERIOD, xAllocationGovernor],
       [x2EarnRewardsPoolAddress], // Setting temporary address for the x2EarnRewardsPool
       [],
+      [],
     ],
     {
-      versions: [undefined, 2, 3, 4, 5],
+      versions: [undefined, 2, 3, 4, 5, 6],
       libraries: [
         undefined,
         {
@@ -538,6 +664,11 @@ export const getOrDeployContractInstances = async ({
           AdministrationUtilsV4: await AdministrationUtilsV4.getAddress(),
           EndorsementUtilsV4: await EndorsementUtilsV4.getAddress(),
           VoteEligibilityUtilsV4: await VoteEligibilityUtilsV4.getAddress(),
+        },
+        {
+          AdministrationUtilsV5: await AdministrationUtilsV5.getAddress(),
+          EndorsementUtilsV5: await EndorsementUtilsV5.getAddress(),
+          VoteEligibilityUtilsV5: await VoteEligibilityUtilsV5.getAddress(),
         },
         {
           AdministrationUtils: await AdministrationUtils.getAddress(),
@@ -1023,7 +1154,7 @@ export const getOrDeployContractInstances = async ({
     galaxyMember,
     x2EarnApps,
     xAllocationVoting,
-    nodeManagement,
+    nodeManagement: nodeManagementMock,
     xAllocationPool,
     emissions,
     voterRewards,
@@ -1124,9 +1255,14 @@ export const getOrDeployContractInstances = async ({
     administrationUtilsV4: AdministrationUtilsV4,
     endorsementUtilsV4: EndorsementUtilsV4,
     voteEligibilityUtilsV4: VoteEligibilityUtilsV4,
+    administrationUtilsV5: AdministrationUtilsV5,
+    endorsementUtilsV5: EndorsementUtilsV5,
+    voteEligibilityUtilsV5: VoteEligibilityUtilsV5,
     myErc721: myErc721,
     myErc1155: myErc1155,
+    vthoTokenMock,
     vechainNodesMock,
+    stargateNftMock,
   }
   return cachedDeployInstance
 }

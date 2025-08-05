@@ -29,7 +29,7 @@ import { AppsStorageUpgradeable } from "./x-2-earn-apps/modules/AppsStorageUpgra
 import { ContractSettingsUpgradeable } from "./x-2-earn-apps/modules/ContractSettingsUpgradeable.sol";
 import { VoteEligibilityUpgradeable } from "./x-2-earn-apps/modules//VoteEligibilityUpgradeable.sol";
 import { EndorsementUpgradeable } from "./x-2-earn-apps/modules/EndorsementUpgradeable.sol";
-import { VechainNodesDataTypes } from "./libraries/VechainNodesDataTypes.sol";
+import { VechainNodesDataTypes } from "./mocks/Stargate/NodeManagement/libraries/VechainNodesDataTypes.sol";
 import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import { IXAllocationVotingGovernor } from "./interfaces/IXAllocationVotingGovernor.sol";
@@ -57,6 +57,11 @@ import { IXAllocationVotingGovernor } from "./interfaces/IXAllocationVotingGover
  * - Restricting one app per creator holding a creator NFT.
  * A check on submitApp is added to ensure that the number of creatorApps[creator] is 0.
  * This mapping is increased when a creator is added to an app, submit an app after approved by VBD, or got endorsed.
+ *
+ * -------------------- Version 6 --------------------
+ * - Upon StarGate launch, we updated the NodeManagement contract to V3. This impacted mostly
+ *   EndorsementUtils library.
+ *   EndorsementUpgradeable module.
  */
 contract X2EarnApps is
   X2EarnAppsUpgradeable,
@@ -125,7 +130,7 @@ contract X2EarnApps is
    * @return sting The version of the contract
    */
   function version() public pure virtual returns (string memory) {
-    return "5";
+    return "6";
   }
 
   // ---------- Overrides ------------ //

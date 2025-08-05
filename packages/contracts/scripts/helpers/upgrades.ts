@@ -108,6 +108,38 @@ export const deployProxyOnly = async (
   return await proxy.getAddress()
 }
 
+// This util is specific to StarGate
+// It is used to deploy the proxy contract without initializating StarGate contracts
+export const deployStargateProxyWithoutInitialization = async (
+  contractName: string,
+  libraries: { [libraryName: string]: string } = {},
+  logOutput: boolean = false,
+): Promise<string> => {
+  // Deploy the implementation contract
+  const Contract = await ethers.getContractFactory(contractName, {
+    libraries: libraries,
+  })
+  const implementation = await Contract.deploy()
+  await implementation.waitForDeployment()
+  logOutput && console.log(`${contractName} impl.: ${await implementation.getAddress()}`)
+
+  // Deploy the proxy contract without initialization
+  const proxyFactory = await ethers.getContractFactory("StargateProxy")
+  const proxy = await proxyFactory.deploy(await implementation.getAddress(), "0x")
+  await proxy.waitForDeployment()
+  logOutput && console.log(`${contractName} proxy: ${await proxy.getAddress()}`)
+
+  const newImplementationAddress = await getImplementationAddress(ethers.provider, await proxy.getAddress())
+  if (!AddressUtils.compareAddresses(newImplementationAddress, await implementation.getAddress())) {
+    throw new Error(
+      `The implementation address is not the one expected: ${newImplementationAddress} !== ${await implementation.getAddress()}`,
+    )
+  }
+
+  // Return the proxy address
+  return await proxy.getAddress()
+}
+
 export const initializeProxy = async (
   proxyAddress: string,
   contractName: string,
@@ -128,6 +160,7 @@ export const initializeProxy = async (
   const tx = await signer.sendTransaction({
     to: proxyAddress,
     data: initializerData,
+    gasLimit: 10_000_000, // Keep! Else, StargateNFT contract init tx will fail
   })
   await tx.wait()
 

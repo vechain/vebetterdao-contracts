@@ -23,7 +23,7 @@
 
 pragma solidity 0.8.20;
 
-import { VechainNodesDataTypes } from "../../../../libraries/VechainNodesDataTypes.sol";
+import { VechainNodesDataTypes } from "../../node-management-libraries/VechainNodesDataTypes.sol";
 import { PassportTypes } from "../../../../ve-better-passport/libraries/PassportTypes.sol";
 import { INodeManagementV1 } from "../../../V1/interfaces/INodeManagementV1.sol";
 import { X2EarnAppsDataTypes } from "../../../../libraries/X2EarnAppsDataTypes.sol";

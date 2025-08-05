@@ -24,11 +24,11 @@
 pragma solidity 0.8.20;
 
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import { VechainNodesDataTypes } from "../../libraries/VechainNodesDataTypes.sol";
+import { VechainNodesDataTypes } from "../../mocks/Stargate/NodeManagement/libraries/VechainNodesDataTypes.sol";
 import { X2EarnAppsUpgradeable } from "../X2EarnAppsUpgradeable.sol";
 import { X2EarnAppsDataTypes } from "../../libraries/X2EarnAppsDataTypes.sol";
 import { EndorsementUtils } from "../libraries/EndorsementUtils.sol";
-import { INodeManagement } from "../../interfaces/INodeManagement.sol";
+import { INodeManagementV3 } from "../../mocks/Stargate/interfaces/INodeManagement/INodeManagementV3.sol";
 import { IVeBetterPassport } from "../../interfaces/IVeBetterPassport.sol";
 import { PassportTypes } from "../../ve-better-passport/libraries/PassportTypes.sol";
 import { IXAllocationVotingGovernor } from "../../interfaces/IXAllocationVotingGovernor.sol";
@@ -39,14 +39,14 @@ abstract contract EndorsementUpgradeable is Initializable, X2EarnAppsUpgradeable
     bytes32[] _unendorsedApps; // List of apps pending endorsement
     mapping(bytes32 => uint256) _unendorsedAppsIndex; // Mapping from app ID to index in the _unendorsedApps array, so we can remove an app in O(1)
     mapping(bytes32 => uint256[]) _appEndorsers; // Maps each app ID to an array of node IDs that have endorsed it
-    mapping(VechainNodesDataTypes.NodeStrengthLevel => uint256) _nodeEnodorsmentScore; // The endorsement score for each node level
+    mapping(uint8 => uint256) _nodeEnodorsmentScore; // The endorsement score for each node level
     mapping(bytes32 => uint48) _appGracePeriodStart; // The grace period elapsed by the app since endorsed
     mapping(uint256 => bytes32) _nodeToEndorsedApp; // Maps a node ID to the app it currently endorses
     uint48 _gracePeriodDuration; // The grace period threshold for no endorsement in BLOCKS
     uint256 _endorsementScoreThreshold; // The endorsement score threshold for an app to be eligible for voting
     mapping(bytes32 => uint256) _appScores; // The score of each app
     mapping(bytes32 => PassportTypes.APP_SECURITY) _appSecurity; // The security score of each app
-    INodeManagement _nodeManagementContract; // The token auction contract
+    INodeManagementV3 _nodeManagementContract; // The token auction contract
     IVeBetterPassport _veBetterPassport; // The VeBetterPassport contract
     mapping(uint256 => uint256) _endorsementRound; // The latest round in which a node endorsed an app
     uint256 _cooldownPeriod; // Cooldown duration in rounds for a node to endorse an app
@@ -66,10 +66,7 @@ abstract contract EndorsementUpgradeable is Initializable, X2EarnAppsUpgradeable
   /**
    * @dev Sets the value for the cooldown period.
    */
-  function __Endorsement_init_v3(
-    uint48 _cooldownPeriod,
-    address _xAllocationVotingGovernor
-  ) internal onlyInitializing {
+  function __Endorsement_init_v3(uint48 _cooldownPeriod, address _xAllocationVotingGovernor) internal onlyInitializing {
     __Endorsement_init_unchained_v3(_cooldownPeriod, _xAllocationVotingGovernor);
   }
 
@@ -155,6 +152,10 @@ abstract contract EndorsementUpgradeable is Initializable, X2EarnAppsUpgradeable
       revert X2EarnNodeCooldownActive();
     }
 
+    if (getNodeEndorsementScore(nodeId) == 0) {
+      revert NodeNotAllowedToEndorse();
+    }
+
     // Add the caller to the list of endorsers for the app
     $._appEndorsers[appId].push(nodeId);
     $._nodeToEndorsedApp[nodeId] = appId;
@@ -209,9 +210,7 @@ abstract contract EndorsementUpgradeable is Initializable, X2EarnAppsUpgradeable
    * @param nodeLevel The node level of the node ID.
    * @return uint256 The endorsement score of the node ID.
    */
-  function nodeLevelEndorsementScore(
-    VechainNodesDataTypes.NodeStrengthLevel nodeLevel
-  ) external view returns (uint256) {
+  function nodeLevelEndorsementScore(uint8 nodeLevel) external view returns (uint256) {
     EndorsementStorage storage $ = _getEndorsementStorage();
     return $._nodeEnodorsmentScore[nodeLevel];
   }
@@ -396,7 +395,7 @@ abstract contract EndorsementUpgradeable is Initializable, X2EarnAppsUpgradeable
    */
   function _setNodeManagementContract(address nodeManagementContract) internal virtual {
     EndorsementStorage storage $ = _getEndorsementStorage();
-    $._nodeManagementContract = INodeManagement(nodeManagementContract);
+    $._nodeManagementContract = INodeManagementV3(nodeManagementContract);
   }
 
   /**
@@ -563,17 +562,17 @@ abstract contract EndorsementUpgradeable is Initializable, X2EarnAppsUpgradeable
   /**
    * @dev See {IX2EarnApps-getNodeEndorsementScore}.
    */
-  function getNodeEndorsementScore(uint256 nodeId) external view returns (uint256) {
+  function getNodeEndorsementScore(uint256 nodeId) public view returns (uint256) {
     EndorsementStorage storage $ = _getEndorsementStorage();
 
-    VechainNodesDataTypes.NodeStrengthLevel nodeLevel = $._nodeManagementContract.getNodeLevel(nodeId);
+    uint8 nodeLevel = $._nodeManagementContract.getNodeLevel(nodeId);
     return $._nodeEnodorsmentScore[nodeLevel];
   }
 
   /**
    * @dev See {IX2EarnApps-getNodeEndorsementScore}.
    */
-  function getNodeManagementContract() external view returns (INodeManagement) {
+  function getNodeManagementContract() external view returns (INodeManagementV3) {
     EndorsementStorage storage $ = _getEndorsementStorage();
     return $._nodeManagementContract;
   }

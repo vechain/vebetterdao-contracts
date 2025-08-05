@@ -23,9 +23,9 @@
 
 pragma solidity 0.8.20;
 
-import { VechainNodesDataTypes } from "../../libraries/VechainNodesDataTypes.sol";
+import { VechainNodesDataTypes } from "../../mocks/Stargate/NodeManagement/libraries/VechainNodesDataTypes.sol";
 import { PassportTypes } from "../../ve-better-passport/libraries/PassportTypes.sol";
-import { INodeManagement } from "../../interfaces/INodeManagement.sol";
+import { INodeManagementV3 } from "../../mocks/Stargate/interfaces/INodeManagement/INodeManagementV3.sol";
 import { IVeBetterPassport } from "../../interfaces/IVeBetterPassport.sol";
 import { IXAllocationVotingGovernor } from "../../interfaces/IXAllocationVotingGovernor.sol";
 
@@ -75,7 +75,7 @@ library EndorsementUtils {
    */
   function getEndorsers(
     mapping(bytes32 => uint256[]) storage _appEndorsers,
-    INodeManagement _nodeManagementContract,
+    INodeManagementV3 _nodeManagementContract,
     bytes32 appId
   ) external view returns (address[] memory) {
     uint256 length = _appEndorsers[appId].length;
@@ -105,11 +105,11 @@ library EndorsementUtils {
    * @return uint256 The total endorsement score for the user's nodes.
    */
   function getUsersEndorsementScore(
-    mapping(VechainNodesDataTypes.NodeStrengthLevel => uint256) storage _nodeEnodorsmentScore,
-    INodeManagement _nodeManagementContract,
+    mapping(uint8 => uint256) storage _nodeEnodorsmentScore,
+    INodeManagementV3 _nodeManagementContract,
     address user
   ) external view returns (uint256) {
-    VechainNodesDataTypes.NodeStrengthLevel[] memory nodeLevels = _nodeManagementContract.getUsersNodeLevels(user);
+    uint8[] memory nodeLevels = _nodeManagementContract.getUsersNodeLevels(user);
     uint256 totalScore;
 
     for (uint256 i; i < nodeLevels.length; i++) {
@@ -132,11 +132,11 @@ library EndorsementUtils {
    * @return uint256 The updated score of the app.
    */
   function getScoreAndRemoveEndorsement(
-    mapping(VechainNodesDataTypes.NodeStrengthLevel => uint256) storage _nodeEnodorsmentScore,
+    mapping(uint8 => uint256) storage _nodeEnodorsmentScore,
     mapping(uint256 => bytes32) storage _nodeToEndorsedApp,
     mapping(bytes32 => uint256[]) storage _appEndorsers,
     mapping(bytes32 => uint256) storage _appScores,
-    INodeManagement _nodeManagementContract,
+    INodeManagementV3 _nodeManagementContract,
     bytes32 appId,
     uint256 endorserToRemove
   ) external returns (uint256) {
@@ -147,10 +147,10 @@ library EndorsementUtils {
       // Get the current endorser's node id
       uint256 endorser = _appEndorsers[appId][i];
       // Get the node level of the endorser
-      VechainNodesDataTypes.NodeStrengthLevel nodeLevel = _nodeManagementContract.getNodeLevel(endorser);
+      uint8 nodeLevel = _nodeManagementContract.getNodeLevel(endorser);
 
       // Check if the endorser's node level is 0 or if the endorser is the one to be removed
-      if (nodeLevel == VechainNodesDataTypes.NodeStrengthLevel.None || endorser == endorserToRemove) {
+      if (nodeLevel == 0 || endorser == endorserToRemove) {
         // Remove endorser by swapping with the last element and then reducing the length
         _appEndorsers[appId][i] = _appEndorsers[appId][_appEndorsers[appId].length - 1];
         _appEndorsers[appId].pop();
@@ -239,18 +239,18 @@ library EndorsementUtils {
    * Emits a {NodeStrengthScoresUpdated} event.
    */
   function updateNodeEndorsementScores(
-    mapping(VechainNodesDataTypes.NodeStrengthLevel => uint256) storage nodeEnodorsmentScores,
+    mapping(uint8 => uint256) storage nodeEnodorsmentScores,
     VechainNodesDataTypes.NodeStrengthScores calldata nodeStrengthScores
   ) external {
     // Set the endorsement score for each node level
-    nodeEnodorsmentScores[VechainNodesDataTypes.NodeStrengthLevel.Strength] = nodeStrengthScores.strength; // Strength Node score
-    nodeEnodorsmentScores[VechainNodesDataTypes.NodeStrengthLevel.Thunder] = nodeStrengthScores.thunder; // Thunder Node score
-    nodeEnodorsmentScores[VechainNodesDataTypes.NodeStrengthLevel.Mjolnir] = nodeStrengthScores.mjolnir; // Mjolnir Node score
+    nodeEnodorsmentScores[1] = nodeStrengthScores.strength; // Strength Node score
+    nodeEnodorsmentScores[2] = nodeStrengthScores.thunder; // Thunder Node score
+    nodeEnodorsmentScores[3] = nodeStrengthScores.mjolnir; // Mjolnir Node score
 
-    nodeEnodorsmentScores[VechainNodesDataTypes.NodeStrengthLevel.VeThorX] = nodeStrengthScores.veThorX; // VeThor X Node score
-    nodeEnodorsmentScores[VechainNodesDataTypes.NodeStrengthLevel.StrengthX] = nodeStrengthScores.strengthX; // Strength X Node score
-    nodeEnodorsmentScores[VechainNodesDataTypes.NodeStrengthLevel.ThunderX] = nodeStrengthScores.thunderX; // Thunder X Node score
-    nodeEnodorsmentScores[VechainNodesDataTypes.NodeStrengthLevel.MjolnirX] = nodeStrengthScores.mjolnirX; // Mjolnir X Node score
+    nodeEnodorsmentScores[4] = nodeStrengthScores.veThorX; // VeThor X Node score
+    nodeEnodorsmentScores[5] = nodeStrengthScores.strengthX; // Strength X Node score
+    nodeEnodorsmentScores[6] = nodeStrengthScores.thunderX; // Thunder X Node score
+    nodeEnodorsmentScores[7] = nodeStrengthScores.mjolnirX; // Mjolnir X Node score
 
     emit NodeStrengthScoresUpdated(nodeStrengthScores);
   }

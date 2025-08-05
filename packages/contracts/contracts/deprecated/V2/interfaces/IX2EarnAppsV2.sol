@@ -2,7 +2,7 @@
 pragma solidity 0.8.20;
 
 import { X2EarnAppsDataTypes } from "../../../libraries/X2EarnAppsDataTypes.sol";
-import { VechainNodesDataTypes } from "../../../libraries/VechainNodesDataTypes.sol";
+import { VechainNodesDataTypes } from "../node-management-libraries/VechainNodesDataTypes.sol";
 import { IX2EarnCreator } from "../../../interfaces/IX2EarnCreator.sol";
 
 /**

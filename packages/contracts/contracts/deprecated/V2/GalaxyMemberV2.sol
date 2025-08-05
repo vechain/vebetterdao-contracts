@@ -36,7 +36,7 @@ import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { IXAllocationVotingGovernor } from "../../interfaces/IXAllocationVotingGovernor.sol";
 import { IB3TRGovernor } from "../../interfaces/IB3TRGovernor.sol";
 import { IB3TR } from "../../interfaces/IB3TR.sol";
-import { ITokenAuction } from "../../interfaces/ITokenAuction.sol";
+import { ITokenAuction } from "../../mocks/Stargate/interfaces/ITokenAuction.sol";
 import { INodeManagementV1 } from "../V1/interfaces/INodeManagementV1.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 

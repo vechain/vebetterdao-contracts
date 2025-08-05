@@ -67,6 +67,19 @@ export async function x2EarnLibraries(latestOnly: boolean = false) {
   const VoteEligibilityUtilsLibV4 = await VoteEligibilityUtilsV4.deploy()
   await VoteEligibilityUtilsLibV4.waitForDeployment()
 
+  // ---------------------- Version 5 ----------------------
+  const AdministrationUtilsV5 = await ethers.getContractFactory("AdministrationUtilsV5")
+  const AdministrationUtilsLibV5 = await AdministrationUtilsV5.deploy()
+  await AdministrationUtilsLibV5.waitForDeployment()
+
+  const EndorsementUtilsV5 = await ethers.getContractFactory("EndorsementUtilsV5")
+  const EndorsementUtilsLibV5 = await EndorsementUtilsV5.deploy()
+  await EndorsementUtilsLibV5.waitForDeployment()
+
+  const VoteEligibilityUtilsV5 = await ethers.getContractFactory("VoteEligibilityUtilsV5")
+  const VoteEligibilityUtilsLibV5 = await VoteEligibilityUtilsV5.deploy()
+  await VoteEligibilityUtilsLibV5.waitForDeployment()
+
   return {
     AdministrationUtils: AdministrationUtilsLib,
     EndorsementUtils: EndorsementUtilsLib,
@@ -80,5 +93,8 @@ export async function x2EarnLibraries(latestOnly: boolean = false) {
     AdministrationUtilsV4: AdministrationUtilsLibV4,
     EndorsementUtilsV4: EndorsementUtilsLibV4,
     VoteEligibilityUtilsV4: VoteEligibilityUtilsLibV4,
+    AdministrationUtilsV5: AdministrationUtilsLibV5,
+    EndorsementUtilsV5: EndorsementUtilsLibV5,
+    VoteEligibilityUtilsV5: VoteEligibilityUtilsLibV5,
   }
 }

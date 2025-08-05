@@ -32,7 +32,7 @@ export async function checkContractsDeployment() {
         // deploy the contracts and override the config file
         const newAddresses = await deployAll(getContractsConfig(env))
 
-        return await overrideLocalConfigWithNewContracts(newAddresses, config.network)
+        return await overrideLocalConfigWithNewContracts(newAddresses)
       } else console.log(`Skipping deployment on ${network.name}`)
     } else console.log(`B3tr contract already deployed`)
   } catch (e) {
@@ -40,7 +40,7 @@ export async function checkContractsDeployment() {
   }
 }
 
-async function overrideLocalConfigWithNewContracts(contracts: Awaited<ReturnType<typeof deployAll>>, network: Network) {
+async function overrideLocalConfigWithNewContracts(contracts: Awaited<ReturnType<typeof deployAll>>) {
   const newConfig: AppConfig = {
     ...config,
     b3trContractAddress: await contracts.b3tr.getAddress(),
@@ -85,8 +85,6 @@ async function overrideLocalConfigWithNewContracts(contracts: Awaited<ReturnType
   // eslint-disable-next-line
   const toWrite = `import { AppConfig } from \".\" \n const config: AppConfig = ${JSON.stringify(newConfig, null, 2)};
   export default config;`
-
-  // const fileToWrite = network.name === "solo" ? "local.ts" : "testnet-staging.ts"
 
   let fileToWrite: string
   switch (env) {
