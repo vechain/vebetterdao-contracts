@@ -2,7 +2,7 @@
 pragma solidity 0.8.20;
 
 import { X2EarnAppsDataTypes } from "../libraries/X2EarnAppsDataTypes.sol";
-import { VechainNodesDataTypes } from "../libraries/VechainNodesDataTypes.sol";
+import { VechainNodesDataTypes } from "../mocks/Stargate/NodeManagement/libraries/VechainNodesDataTypes.sol";
 import { IX2EarnCreator } from "./IX2EarnCreator.sol";
 import { IXAllocationVotingGovernor } from "./IXAllocationVotingGovernor.sol";
 import { IX2EarnRewardsPool } from "./IX2EarnRewardsPool.sol";
@@ -137,6 +137,11 @@ interface IX2EarnApps {
    * @dev The maximum number of managers has been reached.
    */
   error X2EarnMaxManagersReached(bytes32 appId);
+
+  /**
+   * @dev The user has a node that cannot be used to endorse
+   */
+  error NodeNotAllowedToEndorse();
 
   /**
    * @dev Event fired when a new app is added.
@@ -441,7 +446,7 @@ interface IX2EarnApps {
    *
    * @param  _x2EarnRewardsPoolContract the address of the X2EarnRewardsPool contract
    */
-  function setX2EarnRewardsPoolContract(address  _x2EarnRewardsPoolContract) external;
+  function setX2EarnRewardsPoolContract(address _x2EarnRewardsPoolContract) external;
 
   /**
    * @dev Get the X2EarnRewardsPool contract address.
@@ -639,7 +644,7 @@ interface IX2EarnApps {
    * @param nodeLevel The strength level of the node.
    * @return uint256 The endorsement score of the node level.
    */
-  function nodeLevelEndorsementScore(VechainNodesDataTypes.NodeStrengthLevel nodeLevel) external view returns (uint256);
+  function nodeLevelEndorsementScore(uint8 nodeLevel) external view returns (uint256);
 
   /**
    * @dev Update the X2EarnCreator contract address.

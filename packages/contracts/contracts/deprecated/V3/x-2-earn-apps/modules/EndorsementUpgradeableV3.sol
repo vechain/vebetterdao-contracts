@@ -24,11 +24,11 @@
 pragma solidity 0.8.20;
 
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import { VechainNodesDataTypes } from "../../../../libraries/VechainNodesDataTypes.sol";
+import { VechainNodesDataTypes } from "../../../V2/node-management-libraries/VechainNodesDataTypes.sol";
 import { X2EarnAppsUpgradeableV3 } from "../X2EarnAppsUpgradeableV3.sol";
 import { X2EarnAppsDataTypes } from "../../../../libraries/X2EarnAppsDataTypes.sol";
 import { EndorsementUtilsV3 } from "../libraries/EndorsementUtilsV3.sol";
-import { INodeManagement } from "../../../../interfaces/INodeManagement.sol";
+import { INodeManagementV2 } from "../../../V2/interfaces/INodeManagementV2.sol";
 import { IVeBetterPassport } from "../../../../interfaces/IVeBetterPassport.sol";
 import { PassportTypes } from "../../../../ve-better-passport/libraries/PassportTypes.sol";
 import { IXAllocationVotingGovernor } from "../../../../interfaces/IXAllocationVotingGovernor.sol";
@@ -46,7 +46,7 @@ abstract contract EndorsementUpgradeableV3 is Initializable, X2EarnAppsUpgradeab
     uint256 _endorsementScoreThreshold; // The endorsement score threshold for an app to be eligible for voting
     mapping(bytes32 => uint256) _appScores; // The score of each app
     mapping(bytes32 => PassportTypes.APP_SECURITY) _appSecurity; // The security score of each app
-    INodeManagement _nodeManagementContract; // The token auction contract
+    INodeManagementV2 _nodeManagementContract; // The token auction contract
     IVeBetterPassport _veBetterPassport; // The VeBetterPassport contract
     mapping(uint256 => uint256) _endorsementRound; // The latest round in which a node endorsed an app
     uint256 _cooldownPeriod; // Cooldown duration in rounds for a node to endorse an app
@@ -396,7 +396,7 @@ abstract contract EndorsementUpgradeableV3 is Initializable, X2EarnAppsUpgradeab
    */
   function _setNodeManagementContract(address nodeManagementContract) internal virtual {
     EndorsementStorage storage $ = _getEndorsementStorage();
-    $._nodeManagementContract = INodeManagement(nodeManagementContract);
+    $._nodeManagementContract = INodeManagementV2(nodeManagementContract);
   }
 
   /**
@@ -573,7 +573,7 @@ abstract contract EndorsementUpgradeableV3 is Initializable, X2EarnAppsUpgradeab
   /**
    * @dev See {IX2EarnApps-getNodeEndorsementScore}.
    */
-  function getNodeManagementContract() external view returns (INodeManagement) {
+  function getNodeManagementContract() external view returns (INodeManagementV2) {
     EndorsementStorage storage $ = _getEndorsementStorage();
     return $._nodeManagementContract;
   }

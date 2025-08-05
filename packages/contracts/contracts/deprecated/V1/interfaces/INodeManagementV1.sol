@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.20;
 
-import { VechainNodesDataTypes } from "../../../libraries/VechainNodesDataTypes.sol";
+import { VechainNodesDataTypes } from "../../V2/node-management-libraries/VechainNodesDataTypes.sol";
 
 interface INodeManagementV1 {
   /**

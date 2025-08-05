@@ -296,10 +296,6 @@ interface IGalaxyMember {
   /// @param level Free upgrade level
   function setNodeToFreeUpgradeLevel(uint8 nodeLevel, uint256 level) external;
 
-  /// @notice Sets the VeChain nodes contract address
-  /// @param _vechainNodes New nodes contract address
-  function setVechainNodes(address _vechainNodes) external;
-
   /// @notice Sets the X-Allocations governor address
   /// @param _xAllocationsGovernor New governor address
   function setXAllocationsGovernorAddress(address _xAllocationsGovernor) external;

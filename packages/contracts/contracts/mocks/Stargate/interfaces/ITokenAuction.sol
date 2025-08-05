@@ -2,6 +2,60 @@
 pragma solidity 0.8.20;
 
 interface ITokenAuction {
+  // ------------ Events ------------ //
+  // TODO: revisit interface
+  event AuctionCreated(
+    uint256 indexed _auctionId,
+    uint256 indexed _tokenId,
+    uint256 _startingPrice,
+    uint256 _endingPrice,
+    uint64 _duration
+  );
+
+  event AuctionSuccessful(
+    uint256 indexed _auctionId,
+    uint256 indexed _tokenId,
+    address indexed _seller,
+    address _winner,
+    uint256 _finalPrice
+  );
+
+  event AddAuctionWhiteList(uint256 indexed _auctionId, uint256 indexed _tokenId, address indexed _candidate);
+
+  event RemoveAuctionWhiteList(uint256 indexed _auctionId, uint256 indexed _tokenId, address indexed _candidate);
+
+  event Transfer(address indexed _from, address indexed _to, uint256 indexed _tokenId);
+
+  event Approval(address indexed _owner, address indexed _approved, uint256 indexed _tokenId);
+
+  event ApprovalForAll(address indexed _owner, address indexed _operator, bool _approved);
+
+  event NewUpgradeApply(
+    uint256 indexed _tokenId,
+    address indexed _applier,
+    uint8 _level,
+    uint64 _applyTime,
+    uint64 _applyBlockno
+  );
+
+  event CancelUpgrade(uint256 indexed _tokenId, address indexed _owner);
+
+  event LevelChanged(uint256 indexed _tokenId, address indexed _owner, uint8 _fromLevel, uint8 _toLevel);
+
+  event AuctionCancelled(uint256 indexed _auctionId, uint256 indexed _tokenId);
+
+  event ProtocolUpgrade(address _saleAuction);
+
+  event OperatorUpdated(address _op, bool _enabled);
+
+  event BlackListUpdated(address _person, bool _op);
+
+  event Pause();
+
+  event Unpause();
+
+  event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+
   // ------------ Functions ------------ //
 
   function removeAuctionWhiteList(uint256 _tokenId, address _address) external;
@@ -120,58 +174,4 @@ interface ITokenAuction {
   function normalTokenCount() external view returns (uint64);
 
   function isX(address _target) external view returns (bool);
-
-  // ------------ Events ------------ //
-
-  event AuctionCreated(
-    uint256 indexed _auctionId,
-    uint256 indexed _tokenId,
-    uint256 _startingPrice,
-    uint256 _endingPrice,
-    uint64 _duration
-  );
-
-  event AuctionSuccessful(
-    uint256 indexed _auctionId,
-    uint256 indexed _tokenId,
-    address indexed _seller,
-    address _winner,
-    uint256 _finalPrice
-  );
-
-  event AddAuctionWhiteList(uint256 indexed _auctionId, uint256 indexed _tokenId, address indexed _candidate);
-
-  event RemoveAuctionWhiteList(uint256 indexed _auctionId, uint256 indexed _tokenId, address indexed _candidate);
-
-  event Transfer(address indexed _from, address indexed _to, uint256 indexed _tokenId);
-
-  event Approval(address indexed _owner, address indexed _approved, uint256 indexed _tokenId);
-
-  event ApprovalForAll(address indexed _owner, address indexed _operator, bool _approved);
-
-  event NewUpgradeApply(
-    uint256 indexed _tokenId,
-    address indexed _applier,
-    uint8 _level,
-    uint64 _applyTime,
-    uint64 _applyBlockno
-  );
-
-  event CancelUpgrade(uint256 indexed _tokenId, address indexed _owner);
-
-  event LevelChanged(uint256 indexed _tokenId, address indexed _owner, uint8 _fromLevel, uint8 _toLevel);
-
-  event AuctionCancelled(uint256 indexed _auctionId, uint256 indexed _tokenId);
-
-  event ProtocolUpgrade(address _saleAuction);
-
-  event OperatorUpdated(address _op, bool _enabled);
-
-  event BlackListUpdated(address _person, bool _op);
-
-  event Pause();
-
-  event Unpause();
-
-  event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 }

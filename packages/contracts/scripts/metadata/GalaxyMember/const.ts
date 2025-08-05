@@ -48,4 +48,10 @@ export const GM_IMAGES_DATA: ImageData[] = [
       Level: 6,
     },
   },
+  {
+    levelName: "Saturn",
+    levelAttributes: {
+      Level: 7,
+    },
+  },
 ]

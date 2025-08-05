@@ -138,7 +138,7 @@ export const setupLocalEnvironment = async (
   b3tr: B3TR,
   vot3: VOT3,
   vechainNodesMock: TokenAuction,
-  endorseApps: boolean = false,
+  endorseApps: boolean,
 ) => {
   const start = performance.now()
   console.log("================ Setup local environment")

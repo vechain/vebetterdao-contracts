@@ -4468,7 +4468,7 @@ describe("VoterRewards - @shard10", () => {
 
       if (!vechainNodesMock) throw new Error("VechainNodesMock not deployed")
 
-      await galaxyMember.setVechainNodes(await vechainNodesMock.getAddress())
+      // await galaxyMember.setVechainNodes(await vechainNodesMock.getAddress())
 
       await addNodeToken(1, voter1)
       await addNodeToken(3, voter3)
@@ -4676,7 +4676,7 @@ describe("VoterRewards - @shard10", () => {
 
       if (!vechainNodesMock) throw new Error("VechainNodesMock not deployed")
 
-      await galaxyMember.setVechainNodes(await vechainNodesMock.getAddress())
+      // await galaxyMember.setVechainNodes(await vechainNodesMock.getAddress())
 
       await addNodeToken(3, voter1)
 
@@ -4870,7 +4870,7 @@ describe("VoterRewards - @shard10", () => {
 
       if (!vechainNodesMock) throw new Error("VechainNodesMock not deployed")
 
-      await galaxyMember.setVechainNodes(await vechainNodesMock.getAddress())
+      // await galaxyMember.setVechainNodes(await vechainNodesMock.getAddress())
 
       await addNodeToken(3, voter1)
 
@@ -5125,7 +5125,7 @@ describe("VoterRewards - @shard10", () => {
 
       if (!vechainNodesMock) throw new Error("VechainNodesMock not deployed")
 
-      await galaxyMember.setVechainNodes(await vechainNodesMock.getAddress())
+      // await galaxyMember.setVechainNodes(await vechainNodesMock.getAddress())
 
       await addNodeToken(3, voter1)
 
