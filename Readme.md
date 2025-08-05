@@ -28,7 +28,7 @@ Welcome to the VeBetterDAO Smart Contracts repository! This open-source reposito
 The complete documentation for the VeBetterDAO and the contracts can be found [here](https://docs.vebetterdao.org).
 Or visit the [Github Pages](https://vechain.github.io/vebetterdao-contracts) for the latest documentation extracted from the contracts source code.
 
-Our contracts are upgradeable and versioned. See the [contracts changelog](CONTRACTS_CHANGELOG.md) for more information on the changes introduced in each of new upgraded version.
+Our contracts are upgradeable and versioned. See the [contracts changelog](/packages/contracts/CONTRACTS_CHANGELOG.md) for more information on the changes introduced in each of new upgraded version.
 
 ## Mainnet contract addresses
 
