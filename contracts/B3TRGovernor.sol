@@ -77,8 +77,6 @@ import { IVeBetterPassport } from "./interfaces/IVeBetterPassport.sol";
  * - Integrated VeBetterPassport contract
  * ------------------ VERSION 5 ------------------
  * - Difference from V4: Updated all libraries to use new version of IVoterRewards that supports GM Upgrades.
- * ------------------ VERSION 6 ------------------
- * - Updated all libraries to use new version of IVoterRewards that supports GM Rewards Pool.
  */
 contract B3TRGovernor is
   IB3TRGovernor,
@@ -577,7 +575,7 @@ contract B3TRGovernor is
    * @return string The version of the governor
    */
   function version() external pure returns (string memory) {
-    return "6";
+    return "5";
   }
 
   /**

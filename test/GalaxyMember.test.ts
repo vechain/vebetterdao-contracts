@@ -14,7 +14,6 @@ import {
   getVot3Tokens,
   participateInAllocationVoting,
   payDeposit,
-  startNewAllocationRound,
   upgradeNFTtoLevel,
   waitForCurrentRoundToEnd,
   waitForProposalToBeActive,
@@ -28,9 +27,8 @@ import { deployProxy, upgradeProxy } from "../scripts/helpers"
 import { GalaxyMember, GalaxyMemberV1, GalaxyMemberV2, MockERC721Receiver } from "../typechain-types"
 import { time } from "@nomicfoundation/hardhat-network-helpers"
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers"
-import { endorseApp } from "./helpers/xnodes"
 
-describe("Galaxy Member - @shard4", () => {
+describe("Galaxy Member - @shard1", () => {
   describe("Contract parameters", () => {
     it("Should have correct parameters set on deployment", async () => {
       const { galaxyMember, owner } = await getOrDeployContractInstances({ forceDeploy: true })
@@ -664,7 +662,7 @@ describe("Galaxy Member - @shard4", () => {
         forceDeploy: true,
       })
 
-      expect(await galaxyMember.version()).to.equal("4")
+      expect(await galaxyMember.version()).to.equal("3")
     })
 
     it("Should not have state conflict after upgrading to V3", async () => {
@@ -831,7 +829,7 @@ describe("Galaxy Member - @shard4", () => {
 
       const galaxyMemberV3 = (await upgradeProxy(
         "GalaxyMemberV2",
-        "GalaxyMemberV3",
+        "GalaxyMember",
         await galaxyMember.getAddress(),
         [],
         { version: 3 },
@@ -906,49 +904,18 @@ describe("Galaxy Member - @shard4", () => {
         ),
       ).to.equal(4n)
 
-      storageSlots = []
-      for (let i = initialSlot; i < initialSlot + BigInt(100); i++) {
-        storageSlots.push(await ethers.provider.getStorage(await galaxyMemberV2.getAddress(), i))
-      }
-
-      storageSlots = storageSlots.filter(
-        slot => slot !== "0x0000000000000000000000000000000000000000000000000000000000000000",
-      )
-
-      const galaxyMemberV4 = (await upgradeProxy(
-        "GalaxyMemberV3",
-        "GalaxyMember",
-        await galaxyMember.getAddress(),
-        [],
-        { version: 4 },
-      )) as unknown as GalaxyMember
-
-      storageSlotsAfter = []
-      for (let i = initialSlot; i < initialSlot + BigInt(100); i++) {
-        storageSlotsAfter.push(await ethers.provider.getStorage(await galaxyMemberV3.getAddress(), i))
-      }
-
-      storageSlotsAfter = storageSlotsAfter.filter(
-        slot => slot !== "0x0000000000000000000000000000000000000000000000000000000000000000",
-      )
-
-      // Check if storage slots are the same after upgrade
-      for (let i = 0; i < storageSlots.length; i++) {
-        expect(storageSlots[i]).to.equal(storageSlotsAfter[i])
-      }
-
       // Transfer the token
-      await galaxyMemberV4.connect(owner).transferFrom(owner.address, otherAccounts[6].address, 6)
-      await galaxyMemberV4.connect(owner).transferFrom(owner.address, otherAccounts[6].address, 5)
+      await galaxyMemberV3.connect(owner).transferFrom(owner.address, otherAccounts[6].address, 6)
+      await galaxyMemberV3.connect(owner).transferFrom(owner.address, otherAccounts[6].address, 5)
 
       // Check if the token is transferred
-      expect(await galaxyMemberV4.ownerOf(4)).to.equal(await otherAccounts[6].getAddress())
+      expect(await galaxyMemberV3.ownerOf(4)).to.equal(await otherAccounts[6].getAddress())
 
-      expect(await galaxyMemberV4.getSelectedTokenId(owner.getAddress())).to.equal(0n)
+      expect(await galaxyMemberV3.getSelectedTokenId(owner.getAddress())).to.equal(0n)
 
       // Get checkpointed token Id
       expect(
-        await galaxyMemberV4.getSelectedTokenIdAtBlock(
+        await galaxyMemberV3.getSelectedTokenIdAtBlock(
           otherAccounts[6].address,
           await ethers.provider.getBlockNumber(),
         ),
@@ -4083,187 +4050,4 @@ describe("Galaxy Member - @shard4", () => {
       })
     })
   })
-
-  describe("Updating B3TR Required", () => {
-    it("Should update B3TR required for GM NFT", async () => {
-      const config = createLocalConfig()
-      const {
-        owner,
-        xAllocationVoting,
-        x2EarnApps,
-        veBetterPassport,
-        galaxyMember,
-        minterAccount,
-        otherAccounts,
-        b3tr,
-      } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      // Bootstrap emissions
-      await bootstrapEmissions()
-
-      const account1 = otherAccounts[0] // Holds level 2 GM NFT
-      const account2 = otherAccounts[1] // Holds level 3 GM NFT
-      const account3 = otherAccounts[2] // Holds level 4 GM NFT
-      const account4 = otherAccounts[3] // Holds level 2 GM NFT with level 5 node attached
-      const account5 = otherAccounts[4] // Holds level 1 GM NFT with level 7 node attached
-      const account6 = otherAccounts[7] // Holds level 1 GM NFT with level 5 node attached
-
-      const endorser1 = otherAccounts[5]
-      const endorser2 = otherAccounts[6]
-
-      await addNodeToken(5, account4)
-      await addNodeToken(7, account5)
-      await addNodeToken(5, account6)
-
-      // participation in governance is a requirement for minting
-      await getVot3Tokens(account1, "5000000")
-      await getVot3Tokens(account2, "5000000")
-      await getVot3Tokens(account3, "5000000")
-      await getVot3Tokens(account4, "5000000")
-      await getVot3Tokens(account5, "5000000")
-      await getVot3Tokens(account6, "5000000")
-
-      // Whitelist accounts
-      await veBetterPassport.whitelist(account1.address)
-      await veBetterPassport.whitelist(account2.address)
-      await veBetterPassport.whitelist(account3.address)
-      await veBetterPassport.whitelist(account4.address)
-      await veBetterPassport.whitelist(account5.address)
-      await veBetterPassport.whitelist(account6.address)
-      // Toggle Whitelist Check
-      if ((await veBetterPassport.isCheckEnabled(1)) === false) await veBetterPassport.toggleCheck(1)
-
-      // Set up X2EarnApps
-      const app1Id = await x2EarnApps.hashAppName("App 1")
-      const app2Id = await x2EarnApps.hashAppName("App 2")
-      await x2EarnApps.connect(endorser1).submitApp(endorser1.address, endorser1.address, "App 1", "metadataURI 1")
-      await x2EarnApps.connect(endorser2).submitApp(endorser2.address, endorser2.address, "App 2", "metadataURI 2")
-      await endorseApp(app1Id, endorser1)
-      await endorseApp(app2Id, endorser2)
-
-      const roundId = await startNewAllocationRound()
-
-      // Vote
-      await xAllocationVoting.connect(account1).castVote(roundId, [app1Id], [ethers.parseEther("1")])
-      await xAllocationVoting.connect(account2).castVote(roundId, [app1Id], [ethers.parseEther("1")])
-      await xAllocationVoting.connect(account3).castVote(roundId, [app1Id], [ethers.parseEther("1")])
-      await xAllocationVoting.connect(account4).castVote(roundId, [app2Id], [ethers.parseEther("1")])
-      await xAllocationVoting.connect(account5).castVote(roundId, [app2Id], [ethers.parseEther("1")])
-      await xAllocationVoting.connect(account6).castVote(roundId, [app2Id], [ethers.parseEther("1")])
-
-      await galaxyMember.connect(owner).setMaxLevel(5)
-
-      await galaxyMember.connect(account1).freeMint()
-      await galaxyMember.connect(account2).freeMint()
-      await galaxyMember.connect(account3).freeMint()
-      await galaxyMember.connect(account4).freeMint()
-      await galaxyMember.connect(account5).freeMint()
-      await galaxyMember.connect(account6).freeMint()
-
-      // Check initial B3TR required for each GM NFT level
-      expect(await galaxyMember.getB3TRtoUpgradeToLevel(1)).to.equal(0)
-      expect(await galaxyMember.getB3TRtoUpgradeToLevel(2)).to.equal(ethers.parseEther("10000"))
-      expect(await galaxyMember.getB3TRtoUpgradeToLevel(3)).to.equal(ethers.parseEther("25000"))
-      expect(await galaxyMember.getB3TRtoUpgradeToLevel(4)).to.equal(ethers.parseEther("50000"))
-      expect(await galaxyMember.getB3TRtoUpgradeToLevel(5)).to.equal(ethers.parseEther("100000"))
-      expect(await galaxyMember.getB3TRtoUpgradeToLevel(6)).to.equal(ethers.parseEther("250000"))
-      expect(await galaxyMember.getB3TRtoUpgradeToLevel(7)).to.equal(ethers.parseEther("500000"))
-      expect(await galaxyMember.getB3TRtoUpgradeToLevel(8)).to.equal(ethers.parseEther("2500000"))
-      expect(await galaxyMember.getB3TRtoUpgradeToLevel(9)).to.equal(ethers.parseEther("5000000"))
-      expect(await galaxyMember.getB3TRtoUpgradeToLevel(10)).to.equal(ethers.parseEther("25000000"))
-
-      // Get tokenId of each GM NFT
-      const tokenId1 = await galaxyMember.getSelectedTokenId(account1.address)
-      const tokenId2 = await galaxyMember.getSelectedTokenId(account2.address)
-      const tokenId3 = await galaxyMember.getSelectedTokenId(account3.address)
-      const tokenId4 = await galaxyMember.getSelectedTokenId(account4.address)
-      const tokenId5 = await galaxyMember.getSelectedTokenId(account5.address)
-      const tokenId6 = await galaxyMember.getSelectedTokenId(account6.address)
-
-      // Set level of each GM NFT
-      await upgradeNFTtoLevel(Number(tokenId1), 2, galaxyMember, b3tr, account1, minterAccount)
-      await upgradeNFTtoLevel(Number(tokenId2), 3, galaxyMember, b3tr, account2, minterAccount)
-      await upgradeNFTtoLevel(Number(tokenId3), 4, galaxyMember, b3tr, account3, minterAccount)
-      await upgradeNFTtoLevel(Number(tokenId4), 2, galaxyMember, b3tr, account4, minterAccount)
-      await upgradeNFTtoLevel(Number(tokenId5), 1, galaxyMember, b3tr, account5, minterAccount)
-      await upgradeNFTtoLevel(Number(tokenId6), 4, galaxyMember, b3tr, account6, minterAccount)
-
-      // Check GM NFT levels
-      expect(await galaxyMember.levelOf(tokenId1)).to.equal(2) // Level 2
-      expect(await galaxyMember.levelOf(tokenId2)).to.equal(3) // Level 3
-      expect(await galaxyMember.levelOf(tokenId3)).to.equal(4) // Level 4
-      expect(await galaxyMember.levelOf(tokenId4)).to.equal(2) // Level 2
-      expect(await galaxyMember.levelOf(tokenId5)).to.equal(1) // Level 1
-      expect(await galaxyMember.levelOf(tokenId6)).to.equal(4) // Level 4
-
-      // Attach nodes to GM NFTs
-      await galaxyMember.connect(account4).attachNode(1, tokenId4)
-      await galaxyMember.connect(account5).attachNode(2, tokenId5)
-      await galaxyMember.connect(account6).attachNode(3, tokenId6)
-
-      // Check GM NFT levels after attaching nodes
-      expect(await galaxyMember.levelOf(tokenId4)).to.equal(4) // Free upgrade to level 4 => Has GM of level 2 which means B3TR donated of 10000, needs 90000 more to reach level 5
-      expect(await galaxyMember.levelOf(tokenId5)).to.equal(5) // Free upgrade to level 7 => Capped at 5
-      expect(await galaxyMember.levelOf(tokenId6)).to.equal(4) // Free upgrade to level 4 => Has GM of level 4 which means B3TR donated of 500000, needs 50000 more to reach level 5
-
-      // Check B3TR required to upgrade each GM NFT level
-      expect(await galaxyMember.getB3TRtoUpgrade(tokenId1)).to.equal(ethers.parseEther("25000")) // Level 2 -> Level 3 = 25000
-      expect(await galaxyMember.getB3TRtoUpgrade(tokenId2)).to.equal(ethers.parseEther("50000")) // Level 3 -> Level 4 = 50000
-      expect(await galaxyMember.getB3TRtoUpgrade(tokenId3)).to.equal(ethers.parseEther("100000")) // Level 4 -> Level 5 = 100000
-      expect(await galaxyMember.getB3TRtoUpgrade(tokenId4)).to.equal(ethers.parseEther("90000")) // Level 4 -> Level 5 - 10000 (B3TR Donated before free upgrade) = 90000
-      expect(await galaxyMember.getB3TRtoUpgrade(tokenId5)).to.equal(ethers.parseEther("0")) // Level 1 -> Level 2 = 0 => Capped at 5
-      expect(await galaxyMember.getB3TRtoUpgrade(tokenId6)).to.equal(ethers.parseEther("15000")) // Level 4 -> Level 5 - 850000 (B3TR Donated before free upgrade) = 15000
-
-      // Check B3TR donated for each GM NFT
-      expect(await galaxyMember.getB3TRdonated(tokenId1)).to.equal(ethers.parseEther("10000")) // Level 2 => 10000
-      expect(await galaxyMember.getB3TRdonated(tokenId2)).to.equal(ethers.parseEther("35000")) // Level 3 => 10000 + 250000 = 35000
-      expect(await galaxyMember.getB3TRdonated(tokenId3)).to.equal(ethers.parseEther("85000")) // Level 4 => 10000 + 25000 + 50000 = 85000
-      expect(await galaxyMember.getB3TRdonated(tokenId4)).to.equal(ethers.parseEther("10000")) // Level 2 => 10000
-      expect(await galaxyMember.getB3TRdonated(tokenId5)).to.equal(ethers.parseEther("0")) // Level 1
-      expect(await galaxyMember.getB3TRdonated(tokenId6)).to.equal(ethers.parseEther("85000")) // Level 4 => 10000 + 25000 + 50000 = 85000
-
-      // Update B3TR required for GM NFT levels
-      await galaxyMember.connect(owner).setB3TRtoUpgradeToLevel(config.GM_NFT_B3TR_REQUIRED_TO_UPGRADE_TO_LEVEL_V2)
-
-      // Check updated B3TR required for each GM NFT level
-      expect(await galaxyMember.getB3TRtoUpgradeToLevel(1)).to.equal(0)
-      expect(await galaxyMember.getB3TRtoUpgradeToLevel(2)).to.equal(ethers.parseEther("5000"))
-      expect(await galaxyMember.getB3TRtoUpgradeToLevel(3)).to.equal(ethers.parseEther("12500"))
-      expect(await galaxyMember.getB3TRtoUpgradeToLevel(4)).to.equal(ethers.parseEther("25000"))
-      expect(await galaxyMember.getB3TRtoUpgradeToLevel(5)).to.equal(ethers.parseEther("50000"))
-      expect(await galaxyMember.getB3TRtoUpgradeToLevel(6)).to.equal(ethers.parseEther("125000"))
-      expect(await galaxyMember.getB3TRtoUpgradeToLevel(7)).to.equal(ethers.parseEther("250000"))
-      expect(await galaxyMember.getB3TRtoUpgradeToLevel(8)).to.equal(ethers.parseEther("1250000"))
-      expect(await galaxyMember.getB3TRtoUpgradeToLevel(9)).to.equal(ethers.parseEther("2500000"))
-      expect(await galaxyMember.getB3TRtoUpgradeToLevel(10)).to.equal(ethers.parseEther("12500000"))
-
-      /**
-       * Check GM NFT levels after updating B3TR required
-       *
-       * tokenId1 donated 10000 B3TR, to reach level 2 it now needs 7500 B3TR (level 3 (12500) - (10000 (B3TR donated) - level 2 (5000)))
-       * tokenId2 donated 35000 B3TR, to reach level 3 it now needs 7500 B3TR (level 4 (25000) - (35000 (B3TR donated) - level 2 (5000) - level 3 (12500)))
-       * tokenId3 donated 85000 B3TR, to reach level 4 it now needs 7500 B3TR (level 5 (50000) - (85000 (B3TR donated) - level 2 (5000) - level 3 (12500) - level 4 (25000)))
-       * tokenId4 donated 10000 B3TR, to reach level 5 it now needs 40000 B3TR (level 5 (50000) - (10000 (B3TR donated) - 0 (free upgrade)))
-       * tokenId5 donated 0 B3TR, at level 5 it needs 0 B3TR to upgrade (capped at 5)
-       * tokenId6 donated 85000 B3TR, to reach level 5 it now needs 0 B3TR (level 5 (50000) - (85000 (B3TR donated) - free upgrade))
-       */
-      expect(await galaxyMember.levelOf(tokenId1)).to.equal(2) // Level 2
-      expect(await galaxyMember.levelOf(tokenId2)).to.equal(3) // Level 3
-      expect(await galaxyMember.levelOf(tokenId3)).to.equal(4) // Level 4
-      expect(await galaxyMember.levelOf(tokenId4)).to.equal(4) // Level 4
-      expect(await galaxyMember.levelOf(tokenId5)).to.equal(5) // Level 1
-      expect(await galaxyMember.levelOf(tokenId6)).to.equal(5) // Level 5
-
-      // Check B3TR required to upgrade each GM NFT level
-      expect(await galaxyMember.getB3TRtoUpgrade(tokenId1)).to.equal(ethers.parseEther("7500")) // Level 2 -> Level 3 = 7500
-      expect(await galaxyMember.getB3TRtoUpgrade(tokenId2)).to.equal(ethers.parseEther("7500")) // Level 3 -> Level 4 = 7500
-      expect(await galaxyMember.getB3TRtoUpgrade(tokenId3)).to.equal(ethers.parseEther("7500")) // Level 4 -> Level 5 = 7500
-      expect(await galaxyMember.getB3TRtoUpgrade(tokenId4)).to.equal(ethers.parseEther("40000")) // Level 4 -> Level 5 = 40000 (With free upgrade)
-      expect(await galaxyMember.getB3TRtoUpgrade(tokenId5)).to.equal(ethers.parseEther("0")) // Level 5
-      expect(await galaxyMember.getB3TRtoUpgrade(tokenId6)).to.equal(ethers.parseEther("0")) // Level 5
-    })
-  })
 })
-

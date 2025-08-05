@@ -133,41 +133,5 @@ export function createTestConfig() {
     CREATOR_NFT_URI: "ipfs://BASE_URI",
 
     X2EARN_NODE_COOLDOWN_PERIOD: 0,
-
-    MULTI_SIG_SIGNERS: [
-      "0xf077b491b355E64048cE21E3A6Fc4751eEeA77fa",
-      "0x435933c8064b4Ae76bE665428e0307eF2cCFBD68",
-      "0x0F872421Dc479F3c11eDd89512731814D0598dB5",
-    ],
-
-    GM_PERCENTAGE_OF_TREASURY: 2500,
-
-    GM_MULTIPLIERS_V2: [110, 120, 150, 200, 250, 300, 500, 1000, 2500], // GM multipiers according
-    VOTER_REWARDS_LEVELS_V2: [2, 3, 4, 5, 6, 7, 8, 9, 10], // Voter rewards levels according to GM level
-
-    /*
-    Level => B3TR Required (halved)
-
-    2 (Moon) => 5,000 B3TR
-    3 (Mercury) => 12,500 B3TR
-    4 (Venus) => 25,000 B3TR
-    5 (Mars) => 50,000 B3TR
-    6 (Jupiter) => 125,000 B3TR
-    7 (Saturn) => 250,000 B3TR
-    8 (Uranus) => 1,250,000 B3TR
-    9 (Neptune) => 2,500,000 B3TR
-    10 (Galaxy) => 12,500,000 B3TR
-*/
-    GM_NFT_B3TR_REQUIRED_TO_UPGRADE_TO_LEVEL_V2: [
-      5000000000000000000000n,
-      12500000000000000000000n,
-      25000000000000000000000n,
-      50000000000000000000000n,
-      125000000000000000000000n,
-      250000000000000000000000n,
-      1250000000000000000000000n,
-      2500000000000000000000000n,
-      12500000000000000000000000n,
-    ],
   })
 }

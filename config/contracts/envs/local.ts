@@ -33,7 +33,6 @@ export function createLocalConfig() {
         "setEmissions",
         "setVotingThreshold",
       ],
-      X2EarnAppsV1: ["addApp", "setVotingEligibility"],
       X2EarnApps: ["setVotingEligibility"],
     },
 
@@ -57,7 +56,7 @@ export function createLocalConfig() {
 
     INITIAL_X_ALLOCATION: BigInt("2000000000000000000000000"), // 2M B3TR
 
-    GM_NFT_BASE_URI: "ipfs://bafybeicz4jdfmdksq537a3cumwprvaprfuy2unc34havamwdrl7dcnnami/metadata/", // IPFS base URI for the GM NFT
+    GM_NFT_BASE_URI: "ipfs://bafybeienna2npuyliqaqsrxziu4texyginznh5ewxcvlvlqcxfyw7ef52q/metadata/", // IPFS base URI for the GM NFT
 
     /*
       Level => B3TR Required
@@ -159,41 +158,5 @@ export function createLocalConfig() {
     //WARNING: Cooldown depends on the current round. If the current round is 1, the cooldown cannot be greater than 1. Otherwise the endorsement will fail.
     //Check `EndorsementUtils.sol` `checkCooldown` method for more details.
     X2EARN_NODE_COOLDOWN_PERIOD: 0, // 0 cycles
-
-    MULTI_SIG_SIGNERS: [
-      "0xf077b491b355E64048cE21E3A6Fc4751eEeA77fa",
-      "0x435933c8064b4Ae76bE665428e0307eF2cCFBD68",
-      "0x0F872421Dc479F3c11eDd89512731814D0598dB5",
-    ],
-
-    GM_PERCENTAGE_OF_TREASURY: 2500, // 25% of the treasury will be used for GM Holder Rewards
-
-    GM_MULTIPLIERS_V2: [110, 120, 150, 200, 250, 300, 500, 1000, 2500], // GM multipiers scaled -> [1.1x, 1.2x, 1.5x, 2x, 2.5x, 3x, 5x, 10x, 25x]
-    VOTER_REWARDS_LEVELS_V2: [2, 3, 4, 5, 6, 7, 8, 9, 10], // Voter rewards levels for the new GM multipliers
-
-    /*
-    Level => B3TR Required (halved)
-
-    2 (Moon) => 5,000 B3TR
-    3 (Mercury) => 12,500 B3TR
-    4 (Venus) => 25,000 B3TR
-    5 (Mars) => 50,000 B3TR
-    6 (Jupiter) => 125,000 B3TR
-    7 (Saturn) => 250,000 B3TR
-    8 (Uranus) => 1,250,000 B3TR
-    9 (Neptune) => 2,500,000 B3TR
-    10 (Galaxy) => 12,500,000 B3TR
-*/
-    GM_NFT_B3TR_REQUIRED_TO_UPGRADE_TO_LEVEL_V2: [
-      5000000000000000000000n,
-      12500000000000000000000n,
-      25000000000000000000000n,
-      50000000000000000000000n,
-      125000000000000000000000n,
-      250000000000000000000000n,
-      1250000000000000000000000n,
-      2500000000000000000000000n,
-      12500000000000000000000000n,
-    ],
   })
 }

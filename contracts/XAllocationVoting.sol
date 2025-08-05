@@ -53,9 +53,6 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
  *
  * ----- Version 4 -----
  * - Updated the X2EarnApps interface to support node cooldown functionality
- *
- * ----- Version 6 -----
- *  - Align IVoterRewards and IEmissions interfaces with the new contracts
  */
 contract XAllocationVoting is
   XAllocationVotingGovernor,

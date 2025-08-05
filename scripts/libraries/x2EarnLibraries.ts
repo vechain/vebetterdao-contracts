@@ -32,7 +32,7 @@ export async function x2EarnLibraries() {
   const VoteEligibilityUtilsLibV3 = await VoteEligibilityUtilsV3.deploy()
   await VoteEligibilityUtilsLibV3.waitForDeployment()
 
-  // ---------------------- Version 4 ----------------------
+  // ---------------------- Version 4  ----------------------
   const AdministrationUtilsV4 = await ethers.getContractFactory("AdministrationUtilsV4")
   const AdministrationUtilsLibV4 = await AdministrationUtilsV4.deploy()
   await AdministrationUtilsLibV4.waitForDeployment()
@@ -45,15 +45,17 @@ export async function x2EarnLibraries() {
   const VoteEligibilityUtilsLibV4 = await VoteEligibilityUtilsV4.deploy()
   await VoteEligibilityUtilsLibV4.waitForDeployment()
 
-  // ---------------------- Version 5 ----------------------
+  // ---------------------- Version 5  ----------------------
   // Latest version
   const AdministrationUtils = await ethers.getContractFactory("AdministrationUtils")
   const AdministrationUtilsLib = await AdministrationUtils.deploy()
   await AdministrationUtilsLib.waitForDeployment()
+
   // Latest version
   const EndorsementUtils = await ethers.getContractFactory("EndorsementUtils")
   const EndorsementUtilsLib = await EndorsementUtils.deploy()
   await EndorsementUtilsLib.waitForDeployment()
+
   // Latest version
   const VoteEligibilityUtils = await ethers.getContractFactory("VoteEligibilityUtils")
   const VoteEligibilityUtilsLib = await VoteEligibilityUtils.deploy()

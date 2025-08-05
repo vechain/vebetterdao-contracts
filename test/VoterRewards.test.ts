@@ -1,4 +1,4 @@
-import { describe, it, beforeEach } from "mocha"
+import { describe, it } from "mocha"
 import {
   catchRevert,
   getOrDeployContractInstances,
@@ -22,7 +22,6 @@ import {
   bootstrapAndStartEmissions,
   payDeposit,
   moveBlocks,
-  updateGMMultipliers,
 } from "./helpers"
 import { expect } from "chai"
 import { ethers } from "hardhat"
@@ -32,9 +31,6 @@ import { getImplementationAddress } from "@openzeppelin/upgrades-core"
 import { deployAndUpgrade, deployProxy, upgradeProxy } from "../scripts/helpers"
 import {
   B3TRGovernor,
-  B3TRGovernorV5,
-  Emissions,
-  EmissionsV2,
   GalaxyMember,
   GalaxyMemberV1,
   GalaxyMemberV2,
@@ -42,7 +38,6 @@ import {
   VoterRewardsV1,
   VoterRewardsV2,
   VoterRewardsV3,
-  VoterRewardsV4,
   XAllocationVoting,
 } from "../typechain-types"
 import { time } from "@nomicfoundation/hardhat-network-helpers"
@@ -171,13 +166,13 @@ describe("VoterRewards - @shard2", () => {
     it("Should be able to set level to multiplier", async () => {
       const { voterRewards, owner, otherAccount } = await getOrDeployContractInstances({ forceDeploy: true })
 
-      await voterRewards.connect(owner).setLevelToMultiplierNow(1, 2)
+      await voterRewards.connect(owner).setLevelToMultiplier(1, 2)
       expect(await voterRewards.levelToMultiplier(1)).to.equal(2)
 
-      await expect(voterRewards.connect(owner).setLevelToMultiplierNow(0, 2)).to.be.reverted // Level cannot be zero
-      await expect(voterRewards.connect(owner).setLevelToMultiplierNow(1, 0)).to.be.reverted // Multiplier cannot be zero
+      await expect(voterRewards.connect(owner).setLevelToMultiplier(0, 2)).to.be.reverted // Level cannot be zero
+      await expect(voterRewards.connect(owner).setLevelToMultiplier(1, 0)).to.be.reverted // Multiplier cannot be zero
 
-      await expect(voterRewards.connect(otherAccount).setLevelToMultiplierNow(1, 2)).to.be.reverted // Should not be able to set level to multiplier if not admin
+      await expect(voterRewards.connect(otherAccount).setLevelToMultiplier(1, 2)).to.be.reverted // Should not be able to set level to multiplier if not admin
     })
 
     it("Should be able to set galaxy member address", async () => {
@@ -341,12 +336,12 @@ describe("VoterRewards - @shard2", () => {
     })
 
     it("Should not be able to initialize the contract after already being initialized", async function () {
-      const { voterRewards, owner, emissions, galaxyMember, b3tr } = await getOrDeployContractInstances({
+      const { voterRewardsV1, owner, emissions, galaxyMember, b3tr } = await getOrDeployContractInstances({
         forceDeploy: true,
       })
 
       await expect(
-        voterRewards.initialize(
+        voterRewardsV1.initialize(
           owner.address,
           owner.address,
           owner.address,
@@ -459,7 +454,7 @@ describe("VoterRewards - @shard2", () => {
         forceDeploy: true,
       })
 
-      expect(await voterRewards.version()).to.equal("5")
+      expect(await voterRewards.version()).to.equal("4")
     })
 
     it("Should not have state conflict after upgrading to V3 and V4", async () => {
@@ -968,7 +963,7 @@ describe("VoterRewards - @shard2", () => {
 
       const voterRewardsV4 = (await upgradeProxy(
         "VoterRewardsV3",
-        "VoterRewardsV4",
+        "VoterRewards",
         await voterRewardsV1.getAddress(),
         [],
         {
@@ -1009,693 +1004,6 @@ describe("VoterRewards - @shard2", () => {
 
       await expect(voterRewardsV4.connect(voter1).claimReward(4, voter1)).to.emit(voterRewardsV4, "RewardClaimed")
       await expect(voterRewardsV4.connect(voter2).claimReward(4, voter2)).to.emit(voterRewardsV4, "RewardClaimed")
-    })
-
-    it("Should not have state conflict after upgrading to V5", async () => {
-      const config = createLocalConfig()
-      const {
-        otherAccounts,
-        otherAccount: voter1,
-        owner,
-        b3tr,
-        timeLock,
-        nodeManagement,
-        vot3,
-        treasury,
-        x2EarnApps,
-        veBetterPassport,
-        xAllocationPool,
-        governorClockLogicLib,
-        governorConfiguratorLib,
-        governorDepositLogicLib,
-        governorFunctionRestrictionsLogicLib,
-        governorProposalLogicLib,
-        governorQuorumLogicLib,
-        governorStateLogicLib,
-        governorVotesLogicLib,
-        governorClockLogicLibV1,
-        governorConfiguratorLibV1,
-        governorDepositLogicLibV1,
-        governorFunctionRestrictionsLogicLibV1,
-        governorProposalLogicLibV1,
-        governorQuorumLogicLibV1,
-        governorStateLogicLibV1,
-        governorVotesLogicLibV1,
-        governorClockLogicLibV3,
-        governorConfiguratorLibV3,
-        governorDepositLogicLibV3,
-        governorFunctionRestrictionsLogicLibV3,
-        governorProposalLogicLibV3,
-        governorQuorumLogicLibV3,
-        governorStateLogicLibV3,
-        governorVotesLogicLibV3,
-        governorClockLogicLibV4,
-        governorConfiguratorLibV4,
-        governorDepositLogicLibV4,
-        governorFunctionRestrictionsLogicLibV4,
-        governorProposalLogicLibV4,
-        governorQuorumLogicLibV4,
-        governorStateLogicLibV4,
-        governorVotesLogicLibV4,
-        governorClockLogicLibV5,
-        governorConfiguratorLibV5,
-        governorDepositLogicLibV5,
-        governorFunctionRestrictionsLogicLibV5,
-        governorQuorumLogicLibV5,
-        governorStateLogicLibV5,
-        governorVotesLogicLibV5,
-        governorProposalLogicLibV5,
-        minterAccount,
-      } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      const galaxyMember = (await deployAndUpgrade(
-        ["GalaxyMemberV1", "GalaxyMember"],
-        [
-          [
-            {
-              name: "galaxyMember",
-              symbol: "GM",
-              admin: owner.address,
-              upgrader: owner.address,
-              pauser: owner.address,
-              minter: owner.address,
-              contractsAddressManager: owner.address,
-              maxLevel: 10,
-              baseTokenURI: config.GM_NFT_BASE_URI,
-              b3trToUpgradeToLevel: config.GM_NFT_B3TR_REQUIRED_TO_UPGRADE_TO_LEVEL,
-              b3tr: await b3tr.getAddress(),
-              treasury: await treasury.getAddress(),
-            },
-          ],
-          [owner.address, await nodeManagement.getAddress(), owner.address, config.GM_NFT_NODE_TO_FREE_LEVEL],
-        ],
-        { versions: [undefined, 2] },
-      )) as unknown as GalaxyMember
-
-      const emissions = (await deployAndUpgrade(
-        ["EmissionsV1", "EmissionsV2"],
-        [
-          [
-            {
-              minter: minterAccount.address,
-              admin: owner.address,
-              upgrader: owner.address,
-              contractsAddressManager: owner.address,
-              decaySettingsManager: owner.address,
-              b3trAddress: await b3tr.getAddress(),
-              destinations: [
-                await xAllocationPool.getAddress(),
-                owner.address,
-                await treasury.getAddress(),
-                config.MIGRATION_ADDRESS,
-              ],
-              initialXAppAllocation: config.INITIAL_X_ALLOCATION,
-              cycleDuration: config.EMISSIONS_CYCLE_DURATION,
-              decaySettings: [
-                config.EMISSIONS_X_ALLOCATION_DECAY_PERCENTAGE,
-                config.EMISSIONS_VOTE_2_EARN_DECAY_PERCENTAGE,
-                config.EMISSIONS_X_ALLOCATION_DECAY_PERIOD,
-                config.EMISSIONS_VOTE_2_EARN_ALLOCATION_DECAY_PERIOD,
-              ],
-              treasuryPercentage: config.EMISSIONS_TREASURY_PERCENTAGE,
-              maxVote2EarnDecay: config.EMISSIONS_MAX_VOTE_2_EARN_DECAY_PERCENTAGE,
-              migrationAmount: config.MIGRATION_AMOUNT,
-            },
-          ],
-          [config.EMISSIONS_IS_NOT_ALIGNED],
-        ],
-        {
-          versions: [undefined, 2],
-          logOutput: false,
-        },
-      )) as EmissionsV2
-
-      const voterRewardsV4 = (await deployAndUpgrade(
-        ["VoterRewardsV1", "VoterRewardsV2", "VoterRewardsV3", "VoterRewardsV4"],
-        [
-          [
-            owner.address, // admin
-            owner.address, // upgrader
-            owner.address, // contractsAddressManager
-            await emissions.getAddress(),
-            await galaxyMember.getAddress(),
-            await b3tr.getAddress(),
-            levels,
-            multipliers,
-          ],
-          [],
-          [],
-          [],
-        ],
-        {
-          versions: [undefined, 2, 3, 4],
-        },
-      )) as VoterRewardsV4
-
-      await voterRewardsV4.connect(owner).setEmissions(await emissions.getAddress())
-
-      const xAllocationVoting = (await deployAndUpgrade(
-        [
-          "XAllocationVotingV1",
-          "XAllocationVotingV2",
-          "XAllocationVotingV3",
-          "XAllocationVotingV4",
-          "XAllocationVotingV5",
-        ],
-        [
-          [
-            {
-              vot3Token: await vot3.getAddress(),
-              quorumPercentage: config.X_ALLOCATION_VOTING_QUORUM_PERCENTAGE, // quorum percentage
-              initialVotingPeriod: config.EMISSIONS_CYCLE_DURATION - 1, // X Alloc voting period
-              timeLock: await timeLock.getAddress(),
-              voterRewards: await voterRewardsV4.getAddress(),
-              emissions: await emissions.getAddress(),
-              admins: [await timeLock.getAddress(), owner.address],
-              upgrader: owner.address,
-              contractsAddressManager: owner.address,
-              x2EarnAppsAddress: await x2EarnApps.getAddress(),
-              baseAllocationPercentage: config.X_ALLOCATION_POOL_BASE_ALLOCATION_PERCENTAGE,
-              appSharesCap: config.X_ALLOCATION_POOL_APP_SHARES_MAX_CAP,
-              votingThreshold: config.X_ALLOCATION_VOTING_VOTING_THRESHOLD,
-            },
-          ],
-          [await veBetterPassport.getAddress()],
-          [],
-          [],
-          [],
-        ],
-        {
-          versions: [undefined, 2, 3, 4, 5],
-          logOutput: false,
-        },
-      )) as XAllocationVoting
-
-      // Deploy Governor
-      const governor = (await deployAndUpgrade(
-        ["B3TRGovernorV1", "B3TRGovernorV2", "B3TRGovernorV3", "B3TRGovernorV4", "B3TRGovernorV5"],
-        [
-          [
-            {
-              vot3Token: await vot3.getAddress(),
-              timelock: await timeLock.getAddress(),
-              xAllocationVoting: await xAllocationVoting.getAddress(),
-              b3tr: await b3tr.getAddress(),
-              quorumPercentage: config.B3TR_GOVERNOR_QUORUM_PERCENTAGE,
-              initialDepositThreshold: config.B3TR_GOVERNOR_DEPOSIT_THRESHOLD,
-              initialMinVotingDelay: config.B3TR_GOVERNOR_MIN_VOTING_DELAY,
-              initialVotingThreshold: config.B3TR_GOVERNOR_VOTING_THRESHOLD,
-              voterRewards: await voterRewardsV4.getAddress(),
-              isFunctionRestrictionEnabled: true,
-            },
-            {
-              governorAdmin: owner.address, // admin
-              pauser: owner.address, // botSignaler
-              contractsAddressManager: owner.address, // upgrader
-              proposalExecutor: owner.address, // settingsManager
-              governorFunctionSettingsRoleAddress: owner.address, // roleGranter
-            },
-          ],
-          [],
-          [],
-          [await veBetterPassport.getAddress()],
-          [],
-        ],
-        {
-          versions: [undefined, 2, 3, 4, 5],
-          libraries: [
-            {
-              GovernorClockLogicV1: await governorClockLogicLibV1.getAddress(),
-              GovernorConfiguratorV1: await governorConfiguratorLibV1.getAddress(),
-              GovernorDepositLogicV1: await governorDepositLogicLibV1.getAddress(),
-              GovernorFunctionRestrictionsLogicV1: await governorFunctionRestrictionsLogicLibV1.getAddress(),
-              GovernorProposalLogicV1: await governorProposalLogicLibV1.getAddress(),
-              GovernorQuorumLogicV1: await governorQuorumLogicLibV1.getAddress(),
-              GovernorStateLogicV1: await governorStateLogicLibV1.getAddress(),
-              GovernorVotesLogicV1: await governorVotesLogicLibV1.getAddress(),
-            },
-            {
-              GovernorClockLogicV1: await governorClockLogicLibV1.getAddress(),
-              GovernorConfiguratorV1: await governorConfiguratorLibV1.getAddress(),
-              GovernorDepositLogicV1: await governorDepositLogicLibV1.getAddress(),
-              GovernorFunctionRestrictionsLogicV1: await governorFunctionRestrictionsLogicLibV1.getAddress(),
-              GovernorProposalLogicV1: await governorQuorumLogicLibV1.getAddress(),
-              GovernorQuorumLogicV1: await governorQuorumLogicLibV1.getAddress(),
-              GovernorStateLogicV1: await governorStateLogicLibV1.getAddress(),
-              GovernorVotesLogicV1: await governorVotesLogicLibV1.getAddress(),
-            },
-            {
-              GovernorClockLogicV3: await governorClockLogicLibV3.getAddress(),
-              GovernorConfiguratorV3: await governorConfiguratorLibV3.getAddress(),
-              GovernorDepositLogicV3: await governorDepositLogicLibV3.getAddress(),
-              GovernorFunctionRestrictionsLogicV3: await governorFunctionRestrictionsLogicLibV3.getAddress(),
-              GovernorProposalLogicV3: await governorProposalLogicLibV3.getAddress(),
-              GovernorQuorumLogicV3: await governorQuorumLogicLibV3.getAddress(),
-              GovernorStateLogicV3: await governorStateLogicLibV3.getAddress(),
-              GovernorVotesLogicV3: await governorVotesLogicLibV3.getAddress(),
-            },
-            {
-              GovernorClockLogicV4: await governorClockLogicLibV4.getAddress(),
-              GovernorConfiguratorV4: await governorConfiguratorLibV4.getAddress(),
-              GovernorDepositLogicV4: await governorDepositLogicLibV4.getAddress(),
-              GovernorFunctionRestrictionsLogicV4: await governorFunctionRestrictionsLogicLibV4.getAddress(),
-              GovernorProposalLogicV4: await governorProposalLogicLibV4.getAddress(),
-              GovernorQuorumLogicV4: await governorQuorumLogicLibV4.getAddress(),
-              GovernorStateLogicV4: await governorStateLogicLibV4.getAddress(),
-              GovernorVotesLogicV4: await governorVotesLogicLibV4.getAddress(),
-            },
-            {
-              GovernorClockLogicV5: await governorClockLogicLibV5.getAddress(),
-              GovernorConfiguratorV5: await governorConfiguratorLibV5.getAddress(),
-              GovernorDepositLogicV5: await governorDepositLogicLibV5.getAddress(),
-              GovernorFunctionRestrictionsLogicV5: await governorFunctionRestrictionsLogicLibV5.getAddress(),
-              GovernorQuorumLogicV5: await governorQuorumLogicLibV5.getAddress(),
-              GovernorProposalLogicV5: await governorProposalLogicLibV5.getAddress(),
-              GovernorStateLogicV5: await governorStateLogicLibV5.getAddress(),
-              GovernorVotesLogicV5: await governorVotesLogicLibV5.getAddress(),
-            },
-          ],
-        },
-      )) as B3TRGovernorV5
-
-      await xAllocationPool.connect(owner).setXAllocationVotingAddress(await xAllocationVoting.getAddress())
-
-      // Grant Vote registrar role to XAllocationVoting
-      await voterRewardsV4
-        .connect(owner)
-        .grantRole(await voterRewardsV4.VOTE_REGISTRAR_ROLE(), await xAllocationVoting.getAddress())
-      // Grant Vote registrar role to Governor
-      await voterRewardsV4
-        .connect(owner)
-        .grantRole(await voterRewardsV4.VOTE_REGISTRAR_ROLE(), await governor.getAddress())
-
-      // Grant admin role to voter rewards for registering x allocation voting
-      await xAllocationVoting
-        .connect(owner)
-        .grantRole(await xAllocationVoting.DEFAULT_ADMIN_ROLE(), emissions.getAddress())
-
-      // Set xAllocationGovernor in emissions
-      await emissions.connect(owner).setXAllocationsGovernorAddress(await xAllocationVoting.getAddress())
-      await emissions.connect(owner).setVote2EarnAddress(await voterRewardsV4.getAddress())
-
-      // Setup XAllocationPool addresses
-      await xAllocationPool.connect(owner).setXAllocationVotingAddress(await xAllocationVoting.getAddress())
-      await xAllocationPool.connect(owner).setEmissionsAddress(await emissions.getAddress())
-
-      await b3tr.connect(owner).grantRole(await b3tr.MINTER_ROLE(), await emissions.getAddress())
-
-      //Set the emissions address and the admin as the ROUND_STARTER_ROLE in XAllocationVoting
-      const roundStarterRole = await xAllocationVoting.ROUND_STARTER_ROLE()
-      await xAllocationVoting
-        .connect(owner)
-        .grantRole(roundStarterRole, await emissions.getAddress())
-        .then(async tx => await tx.wait())
-      await xAllocationVoting
-        .connect(owner)
-        .grantRole(roundStarterRole, owner.address)
-        .then(async tx => await tx.wait())
-
-      await galaxyMember.connect(owner).setB3trGovernorAddress(await governor.getAddress())
-      await galaxyMember.connect(owner).setXAllocationsGovernorAddress(await xAllocationVoting.getAddress())
-
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-      const app1 = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[0].address))
-      await endorseApp(app1, otherAccounts[0])
-      await x2EarnApps
-        .connect(creator1)
-        .submitApp(otherAccounts[1].address, otherAccounts[1].address, otherAccounts[1].address, "metadataURI")
-      const app2 = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[1].address))
-      await endorseApp(app2, otherAccounts[1])
-      const voter2 = otherAccounts[3]
-      const voter3 = otherAccounts[4]
-
-      await getVot3Tokens(voter1, "1000")
-      await getVot3Tokens(voter2, "1000")
-      await getVot3Tokens(voter3, "1000")
-
-      await veBetterPassport.whitelist(voter1.address)
-      await veBetterPassport.whitelist(voter2.address)
-      await veBetterPassport.whitelist(voter3.address)
-      await veBetterPassport.toggleCheck(1)
-
-      // Bootstrap emissions
-      await emissions.connect(minterAccount).bootstrap()
-
-      await emissions.connect(minterAccount).start()
-
-      const roundId = await xAllocationVoting.currentRoundId()
-
-      expect(roundId).to.equal(1)
-
-      expect(await xAllocationVoting.roundDeadline(roundId)).to.lt(await emissions.getNextCycleBlock())
-
-      // Vote on apps for the first round
-      await voteOnApps(
-        [app1, app2],
-        [voter1, voter2, voter3],
-        [
-          [ethers.parseEther("1000"), ethers.parseEther("0")], // Voter 1 votes 1000 for app1
-          [ethers.parseEther("500"), ethers.parseEther("500")], // Voter 2 votes 500 for app1 and 500 for app2
-          [ethers.parseEther("500"), ethers.parseEther("500")], // Voter 3 votes 500 for app1 and 500 for app2
-        ],
-        roundId, // First round
-        xAllocationVoting,
-        veBetterPassport,
-      )
-
-      // Rewards to be claimed are the same for all voters:
-      expect(await voterRewardsV4.getReward(1, voter1.address)).to.equal(666666666666666666666666n)
-      expect(await voterRewardsV4.getReward(1, voter2.address)).to.equal(666666666666666666666666n)
-      expect(await voterRewardsV4.getReward(1, voter3.address)).to.equal(666666666666666666666666n)
-
-      await waitForRoundToEnd(Number(roundId), xAllocationVoting)
-
-      await waitForNextCycle(emissions)
-
-      // Claim rewards events should match V1
-      expect(await voterRewardsV4.connect(voter1).claimReward(1, voter1.address))
-        .to.emit(voterRewardsV4, "RewardClaimed")
-        .withArgs(1, voter1.address, 666666666666666666666666n)
-      expect(await voterRewardsV4.connect(voter2).claimReward(1, voter2.address))
-        .to.emit(voterRewardsV4, "RewardClaimed")
-        .withArgs(1, voter2.address, 666666666666666666666666n)
-      expect(await voterRewardsV4.connect(voter3).claimReward(1, voter3.address))
-        .to.emit(voterRewardsV4, "RewardClaimed")
-        .withArgs(1, voter3.address, 666666666666666666666666n)
-
-      // GM NFT token mint and upgrade
-      await galaxyMember.connect(voter1).freeMint()
-
-      await upgradeNFTtoLevel(1, 5, galaxyMember, b3tr, voter1, minterAccount) // Upgrading to level 5
-
-      expect(await galaxyMember.levelOf(await galaxyMember.getSelectedTokenId(voter1.address))).to.equal(5)
-
-      await galaxyMember.connect(voter2).freeMint()
-
-      await upgradeNFTtoLevel(2, 10, galaxyMember, b3tr, voter2, minterAccount) // Upgrading to level 10
-
-      expect(await galaxyMember.levelOf(await galaxyMember.getSelectedTokenId(voter2.address))).to.equal(10)
-
-      await galaxyMember.connect(voter3).freeMint()
-
-      await upgradeNFTtoLevel(3, 2, galaxyMember, b3tr, voter3, minterAccount) // Upgrading to level 2
-
-      expect(await galaxyMember.levelOf(await galaxyMember.getSelectedTokenId(voter3.address))).to.equal(2)
-
-      await emissions.connect(voter1).distribute() // Anyone can distribute the cycle
-
-      const roundId2 = await xAllocationVoting.currentRoundId()
-
-      expect(roundId2).to.equal(2)
-
-      expect(await xAllocationVoting.roundDeadline(roundId2)).to.lt(await emissions.getNextCycleBlock())
-
-      await waitForNextBlock()
-
-      let storageSlots = []
-
-      const initialSlot = BigInt("0x114e7ffaaf205d38cd05b17b56f3357806ef2ce889cb4748445ae91cdfc37c00") // Slot 0 of VoterRewards
-
-      for (let i = initialSlot; i < initialSlot + BigInt(100); i++) {
-        storageSlots.push(await ethers.provider.getStorage(await voterRewardsV4.getAddress(), i))
-      }
-
-      storageSlots = storageSlots.filter(
-        slot => slot !== "0x0000000000000000000000000000000000000000000000000000000000000000",
-      ) // removing empty slots
-
-      // Upgrade Emissions and Voter Rewards to support GM Pool
-      const emissionsLatest = (await upgradeProxy(
-        "EmissionsV2",
-        "Emissions",
-        await emissions.getAddress(),
-        [config.GM_PERCENTAGE_OF_TREASURY],
-        {
-          version: 3,
-        },
-      )) as unknown as Emissions
-
-      const voterRewardsLatest = (await upgradeProxy(
-        "VoterRewardsV4",
-        "VoterRewards",
-        await voterRewardsV4.getAddress(),
-        [config.VOTER_REWARDS_LEVELS_V2, config.GM_MULTIPLIERS_V2],
-        {
-          version: 5,
-        },
-      )) as unknown as VoterRewards
-
-      // Upgrade contracts that use interfaces
-      await upgradeProxy("XAllocationVotingV5", "XAllocationVoting", await xAllocationVoting.getAddress(), [], {
-        version: 6,
-      })
-
-      await upgradeProxy("XAllocationPoolV5", "XAllocationPool", await xAllocationPool.getAddress(), [], {
-        version: 6,
-      })
-
-      await upgradeProxy("B3TRGovernorV5", "B3TRGovernor", await governor.getAddress(), [], {
-        version: 6,
-        libraries: {
-          GovernorClockLogic: await governorClockLogicLib.getAddress(),
-          GovernorConfigurator: await governorConfiguratorLib.getAddress(),
-          GovernorDepositLogic: await governorDepositLogicLib.getAddress(),
-          GovernorFunctionRestrictionsLogic: await governorFunctionRestrictionsLogicLib.getAddress(),
-          GovernorProposalLogic: await governorProposalLogicLib.getAddress(),
-          GovernorQuorumLogic: await governorQuorumLogicLib.getAddress(),
-          GovernorStateLogic: await governorStateLogicLib.getAddress(),
-          GovernorVotesLogic: await governorVotesLogicLib.getAddress(),
-        },
-      })
-
-      let storageSlotsAfter = []
-
-      for (let i = initialSlot; i < initialSlot + BigInt(100); i++) {
-        storageSlotsAfter.push(await ethers.provider.getStorage(await voterRewardsLatest.getAddress(), i))
-      }
-
-      // Check if storage slots are the same after upgrade
-      for (let i = 0; i < storageSlots.length; i++) {
-        expect(storageSlots[i]).to.equal(storageSlotsAfter[i])
-      }
-
-      expect(await voterRewardsLatest.version()).to.equal("5")
-
-      // Vote on apps for the second round
-      await voteOnApps(
-        [app1, app2],
-        [voter1, voter2, voter3],
-        [
-          [ethers.parseEther("0"), ethers.parseEther("1000")], // Voter 1 votes 1000 for app2
-          [ethers.parseEther("500"), ethers.parseEther("500")], // Voter 2 votes 500 for app1 and 500 for app2
-          [ethers.parseEther("500"), ethers.parseEther("500")], // Voter 3 votes 500 for app1 and 500 for app2
-        ],
-        roundId2, // Second round
-        xAllocationVoting,
-        veBetterPassport,
-      )
-
-      //------ Should still be using original GM reward formula for the round when upgrade happens ------//
-
-      /*
-          voter 1 = 31.62 reward weighted votes * 100% multiplier = 63.24 reward weighted power
-          voter 2 = 31.62 reward weighted votes * 25x multiplier = 790.57 reward weighted power
-          voter 3 = 31.62 reward weighted votes * 10% multiplier = 34.78 reward weighted power
-  
-          Total power = 888.60
-          voter 1 allocation = 63.24 / 888.60 * 100 = 7.11%
-          voter 2 allocation = 790.57 / 888.60 * 100 = 88.96%
-          voter 3 allocation = 34.78 / 888.60 * 100 = 3.91%
-        */
-      expect(await voterRewardsLatest.cycleToTotal(2)).to.equal(ethers.parseEther("888.6000224881")) // Total reward weighted votes
-      expect(await voterRewardsLatest.cycleToVoterToTotal(2, voter1)).to.equal(ethers.parseEther("63.245553202")) // Voter 1 reward weighted votes
-      expect(await voterRewardsLatest.cycleToVoterToTotal(2, voter2)).to.equal(ethers.parseEther("790.569415025")) // Voter 2 reward weighted votes
-      expect(await voterRewardsLatest.cycleToVoterToTotal(2, voter3)).to.equal(ethers.parseEther("34.7850542611")) // Voter 3 reward weighted votes
-
-      /*
-          voter 1 = 31.62 reward weighted votes * 100% multiplier = 63.24 reward weighted power
-          voter 2 = 31.62 reward weighted votes * 25x multiplier = 790.57 reward weighted power
-          voter 3 = 31.62 reward weighted votes * 10% multiplier = 34.78 reward weighted power
-  
-          Total power = 888.60
-          voter 1 allocation = 63.24 / 888.60 * 100 = 7.11%
-          voter 2 allocation = 790.57 / 888.60 * 100 = 88.96%
-          voter 3 allocation = 34.78 / 888.60 * 100 = 3.91%
-        */
-      expect(await voterRewardsLatest.getReward(2, voter1.address)).to.equal(142348754448398576512455n) // 7.11%
-      expect(await voterRewardsLatest.getReward(2, voter2.address)).to.equal(1779359430604982206405693n) // 88.96%
-      expect(await voterRewardsLatest.getReward(2, voter3.address)).to.equal(78291814946619217081850n) // 3.91%
-
-      // Get GM rewards should be 0
-      expect(await voterRewardsLatest.getGMReward(2, voter1.address)).to.equal(0n)
-      expect(await voterRewardsLatest.getGMReward(2, voter2.address)).to.equal(0n)
-      expect(await voterRewardsLatest.getGMReward(2, voter3.address)).to.equal(0n)
-
-      // GM pool is 0 for round 2
-      expect(await emissionsLatest.getGMAmount(2)).to.equal(0n)
-
-      // wait for next cycle
-      await waitForNextCycle(emissionsLatest)
-
-      // Distribute emissions
-      await emissionsLatest.connect(minterAccount).distribute()
-
-      // GM pool should have 25% of the treasury
-      expect(await emissionsLatest.getGMAmount(3)).to.equal(ethers.parseEther("250000"))
-
-      // Claim rewards for last round
-      await expect(voterRewardsLatest.connect(voter1).claimReward(2, voter1.address))
-        .to.emit(voterRewardsLatest, "RewardClaimedV2")
-        .withArgs(2, voter1.address, 142348754448398576512455n, 0n)
-      await expect(voterRewardsLatest.connect(voter2).claimReward(2, voter2.address))
-        .to.emit(voterRewardsLatest, "RewardClaimedV2")
-        .withArgs(2, voter2.address, 1779359430604982206405693n, 0n)
-      await expect(voterRewardsLatest.connect(voter3).claimReward(2, voter3.address))
-        .to.emit(voterRewardsLatest, "RewardClaimedV2")
-        .withArgs(2, voter3.address, 78291814946619217081850n, 0n)
-
-      const roundId3 = await xAllocationVoting.currentRoundId()
-
-      // Vote on apps for the third round
-      await voteOnApps(
-        [app1, app2],
-        [voter1, voter2, voter3],
-        [
-          [ethers.parseEther("0"), ethers.parseEther("1000")], // Voter 1 votes 1000 for app2
-          [ethers.parseEther("500"), ethers.parseEther("500")], // Voter 2 votes 500 for app1 and 500 for app2
-          [ethers.parseEther("500"), ethers.parseEther("500")], // Voter 3 votes 500 for app1 and 500 for app2
-        ],
-        roundId3, // Third round
-        xAllocationVoting,
-        veBetterPassport,
-      )
-
-      // Total votes will no longer be effected by GM as that comes from standalone pool
-      expect(await voterRewardsLatest.cycleToTotal(3)).to.equal(ethers.parseEther("94.868329803")) // Total weighted votes (31.62 * 3)
-      expect(await voterRewardsLatest.cycleToVoterToTotal(3, voter1)).to.equal(ethers.parseEther("31.622776601")) // Voter 1 weighted vote
-      expect(await voterRewardsLatest.cycleToVoterToTotal(3, voter2)).to.equal(ethers.parseEther("31.622776601")) // Voter 2 weighted vote
-      expect(await voterRewardsLatest.cycleToVoterToTotal(3, voter3)).to.equal(ethers.parseEther("31.622776601")) // Voter 3 weighted vote
-
-      // Total GM weight should be 2810
-      /**
-       *  voter 1 has level 5 GM NFT -> 2x multiplier (200)
-       *  voter 2 has level 10 GM NFT -> 25x multiplier (2500)
-       *  voter 3 has level 2 GM NFT -> 1.1x multiplier (110)
-       *
-       *  total = 200 + 2500 + 110 = 2810
-       */
-      expect(await voterRewardsLatest.cycleToTotalGMWeight(3)).to.equal(2810n)
-      expect(await voterRewardsLatest.cycleToVoterToGMWeight(3, voter1)).to.equal(200n)
-      expect(await voterRewardsLatest.cycleToVoterToGMWeight(3, voter2)).to.equal(2500n)
-      expect(await voterRewardsLatest.cycleToVoterToGMWeight(3, voter3)).to.equal(110n)
-
-      /**
-       * There is 250000 in the GM pool for round 3
-       *
-       *  Rewards distribution should be:
-       *  voter 1 = 200 / 2810 * 250000 = 17793.59 B3TR
-       *  voter 2 = 2500 / 2810 * 250000 = 222419.92 B3TR
-       *  voter 3 = 110 / 2810 * 250000 = 9786.45 B3TR
-       */
-      expect(await voterRewardsLatest.getGMReward(3, voter1.address)).to.equal(
-        ethers.parseEther("17793.594306049822064056"),
-      )
-      expect(await voterRewardsLatest.getGMReward(3, voter2.address)).to.equal(
-        ethers.parseEther("222419.928825622775800711"),
-      )
-      expect(await voterRewardsLatest.getGMReward(3, voter3.address)).to.equal(
-        ethers.parseEther("9786.476868327402135231"),
-      )
-
-      /**
-       *
-       * There is 2000000 in the generic pool for round 3
-       *
-       *  Rewards distribution should no longer be affected by GM as that comes from standalone pool
-       *
-       *  Cycle to total = 94.868329803
-       *  voter 1 = 31.62 / 94.868329803 * 2000000 = 666666.66 B3TR
-       *  voter 2 = 31.62 / 94.868329803 * 2000000 = 666666.66 B3TR
-       *  voter 3 = 31.62 / 94.868329803 * 2000000 = 666666.66 B3TR
-       */
-      expect(await voterRewardsLatest.cycleToTotal(3)).to.equal(ethers.parseEther("94.868329803")) // Total weighted votes (31.62 * 3)
-      expect(await voterRewardsLatest.cycleToVoterToTotal(3, voter1)).to.equal(ethers.parseEther("31.622776601")) // Voter 1 weighted vote
-      expect(await voterRewardsLatest.cycleToVoterToTotal(3, voter2)).to.equal(ethers.parseEther("31.622776601")) // Voter 2 weighted vote
-      expect(await voterRewardsLatest.cycleToVoterToTotal(3, voter3)).to.equal(ethers.parseEther("31.622776601")) // Voter 3 weighted vote
-
-      // Wait for next cycle
-      await waitForNextCycle(emissionsLatest)
-
-      // Distribute emissions
-      await emissionsLatest.connect(minterAccount).distribute()
-
-      // Claim rewards for last round
-      await expect(voterRewardsLatest.connect(voter1).claimReward(3, voter1.address))
-        .to.emit(voterRewardsLatest, "RewardClaimedV2")
-        .withArgs(3, voter1.address, 666666666666666666666666n, 17793594306049822064056n)
-      await expect(voterRewardsLatest.connect(voter2).claimReward(3, voter2.address))
-        .to.emit(voterRewardsLatest, "RewardClaimedV2")
-        .withArgs(3, voter2.address, 666666666666666666666666n, 222419928825622775800711n)
-      await expect(voterRewardsLatest.connect(voter3).claimReward(3, voter3.address))
-        .to.emit(voterRewardsLatest, "RewardClaimedV2")
-        .withArgs(3, voter3.address, 666666666666666666666666n, 9786476868327402135231n)
-
-      // Can update GM multipliers, but it wont take effect until next cycle
-      await voterRewardsLatest.setLevelToMultiplier(2, 1000)
-      await voterRewardsLatest.setLevelToMultiplier(5, 2000)
-
-      // Multiplier is set to latest update to level
-      await expect(voterRewardsLatest.setLevelToMultiplier(2, 50))
-        .to.emit(voterRewardsLatest, "LevelToMultiplierPending")
-        .withArgs(2, 50)
-
-      const roundId4 = await xAllocationVoting.currentRoundId()
-      // Vote on apps for the fourth round
-      await voteOnApps(
-        [app1, app2],
-        [voter1, voter2, voter3],
-        [
-          [ethers.parseEther("0"), ethers.parseEther("1000")], // Voter 1 votes 1000 for app2
-          [ethers.parseEther("500"), ethers.parseEther("500")], // Voter 2 votes 500 for app1 and 500 for app2
-          [ethers.parseEther("500"), ethers.parseEther("500")], // Voter 3 votes 500 for app1 and 500 for app2
-        ],
-        roundId4, // Fourth round
-        xAllocationVoting,
-        veBetterPassport,
-      )
-
-      // cycle to GM total should be same as before
-      expect(await voterRewardsLatest.cycleToTotalGMWeight(4)).to.equal(2810n)
-      expect(await voterRewardsLatest.cycleToVoterToGMWeight(4, voter1)).to.equal(200n)
-      expect(await voterRewardsLatest.cycleToVoterToGMWeight(4, voter2)).to.equal(2500n)
-      expect(await voterRewardsLatest.cycleToVoterToGMWeight(4, voter3)).to.equal(110n)
-
-      await waitForNextCycle(emissionsLatest)
-      await emissionsLatest.connect(minterAccount).distribute()
-
-      // GM Multiplier should be updated as of this cycle
-      const roundId5 = await xAllocationVoting.currentRoundId()
-
-      await voteOnApps(
-        [app1, app2],
-        [voter1, voter2, voter3],
-        [
-          [ethers.parseEther("0"), ethers.parseEther("1000")], // Voter 1 votes 1000 for app2
-          [ethers.parseEther("500"), ethers.parseEther("500")], // Voter 2 votes 500 for app1 and 500 for app2
-          [ethers.parseEther("500"), ethers.parseEther("500")], // Voter 3 votes 500 for app1 and 500 for app2
-        ],
-        roundId5, // Fifth round
-        xAllocationVoting,
-        veBetterPassport,
-      )
-
-      expect(await voterRewardsLatest.cycleToVoterToGMWeight(5, voter1)).to.equal(2000n)
-      expect(await voterRewardsLatest.cycleToVoterToGMWeight(5, voter2)).to.equal(2500n)
-      expect(await voterRewardsLatest.cycleToVoterToGMWeight(5, voter3)).to.equal(50n)
     })
   })
 
@@ -1768,12 +1076,9 @@ describe("VoterRewards - @shard2", () => {
 
       expect(await emissions.nextCycle()).to.equal(2)
 
-      await waitForNextCycle()
-      await emissions.connect(minterAccount).distribute()
-
       const roundId = await xAllocationVoting.currentRoundId()
 
-      expect(roundId).to.equal(2)
+      expect(roundId).to.equal(1)
 
       expect(await xAllocationVoting.roundDeadline(roundId)).to.lt(await emissions.getNextCycleBlock())
 
@@ -1792,16 +1097,16 @@ describe("VoterRewards - @shard2", () => {
         })
       })
 
-      expect(decodedEvents[0]?.args?.[0]).to.equal(2) // Cycle
+      expect(decodedEvents[0]?.args?.[0]).to.equal(1) // Cycle
       expect(decodedEvents[0]?.args?.[1]).to.equal(otherAccount.address) // Voter
       expect(decodedEvents[0]?.args?.[2]).to.equal(ethers.parseEther("500")) // Votes
       expect(decodedEvents[0]?.args?.[3]).to.equal(ethers.parseEther("22.360679774")) // Reward weight
 
-      expect(await emissions.isCycleEnded(roundId)).to.equal(false)
+      expect(await emissions.isCycleEnded(1)).to.equal(false)
 
-      await catchRevert(voterRewards.claimReward(roundId, otherAccount.address)) // Should not be able to claim rewards before cycle ended
+      await catchRevert(voterRewards.claimReward(1, otherAccount.address)) // Should not be able to claim rewards before cycle ended
 
-      expect(await voterRewards.cycleToVoterToTotal(roundId, otherAccount)).to.equal(ethers.parseEther("22.360679774")) // I'm expecting 22.36 because I voted 300 for app1 and 200 for app2 at the first cycle which is 500 and the square root of 500 is 22.36
+      expect(await voterRewards.cycleToVoterToTotal(1, otherAccount)).to.equal(ethers.parseEther("22.360679774")) // I'm expecting 22.36 because I voted 300 for app1 and 200 for app2 at the first cycle which is 500 and the square root of 500 is 22.36
 
       tx = await xAllocationVoting
         .connect(voter2)
@@ -1809,9 +1114,9 @@ describe("VoterRewards - @shard2", () => {
       receipt = await tx.wait()
       if (!receipt) throw new Error("No receipt")
 
-      expect(await voterRewards.cycleToVoterToTotal(roundId, voter2)).to.equal(ethers.parseEther("17.320508075")) // I'm expecting 17.32 because I voted 200 for app1 and 100 for app2 at the first cycle which is 300 and the square root of 300 is 17.32
+      expect(await voterRewards.cycleToVoterToTotal(1, voter2)).to.equal(ethers.parseEther("17.320508075")) // I'm expecting 17.32 because I voted 200 for app1 and 100 for app2 at the first cycle which is 300 and the square root of 300 is 17.32
 
-      await catchRevert(voterRewards.claimReward(roundId, voter2.address)) // Should not be able to claim rewards before cycle ended
+      await catchRevert(voterRewards.claimReward(1, voter2.address)) // Should not be able to claim rewards before cycle ended
 
       tx = await xAllocationVoting
         .connect(voter3)
@@ -1819,7 +1124,7 @@ describe("VoterRewards - @shard2", () => {
       receipt = await tx.wait()
       if (!receipt) throw new Error("No receipt")
 
-      expect(await voterRewards.cycleToVoterToTotal(roundId, voter3)).to.equal(ethers.parseEther("24.494897427")) // I'm expecting 24.49 because I voted 100 for app1 and 500 for app2 at the first cycle which is 600 and the square root of 600 is 24.49
+      expect(await voterRewards.cycleToVoterToTotal(1, voter3)).to.equal(ethers.parseEther("24.494897427")) // I'm expecting 24.49 because I voted 100 for app1 and 500 for app2 at the first cycle which is 600 and the square root of 600 is 24.49
 
       // Votes should be tracked correctly
       let appVotes = await xAllocationVoting.getAppVotes(roundId, app1)
@@ -1835,11 +1140,11 @@ describe("VoterRewards - @shard2", () => {
       expect(totalVoters).to.eql(BigInt(3))
 
       // Voter rewards checks
-      expect(await voterRewards.cycleToTotal(roundId)).to.equal(ethers.parseEther("64.176085276")) // Total votes -> Math.sqrt(500) + Math.sqrt(300) + Math.sqrt(600)
-      expect(await voterRewards.cycleToTotal(roundId)).to.equal(
-        (await voterRewards.cycleToVoterToTotal(roundId, otherAccount)) +
-          (await voterRewards.cycleToVoterToTotal(roundId, voter2)) +
-          (await voterRewards.cycleToVoterToTotal(roundId, voter3)),
+      expect(await voterRewards.cycleToTotal(1)).to.equal(ethers.parseEther("64.176085276")) // Total votes -> Math.sqrt(500) + Math.sqrt(300) + Math.sqrt(600)
+      expect(await voterRewards.cycleToTotal(1)).to.equal(
+        (await voterRewards.cycleToVoterToTotal(1, otherAccount)) +
+          (await voterRewards.cycleToVoterToTotal(1, voter2)) +
+          (await voterRewards.cycleToVoterToTotal(1, voter3)),
       ) // Total votes
 
       await waitForRoundToEnd(Number(roundId))
@@ -1860,17 +1165,13 @@ describe("VoterRewards - @shard2", () => {
 
       // Reward claiming
       expect(await emissions.isCycleDistributed(1)).to.equal(true)
-      expect(await b3tr.balanceOf(await voterRewards.getAddress())).to.equal(
-        (await emissions.getVote2EarnAmount(1)) +
-          (await emissions.getVote2EarnAmount(2)) +
-          (await emissions.getGMAmount(2)),
-      )
+      expect(await b3tr.balanceOf(await voterRewards.getAddress())).to.equal(await emissions.getVote2EarnAmount(1))
 
-      const voter1Rewards = await voterRewards.getReward(roundId, otherAccount.address)
-      const voter2Rewards = await voterRewards.getReward(roundId, voter2.address)
-      const voter3Rewards = await voterRewards.getReward(roundId, voter3.address)
+      const voter1Rewards = await voterRewards.getReward(1, otherAccount.address)
+      const voter2Rewards = await voterRewards.getReward(1, voter2.address)
+      const voter3Rewards = await voterRewards.getReward(1, voter3.address)
 
-      tx = await voterRewards.connect(otherAccount).claimReward(roundId, otherAccount.address)
+      tx = await voterRewards.connect(otherAccount).claimReward(1, otherAccount)
       receipt = await tx.wait()
       if (!receipt) throw new Error("No receipt")
 
@@ -1885,21 +1186,21 @@ describe("VoterRewards - @shard2", () => {
         })
       })
 
-      const rewardClaimedEvent = decodedEvents.find(event => event?.name === "RewardClaimedV2")
+      const rewardClaimedEvent = decodedEvents.find(event => event?.name === "RewardClaimed")
 
-      expect(rewardClaimedEvent?.args?.[0]).to.equal(roundId) // Cycle
+      expect(rewardClaimedEvent?.args?.[0]).to.equal(1) // Cycle
       expect(rewardClaimedEvent?.args?.[1]).to.equal(otherAccount.address) // Voter
       expect(rewardClaimedEvent?.args?.[2]).to.equal(696853966016598011228309n) // Reward
 
-      await voterRewards.connect(voter2).claimReward(roundId, voter2.address)
-      await voterRewards.connect(voter3).claimReward(roundId, voter3.address)
+      await voterRewards.connect(voter2).claimReward(1, voter2.address)
+      await voterRewards.connect(voter3).claimReward(1, voter3.address)
 
       await expect(voterRewards.connect(voter2).claimReward(1, ZERO_ADDRESS)).to.be.reverted // Should not be able to claim rewards for zero address
 
       expect(await b3tr.balanceOf(voter2.address)).to.equal(voter2Rewards)
       expect(await b3tr.balanceOf(voter3.address)).to.equal(voter3Rewards)
 
-      expect(await b3tr.balanceOf(await voterRewards.getAddress())).to.lt(ethers.parseEther("22500001")) // Round 1 + GM pool round 2
+      expect(await b3tr.balanceOf(await voterRewards.getAddress())).to.lt(ethers.parseEther("1"))
     })
 
     it("Should track voting rewards correctly involving multiple voters when Quadratic Rewarding is disabled", async () => {
@@ -2084,7 +1385,7 @@ describe("VoterRewards - @shard2", () => {
         })
       })
 
-      const rewardClaimedEvent = decodedEvents.find(event => event?.name === "RewardClaimedV2")
+      const rewardClaimedEvent = decodedEvents.find(event => event?.name === "RewardClaimed")
 
       expect(rewardClaimedEvent?.args?.[0]).to.equal(1) // Cycle
       expect(rewardClaimedEvent?.args?.[1]).to.equal(otherAccount.address) // Voter
@@ -2113,6 +1414,8 @@ describe("VoterRewards - @shard2", () => {
         minterAccount,
         x2EarnApps,
         veBetterPassport,
+        vechainNodesMock,
+        nodeManagement,
       } = await getOrDeployContractInstances({
         forceDeploy: true,
       })
@@ -2327,7 +1630,7 @@ describe("VoterRewards - @shard2", () => {
       expect(await b3tr.balanceOf(voter3.address)).to.equal(voter3Rewards + voter3Rewards2)
     })
 
-    it("Should increase GM voting rewards for user's with higher token levels", async () => {
+    it("Should increase voting rewards for user's with higher token levels", async () => {
       const config = createTestConfig()
       const {
         xAllocationVoting,
@@ -2441,7 +1744,7 @@ describe("VoterRewards - @shard2", () => {
       // GM NFT token mint and upgrade
       await galaxyMember.connect(voter1).freeMint()
 
-      await upgradeNFTtoLevel(1, 5, galaxyMember, b3tr, voter1, minterAccount) // Upgrading to level 5 -> Rewards multiplier is 2x
+      await upgradeNFTtoLevel(1, 5, galaxyMember, b3tr, voter1, minterAccount) // Upgrading to level 5
 
       expect(await galaxyMember.levelOf(await galaxyMember.getSelectedTokenId(voter1.address))).to.equal(5)
 
@@ -2468,33 +1771,17 @@ describe("VoterRewards - @shard2", () => {
         roundId2, // Second round
       )
 
-      // Rewards to be claimed from generic pool are now STILL the same for all voters event though voter1 has a higher level NFT:
+      // Rewards to be claimed are now NOT the same for all voters because voter1 has a higher level NFT:
 
       /*
-       The rewards are calculated as follows:
-      - Generic pool rewards: 2000000
-      - Voter 1 generic rewards = 2000000/3 = 666666666666666666666666n
-      - Voter 2 generic rewards = 2000000/3 = 666666666666666666666666n
-      - Voter 3 generic rewards = 2000000/3 = 666666666666666666666666n
+
       */
-      expect(await voterRewards.getReward(2, voter1.address)).to.equal(666666666666666666666666n) // Double voting rewards multiplier so it's like he voted 2000 (out of 4000 total votes) => 50% of the rewards
-      expect(await voterRewards.getReward(2, voter2.address)).to.equal(666666666666666666666666n)
-      expect(await voterRewards.getReward(2, voter3.address)).to.equal(666666666666666666666666n)
-
-      // GM pool rewards should be 250000
-      expect(await emissions.getGMAmount(2)).to.equal(250000000000000000000000n)
-
-      // cycle to total GM should be 100 (Using original multipliers here) as only voter1 has a GM NFT
-      expect(await voterRewards.cycleToTotalGMWeight(2)).to.equal(100n)
-      expect(await voterRewards.cycleToVoterToGMWeight(2, voter1.address)).to.equal(100n)
-
-      // Expect only voter 1 to get rewards from GM pool
-      expect(await voterRewards.getGMReward(2, voter1.address)).to.equal(250000000000000000000000n)
-      expect(await voterRewards.getGMReward(2, voter2.address)).to.equal(0n)
-      expect(await voterRewards.getGMReward(2, voter3.address)).to.equal(0n)
+      expect(await voterRewards.getReward(2, voter1.address)).to.equal(1000000000000000000000000n) // Double voting rewards multiplier so it's like he voted 2000 (out of 4000 total votes) => 50% of the rewards
+      expect(await voterRewards.getReward(2, voter2.address)).to.equal(500000000000000000000000n)
+      expect(await voterRewards.getReward(2, voter3.address)).to.equal(500000000000000000000000n)
     })
 
-    it("Should change GM voting rewards if user upgrades after x allocation round snapshot", async () => {
+    it("Should change voting rewards if user upgrades after x allocation round snapshot", async () => {
       const config = createTestConfig()
       const {
         xAllocationVoting,
@@ -2635,37 +1922,25 @@ describe("VoterRewards - @shard2", () => {
       )
 
       /*
-        Rewards to be claimed from generic pool do not take into account the level of the NFT:
-        The rewards are calculated as follows:
-        - Generic pool rewards: 2000000
-
-        voter 1 = sqrt(1000 = 31.622
+        voter 1 = sqrt(1000) * 1.1 = 34.74842
         voter 2 = sqrt(1000) = 31.622
         voter 3 = sqrt(1000) = 31.622
 
-        total = 31.622 + 31.622 + 31.622 = 94.866
-        voter 1 = 31.622 / 94.866 * 100 = 33.33% = 2,000,000 * 33.33% = 666,666.
-        voter 2 = 31.622 / 94.866 * 100 = 33.33% = 2,000,000 * 33.33% = 666,666.
-        voter 3 = 31.622 / 94.866 * 100 = 33.33% = 2,000,000 * 33.33% = 666,666.
-      */
-      expect(await voterRewards.getReward(2, voter1.address)).to.equal(666666666666666666666666n)
-      expect(await voterRewards.getReward(2, voter2.address)).to.equal(666666666666666666666666n)
-      expect(await voterRewards.getReward(2, voter3.address)).to.equal(666666666666666666666666n)
+        total = 34.74842 + 31.622 + 31.622 = 97.99242
 
-      // GM pool rewards should be 250000
-      expect(await emissions.getGMAmount(2)).to.equal(250000000000000000000000n)
-      // cycle to total GM should be 100 (Using original multipliers here) as only voter1 has a GM NFT
-      expect(await voterRewards.cycleToTotalGMWeight(2)).to.equal(10n)
-      expect(await voterRewards.cycleToVoterToGMWeight(2, voter1.address)).to.equal(10n)
-      // Expect only voter 1 to get rewards from GM pool
-      expect(await voterRewards.getGMReward(2, voter1.address)).to.equal(250000000000000000000000n)
-      expect(await voterRewards.getGMReward(2, voter2.address)).to.equal(0n)
-      expect(await voterRewards.getGMReward(2, voter3.address)).to.equal(0n)
+        voter 1 = 34.74842 / 97.99242 * 100 = 35.42% = 2,000,000 * 35.42% = 708,333.
+        voter 2 = 31.622 / 97.99242 * 100 = 32.31% = 2,000,000 * 32.31% = 646,153.
+        voter 3 = 31.622 / 97.99242 * 100 = 32.31% = 2,000,000 * 32.31% = 646,153.
+      */
+
+      // Rewards to be claimed are now NOT the same for all voters because voter1 has a higher level NFT:
+      expect(await voterRewards.getReward(2, voter1.address)).to.equal(709677419354838709677419n)
+      expect(await voterRewards.getReward(2, voter2.address)).to.equal(645161290322580645161290n)
+      expect(await voterRewards.getReward(2, voter3.address)).to.equal(645161290322580645161290n)
     })
 
-    it("Should calculate GM rewards correctly if users have different levels of NFTs", async () => {
+    it("Should calculate rewards correctly if users have different levels of NFTs", async () => {
       const config = createTestConfig()
-      config.EMISSIONS_CYCLE_DURATION = 24
       const {
         xAllocationVoting,
         otherAccounts,
@@ -2750,8 +2025,6 @@ describe("VoterRewards - @shard2", () => {
       await emissions.connect(minterAccount).start()
 
       const roundId = await xAllocationVoting.currentRoundId()
-
-      await updateGMMultipliers()
 
       expect(roundId).to.equal(1)
 
@@ -2821,21 +2094,19 @@ describe("VoterRewards - @shard2", () => {
       )
 
       /*
-        GM NFT has no effect on the generic pool rewards:
-        The rewards are calculated as follows:
-        - Generic pool rewards: 2000000
+        voter 1 = 31.62 reward weighted votes * 100% multiplier = 63.24 reward weighted power
+        voter 2 = 31.62 reward weighted votes * 25x multiplier = 790.57 reward weighted power
+        voter 3 = 31.62 reward weighted votes * 10% multiplier = 34.78 reward weighted power
 
-        voter 1 = sqrt(1000 = 31.622
-        voter 2 = sqrt(1000) = 31.622
-        voter 3 = sqrt(1000) = 31.622
-        total = 31.622 + 31.622 + 31.622 = 94.866
-        voter 1 = 31.622 / 94.866 * 100 = 33.33% = 2,000,000 * 33.33% = 666,666.
-
+        Total power = 888.60
+        voter 1 allocation = 63.24 / 888.60 * 100 = 7.11%
+        voter 2 allocation = 790.57 / 888.60 * 100 = 88.96%
+        voter 3 allocation = 34.78 / 888.60 * 100 = 3.91%
       */
-      expect(await voterRewards.cycleToTotal(2)).to.equal(ethers.parseEther("94.868329803")) // Total reward weighted votes
-      expect(await voterRewards.cycleToVoterToTotal(2, voter1)).to.equal(ethers.parseEther("31.622776601")) // Voter 1 reward weighted votes
-      expect(await voterRewards.cycleToVoterToTotal(2, voter2)).to.equal(ethers.parseEther("31.622776601")) // Voter 2 reward weighted votes
-      expect(await voterRewards.cycleToVoterToTotal(2, voter3)).to.equal(ethers.parseEther("31.622776601")) // Voter 3 reward weighted votes
+      expect(await voterRewards.cycleToTotal(2)).to.equal(ethers.parseEther("888.6000224881")) // Total reward weighted votes
+      expect(await voterRewards.cycleToVoterToTotal(2, voter1)).to.equal(ethers.parseEther("63.245553202")) // Voter 1 reward weighted votes
+      expect(await voterRewards.cycleToVoterToTotal(2, voter2)).to.equal(ethers.parseEther("790.569415025")) // Voter 2 reward weighted votes
+      expect(await voterRewards.cycleToVoterToTotal(2, voter3)).to.equal(ethers.parseEther("34.7850542611")) // Voter 3 reward weighted votes
 
       /*
         voter 1 = 31.62 reward weighted votes * 100% multiplier = 63.24 reward weighted power
@@ -2847,39 +2118,13 @@ describe("VoterRewards - @shard2", () => {
         voter 2 allocation = 790.57 / 888.60 * 100 = 88.96%
         voter 3 allocation = 34.78 / 888.60 * 100 = 3.91%
       */
-      expect(await voterRewards.getReward(2, voter1.address)).to.equal(666666666666666666666666n) // 33.33%
-      expect(await voterRewards.getReward(2, voter2.address)).to.equal(666666666666666666666666n) // 33.33%
-      expect(await voterRewards.getReward(2, voter3.address)).to.equal(666666666666666666666666n) // 33.33%
-
-      // GM pool rewards should be 250000
-      expect(await emissions.getGMAmount(2)).to.equal(250000000000000000000000n)
-
-      /*
-        GM NFT rewards should be calculated as follows:
-        - GM pool rewards: 250000
-        voter 1 = NFT level 5 = 2x multiplier = 200
-        voter 2 = NFT level 10 = 25x multiplier = 2500
-        voter 3 = NFT level 2 = 1.1x multiplier = 110
-
-        Total power = 2810
-        voter 1 allocation = 200 / 2810 * 100 = 7.11%
-        voter 2 allocation = 2500 / 2810 * 100 = 88.96%
-        voter 3 allocation = 110 / 2810 * 100 = 3.91%
-      */
-      expect(await voterRewards.cycleToTotalGMWeight(2)).to.equal(2810n) // Total GM power
-      expect(await voterRewards.cycleToVoterToGMWeight(2, voter1.address)).to.equal(200n) // Voter 1 GM power
-      expect(await voterRewards.cycleToVoterToGMWeight(2, voter2.address)).to.equal(2500n) // Voter 2 GM power
-      expect(await voterRewards.cycleToVoterToGMWeight(2, voter3.address)).to.equal(110n) // Voter 3 GM power
-
-      // Expect only voter 1 to get rewards from GM pool
-      expect(await voterRewards.getGMReward(2, voter1.address)).to.equal(17793594306049822064056n) // 7.11% of 250000
-      expect(await voterRewards.getGMReward(2, voter2.address)).to.equal(222419928825622775800711n) // 88.96% of 250000
-      expect(await voterRewards.getGMReward(2, voter3.address)).to.equal(9786476868327402135231n) // 3.91% of 250000
+      expect(await voterRewards.getReward(2, voter1.address)).to.equal(142348754448398576512455n) // 7.11%
+      expect(await voterRewards.getReward(2, voter2.address)).to.equal(1779359430604982206405693n) // 88.96%
+      expect(await voterRewards.getReward(2, voter3.address)).to.equal(78291814946619217081850n) // 3.91%
     })
 
     it("Should change GM NFT Level if user transfers GM NFT", async () => {
       const config = createTestConfig()
-      config.EMISSIONS_CYCLE_DURATION = 24
       const {
         xAllocationVoting,
         otherAccounts,
@@ -2963,8 +2208,6 @@ describe("VoterRewards - @shard2", () => {
 
       await emissions.connect(minterAccount).start()
 
-      await updateGMMultipliers()
-
       const roundId = await xAllocationVoting.currentRoundId()
 
       expect(roundId).to.equal(1)
@@ -3027,32 +2270,10 @@ describe("VoterRewards - @shard2", () => {
         roundId2, // Second round
       )
 
-      // Rewards to be claimed are the same for all voters as NFTs do not impact the rewards calculation
-      expect(await voterRewards.getReward(2, voter1.address)).to.equal(666666666666666666666666n)
-      expect(await voterRewards.getReward(2, voter2.address)).to.equal(666666666666666666666666n)
-      expect(await voterRewards.getReward(2, voter3.address)).to.equal(666666666666666666666666n)
-
-      /**
-       * NFT Rewards should be calculated as follows, only voter 1 had a NFT at the time of the round snapshot but the NFT was transferred to voter 2
-       *
-       * voter 1 = NFT level 5 = 2x multiplier = 200 @ time of round snapshot -> No rewards as NFT was transferred
-       * voter 2 = NFT level 5 = 2x multiplier = 200 @ time of vote -> They will benefit from the NFT level 5
-       * voter 3 = NFT level 0
-       *
-       * Total power = 600
-       * voter 1 allocation = 0 / 200 * 100 = 0%
-       * voter 2 allocation = 200 / 200 * 100 = 100%
-       * voter 3 allocation = 0 / 200 * 100 = 0%
-       */
-      expect(await voterRewards.getGMReward(2, voter1.address)).to.equal(0n)
-      expect(await voterRewards.getGMReward(2, voter2.address)).to.equal(250000000000000000000000n)
-      expect(await voterRewards.getGMReward(2, voter3.address)).to.equal(0n)
-
-      // Cycle to total GM weight should be 200 as voter 2 has the NFT
-      expect(await voterRewards.cycleToTotalGMWeight(2)).to.equal(200n)
-      expect(await voterRewards.cycleToVoterToGMWeight(2, voter1.address)).to.equal(0n)
-      expect(await voterRewards.cycleToVoterToGMWeight(2, voter2.address)).to.equal(200n)
-      expect(await voterRewards.cycleToVoterToGMWeight(2, voter3.address)).to.equal(0n)
+      // Rewards to be claimed are now NOT the same for all voters because voters have different levels of NFTs:
+      expect(await voterRewards.getReward(2, voter1.address)).to.equal(500000000000000000000000n) // Even if voter1 transferred the NFT, at the time of the round snapshot he had a level 5 NFT (thus he should get the rewards of a level 5 NFT)
+      expect(await voterRewards.getReward(2, voter2.address)).to.equal(1000000000000000000000000n)
+      expect(await voterRewards.getReward(2, voter3.address)).to.equal(500000000000000000000000n)
     })
 
     it("Should be able to use GM NFT received from transfer to increase voting rewards", async () => {
@@ -3202,20 +2423,11 @@ describe("VoterRewards - @shard2", () => {
         ],
         roundId2, // Second round
       )
+
       // Rewards to be claimed are now NOT the same for all voters because voters have different levels of NFTs:
-      expect(await voterRewards.getReward(2, voter1.address)).to.equal(666666666666666666666666n)
-      expect(await voterRewards.getReward(2, voter2.address)).to.equal(666666666666666666666666n)
-      expect(await voterRewards.getReward(2, voter3.address)).to.equal(666666666666666666666666n)
-
-      expect(await voterRewards.getGMReward(2, voter1.address)).to.equal(0n)
-      expect(await voterRewards.getGMReward(2, voter2.address)).to.equal(250000000000000000000000n)
-      expect(await voterRewards.getGMReward(2, voter3.address)).to.equal(0n)
-
-      // Cycle to total GM weight should be 200 as voter 2 has the NFT
-      expect(await voterRewards.cycleToTotalGMWeight(2)).to.equal(100n)
-      expect(await voterRewards.cycleToVoterToGMWeight(2, voter1.address)).to.equal(0n)
-      expect(await voterRewards.cycleToVoterToGMWeight(2, voter2.address)).to.equal(100n)
-      expect(await voterRewards.cycleToVoterToGMWeight(2, voter3.address)).to.equal(0n)
+      expect(await voterRewards.getReward(2, voter1.address)).to.equal(500000000000000000000000n)
+      expect(await voterRewards.getReward(2, voter2.address)).to.equal(1000000000000000000000000n) // Voter 2 has the NFT transferred from voter 1 of level 5 before the round snapshot
+      expect(await voterRewards.getReward(2, voter3.address)).to.equal(500000000000000000000000n)
     })
 
     it("Should not be able to claim rewards if not voted", async () => {
@@ -3453,7 +2665,7 @@ describe("VoterRewards - @shard2", () => {
       expect(await voterRewards.getReward(cycle, voter2.address)).to.equal(0) // Even if voter2 voted, he has 0 VOT3 tokens so he should not receive any rewards
     })
 
-    it("Should be able to increase GM voting rewards by upgrading GM NFT", async () => {
+    it("Should be able to increase voting rewards by upgrading GM NFT", async () => {
       const config = createLocalConfig()
       const {
         otherAccounts,
@@ -3532,8 +2744,6 @@ describe("VoterRewards - @shard2", () => {
 
       let cycle = await governor.proposalStartRound(proposalId)
 
-      await updateGMMultipliers()
-
       const proposalState = await waitForProposalToBeActive(proposalId)
 
       expect(proposalState).to.equal("1") // Active
@@ -3546,10 +2756,6 @@ describe("VoterRewards - @shard2", () => {
 
       expect(await voterRewards.getReward(cycle, voter1.address)).to.equal(1000000000000000000000000n) // 50% of the rewards
       expect(await voterRewards.getReward(cycle, voter2.address)).to.equal(1000000000000000000000000n) // 50% of the rewards
-
-      // No GM rewards yet
-      expect(await voterRewards.getGMReward(cycle, voter1.address)).to.equal(0n)
-      expect(await voterRewards.getGMReward(cycle, voter2.address)).to.equal(0n)
 
       await emissions.connect(voter1).distribute() // Anyone can distribute the cycle
 
@@ -3571,34 +2777,15 @@ describe("VoterRewards - @shard2", () => {
       await waitForNextCycle()
 
       /*
-        voter1 = 1000 votes (31.62 reward weighted votes) for governance voting
-        voter2 = 1000 votes (31.62 reward weighted votes) for governance voting
+        voter1 = 1000 votes (31.62 reward weighted votes) for governance voting * 100% multiplier = 63.24 reward weighted power
+        voter2 = 1000 votes (31.62 reward weighted votes) for governance voting without NFT upgrade = 31.62 reward weighted power
 
         Total power = 94.86
-        voter1 allocation = 31.62/ 63.245553202 * 100 = 50%
-        voter2 allocation = 31.62 / 63.245553202 * 100 = 50%
+        voter1 allocation = 63.24 / 94.86 * 100 = 66.67%
+        voter2 allocation = 31.62 / 94.86 * 100 = 33.33%
       */
-      expect(await voterRewards.getReward(cycle, voter1.address)).to.equal(1000000000000000000000000n)
-      expect(await voterRewards.getReward(cycle, voter2.address)).to.equal(1000000000000000000000000n)
-
-      /*
-
-        GM rewards should be calculated as follows:
-        voter1 = NFT level 5 = 2x multiplier = 200 @ time of round snapshot
-        voter2 = NFT level 0
-
-        Total power = 200
-        voter1 allocation = 200 / 200 * 100 = 100%
-        voter2 allocation = 0 / 200 * 100 = 0%
-      */
-
-      expect(await voterRewards.getGMReward(cycle, voter1.address)).to.equal(250000000000000000000000n)
-      expect(await voterRewards.getGMReward(cycle, voter2.address)).to.equal(0n)
-
-      // Cycle to total GM weight should be 200 as voter 1 has the NFT
-      expect(await voterRewards.cycleToTotalGMWeight(cycle)).to.equal(200n)
-      expect(await voterRewards.cycleToVoterToGMWeight(cycle, voter1.address)).to.equal(200n)
-      expect(await voterRewards.cycleToVoterToGMWeight(cycle, voter2.address)).to.equal(0n)
+      expect(await voterRewards.getReward(cycle, voter1.address)).to.equal(1333333333333333333333333n)
+      expect(await voterRewards.getReward(cycle, voter2.address)).to.equal(666666666666666666666666n)
     })
   })
 
@@ -3697,8 +2884,6 @@ describe("VoterRewards - @shard2", () => {
       // Bootstrap emissions
       await bootstrapAndStartEmissions() // round 1
 
-      await updateGMMultipliers()
-
       // Quadratic rewarding enabled
       expect(await voterRewards.isQuadraticRewardingDisabledForCurrentCycle()).to.be.false
 
@@ -3740,21 +2925,19 @@ describe("VoterRewards - @shard2", () => {
       )
 
       /*
-        GM has no effect on regular reward pool
+        voter1 = 1000 votes (reward weighted votes 31.26) for governance voting and 1000 votes * 2.5 = 31.26 + 31.26 * 2 = 93.78
+        voter2 = 1000 votes (reward weighted votes 31.26) for governance voting and 1000 votes (reward weighted votes 31.26) for x allocation voting = 2000 votes (reward weighted votes 63.24)
+        voter3 = 0 votes for governance voting and 1000 votes (reward weighted votes 31.26) for x allocation voting = 1000 votes (reward weighted votes 31.26)
 
-        voter1 = 1000 votes (reward weighted votes 31.26) for governance voting and 1000 votes = 31.26 + 31.26 = 62.52
-        voter2 = 1000 votes (reward weighted votes 31.26) for governance voting and 1000 votes = 31.26 + 31.26 = 62.52
-        voter3 = 0 votes for governance voting and 1000 votes (reward weighted votes 31.26) = 31.26
-
-        Total weighted votes = 62.52 + 62.52 + 31.26 = 156.3
-        Total power = 156.3
-        voter1 allocation = 62.52 / 156.3 * 100 = 40% (1000000 B3TR)
-        voter2 allocation = 62.52 / 156.3 * 100 = 40% (1000000 B3TR)
-        voter3 allocation = 31.26 / 156.3 * 100 = 20% (1000000 B3TR)
+        Total reward weighted votes = 93.78 + 63.24 + 31.26 = 188.28
+        voter1 allocation = 93.78 / 188.28 * 100 = 50% (1000000 B3TR)
+        voter2 allocation = 63.24 / 188.28 * 100 = 33.57% (670000 B3TR)
+        voter3 allocation = 31.26 / 188.28 * 100 = 16.43% (330000 B3TR)
       */
-      expect(await voterRewards.getReward(xAllocationsRoundID, voter1.address)).to.equal(800000000000000000000000n)
-      expect(await voterRewards.getReward(xAllocationsRoundID, voter2.address)).to.equal(800000000000000000000000n)
-      expect(await voterRewards.getReward(xAllocationsRoundID, voter3.address)).to.equal(400000000000000000000000n)
+
+      expect(await voterRewards.getReward(xAllocationsRoundID, voter1.address)).to.equal(1000000000000000000000000n)
+      expect(await voterRewards.getReward(xAllocationsRoundID, voter2.address)).to.equal(666666666666666666666666n)
+      expect(await voterRewards.getReward(xAllocationsRoundID, voter3.address)).to.equal(333333333333333333333333n)
 
       nextCycle = await emissions.nextCycle() // next cycle round 3
 
@@ -3782,32 +2965,19 @@ describe("VoterRewards - @shard2", () => {
       )
 
       /*
-        Same as above GM has no effect on regular reward pool
+        voter 1 = 31.26 * 2 + 31.26 * 2 = 125.04 reward weighted votes
+        voter 2 = 31.26 + 31.26 * 2 = 62.52 reward weighted votes
+        voter 3 = 31.26 
+
+        Total reward weighted votes = 218.82
+
+        voter 1 allocation = 125.04 / 218.82 * 100 = 57.14% = 2,000,000 * 57.14% = 1,142,800
+        voter 2 allocation = 62.52 / 218.82 * 100 = 28.57% = 2,000,000 * 28.57% = 571,400
+        voter 3 allocation = 31.26 / 218.82 * 100 = 14.28% = 2,000,000 * 14.28% = 285,700
       */
-      expect(await voterRewards.getReward(xAllocationsRoundID, voter1.address)).to.equal(800000000000000000000000n)
-      expect(await voterRewards.getReward(xAllocationsRoundID, voter2.address)).to.equal(800000000000000000000000n)
-      expect(await voterRewards.getReward(xAllocationsRoundID, voter3.address)).to.equal(400000000000000000000000n)
-
-      /*
-        GM rewards should be calculated as follows:
-        voter1 = NFT level 5 = 2x multiplier = 200 => 200 (proposal voting) + 200 (x allocation voting) = 400 gm weight
-        voter2 = NFT level 0
-        voter3 = NFT level 0
-
-        Total power = 400
-        voter1 allocation = 400 / 400 * 100 = 100%
-        voter2 allocation = 0 / 200 * 100 = 0%
-        voter3 allocation = 0 / 200 * 100 = 0%
-      */
-      expect(await voterRewards.getGMReward(xAllocationsRoundID, voter1.address)).to.equal(250000000000000000000000n)
-      expect(await voterRewards.getGMReward(xAllocationsRoundID, voter2.address)).to.equal(0n)
-      expect(await voterRewards.getGMReward(xAllocationsRoundID, voter3.address)).to.equal(0n)
-
-      // Cycle to total GM weight should be 400 as voter 1 has the NFT
-      expect(await voterRewards.cycleToTotalGMWeight(xAllocationsRoundID)).to.equal(400n)
-      expect(await voterRewards.cycleToVoterToGMWeight(xAllocationsRoundID, voter1.address)).to.equal(400n)
-      expect(await voterRewards.cycleToVoterToGMWeight(xAllocationsRoundID, voter2.address)).to.equal(0n)
-      expect(await voterRewards.cycleToVoterToGMWeight(xAllocationsRoundID, voter3.address)).to.equal(0n)
+      expect(await voterRewards.getReward(xAllocationsRoundID, voter1.address)).to.equal(1142857142857142857142857n)
+      expect(await voterRewards.getReward(xAllocationsRoundID, voter2.address)).to.equal(571428571428571428571428n)
+      expect(await voterRewards.getReward(xAllocationsRoundID, voter3.address)).to.equal(285714285714285714285714n)
     })
 
     it("QUADRATIC REWARDING DISABLED: Should calculate rewards correctly for governance voting and x allocation voting", async () => {
@@ -4077,8 +3247,6 @@ describe("VoterRewards - @shard2", () => {
 
       let nextCycle = await emissions.nextCycle() // next cycle round 2
 
-      await updateGMMultipliers()
-
       // Now we can create a new proposal
       let tx = await createProposal(b3tr, B3trContract, proposar, description, functionToCall, [], nextCycle)
       let proposalId = await getProposalIdFromTx(tx)
@@ -4163,39 +3331,18 @@ describe("VoterRewards - @shard2", () => {
       )
 
       /*
-        voter 1 = 1000 votes for governance voting and 1000 votes for x allocation voting = reward weighted votes 2000 = 2000 total reward weighted votes
+        voter 1 = 1000 votes for governance voting and 1000 votes for x allocation voting = reward weighted votes 2000 * 100% multiplier = 4000 total reward weighted votes
         voter 2 votes = 1000 votes for governance voting and 1000 votes for x allocation voting = reward weighted votes 2000 with no multiplier = 2000 total reward weighted votes
         voter 3 votes = 0 votes for governance voting and 1000 votes for x allocation voting = reward weighted votes 1000 with no multiplier = 1000 total reward weighted votes
 
-        Total reward weighted votes = 5000 (2000 + 2000 + 1000) = 5000
-        Voter 1 allocation = 2000 / 5000 * 100 = 40% (800000 B3TR)
-        Voter 2 allocation = 2000 / 5000 * 100 = 40% (800000 B3TR)  
-        Voter 3 allocation = 1000 / 5000 * 100 = 20% (400000 B3TR)
+        Total reward weighted votes = 7000 (4000 + 2000 + 1000) = 7000
+        Voter 1 allocation = 4000 / 7000 * 100 = 57.14%
+        Voter 2 allocation = 2000 / 7000 * 100 = 28.57%
+        Voter 3 allocation = 1000 / 7000 * 100 = 14.29%
       */
-      expect(await voterRewards.getReward(xAllocationsRoundID, voter1.address)).to.equal(800000000000000000000000n)
-      expect(await voterRewards.getReward(xAllocationsRoundID, voter2.address)).to.equal(800000000000000000000000n)
-      expect(await voterRewards.getReward(xAllocationsRoundID, voter3.address)).to.equal(400000000000000000000000n)
-
-      /*
-        GM rewards should be calculated as follows:
-        voter1 = NFT level 5 = 2x multiplier = 200 => 200 (proposal voting) + 200 (x allocation voting) = 400 gm weight
-        voter2 = NFT level 0
-        voter3 = NFT level 0
-
-        Total power = 200
-        voter1 allocation = 200 / 200 * 100 = 100%
-        voter2 allocation = 0 / 200 * 100 = 0%
-        voter3 allocation = 0 / 200 * 100 = 0%
-      */
-      expect(await voterRewards.getGMReward(xAllocationsRoundID, voter1.address)).to.equal(250000000000000000000000n)
-      expect(await voterRewards.getGMReward(xAllocationsRoundID, voter2.address)).to.equal(0n)
-      expect(await voterRewards.getGMReward(xAllocationsRoundID, voter3.address)).to.equal(0n)
-
-      // Cycle to total GM weight should be 400 as voter 1 has the NFT
-      expect(await voterRewards.cycleToTotalGMWeight(xAllocationsRoundID)).to.equal(400n)
-      expect(await voterRewards.cycleToVoterToGMWeight(xAllocationsRoundID, voter1.address)).to.equal(400n)
-      expect(await voterRewards.cycleToVoterToGMWeight(xAllocationsRoundID, voter2.address)).to.equal(0n)
-      expect(await voterRewards.cycleToVoterToGMWeight(xAllocationsRoundID, voter3.address)).to.equal(0n)
+      expect(await voterRewards.getReward(xAllocationsRoundID, voter1.address)).to.equal(1142857142857142857142857n)
+      expect(await voterRewards.getReward(xAllocationsRoundID, voter2.address)).to.equal(571428571428571428571428n)
+      expect(await voterRewards.getReward(xAllocationsRoundID, voter3.address)).to.equal(285714285714285714285714n)
     })
 
     it("QUADRATIC REWARDING ENABLED MID ROUND: Should calculate rewards correctly for governance voting and x allocation voting and Quadratic rewarding should only be enabled from following round", async () => {
@@ -4294,8 +3441,6 @@ describe("VoterRewards - @shard2", () => {
 
       let nextCycle = await emissions.nextCycle() // next cycle round 2
 
-      await updateGMMultipliers()
-
       // Now we can create a new proposal
       let tx = await createProposal(b3tr, B3trContract, proposar, description, functionToCall, [], nextCycle)
       let proposalId = await getProposalIdFromTx(tx)
@@ -4380,40 +3525,19 @@ describe("VoterRewards - @shard2", () => {
       )
 
       /*
-        voter1 = 1000 votes (reward weighted votes 31.26) for governance voting and 1000 votes (reward weighted votes 31.26) for x allocation voting = 2000 votes (reward weighted votes 63.24)
-        voter2 = 1000 votes (reward weighted votes 31.26) for governance voting and 1000 votes (reward weighted votes 31.26) for x allocation voting = 2000 votes (reward weighted votes 63.24)
-        voter3 = 0 votes for governance voting and 1000 votes (reward weighted votes 31.26) for x allocation voting = 1000 votes (reward weighted votes 31.26)
+        voter 1 = 1000 votes (reward weighted votes 31.26) for governance voting and 1000 votes (reward weighted votes 31.26) for x allocation voting = reward weighted votes 63.24 * 100% multiplier = 126.48 total reward weighted votes
+        voter 2 votes = 1000 votes (reward weighted votes 31.26) for governance voting and 1000 votes (reward weighted votes 31.26) for x allocation voting = reward weighted votes 63.24 with no multiplier = 63.2 total reward weighted votes
+        voter 3 votes = 0 votes for governance voting and 1000 votes (reward weighted votes 31.26) for x allocation voting = reward weighted votes 31.62 with no multiplier = 31.62 total reward weighted votes
 
-        Total reward weighted votes = 158.10
-        voter1 allocation = 63.24 / 158.10 * 100 = 40% (800000 B3T3)
-        voter2 allocation = 63.24 / 158.10 * 100 = 40% (800000 B3TR)
-        voter3 allocation = 31.62 / 158.10 * 100 = 20% (400000 B3TR)
+        Total reward weighted votes = 221.32 (126.48 + 63.24 + 31.62) = 221.32
+        Total rewards = 2000000000000000000000000 (2,000,000 B3TR)
+        voter 1 allocation = 126.48 / 221.32 * 100 = 57.14%
+        voter 2 allocation = 63.24 / 221.32 * 100 = 28.57%
+        voter 3 allocation = 31.62 / 221.32 * 100 = 14.29%
       */
-
-      expect(await voterRewards.getReward(xAllocationsRoundID, voter1.address)).to.equal(800000000000000000000000n) // 40%
-      expect(await voterRewards.getReward(xAllocationsRoundID, voter2.address)).to.equal(800000000000000000000000n) // 40%
-      expect(await voterRewards.getReward(xAllocationsRoundID, voter3.address)).to.equal(400000000000000000000000n) // 20%
-
-      /*
-        GM rewards should be calculated as follows:
-        voter1 = NFT level 5 = 2x multiplier = 200 => 200 (proposal voting) + 200 (x allocation voting) = 400 gm weight
-        voter2 = NFT level 0
-        voter3 = NFT level 0
-
-        Total power = 400
-        voter1 allocation = 400 / 400 * 100 = 100%
-        voter2 allocation = 0 / 200 * 100 = 0%
-        voter3 allocation = 0 / 200 * 100 = 0%
-      */
-      expect(await voterRewards.getGMReward(xAllocationsRoundID, voter1.address)).to.equal(250000000000000000000000n)
-      expect(await voterRewards.getGMReward(xAllocationsRoundID, voter2.address)).to.equal(0n)
-      expect(await voterRewards.getGMReward(xAllocationsRoundID, voter3.address)).to.equal(0n)
-
-      // Cycle to total GM weight should be 400 as voter 1 has the NFT
-      expect(await voterRewards.cycleToTotalGMWeight(xAllocationsRoundID)).to.equal(400n)
-      expect(await voterRewards.cycleToVoterToGMWeight(xAllocationsRoundID, voter1.address)).to.equal(400n)
-      expect(await voterRewards.cycleToVoterToGMWeight(xAllocationsRoundID, voter2.address)).to.equal(0n)
-      expect(await voterRewards.cycleToVoterToGMWeight(xAllocationsRoundID, voter3.address)).to.equal(0n)
+      expect(await voterRewards.getReward(xAllocationsRoundID, voter1.address)).to.equal(1142857142857142857142857n)
+      expect(await voterRewards.getReward(xAllocationsRoundID, voter2.address)).to.equal(571428571428571428571428n)
+      expect(await voterRewards.getReward(xAllocationsRoundID, voter3.address)).to.equal(285714285714285714285714n)
     })
   })
 
@@ -4475,8 +3599,6 @@ describe("VoterRewards - @shard2", () => {
 
       await participateInAllocationVoting(voter1)
 
-      await updateGMMultipliers()
-
       await galaxyMember.connect(voter1).freeMint() // Token Id 1
 
       await galaxyMember.setMaxLevel(10)
@@ -4514,20 +3636,18 @@ describe("VoterRewards - @shard2", () => {
       await governor.connect(voter2).castVote(proposalId, 1) // For (sqrt(1000) = 31.62 weighted voting power (No multiplier)
 
       /*
-          GM has no effect on generic voter rewards
+          voter1 has 52.37% of the voting power (34.78 / 66.4 * 100)
+          voter2 has 47.62% of the voting power (31.62 / 66.4 * 100)
+
+          voter 1 reward is 52.37% of the rewards = 2,000,000 * 52.37% = 1,047,400
+          voter 2 reward is 47.62% of the rewards = 2,000,000 * 47.62% = 952,600
       */
       expect(await voterRewards.getReward(await xAllocationVoting.currentRoundId(), voter1.address)).to.equal(
-        1000000000000000000000000n,
+        1047619047619047619047619n,
       )
       expect(await voterRewards.getReward(await xAllocationVoting.currentRoundId(), voter2.address)).to.equal(
-        1000000000000000000000000n,
+        952380952380952380952380n,
       )
-
-      // Voter 1 should get all the GM rewards
-      expect(await voterRewards.getGMReward(await xAllocationVoting.currentRoundId(), voter1.address)).to.equal(
-        250000000000000000000000n,
-      )
-      expect(await voterRewards.getGMReward(await xAllocationVoting.currentRoundId(), voter2.address)).to.equal(0n)
 
       // Now we transfer the NFT to another account and vote with that account
 
@@ -4546,33 +3666,27 @@ describe("VoterRewards - @shard2", () => {
       await governor.connect(voter3).castVote(proposalId, 1)
 
       /*
-        GM has no effect here
+        voter3 cast vote but the GM NFT was already used to vote for the proposal, thus NO multiplier should be applied
 
         voter 3 voting power = 31.62
-        voter 1 voting power = 31.62
+        voter 1 voting power = 34.78 (multiplier applied because he voted before with the GM NFT Level 2)
         voter 2 voting power = 31.62
+
+        Total voting power = 98.02
+        voter 3 allocation = 31.62 / 98.02 * 100 = 32.27% => 2,000,000 * 32.27% = 645,400
+        voter 1 allocation = 34.78 / 98.02 * 100 = 35.50% => 2,000,000 * 35.50% = 710,000
+        voter 2 allocation = 31.62 / 98.02 * 100 = 32.27% => 2,000,000 * 32.27% = 645,400
       */
 
       expect(await voterRewards.getReward(await xAllocationVoting.currentRoundId(), voter3.address)).to.equal(
-        666666666666666666666666n,
+        645161290322580645161290n,
       )
       expect(await voterRewards.getReward(await xAllocationVoting.currentRoundId(), voter1.address)).to.equal(
-        666666666666666666666666n,
+        709677419354838709677419n,
       )
       expect(await voterRewards.getReward(await xAllocationVoting.currentRoundId(), voter2.address)).to.equal(
-        666666666666666666666666n,
+        645161290322580645161290n,
       )
-
-      /*
-       voter3 cast vote but the GM NFT was already used to vote for the proposal, thus NO multiplier should be applied
-
-       Only voter 1 gets GM rewards 
-      */
-      expect(await voterRewards.getGMReward(await xAllocationVoting.currentRoundId(), voter1.address)).to.equal(
-        250000000000000000000000n,
-      )
-      expect(await voterRewards.getGMReward(await xAllocationVoting.currentRoundId(), voter2.address)).to.equal(0n)
-      expect(await voterRewards.getGMReward(await xAllocationVoting.currentRoundId(), voter3.address)).to.equal(0n)
 
       expect(await emissions.getCurrentCycle()).to.equal(2) // We're in round 2
       expect(await emissions.isCycleEnded(await emissions.getCurrentCycle())).to.equal(false)
@@ -4589,37 +3703,29 @@ describe("VoterRewards - @shard2", () => {
         xAllocationsRoundID,
       )
 
-      // Same as before GM has no effect on generic voter rewards
+      /*
+        Now with x allocation voting, things change a bit 
+
+        voter 3: total weighted votes = 31.62 + (31.62 * 1.5 because of Level 5 GM NFT due to Mjolnir attached) = 31.62 + 79.05 = 110.67 total weighted votes
+        voter 1: total weighted votes = 34.78 + 31.62 = 66.4 total weighted votes
+        voter 2: total weighted votes = 31.62 + 31.62 = 63.24 total weighted votes
+
+        Total weighted votes = 110.67 + 66.4 + 63.24 = 240.31
+
+        voter 3 allocation = 110.67 / 240.31 * 100 = 46% => 2,000,000 * 46% = 920,000
+        voter 1 allocation = 66.4 / 240.31 * 100 = 27.6% => 2,000,000 * 27.6% = 552,000
+        voter 2 allocation = 63.24 / 240.31 * 100 = 26.3% => 2,000,000 * 26.3% = 526,000
+      */
+
       expect(await voterRewards.getReward(await xAllocationVoting.currentRoundId(), voter3.address)).to.equal(
-        666666666666666666666666n,
+        921052631578947368421052n,
       )
       expect(await voterRewards.getReward(await xAllocationVoting.currentRoundId(), voter1.address)).to.equal(
-        666666666666666666666666n,
+        552631578947368421052631n,
       )
       expect(await voterRewards.getReward(await xAllocationVoting.currentRoundId(), voter2.address)).to.equal(
-        666666666666666666666666n,
+        526315789473684210526315n,
       )
-
-      /*
-        Now with gm reward pool, things change a bit 
-
-        voter 3: 600 because of Level 5 GM NFT due to Mjolnir attached)
-        voter 1: 110 because Mjolnir
-        voter 2: 0
-
-      */
-      expect(await voterRewards.getGMReward(await xAllocationVoting.currentRoundId(), voter3.address)).to.equal(
-        173611111111111111111111n,
-      )
-      expect(await voterRewards.getGMReward(await xAllocationVoting.currentRoundId(), voter2.address)).to.equal(0n)
-      expect(await voterRewards.getGMReward(await xAllocationVoting.currentRoundId(), voter1.address)).to.equal(
-        76388888888888888888888n,
-      )
-
-      expect(await voterRewards.cycleToTotalGMWeight(xAllocationsRoundID)).to.equal(360n)
-      expect(await voterRewards.cycleToVoterToGMWeight(xAllocationsRoundID, voter3.address)).to.equal(250n)
-      expect(await voterRewards.cycleToVoterToGMWeight(xAllocationsRoundID, voter2.address)).to.equal(0n)
-      expect(await voterRewards.cycleToVoterToGMWeight(xAllocationsRoundID, voter1.address)).to.equal(110n)
     })
 
     it("Should not multiply voting power if Vechain node already voted for proposal", async () => {
@@ -4682,8 +3788,6 @@ describe("VoterRewards - @shard2", () => {
 
       const roundId = await startNewAllocationRound()
 
-      await updateGMMultipliers()
-
       await voteOnApps(
         [app1, app2],
         [voter1, voter2],
@@ -4722,19 +3826,17 @@ describe("VoterRewards - @shard2", () => {
       )
 
       /*
-        voter 1: 2.5x (Mjolnir attached) = 250
-        voter 3: 0
+        voter 1: total weighted votes = sqrt(1000) * 2.5 (Mjolnir attached) = 31.62 * 2.5 = 79.05
+        voter 3: total weighted votes = sqrt(1000) = 31.62
 
-        Total GM weight = 250
+        Total weighted votes = 110.67
+
+        voter 1 allocation = 79.05 / 110.67 * 100 = 71.42% => 2,000,000 * 71.42% = 1,428,400
+        voter 3 allocation = 31.62 / 110.67 * 100 = 28.57% => 2,000,000 * 28.57% = 571,600
       */
-      expect(await voterRewards.getGMReward(xAllocationsRoundID, voter1.address)).to.equal(250000000000000000000000n)
-      expect(await voterRewards.getGMReward(xAllocationsRoundID, voter2.address)).to.equal(0n)
-      expect(await voterRewards.getGMReward(xAllocationsRoundID, voter3.address)).to.equal(0n)
-
-      expect(await voterRewards.cycleToTotalGMWeight(xAllocationsRoundID)).to.equal(250n)
-      expect(await voterRewards.cycleToVoterToGMWeight(xAllocationsRoundID, voter1.address)).to.equal(250n)
-      expect(await voterRewards.cycleToVoterToGMWeight(xAllocationsRoundID, voter2.address)).to.equal(0n)
-      expect(await voterRewards.cycleToVoterToGMWeight(xAllocationsRoundID, voter3.address)).to.equal(0n)
+      expect(await voterRewards.getReward(xAllocationsRoundID, voter1.address)).to.equal(1428571428571428571428571n)
+      expect(await voterRewards.getReward(xAllocationsRoundID, voter2.address)).to.equal(0n)
+      expect(await voterRewards.getReward(xAllocationsRoundID, voter3.address)).to.equal(571428571428571428571428n)
 
       // Skip ahead 1 day to be able to transfer node
       await time.setNextBlockTimestamp((await time.latest()) + 86400)
@@ -4766,19 +3868,19 @@ describe("VoterRewards - @shard2", () => {
       /*
         voter 2 now voted:
 
-        voter 2: NO multiplier even though he has level 6 GM NFT with Mjolnir attached, because that node already voted for this proposal
-        voter 1: 2.5x (Mjolnir attached previosuly) = 250
-        voter 3: 0
+        voter 2: total weighted votes = sqrt(1000) = 31.62 (NO multiplier even though he has level 6 GM NFT with Mjolnir attached, because that node already voted for this proposal)
+        voter 1: total weighted votes = sqrt(1000) * 2.5 (Mjolnir attached previosuly) = 31.62 * 2.5 = 79.05
+        voter 3: total weighted votes = sqrt(1000) = 31.62
 
-        Total GM weight = 250
+        Total weighted votes = 142.29
+
+        voter 2 allocation = 31.62 / 142.29 * 100 = 22.22% => 2,000,000 * 22.22% = 444,400
+        voter 1 allocation = 79.05 / 142.29 * 100 = 55.56% => 2,000,000 * 55.56% = 1,111,200
+        voter 3 allocation = 31.62 / 142.29 * 100 = 22.22% => 2,000,000 * 22.22% = 444,400
       */
-      expect(await voterRewards.getGMReward(xAllocationsRoundID, voter1.address)).to.equal(250000000000000000000000n)
-      expect(await voterRewards.getGMReward(xAllocationsRoundID, voter2.address)).to.equal(0n)
-      expect(await voterRewards.getGMReward(xAllocationsRoundID, voter3.address)).to.equal(0n)
-      expect(await voterRewards.cycleToTotalGMWeight(xAllocationsRoundID)).to.equal(250n)
-      expect(await voterRewards.cycleToVoterToGMWeight(xAllocationsRoundID, voter1.address)).to.equal(250n)
-      expect(await voterRewards.cycleToVoterToGMWeight(xAllocationsRoundID, voter2.address)).to.equal(0n)
-      expect(await voterRewards.cycleToVoterToGMWeight(xAllocationsRoundID, voter3.address)).to.equal(0n)
+      expect(await voterRewards.getReward(xAllocationsRoundID, voter2.address)).to.equal(444444444444444444444444n)
+      expect(await voterRewards.getReward(xAllocationsRoundID, voter1.address)).to.equal(1111111111111111111111111n)
+      expect(await voterRewards.getReward(xAllocationsRoundID, voter3.address)).to.equal(444444444444444444444444n)
 
       // Now we can create a new proposal
       const tx = await createProposal(
@@ -4805,19 +3907,19 @@ describe("VoterRewards - @shard2", () => {
       /*
         Now the proposal ID is completely different so multiplier should be applied
 
-        voter 1: NO multiplier as Mjonir was detached
-        voter 2: 2.5x Mjolnir attached
-        voter 3: 0
+        voter 1: total weighted votes = sqrt(1000) = 31.62 (NO multiplier as Mjonir was detached)
+        voter 2: total weighted votes = sqrt(1000) * 2.5 = 31.62 * 2.5 = 79.05 (Mjolnir attached)
+        voter 3: total weighted votes = sqrt(1000) = 31.62
 
-        Total GM weight = 250
+        Total weighted votes = 142.29
+
+        voter 2 allocation = 31.62 / 142.29 * 100 = 22.22% => 2,000,000 * 22.22% = 1,111,200
+        voter 1 allocation = 79.05 / 142.29 * 100 = 55.56% => 2,000,000 * 55.56% = 444,400
+        voter 3 allocation = 31.62 / 142.29 * 100 = 22.22% => 2,000,000 * 22.22% = 444,400
       */
-      expect(await voterRewards.getGMReward(xAllocationsRoundID, voter1.address)).to.equal(0n)
-      expect(await voterRewards.getGMReward(xAllocationsRoundID, voter2.address)).to.equal(250000000000000000000000n)
-      expect(await voterRewards.getGMReward(xAllocationsRoundID, voter3.address)).to.equal(0n)
-      expect(await voterRewards.cycleToTotalGMWeight(xAllocationsRoundID)).to.equal(250n)
-      expect(await voterRewards.cycleToVoterToGMWeight(xAllocationsRoundID, voter1.address)).to.equal(0n)
-      expect(await voterRewards.cycleToVoterToGMWeight(xAllocationsRoundID, voter2.address)).to.equal(250n)
-      expect(await voterRewards.cycleToVoterToGMWeight(xAllocationsRoundID, voter3.address)).to.equal(0n)
+      expect(await voterRewards.getReward(xAllocationsRoundID, voter2.address)).to.equal(1111111111111111111111111n)
+      expect(await voterRewards.getReward(xAllocationsRoundID, voter1.address)).to.equal(444444444444444444444444n)
+      expect(await voterRewards.getReward(xAllocationsRoundID, voter3.address)).to.equal(444444444444444444444444n)
     })
 
     it("Should correctly track multiplier of GM NFT with B3TR donated when voting", async () => {
@@ -4876,8 +3978,6 @@ describe("VoterRewards - @shard2", () => {
 
       const roundId = await startNewAllocationRound()
 
-      await updateGMMultipliers()
-
       await voteOnApps(
         [app1, app2],
         [voter1, voter2],
@@ -4916,20 +4016,19 @@ describe("VoterRewards - @shard2", () => {
       )
 
       /*
-        voter 1: 1.20x (Level 3)
-        voter 2: 0
-        voter 3: 
+        voter 1: total weighted votes = sqrt(1000) * 1.20 (Level 3) = 31.62 * 1.20 = 37.94
+        voter 2: total weighted votes = sqrt(1000) = 31.62
+        voter 3: total weighted votes = sqrt(1000) = 31.62
 
-        Total GM weight = 1.20
+        Total weighted votes = 101.18
+
+        voter 1 allocation = 37.94 / 101.18 * 100 = 37.50% => 2,000,000 * 37.50% = 750,000
+        voter 2 allocation = 31.62 / 101.18 * 100 = 31.25% => 2,000,000 * 31.25% = 625,000
+        voter 3 allocation = 31.62 / 101.18 * 100 = 31.25% => 2,000,000 * 31.25% = 625,000
       */
-      expect(await voterRewards.getGMReward(xAllocationsRoundID, voter1.address)).to.equal(250000000000000000000000n)
-      expect(await voterRewards.getGMReward(xAllocationsRoundID, voter2.address)).to.equal(0n)
-      expect(await voterRewards.getGMReward(xAllocationsRoundID, voter3.address)).to.equal(0n)
-
-      expect(await voterRewards.cycleToTotalGMWeight(xAllocationsRoundID)).to.equal(120n)
-      expect(await voterRewards.cycleToVoterToGMWeight(xAllocationsRoundID, voter1.address)).to.equal(120n)
-      expect(await voterRewards.cycleToVoterToGMWeight(xAllocationsRoundID, voter2.address)).to.equal(0n)
-      expect(await voterRewards.cycleToVoterToGMWeight(xAllocationsRoundID, voter3.address)).to.equal(0n)
+      expect(await voterRewards.getReward(xAllocationsRoundID, voter1.address)).to.equal(750000000000000000000000n)
+      expect(await voterRewards.getReward(xAllocationsRoundID, voter2.address)).to.equal(625000000000000000000000n)
+      expect(await voterRewards.getReward(xAllocationsRoundID, voter3.address)).to.equal(625000000000000000000000n)
 
       await waitForRoundToEnd(xAllocationsRoundID)
 
@@ -4954,20 +4053,19 @@ describe("VoterRewards - @shard2", () => {
       )
 
       /*
-        voter 1: 2.5 (Level 6)
-        voter 2: 0
-        voter 3: 0
+        voter 1: total weighted votes = sqrt(1000) * 2.5 (Level 6) = 31.62 * 2.5 = 79.05
+        voter 2: total weighted votes = sqrt(1000) = 31.62
+        voter 3: total weighted votes = sqrt(1000) = 31.62
 
-        Total GM weight = 2.5
+        Total weighted votes = 142.29
+
+        voter 1 allocation = 31.62 / 142.29 * 100 = 22.22% => 2,000,000 * 22.22% = 1,111,200
+        voter 2 allocation = 79.05 / 142.29 * 100 = 55.56% => 2,000,000 * 55.56% = 444,400
+        voter 3 allocation = 31.62 / 142.29 * 100 = 22.22% => 2,000,000 * 22.22% = 444,400
       */
-      expect(await voterRewards.getGMReward(xAllocationsRoundID, voter1.address)).to.equal(250000000000000000000000n)
-      expect(await voterRewards.getGMReward(xAllocationsRoundID, voter2.address)).to.equal(0n)
-      expect(await voterRewards.getGMReward(xAllocationsRoundID, voter3.address)).to.equal(0n)
-
-      expect(await voterRewards.cycleToTotalGMWeight(xAllocationsRoundID)).to.equal(250n)
-      expect(await voterRewards.cycleToVoterToGMWeight(xAllocationsRoundID, voter1.address)).to.equal(250n)
-      expect(await voterRewards.cycleToVoterToGMWeight(xAllocationsRoundID, voter2.address)).to.equal(0n)
-      expect(await voterRewards.cycleToVoterToGMWeight(xAllocationsRoundID, voter3.address)).to.equal(0n)
+      expect(await voterRewards.getReward(xAllocationsRoundID, voter1.address)).to.equal(1111111111111111111111111n)
+      expect(await voterRewards.getReward(xAllocationsRoundID, voter2.address)).to.equal(444444444444444444444444n)
+      expect(await voterRewards.getReward(xAllocationsRoundID, voter3.address)).to.equal(444444444444444444444444n)
 
       // Now let's upgrade the GM NFT to level 10
       await b3tr.connect(minterAccount).mint(voter1, await galaxyMember.getB3TRtoUpgrade(1))
@@ -5015,19 +4113,19 @@ describe("VoterRewards - @shard2", () => {
       )
 
       /*
-        voter 1: Level 10 GM NFT has 25x multiplier = 250
-        voter 2: 0
-        voter 3: 0
+        voter 1: total weighted votes = sqrt(1000) * 25 = 31.62 * 25 = 790.5 (Level 10 GM NFT has 25x multiplier)
+        voter 2: total weighted votes = sqrt(1000) = 31.62
+        voter 3: total weighted votes = sqrt(1000) = 31.62
 
-        Total GM weight = 250
+        Total weighted votes = 853.74
+
+        voter 1 allocation = 790.5 / 853.74 * 100 = 92.5% => 2,000,000 * 92.5% = 1,850,000
+        voter 2 allocation = 31.62 / 853.74 * 100 = 3.7% => 2,000,000 * 3.7% = 74,000
+        voter 3 allocation = 31.62 / 853.74 * 100 = 3.7% => 2,000,000 * 3.7% = 74,000
       */
-      expect(await voterRewards.getGMReward(xAllocationsRoundID, voter1.address)).to.equal(250000000000000000000000n)
-      expect(await voterRewards.getGMReward(xAllocationsRoundID, voter2.address)).to.equal(0n)
-      expect(await voterRewards.getGMReward(xAllocationsRoundID, voter3.address)).to.equal(0n)
-      expect(await voterRewards.cycleToTotalGMWeight(xAllocationsRoundID)).to.equal(2500n)
-      expect(await voterRewards.cycleToVoterToGMWeight(xAllocationsRoundID, voter1.address)).to.equal(2500n)
-      expect(await voterRewards.cycleToVoterToGMWeight(xAllocationsRoundID, voter2.address)).to.equal(0n)
-      expect(await voterRewards.cycleToVoterToGMWeight(xAllocationsRoundID, voter3.address)).to.equal(0n)
+      expect(await voterRewards.getReward(xAllocationsRoundID, voter1.address)).to.equal(1851851851851851851851851n)
+      expect(await voterRewards.getReward(xAllocationsRoundID, voter2.address)).to.equal(74074074074074074074074n)
+      expect(await voterRewards.getReward(xAllocationsRoundID, voter3.address)).to.equal(74074074074074074074074n)
 
       await waitForRoundToEnd(xAllocationsRoundID)
 
@@ -5060,19 +4158,19 @@ describe("VoterRewards - @shard2", () => {
       )
 
       /*
-        voter 1: Level 9 GM NFT has 10x multiplier => 1000
-        voter 2: 0
-        voter 3: 0
+        voter 1: total weighted votes = sqrt(1000) * 10 = 31.62 * 10 = 316.2 (Level 9 GM NFT has 10x multiplier)
+        voter 2: total weighted votes = sqrt(1000) = 31.62
+        voter 3: total weighted votes = sqrt(1000) = 31.62
 
-        Total GM weight = 1000
+        Total weighted votes = 379.44
+
+        voter 1 allocation = 316.2 / 379.44 * 100 = 83.33% => 2,000,000 * 83.33% = 1,666,600
+        voter 2 allocation = 31.62 / 379.44 * 100 = 8.33% => 2,000,000 * 8.33% = 166,600
+        voter 3 allocation = 31.62 / 379.44 * 100 = 8.33% => 2,000,000 * 8.33% = 166,600
       */
-      expect(await voterRewards.getGMReward(xAllocationsRoundID, voter1.address)).to.equal(250000000000000000000000n)
-      expect(await voterRewards.getGMReward(xAllocationsRoundID, voter2.address)).to.equal(0n)
-      expect(await voterRewards.getGMReward(xAllocationsRoundID, voter3.address)).to.equal(0n)
-      expect(await voterRewards.cycleToTotalGMWeight(xAllocationsRoundID)).to.equal(1000n)
-      expect(await voterRewards.cycleToVoterToGMWeight(xAllocationsRoundID, voter1.address)).to.equal(1000n)
-      expect(await voterRewards.cycleToVoterToGMWeight(xAllocationsRoundID, voter2.address)).to.equal(0n)
-      expect(await voterRewards.cycleToVoterToGMWeight(xAllocationsRoundID, voter3.address)).to.equal(0n)
+      expect(await voterRewards.getReward(xAllocationsRoundID, voter1.address)).to.equal(1666666666666666666666666n)
+      expect(await voterRewards.getReward(xAllocationsRoundID, voter2.address)).to.equal(166666666666666666666666n)
+      expect(await voterRewards.getReward(xAllocationsRoundID, voter3.address)).to.equal(166666666666666666666666n)
     })
 
     it("Should change multiplier if selected GM NFT is changed", async () => {
@@ -5131,8 +4229,6 @@ describe("VoterRewards - @shard2", () => {
 
       const roundId = await startNewAllocationRound()
 
-      await updateGMMultipliers()
-
       await voteOnApps(
         [app1, app2],
         [voter1, voter2],
@@ -5179,14 +4275,20 @@ describe("VoterRewards - @shard2", () => {
 
       // voter 1 should have 1.1x multiplier
       // voter 2 and 3 should have no multiplier
-      expect(await voterRewards.getGMReward(xAllocationsRoundID, voter1.address)).to.equal(250000000000000000000000n)
-      expect(await voterRewards.getGMReward(xAllocationsRoundID, voter2.address)).to.equal(0n)
-      expect(await voterRewards.getGMReward(xAllocationsRoundID, voter3.address)).to.equal(0n)
+      /*
+          voter 1 = sqrt(1000) * 1.1 = 31.62 * 1.1 = 34.78
+          voter 2 = sqrt(1000) = 31.62
+          voter 3 = sqrt(1000) = 31.62
 
-      expect(await voterRewards.cycleToTotalGMWeight(xAllocationsRoundID)).to.equal(110n)
-      expect(await voterRewards.cycleToVoterToGMWeight(xAllocationsRoundID, voter1.address)).to.equal(110n)
-      expect(await voterRewards.cycleToVoterToGMWeight(xAllocationsRoundID, voter2.address)).to.equal(0n)
-      expect(await voterRewards.cycleToVoterToGMWeight(xAllocationsRoundID, voter3.address)).to.equal(0n)
+          total = 98.02
+
+          voter 1 allocation = 34.78 / 98.02 * 100 = 35.50% => 2,000,000 * 35.50% = 710,000
+          voter 2 allocation = 31.62 / 98.02 * 100 = 32.27% => 2,000,000 * 32.27% = 645,400
+          voter 3 allocation = 31.62 / 98.02 * 100 = 32.27% => 2,000,000 * 32.27% = 645,400
+      */
+      expect(await voterRewards.getReward(xAllocationsRoundID, voter1.address)).to.equal(709677419354838709677419n)
+      expect(await voterRewards.getReward(xAllocationsRoundID, voter2.address)).to.equal(645161290322580645161290n)
+      expect(await voterRewards.getReward(xAllocationsRoundID, voter3.address)).to.equal(645161290322580645161290n)
 
       await waitForRoundToEnd(xAllocationsRoundID)
 
@@ -5210,21 +4312,21 @@ describe("VoterRewards - @shard2", () => {
         xAllocationsRoundID,
       )
 
-      // voter 1 should now have no multiplier like voter 2 and 3
+      // voter 1 should now have 1x multiplier like voter 2 and 3
       /*
-        voter 1 = 0
-        voter 2 = 0
-        voter 3 = 0
-        Total GM weight = 0
-      */
-      expect(await voterRewards.getGMReward(xAllocationsRoundID, voter1.address)).to.equal(0n)
-      expect(await voterRewards.getGMReward(xAllocationsRoundID, voter2.address)).to.equal(0n)
-      expect(await voterRewards.getGMReward(xAllocationsRoundID, voter3.address)).to.equal(0n)
+        voter 1 = sqrt(1000) = 31.62
+        voter 2 = sqrt(1000) = 31.62
+        voter 3 = sqrt(1000) = 31.62
 
-      expect(await voterRewards.cycleToTotalGMWeight(xAllocationsRoundID)).to.equal(0n)
-      expect(await voterRewards.cycleToVoterToGMWeight(xAllocationsRoundID, voter1.address)).to.equal(0n)
-      expect(await voterRewards.cycleToVoterToGMWeight(xAllocationsRoundID, voter2.address)).to.equal(0n)
-      expect(await voterRewards.cycleToVoterToGMWeight(xAllocationsRoundID, voter3.address)).to.equal(0n)
+        total = 94.86
+
+        voter 1 allocation = 31.62 / 94.86 * 100 = 33.33% => 2,000,000 * 33.33% = 666,600
+        voter 2 allocation = 31.62 / 94.86 * 100 = 33.33% => 2,000,000 * 33.33% = 666,600
+        voter 3 allocation = 31.62 / 94.86 * 100 = 33.33% => 2,000,000 * 33.33% = 666,600
+      */
+      expect(await voterRewards.getReward(xAllocationsRoundID, voter1.address)).to.equal(666666666666666666666666n)
+      expect(await voterRewards.getReward(xAllocationsRoundID, voter2.address)).to.equal(666666666666666666666666n)
+      expect(await voterRewards.getReward(xAllocationsRoundID, voter3.address)).to.equal(666666666666666666666666n)
     })
   })
 })

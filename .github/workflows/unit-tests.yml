@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [shard1, shard2, shard3, shard4]
+        shard: [shard1, shard2, shard3]
 
     steps:
       - name: Checkout repository

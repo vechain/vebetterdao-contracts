@@ -47,21 +47,8 @@ contract Emissions is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPS
   uint256 public constant SCALING_FACTOR = 1e6;
 
   // ---------------- Events ---------------- //
-  /// @dev Deprecated, use new EmissionDistributed instead
-  event EmissionDistributed(
-    uint256 indexed cycle,
-    uint256 xAllocations,
-    uint256 vote2Earn,
-    uint256 treasury
-  );
-    /// @notice Emitted when emissions are distributed for a cycle
-  event EmissionDistributedV2(
-    uint256 indexed cycle,
-    uint256 xAllocations,
-    uint256 vote2Earn,
-    uint256 treasury,
-    uint256 gm
-  );
+  /// @notice Emitted when emissions are distributed for a cycle
+  event EmissionDistributed(uint256 indexed cycle, uint256 xAllocations, uint256 vote2Earn, uint256 treasury);
   /// @notice Emitted when XAllocations address is updated
   event XAllocationsAddressUpdated(address indexed newAddress, address indexed oldAddress);
   /// @notice Emitted when Vote2Earn address is updated
@@ -84,8 +71,6 @@ contract Emissions is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPS
   event XAllocationsDecayPeriodUpdated(uint256 indexed newPeriod, uint256 indexed oldPeriod);
   /// @notice Emitted when the treasury percentage is updated
   event TreasuryPercentageUpdated(uint256 indexed newPercentage, uint256 indexed oldPercentage);
-  /// @notice Emitted when the GM percentage is updated
-  event GMPercentageUpdated(uint256 indexed newPercentage, uint256 indexed oldPercentage);
 
   /// @notice Initialization data for the Emissions contract
   struct InitializationData {
@@ -141,9 +126,6 @@ contract Emissions is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPS
     uint256 totalEmissions; // Total emissions distributed
     // ----------- Flags ----------- //
     bool _isEmissionsNotAligned; // Flag to indicate if emissions are not aligned with the Emissions schedule
-    // ----------- GM Rewards ----------- //
-    uint256 gmPercentage; // Percentage of the treasury that will be used for GM Holder Rewards
-    mapping(uint256 => uint256) gmEmissions; // GM emissions for each cycle
   }
 
   /// @dev Storage slot for the EmissionsStorage struct
@@ -259,15 +241,6 @@ contract Emissions is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPS
     $._isEmissionsNotAligned = _isEmissionsNotAligned;
   }
 
-  /// @notice Reinitializes the contract with new parameters
-  /// @param _gmPercentage The percentage of the treasury that will be used for GM Holder Rewards (Scaled by 100)
-  function initializeV3(uint256 _gmPercentage) external reinitializer(3) {
-    EmissionsStorage storage $ = _getEmissionsStorage();
-    // Ensure the GM percentage is between 0 and 10000
-    require(_gmPercentage <= 10000, "Emissions: GM percentage must be less than or equal to 10000");
-    $.gmPercentage = _gmPercentage;
-  }
-
   /// @notice Authorized upgrading of the contract implementation
   /// @dev This function can only be called by addresses with the UPGRADER_ROLE
   /// @param newImplementation Address of the new contract implementation
@@ -282,7 +255,7 @@ contract Emissions is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPS
 
     // Calculate initial emissions
     uint256 initialVote2EarnAllocation = _calculateVote2EarnAmount();
-    (uint256 initialTreasuryAllocation, ) = _calculateTreasuryAndGMAmount();
+    uint256 initialTreasuryAllocation = _calculateTreasuryAmount();
 
     // Mint initial allocations
     $.emissions[$.nextCycle] = Emission($.initialXAppAllocation, initialVote2EarnAllocation, initialTreasuryAllocation);
@@ -327,25 +300,24 @@ contract Emissions is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPS
     // Mint emissions for current cycle
     uint256 xAllocationsAmount = _calculateNextXAllocation();
     uint256 vote2EarnAmount = _calculateVote2EarnAmount();
-    (uint256 treasuryAmount, uint256 gmAmount) = _calculateTreasuryAndGMAmount();
+    uint256 treasuryAmount = _calculateTreasuryAmount();
 
     require(
-      xAllocationsAmount + vote2EarnAmount + treasuryAmount + gmAmount <= getRemainingEmissions(),
+      xAllocationsAmount + vote2EarnAmount + treasuryAmount <= getRemainingEmissions(),
       "Emissions: emissions would exceed B3TR supply cap"
     );
 
     $.lastEmissionBlock = block.number;
     $.emissions[$.nextCycle] = Emission(xAllocationsAmount, vote2EarnAmount, treasuryAmount);
-    $.totalEmissions += xAllocationsAmount + vote2EarnAmount + treasuryAmount + gmAmount;
-    $.gmEmissions[$.nextCycle] = gmAmount;
+    $.totalEmissions += xAllocationsAmount + vote2EarnAmount + treasuryAmount;
 
     $.b3tr.mint($._xAllocations, xAllocationsAmount);
-    $.b3tr.mint($._vote2Earn, vote2EarnAmount + gmAmount); // GM rewards are added to Vote2Earn
+    $.b3tr.mint($._vote2Earn, vote2EarnAmount);
     $.b3tr.mint($._treasury, treasuryAmount);
 
     $.xAllocationsGovernor.startNewRound();
 
-    emit EmissionDistributedV2($.nextCycle, xAllocationsAmount, vote2EarnAmount, treasuryAmount, gmAmount);
+    emit EmissionDistributed($.nextCycle, xAllocationsAmount, vote2EarnAmount, treasuryAmount);
     $.nextCycle++;
   }
 
@@ -429,24 +401,15 @@ contract Emissions is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPS
     return vote2EarnScaled / SCALING_FACTOR;
   }
 
-  /// @notice Calculates the token allocation for the Treasury and GM pool based on total emissions
-  /// @dev Treasury gets a percentage of XAllocations + Vote2Earn, GM gets a percentage of that Treasury allocation
-  /// @return treasuryAmount Amount for Treasury (after GM cut)
-  /// @return gmAmount Amount allocated for GM holders
-  function _calculateTreasuryAndGMAmount() internal view virtual returns (uint256 treasuryAmount, uint256 gmAmount) {
+  /// @notice Calculates the token allocation for the Treasury based on the total allocations to XAllocations and Vote2Earn
+  /// @dev Treasury gets a percentage of the combined XAllocations and Vote2Earn amounts, adjusted by the treasury percentage
+  /// @return unit256 The calculated number of tokens for the Treasury for the next cycle
+  function _calculateTreasuryAmount() internal view virtual returns (uint256) {
     EmissionsStorage storage $ = _getEmissionsStorage();
+    uint256 scaledAllocations = (_calculateNextXAllocation() + _calculateVote2EarnAmount()) * SCALING_FACTOR;
+    uint256 treasuryAmount = (scaledAllocations * $.treasuryPercentage) / 10000;
 
-    // Calculate total emissions for XAllocations + Vote2Earn
-    uint256 totalEmission = _calculateNextXAllocation() + _calculateVote2EarnAmount();
-
-    // Calculate total treasury allocation before GM split
-    uint256 rawTreasury = (totalEmission * $.treasuryPercentage) / 10000;
-
-    // GM gets a cut of the treasury allocation
-    gmAmount = (rawTreasury * $.gmPercentage) / 10000;
-    treasuryAmount = rawTreasury - gmAmount;
-
-    return (treasuryAmount, gmAmount);
+    return treasuryAmount / SCALING_FACTOR;
   }
 
   // ----------- Getters ----------- //
@@ -481,29 +444,7 @@ contract Emissions is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPS
     EmissionsStorage storage $ = _getEmissionsStorage();
 
     require(cycle <= $.nextCycle, "Emissions: Cycle not reached yet");
-
-    if (isCycleDistributed(cycle)) {
-      return $.emissions[cycle].treasury;
-    }
-
-    (uint256 treasuryAmount, ) = _calculateTreasuryAndGMAmount();
-    return treasuryAmount;
-  }
-
-  /// @notice Retrieves the GM allocation for a specified cycle
-  /// @dev Returns the allocated amount if the cycle has been distributed, otherwise calculates the expected allocation
-  /// @param cycle The cycle number to query
-  /// @return uint256 The amount of GM allocation for the specified cycle
-  function getGMAmount(uint256 cycle) public view virtual returns (uint256) {
-    EmissionsStorage storage $ = _getEmissionsStorage();
-
-    require(cycle <= $.nextCycle, "Emissions: Cycle not reached yet");
-    if (isCycleDistributed(cycle)) {
-      return $.gmEmissions[cycle];
-    }
-
-    (, uint256 gmAmount) = _calculateTreasuryAndGMAmount();
-    return gmAmount;
+    return isCycleDistributed(cycle) ? $.emissions[cycle].treasury : _calculateTreasuryAmount();
   }
 
   /// @notice Checks if a specific cycle's allocations have been distributed
@@ -636,12 +577,6 @@ contract Emissions is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPS
     return _getEmissionsStorage().treasuryPercentage;
   }
 
-  /// @notice Retrieves the percentage of the Treasury pool allocated to GM
-  /// @return uint256 The GM percentage of the Treasury pool
-  function gmPercentage() public view returns (uint256) {
-    return _getEmissionsStorage().gmPercentage;
-  }
-
   /// @notice Retrieves the block number when the last emission occurred
   /// @return uint256 The block number of the last emission
   function lastEmissionBlock() public view returns (uint256) {
@@ -656,29 +591,9 @@ contract Emissions is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPS
 
   /// @notice Retrieves the emission details for a specific cycle
   /// @param cycle The cycle number to query
-  /// @return xAllocationsAmount The amount of XAllocations for the specified cycle
-  /// @return vote2EarnAmount The amount of Vote2Earn for the specified cycle
-  /// @return treasuryAmount The amount of Treasury for the specified cycle
-  /// @return gmAmount The amount of GM for the specified cycle
-  function emissions(
-    uint256 cycle
-  )
-    public
-    view
-    returns (uint256 xAllocationsAmount, uint256 vote2EarnAmount, uint256 treasuryAmount, uint256 gmAmount)
-  {
-    EmissionsStorage storage $ = _getEmissionsStorage();
-
-    // Cache the cycle emissions
-    Emission memory cycleEmissions = $.emissions[cycle];
-
-    // Set the emissions
-    xAllocationsAmount = cycleEmissions.xAllocations;
-    vote2EarnAmount = cycleEmissions.vote2Earn;
-    treasuryAmount = cycleEmissions.treasury;
-
-    // Set the GM amount
-    gmAmount = $.gmEmissions[cycle];
+  /// @return Emission A struct containing the allocations for XAllocations, Vote2Earn, and Treasury
+  function emissions(uint256 cycle) public view returns (Emission memory) {
+    return _getEmissionsStorage().emissions[cycle];
   }
 
   function isEmissionsNotAligned() public view returns (bool) {
@@ -689,7 +604,7 @@ contract Emissions is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPS
   /// @dev This function is used to identify the version of the contract and should be overridden in each new version
   /// @return The version of the contract
   function version() public pure virtual returns (string memory) {
-    return "3";
+    return "2";
   }
 
   // ----------- Setters ----------- //
@@ -787,17 +702,6 @@ contract Emissions is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPS
     EmissionsStorage storage $ = _getEmissionsStorage();
     emit TreasuryPercentageUpdated(_percentage, $.treasuryPercentage);
     $.treasuryPercentage = _percentage;
-  }
-
-  /// @notice Sets the GM percentage allocation
-  /// @dev The GM percentage is a value between 0 and 10000, scaled by 100 to allow fractional percentages (87.5% for example)
-  /// @dev Requires admin privileges
-  /// @param _percentage GM percentage (scaled by 100)
-  function setGmPercentage(uint256 _percentage) public virtual onlyRole(DECAY_SETTINGS_MANAGER_ROLE) {
-    require(_percentage <= 10000, "Emissions: GM percentage must be between 0 and 10000");
-    EmissionsStorage storage $ = _getEmissionsStorage();
-    emit GMPercentageUpdated(_percentage, $.gmPercentage);
-    $.gmPercentage = _percentage;
   }
 
   /// @notice Sets the maximum decay rate for Vote2Earn allocations

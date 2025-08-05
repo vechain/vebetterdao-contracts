@@ -17,7 +17,7 @@ import {
   waitForCurrentRoundToEnd,
   waitForRoundToEnd,
 } from "./helpers"
-import { describe, it, beforeEach } from "mocha"
+import { describe, it } from "mocha"
 import { getImplementationAddress } from "@openzeppelin/upgrades-core"
 import { createLocalConfig } from "../config/contracts/envs/local"
 import { createNodeHolder, endorseApp } from "./helpers/xnodes"
@@ -49,7 +49,7 @@ import { clauseBuilder, unitsUtils, type TransactionBody, coder, FunctionFragmen
 import { airdropVTHO } from "../scripts/helpers/airdrop"
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers"
 
-describe("X-Apps - @shard3", function () {
+describe("X-Apps - @shard15", function () {
   // We prepare the environment for 4 creators
   let creator1: HardhatEthersSigner
   let creator2: HardhatEthersSigner

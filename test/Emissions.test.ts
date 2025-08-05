@@ -10,18 +10,16 @@ import {
   waitForNextCycle,
 } from "./helpers"
 import { assert, expect } from "chai"
-import { contract, ethers, network } from "hardhat"
+import { ethers, network } from "hardhat"
 import { calculateTreasuryAllocation } from "./helpers/allocations"
 import { createLocalConfig } from "../config/contracts/envs/local"
 import { createTestConfig } from "./helpers/config"
 import { generateB3trAllocations } from "./helpers/generateB3trAllocations"
 import { getImplementationAddress } from "@openzeppelin/upgrades-core"
-import { deployAndUpgrade, deployProxy, upgradeProxy } from "../scripts/helpers"
+import { deployProxy } from "../scripts/helpers"
 import b3trAllocationsEmissionsDisaligned from "./fixture/full-allocations-round-14-decay.json"
-import b3trAllocationsGMPool from "./fixture/updated-full-allocations-with-gm.json"
-import { Emissions, EmissionsV2 } from "../typechain-types"
 
-describe("Emissions - @shard4", () => {
+describe("Emissions - @shard1", () => {
   describe("Contract parameters", () => {
     it("Should have correct parameters set on deployment", async () => {
       const config = createLocalConfig()
@@ -57,9 +55,6 @@ describe("Emissions - @shard4", () => {
 
       // Treasury percentage should be set correctly
       expect(await emissions.treasuryPercentage()).to.equal(config.EMISSIONS_TREASURY_PERCENTAGE)
-
-      // GM Percentage of Treasury Pool should be set correctly
-      expect(await emissions.gmPercentage()).to.equal(config.GM_PERCENTAGE_OF_TREASURY)
     })
 
     it("Should revert if Treasury is set to zero address in initilisation", async () => {
@@ -331,29 +326,6 @@ describe("Emissions - @shard4", () => {
       expect(eventName).to.equal("TreasuryPercentageUpdated")
 
       await expect(emissions.connect(otherAccount).setTreasuryPercentage(55)).to.be.reverted // Not admin
-    })
-
-    it("GM Percentage of Treasury Pool should be between 0 and 10000", async () => {
-      const { emissions, owner, otherAccount } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      await catchRevert(emissions.connect(owner).setGmPercentage(10001))
-      try {
-        await emissions.connect(owner).setGmPercentage(-1)
-        assert.fail("Should revert")
-      } catch (e) {
-        /* empty */
-      }
-      await emissions.connect(owner).setGmPercentage(10000)
-      await emissions.connect(owner).setGmPercentage(0)
-      const tx = await emissions.connect(owner).setGmPercentage(550)
-      const receipt = await tx.wait()
-
-      const eventName = getEventName(receipt, emissions)
-      expect(eventName).to.equal("GMPercentageUpdated")
-
-      await expect(emissions.connect(otherAccount).setGmPercentage(55)).to.be.reverted // Not admin
     })
 
     it("MaxVote2EarnDecay percentage should be between 0 and 100", async () => {
@@ -651,8 +623,6 @@ describe("Emissions - @shard4", () => {
           migrationAmount: config.MIGRATION_AMOUNT,
         }),
       ).to.be.reverted
-
-      expect(emissions.initializeV3(config.GM_PERCENTAGE_OF_TREASURY)).to.be.reverted
     })
 
     it("Should not be able to deploy with initial X Allocations zero", async () => {
@@ -766,58 +736,6 @@ describe("Emissions - @shard4", () => {
             migrationAmount: config.MIGRATION_AMOUNT,
           },
         ]),
-      ).to.be.reverted
-    })
-
-    it("Should not be able to upgrade with GM percentage not between 1 and 10000", async () => {
-      const config = createLocalConfig()
-      const { owner, minterAccount, b3tr, xAllocationPool, voterRewards, treasury } =
-        await getOrDeployContractInstances({
-          forceDeploy: true,
-        })
-
-      const emissions = (await deployAndUpgrade(
-        ["EmissionsV1", "EmissionsV2"],
-        [
-          [
-            {
-              minter: minterAccount.address,
-              admin: owner.address,
-              upgrader: owner.address,
-              contractsAddressManager: owner.address,
-              decaySettingsManager: owner.address,
-              b3trAddress: await b3tr.getAddress(),
-              destinations: [
-                await xAllocationPool.getAddress(),
-                await voterRewards.getAddress(),
-                await treasury.getAddress(),
-                config.MIGRATION_ADDRESS,
-              ],
-              initialXAppAllocation: config.INITIAL_X_ALLOCATION,
-              cycleDuration: config.EMISSIONS_CYCLE_DURATION,
-              decaySettings: [
-                config.EMISSIONS_X_ALLOCATION_DECAY_PERCENTAGE,
-                config.EMISSIONS_VOTE_2_EARN_DECAY_PERCENTAGE,
-                config.EMISSIONS_X_ALLOCATION_DECAY_PERIOD,
-                config.EMISSIONS_VOTE_2_EARN_ALLOCATION_DECAY_PERIOD,
-              ],
-              treasuryPercentage: config.EMISSIONS_TREASURY_PERCENTAGE,
-              maxVote2EarnDecay: config.EMISSIONS_MAX_VOTE_2_EARN_DECAY_PERCENTAGE,
-              migrationAmount: config.MIGRATION_AMOUNT,
-            },
-          ],
-          [],
-        ],
-        {
-          versions: [undefined, 2],
-          logOutput: false,
-        },
-      )) as EmissionsV2
-
-      await expect(
-        upgradeProxy("EmissionsV2", "Emissions", await emissions.getAddress(), [10001], {
-          version: 3,
-        }),
       ).to.be.reverted
     })
 
@@ -1016,241 +934,13 @@ describe("Emissions - @shard4", () => {
         forceDeploy: true,
       })
 
-      expect(await emissions.version()).to.equal("3")
-    })
-
-    it("Should not have any state conflicts after upgrading to V3", async function () {
-      const config = createTestConfig()
-      const { b3tr, minterAccount, owner, xAllocationPool, voterRewards, treasury, xAllocationVoting } =
-        await getOrDeployContractInstances({
-          forceDeploy: true,
-          config,
-        })
-
-      let emissions = (await deployAndUpgrade(
-        ["EmissionsV1", "EmissionsV2"],
-        [
-          [
-            {
-              minter: minterAccount.address,
-              admin: owner.address,
-              upgrader: owner.address,
-              contractsAddressManager: owner.address,
-              decaySettingsManager: owner.address,
-              b3trAddress: await b3tr.getAddress(),
-              destinations: [
-                await xAllocationPool.getAddress(),
-                await voterRewards.getAddress(),
-                await treasury.getAddress(),
-                config.MIGRATION_ADDRESS,
-              ],
-              initialXAppAllocation: config.INITIAL_X_ALLOCATION,
-              cycleDuration: config.EMISSIONS_CYCLE_DURATION,
-              decaySettings: [
-                config.EMISSIONS_X_ALLOCATION_DECAY_PERCENTAGE,
-                config.EMISSIONS_VOTE_2_EARN_DECAY_PERCENTAGE,
-                config.EMISSIONS_X_ALLOCATION_DECAY_PERIOD,
-                config.EMISSIONS_VOTE_2_EARN_ALLOCATION_DECAY_PERIOD,
-              ],
-              treasuryPercentage: config.EMISSIONS_TREASURY_PERCENTAGE,
-              maxVote2EarnDecay: config.EMISSIONS_MAX_VOTE_2_EARN_DECAY_PERCENTAGE,
-              migrationAmount: config.MIGRATION_AMOUNT,
-            },
-          ],
-          [],
-        ],
-        {
-          versions: [undefined, 2],
-          logOutput: false,
-        },
-      )) as EmissionsV2
-
-      await b3tr.connect(owner).grantRole(await b3tr.MINTER_ROLE(), await emissions.getAddress())
-      await emissions.setXAllocationsGovernorAddress(await xAllocationVoting.getAddress())
-      await xAllocationVoting
-        .connect(owner)
-        .grantRole(await xAllocationVoting.ROUND_STARTER_ROLE(), await emissions.getAddress())
-      // Bootstrap emissions
-      await emissions.connect(minterAccount).bootstrap()
-      // Start emissions
-      await emissions.connect(minterAccount).start()
-
-      // Variables to hold calculated amounts for assertions
-      let xAllocationsAmount = BigInt(0)
-      let vote2EarnAmount = BigInt(0)
-      let treasuryAmount = BigInt(0)
-      let gmAmount = BigInt(0)
-      let _totalEmissions = config.MIGRATION_AMOUNT
-      const cap = await b3tr.cap()
-
-      const b3trAllocations = await generateB3trAllocations(config, "./test/fixture/full-allocations.json")
-      // const b3trAllocations = await generateB3trAllocations(config)
-
-      // Loop through all cycles as simulated in the b3tr emissions spreadsheet
-      for (let i = 0; i < 10; i++) {
-        const allocations = b3trAllocations[i]
-
-        // Calculate decayed amounts
-        xAllocationsAmount = await emissions.getXAllocationAmount(allocations.cycle)
-        vote2EarnAmount = await emissions.getVote2EarnAmount(allocations.cycle)
-        treasuryAmount = await emissions.getTreasuryAmount(allocations.cycle)
-        const totalEmissionsFromContract = await emissions.totalEmissions()
-        _totalEmissions = _totalEmissions + xAllocationsAmount + vote2EarnAmount + treasuryAmount
-        const remainingEmissionsFromContract = await emissions.getRemainingEmissions()
-
-        const emissionsFromContract = await emissions.emissions(allocations.cycle)
-        expect(emissionsFromContract).to.deep.equal([xAllocationsAmount, vote2EarnAmount, treasuryAmount])
-
-        // Log the cycle and amounts for debugging
-        // Uncomment to view the emissions for each cycle
-        // console.log(
-        //   `Cycle ${allocations.cycle}: XAllocations = ${ethers.formatEther(xAllocationsAmount)}, Vote2Earn = ${ethers.formatEther(vote2EarnAmount)}`,
-        //   `Treasury = ${ethers.formatEther(treasuryAmount)} Total Emissions = ${ethers.formatEther(totalEmissionsFromContract)} Remaining Emissions = ${ethers.formatEther(remainingEmissionsFromContract)}`,
-        // )
-
-        // Assert the calculated amounts match the expected amounts from the spreadsheet
-        expect(xAllocationsAmount).to.equal(allocations.xAllocation)
-        expect(vote2EarnAmount).to.equal(allocations.vote2EarnAllocation)
-        expect(treasuryAmount).to.equal(allocations.treasuryAllocation)
-        expect(totalEmissionsFromContract).to.equal(_totalEmissions)
-        expect(remainingEmissionsFromContract).to.equal(cap - totalEmissionsFromContract)
-
-        // Move to next cycle
-        const blockNextCycle = await emissions.getNextCycleBlock()
-        await waitForBlock(Number(blockNextCycle))
-
-        await expect(emissions.distribute())
-          .to.emit(emissions, "EmissionDistributed")
-          .withArgs(
-            allocations.cycle + 1,
-            b3trAllocations[i + 1].xAllocation,
-            b3trAllocations[i + 1].vote2EarnAllocation,
-            b3trAllocations[i + 1].treasuryAllocation,
-          )
-
-        expect(await emissions.getCurrentCycle()).to.equal(allocations.cycle + 1)
-      }
-
-      // Should be on cycle 11
-      expect(await emissions.getCurrentCycle()).to.equal(11)
-
-      let storageSlots = []
-
-      const initialSlot = BigInt("0xa3a4dbdafa3539d2a7f76379fff3516428de5d09ad2bbe195434cac5e7193900") // Slot 0 of Emissions
-
-      for (let i = initialSlot; i < initialSlot + BigInt(100); i++) {
-        storageSlots.push(await ethers.provider.getStorage(await emissions.getAddress(), i))
-      }
-
-      storageSlots = storageSlots.filter(
-        slot => slot !== "0x0000000000000000000000000000000000000000000000000000000000000000",
-      ) // removing empty slots
-
-      // Upgrade contract
-      const emissionsV3 = (await upgradeProxy(
-        "EmissionsV2",
-        "Emissions",
-        await emissions.getAddress(),
-        [config.GM_PERCENTAGE_OF_TREASURY],
-        {
-          version: 3,
-        },
-      )) as unknown as Emissions
-
-      let storageSlotsAfter = []
-
-      for (let i = initialSlot; i < initialSlot + BigInt(100); i++) {
-        storageSlotsAfter.push(await ethers.provider.getStorage(await emissionsV3.getAddress(), i))
-      }
-
-      storageSlotsAfter = storageSlotsAfter.filter(
-        slot => slot !== "0x0000000000000000000000000000000000000000000000000000000000000000",
-      )
-
-      // Check if storage slots are the same after upgrade
-      for (let i = 0; i < storageSlots.length; i++) {
-        expect(storageSlots[i]).to.equal(storageSlotsAfter[i])
-      }
-
-      expect(await emissionsV3.version()).to.equal("3")
-
-      const allocations = b3trAllocations[10]
-
-      // Calculate decayed amounts
-      xAllocationsAmount = await emissionsV3.getXAllocationAmount(allocations.cycle)
-      vote2EarnAmount = await emissionsV3.getVote2EarnAmount(allocations.cycle)
-      treasuryAmount = await emissionsV3.getTreasuryAmount(allocations.cycle)
-      gmAmount = await emissionsV3.getGMAmount(allocations.cycle)
-      expect(gmAmount).to.equal(0n)
-      const totalEmissionsFromContract = await emissionsV3.totalEmissions()
-      _totalEmissions = _totalEmissions + xAllocationsAmount + vote2EarnAmount + treasuryAmount + gmAmount
-      const remainingEmissionsFromContract = await emissionsV3.getRemainingEmissions()
-
-      const emissionsFromContract = await emissionsV3.emissions(allocations.cycle)
-      expect(emissionsFromContract).to.deep.equal([xAllocationsAmount, vote2EarnAmount, treasuryAmount, 0n])
-
-      // Move to next cycle as GM will kick in next cycle
-      const blockNextCycle = await emissionsV3.getNextCycleBlock()
-      await waitForBlock(Number(blockNextCycle))
-
-      // Distribute emissions
-      await emissionsV3.connect(minterAccount).distribute()
-
-      for (let i = 11; i < 20; i++) {
-        const allocations = b3trAllocations[i]
-
-        // Calculate decayed amounts
-        xAllocationsAmount = await emissionsV3.getXAllocationAmount(allocations.cycle)
-        vote2EarnAmount = await emissionsV3.getVote2EarnAmount(allocations.cycle)
-        treasuryAmount = await emissionsV3.getTreasuryAmount(allocations.cycle)
-        gmAmount = await emissionsV3.getGMAmount(allocations.cycle)
-        const totalEmissionsFromContract = await emissionsV3.totalEmissions()
-        _totalEmissions = _totalEmissions + xAllocationsAmount + vote2EarnAmount + treasuryAmount + gmAmount
-        const remainingEmissionsFromContract = await emissionsV3.getRemainingEmissions()
-
-        const emissionsFromContract = await emissionsV3.emissions(allocations.cycle)
-        expect(emissionsFromContract).to.deep.equal([xAllocationsAmount, vote2EarnAmount, treasuryAmount, gmAmount])
-
-        // Log the cycle and amounts for debugging
-        // Uncomment to view the emissions for each cycle
-        // console.log(
-        //   `Cycle ${allocations.cycle}: XAllocations = ${ethers.formatEther(xAllocationsAmount)}, Vote2Earn = ${ethers.formatEther(vote2EarnAmount)}`,
-        //   `Treasury = ${ethers.formatEther(treasuryAmount)} Total Emissions = ${ethers.formatEther(totalEmissionsFromContract)} Remaining Emissions = ${ethers.formatEther(remainingEmissionsFromContract)}`,
-        // )
-
-        // Assert the calculated amounts match the expected amounts from the spreadsheet
-        expect(xAllocationsAmount).to.equal(allocations.xAllocation)
-        expect(vote2EarnAmount).to.equal(allocations.vote2EarnAllocation)
-        // Should be 75% of the treasury allocation
-        expect(treasuryAmount).to.equal((allocations.treasuryAllocation * 75n) / 100n)
-        // Should be 25% of the treasury allocation
-        expect(gmAmount).to.equal((allocations.treasuryAllocation * 25n) / 100n)
-        expect(totalEmissionsFromContract).to.equal(_totalEmissions)
-        expect(remainingEmissionsFromContract).to.equal(cap - totalEmissionsFromContract)
-
-        // Move to next cycle
-        const blockNextCycle = await emissionsV3.getNextCycleBlock()
-        await waitForBlock(Number(blockNextCycle))
-
-        await expect(emissionsV3.distribute())
-          .to.emit(emissionsV3, "EmissionDistributedV2")
-          .withArgs(
-            allocations.cycle + 1,
-            b3trAllocations[i + 1].xAllocation,
-            b3trAllocations[i + 1].vote2EarnAllocation,
-            (b3trAllocations[i + 1].treasuryAllocation * 75n) / 100n,
-            (b3trAllocations[i + 1].treasuryAllocation * 25n) / 100n,
-          )
-
-        expect(await emissionsV3.getCurrentCycle()).to.equal(allocations.cycle + 1)
-      }
+      expect(await emissions.version()).to.equal("2")
     })
   })
 
   describe("Bootstrap emissions", () => {
     it("Should be able to bootstrap emissions", async () => {
       const config = createLocalConfig()
-      config.GM_PERCENTAGE_OF_TREASURY = 0
       const { emissions, b3tr, minterAccount, treasury, owner, xAllocationPool, voterRewards } =
         await getOrDeployContractInstances({
           forceDeploy: true,
@@ -1410,15 +1100,10 @@ describe("Emissions - @shard4", () => {
 
       await emissions.connect(minterAccount).start()
 
-      await waitForNextCycle()
-
-      await emissions.connect(minterAccount).distribute()
-
-      expect(await emissions.emissions(2)).to.eql([
+      expect(await emissions.emissions(1)).to.eql([
         2000000000000000000000000n,
         2000000000000000000000000n,
-        750000000000000000000000n,
-        250000000000000000000000n,
+        1000000000000000000000000n,
       ])
     })
   })
@@ -1426,7 +1111,6 @@ describe("Emissions - @shard4", () => {
   describe("Start emissions", () => {
     it("Should be able to start emissions", async () => {
       const config = createLocalConfig()
-      config.GM_PERCENTAGE_OF_TREASURY = 0
       const { emissions, b3tr, minterAccount, treasury, xAllocationPool, voterRewards } =
         await getOrDeployContractInstances({
           forceDeploy: true,
@@ -1505,7 +1189,6 @@ describe("Emissions - @shard4", () => {
   describe("Emissions distribution", () => {
     it("Should be able to calculate emissions correctly for first cycle", async () => {
       const config = createLocalConfig()
-      config.GM_PERCENTAGE_OF_TREASURY = 0
       const { emissions, b3tr, minterAccount } = await getOrDeployContractInstances({
         forceDeploy: true,
         config,
@@ -1526,7 +1209,7 @@ describe("Emissions - @shard4", () => {
       const xAllocationAmount = await emissions.getXAllocationAmount(2)
       const vote2EarnAmount = await emissions.getVote2EarnAmount(2)
       const treasuryAmount = await emissions.getTreasuryAmount(2)
-      const gmAmount = await emissions.getGMAmount(2)
+
       const initialVoteAllocation = config.INITIAL_X_ALLOCATION
       const initialTreasuryAlloc = calculateTreasuryAllocation(
         config.INITIAL_X_ALLOCATION,
@@ -1537,7 +1220,6 @@ describe("Emissions - @shard4", () => {
       expect(xAllocationAmount).to.equal(config.INITIAL_X_ALLOCATION)
       expect(vote2EarnAmount).to.equal(initialVoteAllocation)
       expect(treasuryAmount).to.equal(initialTreasuryAlloc)
-      expect(gmAmount).to.equal(0n)
 
       // Distribute emissions
       const tx = await emissions.connect(minterAccount).distribute()
@@ -1555,7 +1237,7 @@ describe("Emissions - @shard4", () => {
         })
       })
 
-      const emissionDistributedEvent = decodedEvents.find(event => event?.name === "EmissionDistributedV2")
+      const emissionDistributedEvent = decodedEvents.find(event => event?.name === "EmissionDistributed")
 
       expect(emissionDistributedEvent?.args?.cycle).to.equal(2)
       expect(emissionDistributedEvent?.args.xAllocations).to.equal(xAllocationAmount)
@@ -1602,7 +1284,6 @@ describe("Emissions - @shard4", () => {
 
     it("Should not be able to distribute emissions before next cycle starts", async () => {
       const config = createLocalConfig()
-      config.GM_PERCENTAGE_OF_TREASURY = 0
       const { emissions, minterAccount } = await getOrDeployContractInstances({
         forceDeploy: true,
         config,
@@ -1638,7 +1319,6 @@ describe("Emissions - @shard4", () => {
 
     it("Should be able to calculate emissions correctly for second cycle", async () => {
       const config = createLocalConfig()
-      config.GM_PERCENTAGE_OF_TREASURY = 0
       const { emissions, b3tr, minterAccount } = await getOrDeployContractInstances({
         forceDeploy: true,
         config,
@@ -1705,7 +1385,6 @@ describe("Emissions - @shard4", () => {
 
     it("Should calculate emissions properly after first X-Alloc decay period", async () => {
       const config = createTestConfig()
-      config.GM_PERCENTAGE_OF_TREASURY = 0
       const { emissions, b3tr, minterAccount } = await getOrDeployContractInstances({
         forceDeploy: true,
         config,
@@ -1719,17 +1398,14 @@ describe("Emissions - @shard4", () => {
 
       await waitForNextCycle()
 
-      // Set GM Pool percentage to 25%
-      await emissions.setGmPercentage(2500)
-
       // Distribute emissions
       await emissions.connect(minterAccount).distribute()
 
       // Check supply
       expect(await b3tr.totalSupply()).to.equal(ethers.parseEther("13750000"))
-      expect(await b3tr.balanceOf(await emissions.xAllocations())).to.equal(ethers.parseEther("4000000")) // 2Mill (Cycle 1) + 2Mill (Cycle 2)
-      expect(await b3tr.balanceOf(await emissions.vote2Earn())).to.equal(ethers.parseEther("4250000")) // 2Mill (Cycle 1) + 2Mill (Cycle 2) + 250000 (25% of Treasury, Cycle 2)
-      expect(await b3tr.balanceOf(await emissions.treasury())).to.equal(ethers.parseEther("1750000")) // 1Mill (Cycle 1) + 750000 (75% of Treasury, Cycle 2)
+      expect(await b3tr.balanceOf(await emissions.xAllocations())).to.equal(ethers.parseEther("4000000"))
+      expect(await b3tr.balanceOf(await emissions.vote2Earn())).to.equal(ethers.parseEther("4000000"))
+      expect(await b3tr.balanceOf(await emissions.treasury())).to.equal(ethers.parseEther("2000000"))
       expect(await b3tr.balanceOf(config.MIGRATION_ADDRESS)).to.equal(config.MIGRATION_AMOUNT)
 
       // Move to after first decay period
@@ -1743,22 +1419,21 @@ describe("Emissions - @shard4", () => {
       const xAllocationsAmount = await emissions.getXAllocationAmount(cycle)
       const vote2EarnAmount = await emissions.getVote2EarnAmount(cycle)
       const treasuryAmount = await emissions.getTreasuryAmount(cycle)
-      const gmAmount = await emissions.getGMAmount(cycle)
+
       // Check allocations after decay
-      expect(xAllocationsAmount).to.equal(ethers.parseEther("1920000")) // Decay 4% 2Mill = 1920000
-      expect(vote2EarnAmount).to.equal(ethers.parseEther("1920000")) // Decay 4% 2Mill = 1920000
-      expect(treasuryAmount).to.equal(ethers.parseEther("720000")) // 75% of (25% of 1920000 * 2) = 720000
-      expect(gmAmount).to.equal(ethers.parseEther("240000")) // 25% of (25% of 1920000 * 2) = 240000
+      expect(xAllocationsAmount).to.equal(ethers.parseEther("1920000"))
+      expect(vote2EarnAmount).to.equal(ethers.parseEther("1920000"))
+      expect(treasuryAmount).to.equal(ethers.parseEther("960000"))
+
       // Check supply
-      expect(await b3tr.balanceOf(await emissions.xAllocations())).to.equal(ethers.parseEther("25920000")) // 2Mill (Cycle 1) + 2Mill (Cycle 2) + 1920000 (Cycle 3)
-      expect(await b3tr.balanceOf(await emissions.vote2Earn())).to.equal(ethers.parseEther("28910000")) // 2Mill (Cycle 1) + 2Mill (Cycle 2) + 1920000 (Cycle 3) + 240000 (Cycle 3)
-      expect(await b3tr.balanceOf(await emissions.treasury())).to.equal(ethers.parseEther("9970000"))
+      expect(await b3tr.balanceOf(await emissions.xAllocations())).to.equal(ethers.parseEther("25920000"))
+      expect(await b3tr.balanceOf(await emissions.vote2Earn())).to.equal(ethers.parseEther("25920000"))
+      expect(await b3tr.balanceOf(await emissions.treasury())).to.equal(ethers.parseEther("12960000"))
       expect(await b3tr.totalSupply()).to.equal(ethers.parseEther("68550000"))
     }).timeout(1000 * 60 * 10) // 10 minutes
 
     it("Should calculate emissions properly after first Rewards decay period", async () => {
       const config = createTestConfig()
-      config.GM_PERCENTAGE_OF_TREASURY = 0
       const { emissions, b3tr, minterAccount } = await getOrDeployContractInstances({
         forceDeploy: true,
         config,
@@ -1770,9 +1445,6 @@ describe("Emissions - @shard4", () => {
       // Start emissions
       await emissions.connect(minterAccount).start()
 
-      // Set GM Pool percentage to 25%
-      await emissions.setGmPercentage(2500)
-
       await waitForNextCycle()
 
       // Distribute emissions
@@ -1780,9 +1452,9 @@ describe("Emissions - @shard4", () => {
 
       // Check supply
       expect(await b3tr.totalSupply()).to.equal(ethers.parseEther("13750000"))
-      expect(await b3tr.balanceOf(await emissions.xAllocations())).to.equal(ethers.parseEther("4000000")) // 2Mill (Cycle 1) + 2Mill (Cycle 2)
-      expect(await b3tr.balanceOf(await emissions.vote2Earn())).to.equal(ethers.parseEther("4250000")) // 2Mill (Cycle 1) + 2Mill (Cycle 2) + 250000 (GM Pool, Cycle 2)
-      expect(await b3tr.balanceOf(await emissions.treasury())).to.equal(ethers.parseEther("1750000")) // 1Mill (Cycle 1) + 750000 (75% of Treasury, Cycle 2)
+      expect(await b3tr.balanceOf(await emissions.xAllocations())).to.equal(ethers.parseEther("4000000"))
+      expect(await b3tr.balanceOf(await emissions.vote2Earn())).to.equal(ethers.parseEther("4000000"))
+      expect(await b3tr.balanceOf(await emissions.treasury())).to.equal(ethers.parseEther("2000000"))
       expect(await b3tr.balanceOf(config.MIGRATION_ADDRESS)).to.equal(config.MIGRATION_AMOUNT)
 
       // Move to after first Rewards decay period
@@ -1796,19 +1468,16 @@ describe("Emissions - @shard4", () => {
       const xAllocationsAmount = await emissions.getXAllocationAmount(cycle)
       const vote2EarnAmount = await emissions.getVote2EarnAmount(cycle)
       const treasuryAmount = await emissions.getTreasuryAmount(cycle)
-      const gmAmount = await emissions.getGMAmount(cycle)
 
-      // ----------  Cycle 52  ---------- //
       // Check allocations after decay
-      expect(xAllocationsAmount).to.equal(ethers.parseEther("1698693.12")) // (4% Decay every 12 cycles) -> 2,000,000 * (0.96 ^ 4) = 1,698,693.12
-      expect(vote2EarnAmount).to.equal(ethers.parseEther("1358954.496")) //  (20% decay every 50 cycles) -> 1,698,693.12 * (0.8 ^ 1) = 1,358,954.496
-      expect(treasuryAmount).to.equal(ethers.parseEther("573308.928")) // 1698693.12 + 1358954.496 = 3057647.616 * 0.25 = 764411.904 (Full Treasury) * 0.75 (Portion after GM cut) = 573308.928
-      expect(gmAmount).to.equal(ethers.parseEther("191102.976")) // 764411.904 * 0.25 = 191102.976
+      expect(xAllocationsAmount).to.equal(ethers.parseEther("1698693.12"))
+      expect(vote2EarnAmount).to.equal(ethers.parseEther("1358954.496"))
+      expect(treasuryAmount).to.equal(ethers.parseEther("764411.904"))
 
       // Check supply
       expect(await b3tr.balanceOf(await emissions.xAllocations())).to.equal(ethers.parseEther("95488143.36"))
-      expect(await b3tr.balanceOf(await emissions.vote2Earn())).to.equal(ethers.parseEther("106813188.992"))
-      expect(await b3tr.balanceOf(await emissions.treasury())).to.equal(ethers.parseEther("35994352.768"))
+      expect(await b3tr.balanceOf(await emissions.vote2Earn())).to.equal(ethers.parseEther("95148404.736"))
+      expect(await b3tr.balanceOf(await emissions.treasury())).to.equal(ethers.parseEther("47659137.024"))
       expect(await b3tr.totalSupply()).to.equal(ethers.parseEther("242045685.12"))
     }).timeout(1000 * 60 * 10) // 10 minutes
 
@@ -1823,396 +1492,170 @@ describe("Emissions - @shard4", () => {
       await catchRevert(emissions.connect(otherAccount).start())
     })
 
-    it.skip(
-      "Should be able to perform all cycles till reaching B3TR supply cap and GM pool percentage is 0%",
-      async function () {
-        if (network.name !== "hardhat") {
-          console.log(`\nThe test "${this?.test?.title}" is only supported on hardhat network. Skipping...\n`)
-          return
-        }
-        const config = createTestConfig()
-        config.GM_PERCENTAGE_OF_TREASURY = 0
-        const { emissions, b3tr, minterAccount } = await getOrDeployContractInstances({
-          forceDeploy: true,
-          config,
-        })
+    it("Should be able to perform all cycles till reaching B3TR supply cap", async function () {
+      if (network.name !== "hardhat") {
+        console.log(`\nThe test "${this?.test?.title}" is only supported on hardhat network. Skipping...\n`)
+        return
+      }
+      const config = createTestConfig()
+      const { emissions, b3tr, minterAccount } = await getOrDeployContractInstances({
+        forceDeploy: true,
+        config,
+      })
 
-        // Bootstrap emissions
-        await bootstrapEmissions()
+      // Bootstrap emissions
+      await bootstrapEmissions()
 
-        // Start emissions
-        await emissions.connect(minterAccount).start()
+      // Start emissions
+      await emissions.connect(minterAccount).start()
 
-        // Variables to hold calculated amounts for assertions
-        let xAllocationsAmount = BigInt(0)
-        let vote2EarnAmount = BigInt(0)
-        let treasuryAmount = BigInt(0)
-        let gmAmount = BigInt(0)
-        let _totalEmissions = config.MIGRATION_AMOUNT
-        const cap = await b3tr.cap()
+      // Variables to hold calculated amounts for assertions
+      let xAllocationsAmount = BigInt(0)
+      let vote2EarnAmount = BigInt(0)
+      let treasuryAmount = BigInt(0)
+      let _totalEmissions = config.MIGRATION_AMOUNT
+      const cap = await b3tr.cap()
 
-        const b3trAllocations = await generateB3trAllocations(config, "./test/fixture/full-allocations.json")
-        // const b3trAllocations = await generateB3trAllocations(config)
+      const b3trAllocations = await generateB3trAllocations(config, "./test/fixture/full-allocations.json")
+      // const b3trAllocations = await generateB3trAllocations(config)
 
-        // Loop through all cycles as simulated in the b3tr emissions spreadsheet
-        for (let i = 0; i < b3trAllocations.length; i++) {
-          await waitForNextCycle()
+      // Loop through all cycles as simulated in the b3tr emissions spreadsheet
+      for (let i = 0; i < b3trAllocations.length; i++) {
+        await waitForNextCycle()
 
-          const allocations = b3trAllocations[i]
-
-          // Calculate decayed amounts
-          xAllocationsAmount = await emissions.getXAllocationAmount(allocations.cycle)
-          vote2EarnAmount = await emissions.getVote2EarnAmount(allocations.cycle)
-          treasuryAmount = await emissions.getTreasuryAmount(allocations.cycle)
-          expect(await emissions.getGMAmount(allocations.cycle)).to.equal(0n)
-          const totalEmissionsFromContract = await emissions.totalEmissions()
-          _totalEmissions = _totalEmissions + xAllocationsAmount + vote2EarnAmount + treasuryAmount
-          const remainingEmissionsFromContract = await emissions.getRemainingEmissions()
-
-          // Log the cycle and amounts for debugging
-          // Uncomment to view the emissions for each cycle
-          // console.log(
-          //   `Cycle ${allocations.cycle}: XAllocations = ${ethers.formatEther(xAllocationsAmount)}, Vote2Earn = ${ethers.formatEther(vote2EarnAmount)}`,
-          //   `Treasury = ${ethers.formatEther(treasuryAmount)} Total Emissions = ${ethers.formatEther(totalEmissionsFromContract)} Remaining Emissions = ${ethers.formatEther(remainingEmissionsFromContract)}`,
-          // )
-
-          // Assert the calculated amounts match the expected amounts from the spreadsheet
-          expect(xAllocationsAmount).to.equal(allocations.xAllocation)
-          expect(vote2EarnAmount).to.equal(allocations.vote2EarnAllocation)
-          expect(treasuryAmount).to.equal(allocations.treasuryAllocation)
-          expect(totalEmissionsFromContract).to.equal(_totalEmissions)
-          expect(remainingEmissionsFromContract).to.equal(cap - totalEmissionsFromContract)
-
-          // Don't distribute on the last cycle
-          if (i >= b3trAllocations.length - 1) {
-            // console.log(`Not distributing cycle ${allocations.cycle}`)
-            continue
-          }
-
-          // console.log(`Distributing cycle ${allocations.cycle + 1}`)
-          await emissions.distribute()
-
-          expect(await emissions.getCurrentCycle()).to.equal(allocations.cycle + 1)
-        }
-
-        await catchRevert(emissions.connect(minterAccount).distribute()) // Should not be able to distribute more than the B3TR supply cap
-
-        // Check supply
-        expect(await b3tr.totalSupply()).to.equal(await emissions.totalEmissions()) // 999,884,045.14 B3TR
-      },
-    ).timeout(1000 * 60 * 5) // 5 minutes
-
-    it.skip(
-      "Should be able to perform all cycles till reaching B3TR supply cap with Emissions alignment",
-      async function () {
-        const config = createTestConfig()
-        const { emissions, b3tr, minterAccount } = await getOrDeployContractInstances({
-          forceDeploy: true,
-          config: {
-            ...config,
-            EMISSIONS_IS_NOT_ALIGNED: true,
-            EMISSIONS_X_ALLOCATION_DECAY_PERIOD: 912, // Erroneous value to replicate mainnet configuration
-          },
-        })
-
-        expect(await emissions.isEmissionsNotAligned()).to.equal(true)
-
-        // Bootstrap emissions
-        await bootstrapEmissions()
-
-        // Start emissions
-        await emissions.connect(minterAccount).start()
-
-        // Variables to hold calculated amounts for assertions
-        let xAllocationsAmount = BigInt(0)
-        let vote2EarnAmount = BigInt(0)
-        let treasuryAmount = BigInt(0)
-        let _totalEmissions = config.MIGRATION_AMOUNT
-        const cap = await b3tr.cap()
-
-        const b3trAllocations = b3trAllocationsEmissionsDisaligned
-
-        // Loop through all cycles as simulated in the b3tr emissions spreadsheet
-        for (let i = 0; i < b3trAllocations.length; i++) {
-          await waitForNextCycle()
-
-          const allocations = b3trAllocations[i]
-
-          // Calculate decayed amounts
-          xAllocationsAmount = await emissions.getXAllocationAmount(allocations.cycle)
-          vote2EarnAmount = await emissions.getVote2EarnAmount(allocations.cycle)
-          treasuryAmount = await emissions.getTreasuryAmount(allocations.cycle)
-          const totalEmissionsFromContract = await emissions.totalEmissions()
-          _totalEmissions = _totalEmissions + xAllocationsAmount + vote2EarnAmount + treasuryAmount
-          const remainingEmissionsFromContract = await emissions.getRemainingEmissions()
-
-          // Log the cycle and amounts for debugging
-          // Uncomment to view the emissions for each cycle
-          // console.log(
-          //   `Cycle ${allocations.cycle}: XAllocations = ${ethers.formatEther(xAllocationsAmount)}, Vote2Earn = ${ethers.formatEther(vote2EarnAmount)}`,
-          //   `Treasury = ${ethers.formatEther(treasuryAmount)} Total Emissions = ${ethers.formatEther(totalEmissionsFromContract)} Remaining Emissions = ${ethers.formatEther(remainingEmissionsFromContract)}`,
-          // )
-
-          // Assert the calculated amounts match the expected amounts from the spreadsheet
-          expect(xAllocationsAmount).to.equal(allocations.xAllocation)
-          expect(vote2EarnAmount).to.equal(allocations.vote2EarnAllocation)
-          expect(treasuryAmount).to.equal(allocations.treasuryAllocation)
-          expect(totalEmissionsFromContract).to.equal(_totalEmissions)
-          expect(remainingEmissionsFromContract).to.equal(cap - totalEmissionsFromContract)
-
-          // Don't distribute on the last cycle
-          if (i >= b3trAllocations.length - 1) {
-            // console.log(`Not distributing cycle ${allocations.cycle}`)
-            continue
-          }
-
-          // console.log(`Distributing cycle ${allocations.cycle + 1}`)
-          await emissions.distribute()
-
-          expect(await emissions.getCurrentCycle()).to.equal(allocations.cycle + 1)
-
-          // Replicate mainnet transaction setting the correct decay period for the XAllocations
-          if ((await emissions.getCurrentCycle()) === BigInt(13)) {
-            await emissions.setXAllocationsDecayPeriod(12)
-          }
-
-          xAllocationsAmount = await emissions.getXAllocationAmount(allocations.cycle)
-          vote2EarnAmount = await emissions.getVote2EarnAmount(allocations.cycle)
-          treasuryAmount = await emissions.getTreasuryAmount(allocations.cycle)
-          expect(xAllocationsAmount).to.equal(allocations.xAllocation)
-          expect(vote2EarnAmount).to.equal(allocations.vote2EarnAllocation)
-          expect(treasuryAmount).to.equal(allocations.treasuryAllocation)
-        }
-
-        await catchRevert(emissions.connect(minterAccount).distribute()) // Should not be able to distribute more than the B3TR supply cap
-
-        // Check supply
-        expect(await b3tr.totalSupply()).to.equal(await emissions.totalEmissions())
-
-        console.log(`Total emissions: ${ethers.formatEther(await emissions.totalEmissions())}`)
-      },
-    ).timeout(1000 * 60 * 10) // 10 minutes
-
-    it.skip(
-      "Should be able to perform all cycles till reaching B3TR supply cap with GM Pool in cycle 44 added and GM Pool percentage is 25%",
-      async function () {
-        const config = createTestConfig()
-        config.GM_PERCENTAGE_OF_TREASURY = 2500
-        config.EMISSIONS_IS_NOT_ALIGNED = true
-        config.EMISSIONS_X_ALLOCATION_DECAY_PERIOD = 912 // Erroneous value to replicate mainnet configuration
-
-        const { b3tr, minterAccount, xAllocationPool, voterRewards, treasury, owner, xAllocationVoting } =
-          await getOrDeployContractInstances({
-            forceDeploy: true,
-            config,
-          })
-
-        const emissions = (await deployAndUpgrade(
-          ["EmissionsV1", "EmissionsV2"],
-          [
-            [
-              {
-                minter: minterAccount.address,
-                admin: owner.address,
-                upgrader: owner.address,
-                contractsAddressManager: owner.address,
-                decaySettingsManager: owner.address,
-                b3trAddress: await b3tr.getAddress(),
-                destinations: [
-                  await xAllocationPool.getAddress(),
-                  await voterRewards.getAddress(),
-                  await treasury.getAddress(),
-                  config.MIGRATION_ADDRESS,
-                ],
-                initialXAppAllocation: config.INITIAL_X_ALLOCATION,
-                cycleDuration: config.EMISSIONS_CYCLE_DURATION,
-                decaySettings: [
-                  config.EMISSIONS_X_ALLOCATION_DECAY_PERCENTAGE,
-                  config.EMISSIONS_VOTE_2_EARN_DECAY_PERCENTAGE,
-                  config.EMISSIONS_X_ALLOCATION_DECAY_PERIOD,
-                  config.EMISSIONS_VOTE_2_EARN_ALLOCATION_DECAY_PERIOD,
-                ],
-                treasuryPercentage: config.EMISSIONS_TREASURY_PERCENTAGE,
-                maxVote2EarnDecay: config.EMISSIONS_MAX_VOTE_2_EARN_DECAY_PERCENTAGE,
-                migrationAmount: config.MIGRATION_AMOUNT,
-              },
-            ],
-            [config.EMISSIONS_IS_NOT_ALIGNED],
-          ],
-          {
-            versions: [undefined, 2],
-            logOutput: false,
-          },
-        )) as EmissionsV2
-
-        await b3tr.connect(owner).grantRole(await b3tr.MINTER_ROLE(), await emissions.getAddress())
-
-        await emissions.setXAllocationsGovernorAddress(await xAllocationVoting.getAddress())
-
-        await xAllocationVoting
-          .connect(owner)
-          .grantRole(await xAllocationVoting.ROUND_STARTER_ROLE(), await emissions.getAddress())
-
-        // Bootstrap emissions
-
-        expect(await emissions.isEmissionsNotAligned()).to.equal(true)
-
-        // Bootstrap emissions
-        await emissions.connect(minterAccount).bootstrap()
-
-        // Start emissions
-        await emissions.connect(minterAccount).start()
-
-        // Variables to hold calculated amounts for assertions
-        let xAllocationsAmount = BigInt(0)
-        let vote2EarnAmount = BigInt(0)
-        let treasuryAmount = BigInt(0)
-        let gmAmount = BigInt(0)
-        let _totalEmissions = config.MIGRATION_AMOUNT
-        const cap = await b3tr.cap()
-
-        const b3trAllocations = b3trAllocationsGMPool
-
-        // Loop through all cycles as simulated in the b3tr emissions spreadsheet
-        for (let i = 0; i < 42; i++) {
-          const blockNextCycle = await emissions.getNextCycleBlock()
-          await waitForBlock(Number(blockNextCycle))
-
-          const allocations = b3trAllocations[i]
-
-          // Calculate decayed amounts
-          xAllocationsAmount = await emissions.getXAllocationAmount(allocations.cycle)
-          vote2EarnAmount = await emissions.getVote2EarnAmount(allocations.cycle)
-          treasuryAmount = await emissions.getTreasuryAmount(allocations.cycle)
-          const totalEmissionsFromContract = await emissions.totalEmissions()
-          _totalEmissions = _totalEmissions + xAllocationsAmount + vote2EarnAmount + treasuryAmount
-          const remainingEmissionsFromContract = await emissions.getRemainingEmissions()
-
-          // Log the cycle and amounts for debugging
-          // Uncomment to view the emissions for each cycle
-          // console.log(
-          //   `Cycle ${allocations.cycle}: XAllocations = ${ethers.formatEther(xAllocationsAmount)}, Vote2Earn = ${ethers.formatEther(vote2EarnAmount)}`,
-          //   `Treasury = ${ethers.formatEther(treasuryAmount)} Total Emissions = ${ethers.formatEther(totalEmissionsFromContract)} Remaining Emissions = ${ethers.formatEther(remainingEmissionsFromContract)}`,
-          // )
-
-          // Assert the calculated amounts match the expected amounts from the spreadsheet
-          expect(xAllocationsAmount).to.equal(allocations.xAllocation)
-          expect(vote2EarnAmount).to.equal(allocations.vote2EarnAllocation)
-          expect(treasuryAmount).to.equal(allocations.treasuryAllocation)
-          expect(totalEmissionsFromContract).to.equal(_totalEmissions)
-          expect(remainingEmissionsFromContract).to.equal(cap - totalEmissionsFromContract)
-
-          await emissions.distribute()
-
-          expect(await emissions.getCurrentCycle()).to.equal(allocations.cycle + 1)
-
-          // Replicate mainnet transaction setting the correct decay period for the XAllocations
-          if ((await emissions.getCurrentCycle()) === BigInt(13)) {
-            await emissions.setXAllocationsDecayPeriod(12)
-          }
-
-          xAllocationsAmount = await emissions.getXAllocationAmount(allocations.cycle)
-          vote2EarnAmount = await emissions.getVote2EarnAmount(allocations.cycle)
-          treasuryAmount = await emissions.getTreasuryAmount(allocations.cycle)
-          expect(xAllocationsAmount).to.equal(allocations.xAllocation)
-          expect(vote2EarnAmount).to.equal(allocations.vote2EarnAllocation)
-          expect(treasuryAmount).to.equal(allocations.treasuryAllocation)
-        }
-
-        // Next cycle should be 44
-        expect(await emissions.getCurrentCycle()).to.equal(43)
-        // Upgrade contract
-        const emissionsV3 = (await upgradeProxy(
-          "EmissionsV2",
-          "Emissions",
-          await emissions.getAddress(),
-          [config.GM_PERCENTAGE_OF_TREASURY],
-          {
-            version: 3,
-          },
-        )) as unknown as Emissions
-
-        expect(await emissionsV3.version()).to.equal("3")
-
-        const allocations = b3trAllocations[42]
+        const allocations = b3trAllocations[i]
 
         // Calculate decayed amounts
-        xAllocationsAmount = await emissionsV3.getXAllocationAmount(allocations.cycle)
-        vote2EarnAmount = await emissionsV3.getVote2EarnAmount(allocations.cycle)
-        treasuryAmount = await emissionsV3.getTreasuryAmount(allocations.cycle)
-        gmAmount = await emissionsV3.getGMAmount(allocations.cycle)
-        expect(gmAmount).to.equal(0n)
-        const totalEmissionsFromContract = await emissionsV3.totalEmissions()
-        _totalEmissions = _totalEmissions + xAllocationsAmount + vote2EarnAmount + treasuryAmount + gmAmount
-        const remainingEmissionsFromContract = await emissionsV3.getRemainingEmissions()
+        xAllocationsAmount = await emissions.getXAllocationAmount(allocations.cycle)
+        vote2EarnAmount = await emissions.getVote2EarnAmount(allocations.cycle)
+        treasuryAmount = await emissions.getTreasuryAmount(allocations.cycle)
+        const totalEmissionsFromContract = await emissions.totalEmissions()
+        _totalEmissions = _totalEmissions + xAllocationsAmount + vote2EarnAmount + treasuryAmount
+        const remainingEmissionsFromContract = await emissions.getRemainingEmissions()
 
-        // Move to next cycle as GM will kick in next cycle
-        let blockNextCycle = await emissionsV3.getNextCycleBlock()
-        await waitForBlock(Number(blockNextCycle))
+        // Log the cycle and amounts for debugging
+        // Uncomment to view the emissions for each cycle
+        // console.log(
+        //   `Cycle ${allocations.cycle}: XAllocations = ${ethers.formatEther(xAllocationsAmount)}, Vote2Earn = ${ethers.formatEther(vote2EarnAmount)}`,
+        //   `Treasury = ${ethers.formatEther(treasuryAmount)} Total Emissions = ${ethers.formatEther(totalEmissionsFromContract)} Remaining Emissions = ${ethers.formatEther(remainingEmissionsFromContract)}`,
+        // )
 
-        // Distribute emissions
-        await emissionsV3.connect(minterAccount).distribute()
+        // Assert the calculated amounts match the expected amounts from the spreadsheet
+        expect(xAllocationsAmount).to.equal(allocations.xAllocation)
+        expect(vote2EarnAmount).to.equal(allocations.vote2EarnAllocation)
+        expect(treasuryAmount).to.equal(allocations.treasuryAllocation)
+        expect(totalEmissionsFromContract).to.equal(_totalEmissions)
+        expect(remainingEmissionsFromContract).to.equal(cap - totalEmissionsFromContract)
 
-        // Loop through all cycles as simulated in the b3tr emissions spreadsheet
-        for (let i = 43; i < b3trAllocations.length; i++) {
-          const allocations = b3trAllocations[i]
-
-          // Calculate decayed amounts
-          xAllocationsAmount = await emissionsV3.getXAllocationAmount(allocations.cycle)
-          vote2EarnAmount = await emissionsV3.getVote2EarnAmount(allocations.cycle)
-          treasuryAmount = await emissionsV3.getTreasuryAmount(allocations.cycle)
-          gmAmount = await emissionsV3.getGMAmount(allocations.cycle)
-          const totalEmissionsFromContract = await emissionsV3.totalEmissions()
-          _totalEmissions = _totalEmissions + xAllocationsAmount + vote2EarnAmount + treasuryAmount + gmAmount
-          const remainingEmissionsFromContract = await emissionsV3.getRemainingEmissions()
-
-          // Log the cycle and amounts for debugging
-          // Uncomment to view the emissions for each cycle
-          // console.log(
-          //   `Cycle ${allocations.cycle}: XAllocations = ${ethers.formatEther(xAllocationsAmount)}, Vote2Earn = ${ethers.formatEther(vote2EarnAmount)}`,
-          //   `Treasury = ${ethers.formatEther(treasuryAmount)} Total Emissions = ${ethers.formatEther(totalEmissionsFromContract)} Remaining Emissions = ${ethers.formatEther(remainingEmissionsFromContract)}`,
-          // )
-
-          // Assert the calculated amounts match the expected amounts from the spreadsheet
-          expect(xAllocationsAmount).to.equal(allocations.xAllocation)
-          expect(vote2EarnAmount).to.equal(allocations.vote2EarnAllocation)
-          expect(treasuryAmount).to.equal(allocations.treasuryAllocation)
-          expect(gmAmount).to.equal(allocations.gmAllocation)
-          expect(totalEmissionsFromContract).to.equal(_totalEmissions)
-          expect(remainingEmissionsFromContract).to.equal(cap - totalEmissionsFromContract)
-
-          // Don't distribute on the last cycle
-          if (i >= b3trAllocations.length - 1) {
-            // console.log(`Not distributing cycle ${allocations.cycle}`)
-            continue
-          }
-
-          blockNextCycle = await emissionsV3.getNextCycleBlock()
-          await waitForBlock(Number(blockNextCycle))
-
-          await emissionsV3.distribute()
-
-          expect(await emissionsV3.getCurrentCycle()).to.equal(allocations.cycle + 1)
-
-          xAllocationsAmount = await emissionsV3.getXAllocationAmount(allocations.cycle)
-          vote2EarnAmount = await emissionsV3.getVote2EarnAmount(allocations.cycle)
-          treasuryAmount = await emissionsV3.getTreasuryAmount(allocations.cycle)
-          gmAmount = await emissionsV3.getGMAmount(allocations.cycle)
-
-          expect(xAllocationsAmount).to.equal(allocations.xAllocation)
-          expect(vote2EarnAmount).to.equal(allocations.vote2EarnAllocation)
-          expect(treasuryAmount).to.equal(allocations.treasuryAllocation)
-          expect(gmAmount).to.equal(allocations.gmAllocation)
+        // Don't distribute on the last cycle
+        if (i >= b3trAllocations.length - 1) {
+          // console.log(`Not distributing cycle ${allocations.cycle}`)
+          continue
         }
 
-        await catchRevert(emissions.connect(minterAccount).distribute()) // Should not be able to distribute more than the B3TR supply cap
+        // console.log(`Distributing cycle ${allocations.cycle + 1}`)
+        await emissions.distribute()
 
-        // Check supply
-        expect(await b3tr.totalSupply()).to.equal(await emissions.totalEmissions())
+        expect(await emissions.getCurrentCycle()).to.equal(allocations.cycle + 1)
+      }
 
-        console.log(`Total emissions: ${ethers.formatEther(await emissions.totalEmissions())}`)
-      },
-    ).timeout(1000 * 60 * 10) // 10 minutes
+      await catchRevert(emissions.connect(minterAccount).distribute()) // Should not be able to distribute more than the B3TR supply cap
+
+      // Check supply
+      expect(await b3tr.totalSupply()).to.equal(await emissions.totalEmissions()) // 999,884,045.14 B3TR
+    }).timeout(1000 * 60 * 5) // 5 minutes
+
+    it("Should be able to perform all cycles till reaching B3TR supply cap with Emissions alignment", async function () {
+      if (network.name !== "hardhat") {
+        console.log(`\nThe test "${this?.test?.title}" is only supported on hardhat network. Skipping...\n`)
+        return
+      }
+      const config = createTestConfig()
+      const { emissions, b3tr, minterAccount } = await getOrDeployContractInstances({
+        forceDeploy: true,
+        config: {
+          ...config,
+          EMISSIONS_IS_NOT_ALIGNED: true,
+          EMISSIONS_X_ALLOCATION_DECAY_PERIOD: 912, // Erroneous value to replicate mainnet configuration
+        },
+      })
+
+      expect(await emissions.isEmissionsNotAligned()).to.equal(true)
+
+      // Bootstrap emissions
+      await bootstrapEmissions()
+
+      // Start emissions
+      await emissions.connect(minterAccount).start()
+
+      // Variables to hold calculated amounts for assertions
+      let xAllocationsAmount = BigInt(0)
+      let vote2EarnAmount = BigInt(0)
+      let treasuryAmount = BigInt(0)
+      let _totalEmissions = config.MIGRATION_AMOUNT
+      const cap = await b3tr.cap()
+
+      const b3trAllocations = b3trAllocationsEmissionsDisaligned
+
+      // Loop through all cycles as simulated in the b3tr emissions spreadsheet
+      for (let i = 0; i < b3trAllocations.length; i++) {
+        await waitForNextCycle()
+
+        const allocations = b3trAllocations[i]
+
+        // Calculate decayed amounts
+        xAllocationsAmount = await emissions.getXAllocationAmount(allocations.cycle)
+        vote2EarnAmount = await emissions.getVote2EarnAmount(allocations.cycle)
+        treasuryAmount = await emissions.getTreasuryAmount(allocations.cycle)
+        const totalEmissionsFromContract = await emissions.totalEmissions()
+        _totalEmissions = _totalEmissions + xAllocationsAmount + vote2EarnAmount + treasuryAmount
+        const remainingEmissionsFromContract = await emissions.getRemainingEmissions()
+
+        // Log the cycle and amounts for debugging
+        // Uncomment to view the emissions for each cycle
+        // console.log(
+        //   `Cycle ${allocations.cycle}: XAllocations = ${ethers.formatEther(xAllocationsAmount)}, Vote2Earn = ${ethers.formatEther(vote2EarnAmount)}`,
+        //   `Treasury = ${ethers.formatEther(treasuryAmount)} Total Emissions = ${ethers.formatEther(totalEmissionsFromContract)} Remaining Emissions = ${ethers.formatEther(remainingEmissionsFromContract)}`,
+        // )
+
+        // Assert the calculated amounts match the expected amounts from the spreadsheet
+        expect(xAllocationsAmount).to.equal(allocations.xAllocation)
+        expect(vote2EarnAmount).to.equal(allocations.vote2EarnAllocation)
+        expect(treasuryAmount).to.equal(allocations.treasuryAllocation)
+        expect(totalEmissionsFromContract).to.equal(_totalEmissions)
+        expect(remainingEmissionsFromContract).to.equal(cap - totalEmissionsFromContract)
+
+        // Don't distribute on the last cycle
+        if (i >= b3trAllocations.length - 1) {
+          // console.log(`Not distributing cycle ${allocations.cycle}`)
+          continue
+        }
+
+        // console.log(`Distributing cycle ${allocations.cycle + 1}`)
+        await emissions.distribute()
+
+        expect(await emissions.getCurrentCycle()).to.equal(allocations.cycle + 1)
+
+        // Replicate mainnet transaction setting the correct decay period for the XAllocations
+        if ((await emissions.getCurrentCycle()) === BigInt(13)) {
+          await emissions.setXAllocationsDecayPeriod(12)
+        }
+
+        xAllocationsAmount = await emissions.getXAllocationAmount(allocations.cycle)
+        vote2EarnAmount = await emissions.getVote2EarnAmount(allocations.cycle)
+        treasuryAmount = await emissions.getTreasuryAmount(allocations.cycle)
+        expect(xAllocationsAmount).to.equal(allocations.xAllocation)
+        expect(vote2EarnAmount).to.equal(allocations.vote2EarnAllocation)
+        expect(treasuryAmount).to.equal(allocations.treasuryAllocation)
+      }
+
+      await catchRevert(emissions.connect(minterAccount).distribute()) // Should not be able to distribute more than the B3TR supply cap
+
+      // Check supply
+      expect(await b3tr.totalSupply()).to.equal(await emissions.totalEmissions())
+
+      console.log(`Total emissions: ${ethers.formatEther(await emissions.totalEmissions())}`)
+    }).timeout(1000 * 60 * 10) // 10 minutes
 
     it("Should not be able to distribute if cycle is not ready", async () => {
       const { emissions, minterAccount } = await getOrDeployContractInstances({

@@ -1,6 +1,6 @@
 import { ethers, network } from "hardhat"
-import { B3TR, Emissions, GalaxyMember, VeBetterPassport, XAllocationVoting } from "../../typechain-types"
-import { BaseContract, ContractFactory, ContractTransactionResponse, AddressLike } from "ethers"
+import { B3TR, GalaxyMember, VeBetterPassport } from "../../typechain-types"
+import { BaseContract, ContractFactory, ContractTransactionResponse } from "ethers"
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers"
 import { getOrDeployContractInstances } from "./deploy"
 import { mine } from "@nomicfoundation/hardhat-network-helpers"
@@ -9,9 +9,8 @@ import { type TransactionClause, type TransactionBody } from "@vechain/sdk-core"
 import { ZERO_ADDRESS } from "./const"
 import { buildTxBody, signAndSendTx } from "../../scripts/helpers/txHelper"
 import { getTestKeys } from "../../scripts/helpers/seedAccounts"
-import { endorseApp } from "./xnodes"
+import { endorseApp } from "."
 import { time } from "@nomicfoundation/hardhat-network-helpers"
-import { createLocalConfig } from "../../config/contracts/envs/local"
 
 export const waitForNextBlock = async () => {
   if (network.name === "hardhat") {
@@ -161,12 +160,8 @@ export const waitForVotingPeriodToEnd = async (proposalId: number) => {
   await moveBlocks(parseInt((deadline - currentBlock + BigInt(1)).toString()))
 }
 
-export const waitForRoundToEnd = async (roundId: number | BigInt, xAllocationVoting?: XAllocationVoting) => {
-  const instance = await getOrDeployContractInstances({
-    forceDeploy: false,
-  })
-
-  if (!xAllocationVoting) xAllocationVoting = instance.xAllocationVoting as XAllocationVoting
+export const waitForRoundToEnd = async (roundId: number | BigInt) => {
+  const { xAllocationVoting } = await getOrDeployContractInstances({})
 
   if (typeof roundId === "bigint") roundId = parseInt(roundId.toString())
   if (typeof roundId !== "number") throw new Error("Invalid roundId")
@@ -230,19 +225,6 @@ export const getVot3Tokens = async (receiver: HardhatEthersSigner, amount: strin
 
   // Lock B3TR to get VOT3
   await vot3.connect(receiver).convertToVOT3(ethers.parseEther(amount))
-}
-
-export const updateGMMultipliers = async () => {
-  const config = createLocalConfig()
-  const { voterRewards, owner } = await getOrDeployContractInstances({})
-
-  for (let i = 0; i < config.VOTER_REWARDS_LEVELS_V2.length; i++) {
-    const level = config.VOTER_REWARDS_LEVELS_V2[i]
-    const multiplier = config.GM_MULTIPLIERS_V2[i]
-
-    // Update the multiplier for the level
-    await voterRewards.connect(owner).setLevelToMultiplier(level, multiplier)
-  }
 }
 
 export const createProposalAndExecuteIt = async (
@@ -394,26 +376,6 @@ export const createProposalWithMultipleFunctionsAndExecuteIt = async (
   )
 }
 
-export const addAppThroughGovernance = async (
-  proposer: HardhatEthersSigner,
-  voter: HardhatEthersSigner,
-  appName: string = "Bike 4 Life" + Math.random(),
-  appAddress: string,
-  metadataURI: string = "metadataURI",
-) => {
-  const { xAllocationVoting } = await getOrDeployContractInstances({})
-
-  await createProposalAndExecuteIt(
-    proposer,
-    voter,
-    xAllocationVoting,
-    await ethers.getContractFactory("XAllocationVoting"),
-    "Add app to the list",
-    "addApp",
-    [appAddress, appAddress, appName, metadataURI],
-  )
-}
-
 export const waitForBlock = async (blockNumber: number) => {
   const currentBlock = await ethers.provider.getBlock(await ethers.provider.getBlockNumber())
 
@@ -427,9 +389,8 @@ export const waitForBlock = async (blockNumber: number) => {
   }
 }
 
-export const waitForNextCycle = async (emissions?: Emissions) => {
-  const instance = await getOrDeployContractInstances({})
-  if (!emissions) emissions = instance.emissions as Emissions
+export const waitForNextCycle = async () => {
+  const { emissions } = await getOrDeployContractInstances({})
 
   const blockNextCycle = await emissions.getNextCycleBlock()
 
@@ -457,12 +418,8 @@ export const voteOnApps = async (
   voters: HardhatEthersSigner[],
   votes: Array<Array<bigint>>,
   roundId: bigint,
-  xAllocationVoting?: XAllocationVoting,
-  veBetterPassport?: VeBetterPassport,
 ) => {
-  const instance = await getOrDeployContractInstances({})
-  if (!veBetterPassport) veBetterPassport = instance.veBetterPassport as VeBetterPassport
-  if (!xAllocationVoting) xAllocationVoting = instance.xAllocationVoting as XAllocationVoting
+  const { xAllocationVoting, veBetterPassport } = await getOrDeployContractInstances({})
 
   if ((await veBetterPassport.isCheckEnabled(1)) === false) await veBetterPassport.toggleCheck(1)
 
@@ -492,15 +449,14 @@ export const voteOnApps = async (
 }
 
 export const addAppsToAllocationVoting = async (apps: string[], owner: HardhatEthersSigner) => {
-  const { x2EarnApps, otherAccounts } = await getOrDeployContractInstances({})
+  const { x2EarnApps } = await getOrDeployContractInstances({})
 
-  let appIds: string[] = []
-  let i = 0
+  const appIds: string[] = []
   for (const app of apps) {
     await x2EarnApps.connect(owner).submitApp(app, app, app, "metadataURI")
-    const appId = await x2EarnApps.hashAppName(app)
+    const appId = ethers.keccak256(ethers.toUtf8Bytes(app))
+    await endorseApp(appId, owner)
     appIds.push(appId)
-    endorseApp(appId, otherAccounts[i])
   }
 
   return appIds
@@ -525,15 +481,15 @@ export const calculateBaseAllocationOffChain = async (roundId: number) => {
   const { emissions, xAllocationVoting } = await getOrDeployContractInstances({})
 
   // Amount available for this round (assuming the amount is already scaled by 1e18 for precision)
-  let totalAmount = await emissions.getXAllocationAmount(roundId)
+  const totalAmount = await emissions.getXAllocationAmount(roundId)
 
-  let elegibleApps = await xAllocationVoting.getAppIdsOfRound(roundId)
+  const elegibleApps = await xAllocationVoting.getAppIdsOfRound(roundId)
 
   const baseAllcoationPercentage = await xAllocationVoting.getRoundBaseAllocationPercentage(roundId)
 
-  let remaining = (totalAmount * baseAllcoationPercentage) / BigInt(100)
+  const remaining = (totalAmount * baseAllcoationPercentage) / BigInt(100)
 
-  let amountPerApp = remaining / BigInt(elegibleApps.length)
+  const amountPerApp = remaining / BigInt(elegibleApps.length)
 
   return amountPerApp
 }
@@ -542,14 +498,14 @@ export const calculateVariableAppAllocationOffChain = async (roundId: number, ap
   const { emissions, xAllocationVoting, xAllocationPool } = await getOrDeployContractInstances({})
 
   // Amount available for this round (assuming the amount is already scaled by 1e18 for precision)
-  let totalAmount = await emissions.getXAllocationAmount(roundId)
+  const totalAmount = await emissions.getXAllocationAmount(roundId)
 
-  let totalAvailable =
+  const totalAvailable =
     (totalAmount * (BigInt(100) - (await xAllocationVoting.getRoundBaseAllocationPercentage(roundId)))) / BigInt(100)
 
   const roundAppShares = await xAllocationPool.getAppShares(roundId, appId)
 
-  let appShares = roundAppShares[0] / BigInt(100)
+  const appShares = roundAppShares[0] / BigInt(100)
 
   return (totalAvailable * appShares) / BigInt(100)
 }
@@ -558,14 +514,14 @@ export const calculateUnallocatedAppAllocationOffChain = async (roundId: number,
   const { emissions, xAllocationVoting, xAllocationPool } = await getOrDeployContractInstances({})
 
   // Amount available for this round (assuming the amount is already scaled by 1e18 for precision)
-  let totalAmount = await emissions.getXAllocationAmount(roundId)
+  const totalAmount = await emissions.getXAllocationAmount(roundId)
 
-  let totalAvailable =
+  const totalAvailable =
     (totalAmount * (BigInt(100) - (await xAllocationVoting.getRoundBaseAllocationPercentage(roundId)))) / BigInt(100)
 
   const roundAppShares = await xAllocationPool.getAppShares(roundId, appId)
 
-  let appShares = roundAppShares[1] / BigInt(100)
+  const appShares = roundAppShares[1] / BigInt(100)
 
   return (totalAvailable * appShares) / BigInt(100)
 }
@@ -694,40 +650,6 @@ export const upgradeNFTtoLevel = async (
   }
 }
 
-export const upgradeNFTtoNextLevel = async (
-  tokenId: number,
-  nft: GalaxyMember,
-  b3tr: B3TR,
-  owner: HardhatEthersSigner,
-  minter: HardhatEthersSigner,
-) => {
-  const b3trToUpgrade = await nft.getB3TRtoUpgrade(tokenId)
-
-  await b3tr.connect(minter).mint(owner.address, b3trToUpgrade)
-
-  await b3tr.connect(owner).approve(await nft.getAddress(), b3trToUpgrade)
-
-  await nft.connect(owner).upgrade(tokenId)
-}
-
-/**
- * Helper function to get storage slots.
- * @param contractAddress The address of the contract.
- * @param initialSlots The initial storage slots.
- * @returns Array of storage slots.
- */
-export const getStorageSlots = async (contractAddress: AddressLike, ...initialSlots: bigint[]) => {
-  const slots = []
-
-  for (const initialSlot of initialSlots) {
-    for (let i = initialSlot; i < initialSlot + BigInt(100); i++) {
-      slots.push(await ethers.provider.getStorage(contractAddress, i))
-    }
-  }
-
-  return slots.filter(slot => slot !== "0x0000000000000000000000000000000000000000000000000000000000000000") // Removing empty slots
-}
-
 export const addNodeToken = async (
   level: number,
   owner: HardhatEthersSigner,
@@ -757,6 +679,22 @@ export const addNodeToken = async (
   ]
 }
 
+export const upgradeNFTtoNextLevel = async (
+  tokenId: number,
+  nft: GalaxyMember,
+  b3tr: B3TR,
+  owner: HardhatEthersSigner,
+  minter: HardhatEthersSigner,
+) => {
+  const b3trToUpgrade = await nft.getB3TRtoUpgrade(tokenId)
+
+  await b3tr.connect(minter).mint(owner.address, b3trToUpgrade)
+
+  await b3tr.connect(owner).approve(await nft.getAddress(), b3trToUpgrade)
+
+  await nft.connect(owner).upgrade(tokenId)
+}
+
 export const delegateWithSignature = async (
   veBetterPassport: VeBetterPassport,
   delegator: HardhatEthersSigner,
@@ -778,7 +716,7 @@ export const delegateWithSignature = async (
     chainId: 1337,
     verifyingContract: await veBetterPassport.getAddress(),
   }
-  let types = {
+  const types = {
     Delegation: [
       { name: "delegator", type: "address" },
       { name: "delegatee", type: "address" },
@@ -821,7 +759,7 @@ export const linkEntityToPassportWithSignature = async (
     chainId: 1337,
     verifyingContract: await veBetterPassport.getAddress(),
   }
-  let types = {
+  const types = {
     LinkEntity: [
       { name: "entity", type: "address" },
       { name: "passport", type: "address" },
@@ -841,6 +779,24 @@ export const linkEntityToPassportWithSignature = async (
 
   // Perform the delegation using the signature
   await veBetterPassport.connect(passport).linkEntityToPassportWithSignature(entity.address, deadline, signature)
+}
+
+/**
+ * Helper function to get storage slots.
+ * @param contractAddress The address of the contract.
+ * @param initialSlots The initial storage slots.
+ * @returns Array of storage slots.
+ */
+export const getStorageSlots = async (contractAddress: AddressLike, ...initialSlots: bigint[]) => {
+  const slots = []
+
+  for (const initialSlot of initialSlots) {
+    for (let i = initialSlot; i < initialSlot + BigInt(100); i++) {
+      slots.push(await ethers.provider.getStorage(contractAddress, i))
+    }
+  }
+
+  return slots.filter(slot => slot !== "0x0000000000000000000000000000000000000000000000000000000000000000") // Removing empty slots
 }
 
 export const getTwoUniqueRandomIndices = (max: number) => {

@@ -40,7 +40,7 @@ interface IGalaxyMember {
   // Events
   event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId);
   event ApprovalForAll(address indexed owner, address indexed operator, bool approved);
-  event B3TRtoUpgradeToLevelUpdated(uint256[] b3trToUpgradeToLevel);
+  event B3TRtoUpgradeToLevelUpdated(uint256[] indexed b3trToUpgradeToLevel);
   event B3trGovernorAddressUpdated(address indexed newAddress, address indexed oldAddress);
   event BaseURIUpdated(string indexed newBaseURI, string indexed oldBaseURI);
   event Initialized(uint64 version);
@@ -58,8 +58,6 @@ interface IGalaxyMember {
   event XAllocationsGovernorAddressUpdated(address indexed newAddress, address indexed oldAddress);
   event NodeDetached(uint256 indexed nodeTokenId, uint256 indexed tokenId);
   event NodeAttached(uint256 indexed nodeTokenId, uint256 indexed tokenId);
-  event LevelWhenAttached(uint256 indexed tokenId, uint256 indexed nodeTokenId, uint256 level);
-  event LevelWhenDetached(uint256 indexed tokenId, uint256 indexed nodeTokenId, uint256 level);
 
   /// @notice Returns the role identifier for contracts address manager
   function CONTRACTS_ADDRESS_MANAGER_ROLE() external view returns (bytes32);

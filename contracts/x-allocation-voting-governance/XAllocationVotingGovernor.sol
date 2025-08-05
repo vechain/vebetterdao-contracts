@@ -170,7 +170,7 @@ abstract contract XAllocationVotingGovernor is
    * @dev Returns the version of the governor.
    */
   function version() public view virtual returns (string memory) {
-    return "6";
+    return "5";
   }
 
   /**

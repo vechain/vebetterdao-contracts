@@ -7,7 +7,7 @@ import {
   getOrDeployContractInstances,
   waitForRoundToEnd,
 } from "./helpers"
-import { describe, it, beforeEach } from "mocha"
+import { describe, it } from "mocha"
 import { getImplementationAddress } from "@openzeppelin/upgrades-core"
 import { deployProxy, upgradeProxy } from "../scripts/helpers"
 import {
@@ -23,7 +23,8 @@ import { endorseApp } from "./helpers/xnodes"
 import { createLocalConfig } from "../config/contracts/envs/local"
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers"
 
-describe("X2EarnRewardsPool - @shard3", function () {
+
+describe("X2EarnRewardsPool - @shard12", function () {
   // Environment params
   let creator1: HardhatEthersSigner
   let creator2: HardhatEthersSigner

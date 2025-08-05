@@ -180,12 +180,6 @@ library AdministrationUtils {
    */
   event CreatorRemovedFromApp(bytes32 indexed appId, address creator);
 
-  /**
-   * @dev Thrown when a creator is already associated with another app.
-   * @param creator The address of the creator.
-   */
-  error X2EarnCreatorAlreadyUsed(address creator);
-
   // ------------------------------- Getter Functions -------------------------------
   /**
    * @dev Checks if an account is a reward distributor for an app.

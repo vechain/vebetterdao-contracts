@@ -276,7 +276,7 @@ describe("VeBetterPassport (Signaling Logic) - @shard8b", function () {
     const targetUser = otherAccounts[6]
 
     await x2EarnApps
-      .connect(newAppAdmin)
+      .connect(owner)
       .submitApp(otherAccounts[7].address, newAppAdmin, otherAccounts[7].address, "metadataURI")
 
     const newAppId = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[7].address))

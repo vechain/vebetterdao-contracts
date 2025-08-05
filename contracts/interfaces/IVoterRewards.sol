@@ -51,18 +51,10 @@ interface IVoterRewards {
   event Initialized(uint64 version);
 
   /// @notice Emitted when reward is claimed
-  /// @dev This event is deprecated, use RewardClaimedV2 instead.
   /// @param cycle The reward cycle
   /// @param voter The voter's address
   /// @param reward The reward amount
   event RewardClaimed(uint256 indexed cycle, address indexed voter, uint256 reward);
-
-  /// @notice Emitted when reward is claimed, V2.
-  /// @param cycle The reward cycle
-  /// @param voter The voter's address
-  /// @param reward The reward amount
-  /// @param gmReward The GM reward amount
-  event RewardClaimedV2(uint256 indexed cycle, address indexed voter, uint256 reward, uint256 gmReward);
 
   /// @notice Emitted when role admin is changed
   /// @param role The role being modified
@@ -108,21 +100,9 @@ interface IVoterRewards {
   /// @param multiplier The new multiplier value
   event LevelToMultiplierSet(uint256 indexed level, uint256 multiplier);
 
-  /// @notice Emitted when the level to multiplier mapping is updated and will be applied to the next cycle.
-  /// @param level - The level of the Galaxy Member NFT.
-  /// @param multiplier - The percentage multiplier for the level of the Galaxy Member NFT.
-  event LevelToMultiplierPending(uint256 indexed level, uint256 multiplier);
-
   /// @notice Emitted when quadratic rewarding is toggled
   /// @param disabled The new disabled state
   event QuadraticRewardingDisabled(bool indexed disabled);
-
-  /// @notice GM NFT vote is registered.
-  /// @param cycle - The cycle in which the vote was registered.
-  /// @param tokenId - The ID of the Galaxy Member NFT.
-  /// @param level - The level of the Galaxy Member NFT.
-  /// @param multiplier - The percentage multiplier for the level of the Galaxy Member NFT.
-  event GMVoteRegistered(uint256 indexed cycle, uint256 indexed tokenId, uint256 indexed level, uint256 multiplier);
 
   /// @notice Gets the default admin role
   /// @return bytes32 The admin role identifier
@@ -158,21 +138,11 @@ interface IVoterRewards {
   /// @return uint256 The total rewards
   function cycleToTotal(uint256 cycle) external view returns (uint256);
 
-  /// @notice Gets total GM weight for a cycle
-  /// @param cycle The cycle to query
-  /// @return uint256 The total GM weight
-  function cycleToTotalGM(uint256 cycle) external view returns (uint256);
-
   /// @notice Gets voter's total for a cycle
   /// @param cycle The cycle to query
   /// @param voter The voter's address
   /// @return uint256 The voter's total
   function cycleToVoterToTotal(uint256 cycle, address voter) external view returns (uint256);
-
-  /// @notice Gets total GM weight for a cycle
-  /// @param cycle The cycle to query
-  /// @return uint256 The total GM weight
-  function cycleToTotalGMWeight(uint256 cycle) external view returns (uint256);
 
   /// @notice Gets the emissions contract address
   /// @return address The emissions contract address
@@ -183,12 +153,6 @@ interface IVoterRewards {
   /// @param voter The voter's address
   /// @return uint256 The reward amount
   function getReward(uint256 cycle, address voter) external view returns (uint256);
-
-  /// @notice Gets GM reward amount for voter in cycle
-  /// @param cycle The reward cycle
-  /// @param voter The voter's address
-  /// @return uint256 The GM reward amount
-  function getGMReward(uint256 cycle, address voter) external view returns (uint256);
 
   /// @notice Gets admin role for a role
   /// @param role The role to query
