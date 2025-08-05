@@ -182,6 +182,8 @@ jobs:
 
   run-slither:
     name: Slither Analysis
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     needs: check-changes
     if: false
