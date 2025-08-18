@@ -5,16 +5,21 @@ on:
   pull_request:
     branches:
       - main
+      - testnet
   push:
     branches:
       - main
+      - testnet
 
 jobs:
   check-changes:
     runs-on: ubuntu-latest
     outputs:
+      frontend-changed: ${{ steps.changes.outputs.frontend }}
       contracts-changed: ${{ steps.changes.outputs.contracts }}
       utils-changed: ${{ steps.changes.outputs.utils }}
+      backend-changed: ${{ steps.changes.outputs.backend }}
+      lambda-changed: ${{ steps.changes.outputs.lambda }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -24,17 +29,21 @@ jobs:
         uses: dorny/paths-filter@v3
         with:
           filters: |
+            frontend:
+              - 'apps/frontend/**'
             contracts:
               - 'packages/contracts/**'
             utils:
               - 'packages/utils/**'
+            backend:
+              - 'apps/backend/**'
+            lambda:
+              - 'packages/lambda/**'
 
   run-unit-tests:
     name: Unit Testing
     runs-on: ubuntu-latest
     needs: check-changes
-    strategy:
-      fail-fast: false
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -45,16 +54,25 @@ jobs:
           node-version-file: .nvmrc
           cache: "yarn"
 
-      - name: Install dependencies
-        run: yarn install --frozen-lockfile
-
-      - name: Cache Solidity compilers
+      - name: Cache node_modules
         uses: actions/cache@v3
         with:
-          path: ~/.cache/hardhat-nodejs
-          key: ${{ runner.os }}-solc-${{ hashFiles('./packages/contracts/hardhat.config.ts') }}
-          restore-keys: |
-            ${{ runner.os }}-solc-
+          path: |
+            node_modules
+            packages/*/node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/yarn.lock') }}
+
+      # Restore when enabling steps that involve smart contract compilation
+      # - name: Cache Solidity compilers
+      #   uses: actions/cache@v3
+      #   with:
+      #     path: ~/.cache/hardhat-nodejs
+      #     key: ${{ runner.os }}-solc-${{ hashFiles('./packages/contracts/hardhat.config.ts') }}
+      #     restore-keys: |
+      #       ${{ runner.os }}-solc-
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
 
       # Disabled Global and Frontend unit tests for now as they are not working
       # Contract tests should be run separately for each shard on the next step
@@ -64,8 +82,23 @@ jobs:
       #   if: needs.check-changes.outputs.contracts-changed == 'true' || needs.check-changes.outputs.utils-changed == 'true'
       #   run: yarn test
 
+      # Run Frontend unit tests if frontend, contracts, or utils changes are detected
+      # - name: Frontend Unit Tests
+      #   if: needs.check-changes.outputs.frontend-changed == 'true' || needs.check-changes.outputs.contracts-changed == 'true' || needs.check-changes.outputs.utils-changed == 'true'
+      #   run: yarn test --filter=frontend
+
+      # Run Backend unit tests only if there are backend changes and no contracts/utils changes
+      - name: Backend Unit Tests
+        if: needs.check-changes.outputs.backend-changed == 'true' && needs.check-changes.outputs.contracts-changed != 'true' && needs.check-changes.outputs.utils-changed != 'true'
+        run: yarn test --filter=backend
+
+      # Run Lambda unit tests only if there are lambda changes and no contracts/utils changes
+      # - name: Lambda Unit Tests
+      #   if: needs.check-changes.outputs.lambda-changed == 'true' && needs.check-changes.outputs.contracts-changed != 'true' && needs.check-changes.outputs.utils-changed != 'true'
+      #   run: yarn test --filter=lambda
+
   run-contract-tests:
-    name: Contract Testing
+    name: SC Test ${{ matrix.label }}
     runs-on: ubuntu-latest
     needs: check-changes
     if: needs.check-changes.outputs.contracts-changed == 'true'
@@ -74,31 +107,61 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard:
-          [
-            shard0,
-            shard2,
-            shard3a,
-            shard3b,
-            shard4,
-            shard5,
-            shard6,
-            shard7,
-            shard8,
-            shard8a,
-            shard8b,
-            shard8c,
-            shard9,
-            shard10,
-            shard11,
-            shard12,
-            shard13,
-            shard14,
-            shard15,
-            shard16,
-            shard17a,
-            shard17b,
-          ]
+        include:
+          - shard: shard0
+            label: B3TR Token & Multi Sig
+          - shard: shard2
+            label: Emissions
+          - shard: shard3a
+            label: Available for Assignment
+          - shard: shard3b
+            label: Galaxy Member
+          - shard: shard4a
+            label: Governor & TimeLock
+          - shard: shard4b
+            label: Governance - Voting Power
+          - shard: shard4c
+            label: Governance - Milestone Creation
+          - shard: shard4d
+            label: Governance - Proposer Requirement
+          - shard: shard4e
+            label: Governance - Compatibility & Thresholds
+          - shard: shard4f
+            label: Governance - Upgrades
+          - shard: shard5
+            label: Node Management
+          - shard: shard6
+            label: TimeLock
+          - shard: shard7
+            label: Treasury
+          - shard: shard8
+            label: VeBetterPassport
+          - shard: shard8a
+            label: VeBetterPassport - Upgrade
+          - shard: shard8b
+            label: VeBetterPassport - Signaling
+          - shard: shard8c
+            label: VeBetterPassport - Reset Signal Count
+          - shard: shard9
+            label: VOT3
+          - shard: shard10
+            label: VoterRewards
+          - shard: shard11
+            label: X2EarnCreator
+          - shard: shard12
+            label: X2EarnRewardsPool
+          - shard: shard13
+            label: X-Allocation Pool
+          - shard: shard14
+            label: X-Allocation Voting
+          - shard: shard15
+            label: X-Apps
+          - shard: shard16
+            label: VeBetterPassport Additional Tests
+          - shard: shard17a
+            label: X-Apps Additional Tests A
+          - shard: shard17b
+            label: X-Apps Additional Tests B
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -109,8 +172,13 @@ jobs:
           node-version-file: .nvmrc
           cache: "yarn"
 
-      - name: Install dependencies
-        run: yarn install --frozen-lockfile
+      - name: Cache node_modules
+        uses: actions/cache@v3
+        with:
+          path: |
+            node_modules
+            packages/*/node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/yarn.lock') }}
 
       - name: Cache Solidity compilers
         uses: actions/cache@v3
@@ -120,13 +188,16 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-solc-
 
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
       - name: Set Shard Environment Variable
         run: echo "SHARD=${{ matrix.shard }}" >> $GITHUB_ENV
 
-      - name: Run Unit Tests and Check Coverage for ${{ matrix.shard }}
+      - name: Run Unit Tests and Check Coverage for ${{ matrix.label }}
         run: yarn test:coverage:solidity
 
-      - name: Upload Coverage for ${{ matrix.shard }}
+      - name: Upload Coverage for ${{ matrix.label }}
         uses: actions/upload-artifact@v4
         with:
           name: coverage-${{ matrix.shard }}
@@ -146,18 +217,22 @@ jobs:
           node-version-file: .nvmrc
           cache: "yarn"
 
+      - name: Cache node_modules
+        uses: actions/cache@v3
+        with:
+          path: |
+            node_modules
+            packages/*/node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/yarn.lock') }}
+
       - name: Install Dependencies at Root
         run: yarn install --frozen-lockfile
 
-      - name: Download All Coverage Artifacts
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          mkdir -p packages/contracts/coverage-shards
-          for shard in shard0 shard2 shard3 shard4 shard5 shard6 shard7 shard8 shard8a shard8b shard8c shard9 shard10 shard11 shard12 shard13 shard14 shard15 shard16 shard17a shard17b; do
-            echo "Downloading artifact coverage-$shard"
-            gh run download --name "coverage-$shard" --dir packages/contracts/coverage-shards/$shard
-          done
+      - name: Download coverage artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-*
+          path: packages/contracts/coverage-shards
 
       - name: Debug Downloaded Artifacts
         run: ls -la packages/contracts/coverage-shards
@@ -182,8 +257,6 @@ jobs:
 
   run-slither:
     name: Slither Analysis
-    permissions:
-      contents: read
     runs-on: ubuntu-latest
     needs: check-changes
     if: false
