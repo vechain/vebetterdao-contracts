@@ -33,6 +33,7 @@ import { GovernorFunctionRestrictionsLogic } from "./GovernorFunctionRestriction
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 import { DoubleEndedQueue } from "@openzeppelin/contracts/utils/structs/DoubleEndedQueue.sol";
+import { IGrantsManager } from "../../interfaces/IGrantsManager.sol";
 
 /// @title GovernorProposalLogic
 /// @notice Library for managing proposals in the Governor contract.
@@ -59,6 +60,11 @@ library GovernorProposalLogic {
     uint256 indexed roundIdVoteStart,
     uint256 depositThreshold
   );
+
+  /**
+   * @dev Emitted when a proposal is created with type information.
+   */
+  event ProposalCreatedWithType(uint256 indexed proposalId, GovernorTypes.ProposalType proposalType);
 
   /**
    * @dev Emitted when a proposal is executed.
@@ -103,6 +109,16 @@ library GovernorProposalLogic {
    * @dev Thrown when the proposer is not allowed to create a proposal.
    */
   error GovernorRestrictedProposer(address proposer);
+
+  /**
+   * @dev Thrown when the proposal type is invalid.
+   */
+  error GovernorInvalidProposalType(GovernorTypes.ProposalType proposalType);
+
+  /**
+   * @dev Thrown when the proposer does not fit the requirement (GM weight ATM)
+   */
+  error GovernorInvalidProposer(address proposer, uint256 requiredWeight);
 
   /** ------------------ GETTERS ------------------ **/
 
@@ -226,6 +242,19 @@ library GovernorProposalLogic {
     return self.timelockIds[proposalId];
   }
 
+  /**
+   * @notice Returns the proposal type of a proposal.
+   * @param self The storage reference for the GovernorStorage.
+   * @param proposalId The id of the proposal.
+   * @return The proposal type.
+   */
+  function proposalType(
+    GovernorStorageTypes.GovernorStorage storage self,
+    uint256 proposalId
+  ) external view returns (GovernorTypes.ProposalType) {
+    return self.proposalType[proposalId];
+  }
+
   /** ------------------ SETTERS ------------------ **/
 
   /**
@@ -253,9 +282,94 @@ library GovernorProposalLogic {
 
     uint256 proposalId = hashProposal(targets, values, calldatas, keccak256(bytes(description)));
 
-    validateProposeParams(self, proposer, startRoundId, description, targets, values, calldatas, proposalId);
+    validateProposeParams(
+      self,
+      proposer,
+      startRoundId,
+      description,
+      targets,
+      values,
+      calldatas,
+      proposalId,
+      GovernorTypes.ProposalType.Standard
+    );
 
-    return _propose(self, proposer, proposalId, targets, values, calldatas, description, startRoundId, depositAmount);
+    return
+      _propose(
+        self,
+        proposer,
+        proposalId,
+        targets,
+        values,
+        calldatas,
+        description,
+        startRoundId,
+        depositAmount,
+        GovernorTypes.ProposalType.Standard
+      );
+  }
+
+  /**
+   * @notice Proposes a new grant proposal.
+   * @dev Creates a new proposal and validates the proposal parameters.
+   * @param self The storage reference for the GovernorStorage.
+   * @param targets The addresses of the contracts to call.
+   * @param values The values to send to the contracts.
+   * @param calldatas The function signatures and arguments.
+   * @param description The description of the proposal.
+   * @param startRoundId The round in which the proposal should be active.
+   * @param depositAmount The amount of tokens the proposer intends to deposit.
+   * @param grantsReceiver The address of the grants receiver
+   * @param milestonesDetailsMetadataURI The IPFS hash containing the milestones ipfs hash
+   * @return The proposal id.
+   */
+  function proposeGrant(
+    GovernorStorageTypes.GovernorStorage storage self,
+    address[] memory targets,
+    uint256[] memory values,
+    bytes[] memory calldatas,
+    string memory description,
+    uint256 startRoundId,
+    uint256 depositAmount,
+    address grantsReceiver,
+    string memory milestonesDetailsMetadataURI
+  ) external returns (uint256) {
+    uint256 proposalId = hashProposal(targets, values, calldatas, keccak256(bytes(description)));
+
+    validateProposeParams(
+      self,
+      msg.sender, //Proposer
+      startRoundId,
+      description,
+      targets,
+      values,
+      calldatas,
+      proposalId,
+      GovernorTypes.ProposalType.Grant
+    );
+
+    //Instantiate the grants manager contract inline to avoid stack too deep errors
+    IGrantsManager(self.grantsManager).createMilestones(
+      milestonesDetailsMetadataURI,
+      proposalId,
+      msg.sender, //Proposer
+      grantsReceiver,
+      calldatas
+    );
+
+    return
+      _propose(
+        self,
+        msg.sender, //Proposer
+        proposalId,
+        targets,
+        values,
+        calldatas,
+        description,
+        startRoundId,
+        depositAmount,
+        GovernorTypes.ProposalType.Grant
+      );
   }
 
   /**
@@ -444,6 +558,7 @@ library GovernorProposalLogic {
    * @param description The description of the proposal.
    * @param startRoundId The round in which the proposal should be active.
    * @param depositAmount The amount of tokens the proposer intends to deposit.
+   * @param proposalTypeValue The type of the proposal.
    * @return The proposal id.
    */
   function _propose(
@@ -455,25 +570,64 @@ library GovernorProposalLogic {
     bytes[] memory calldatas,
     string memory description,
     uint256 startRoundId,
-    uint256 depositAmount
+    uint256 depositAmount,
+    GovernorTypes.ProposalType proposalTypeValue
   ) private returns (uint256) {
-    uint256 depositThresholdAmount = GovernorDepositLogic._depositThreshold(self);
+    uint256 depositThresholdAmount = GovernorDepositLogic._depositThresholdByProposalType(self, proposalTypeValue);
+    uint32 votingPeriod = SafeCast.toUint32(self.xAllocationVoting.votingPeriod());
+    bool isExecutable = targets.length > 0;
+
+    _validateProposer(self, proposer, proposalTypeValue);
 
     _setProposal(
       self,
       proposalId,
       proposer,
-      SafeCast.toUint32(self.xAllocationVoting.votingPeriod()),
+      votingPeriod,
       startRoundId,
-      targets.length > 0,
+      isExecutable,
       depositAmount,
-      depositThresholdAmount
+      depositThresholdAmount,
+      proposalTypeValue
     );
 
     if (depositAmount > 0) {
       GovernorDepositLogic.depositFunds(self, depositAmount, proposer, proposalId);
     }
 
+    _emitProposalCreatedEvents(
+      proposer,
+      proposalId,
+      targets,
+      values,
+      calldatas,
+      description,
+      startRoundId,
+      depositThresholdAmount,
+      proposalTypeValue
+    );
+
+    return proposalId;
+  }
+
+  /**
+   * @dev Internal function to emit the proposal created events.
+   * @param proposer The address of the proposer.
+   * @param proposalId The id of the proposal.
+   * @param targets The addresses of the contracts to call.
+   */
+  function _emitProposalCreatedEvents(
+    address proposer,
+    uint256 proposalId,
+    address[] memory targets,
+    uint256[] memory values,
+    bytes[] memory calldatas,
+    string memory description,
+    uint256 startRoundId,
+    uint256 depositThresholdAmount,
+    GovernorTypes.ProposalType proposalTypeValue
+  ) private {
+    // Emit original event for backward compatibility
     emit ProposalCreated(
       proposalId,
       proposer,
@@ -486,7 +640,8 @@ library GovernorProposalLogic {
       depositThresholdAmount
     );
 
-    return proposalId;
+    // Emit event just for the proposal type
+    emit ProposalCreatedWithType(proposalId, proposalTypeValue);
   }
 
   /**
@@ -494,7 +649,7 @@ library GovernorProposalLogic {
    * @param self The storage reference for the GovernorStorage.
    * @param proposer The address of the proposer.
    * @param startRoundId The round in which the proposal should be active.
-   * @param description The description of the proposal.
+   * @param description The description of the proposal.si
    * @param targets The addresses of the contracts to call.
    * @param values The values to send to the contracts.
    * @param calldatas The function signatures and arguments.
@@ -508,8 +663,14 @@ library GovernorProposalLogic {
     address[] memory targets,
     uint256[] memory values,
     bytes[] memory calldatas,
-    uint256 proposalId
+    uint256 proposalId,
+    GovernorTypes.ProposalType proposalTypeValue
   ) private view {
+    //proposal type must be valid
+    if (!isValidProposalType(proposalTypeValue)) {
+      revert GovernorInvalidProposalType(proposalTypeValue);
+    }
+
     // round must be in the future
     if (startRoundId <= self.xAllocationVoting.currentRoundId()) {
       revert GovernorInvalidStartRound(startRoundId);
@@ -521,10 +682,11 @@ library GovernorProposalLogic {
         revert GovernorInvalidStartRound(startRoundId);
       }
     }
-
     // check description restriction
-    if (!isValidDescriptionForProposer(proposer, description)) {
-      revert GovernorRestrictedProposer(proposer);
+    if (proposalTypeValue == GovernorTypes.ProposalType.Standard) {
+      if (!isValidDescriptionForProposer(proposer, description)) {
+        revert GovernorRestrictedProposer(proposer);
+      }
     }
 
     if (targets.length != values.length || targets.length != calldatas.length) {
@@ -549,6 +711,7 @@ library GovernorProposalLogic {
    * @param isExecutable Whether the proposal is executable.
    * @param depositAmount The amount of tokens the proposer intends to deposit.
    * @param proposalDepositThreshold The deposit threshold for the proposal.
+   * @param proposalTypeValue The type of the proposal.
    */
   function _setProposal(
     GovernorStorageTypes.GovernorStorage storage self,
@@ -558,7 +721,8 @@ library GovernorProposalLogic {
     uint256 roundIdVoteStart,
     bool isExecutable,
     uint256 depositAmount,
-    uint256 proposalDepositThreshold
+    uint256 proposalDepositThreshold,
+    GovernorTypes.ProposalType proposalTypeValue
   ) private {
     GovernorTypes.ProposalCore storage proposal = self.proposals[proposalId];
 
@@ -568,6 +732,26 @@ library GovernorProposalLogic {
     proposal.isExecutable = isExecutable;
     proposal.depositAmount = depositAmount;
     proposal.depositThreshold = proposalDepositThreshold;
+    // set the proposal type
+    self.proposalType[proposalId] = proposalTypeValue;
+  }
+
+  /**
+   * @dev Internal function to validate the proposer.
+   * @param self The storage reference for the GovernorStorage.
+   * @param proposer The address of the proposer.
+   * @param proposalTypeValue The type of the proposal.
+   */
+  function _validateProposer(
+    GovernorStorageTypes.GovernorStorage storage self,
+    address proposer,
+    GovernorTypes.ProposalType proposalTypeValue
+  ) private view {
+    uint256 requiredWeight = self.requiredGMLevelByProposalType[proposalTypeValue];
+    uint256 level = self.galaxyMember.levelOf(self.galaxyMember.getSelectedTokenId(proposer)); // 1 for earth
+    if (level < requiredWeight) {
+      revert GovernorInvalidProposer(proposer, requiredWeight);
+    }
   }
 
   /**
@@ -589,7 +773,7 @@ library GovernorProposalLogic {
     bytes[] memory calldatas,
     bytes32 descriptionHash
   ) private {
-    // execute
+    // execute transfer first
     self.timelock.executeBatch{ value: msg.value }(
       targets,
       values,
@@ -597,6 +781,7 @@ library GovernorProposalLogic {
       0,
       GovernorGovernanceLogic.timelockSalt(descriptionHash, contractAddress)
     );
+
     // cleanup for refund
     delete self.timelockIds[proposalId];
   }
@@ -757,6 +942,16 @@ library GovernorProposalLogic {
     }
 
     return recovered == uint160(proposer);
+  }
+
+  /**
+   * @dev Checks if the proposal type is valid.
+   * @param proposalTypeValue The type of the proposal.
+   * @return True if the proposal type is valid, false otherwise.
+   */
+  function isValidProposalType(GovernorTypes.ProposalType proposalTypeValue) internal pure returns (bool) {
+    return
+      proposalTypeValue == GovernorTypes.ProposalType.Standard || proposalTypeValue == GovernorTypes.ProposalType.Grant;
   }
 
   /**

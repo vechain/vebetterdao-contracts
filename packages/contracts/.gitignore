@@ -11,3 +11,6 @@ artifacts
 .vscode/*
 
 docs
+
+# GalaxyMember metadata
+metadata/galaxyMember/metadata.zip

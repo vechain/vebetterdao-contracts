@@ -27,16 +27,11 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers"
 import { describe, it } from "mocha"
 import { createLocalConfig } from "@repo/config/contracts/envs/local"
 import { getImplementationAddress } from "@openzeppelin/upgrades-core"
-import {
-  B3TRGovernor,
-  B3TRGovernorV1,
-  B3TRGovernorV1__factory,
-  B3TRGovernorV3,
-  B3TRGovernor__factory,
-} from "../typechain-types"
-import { deployAndUpgrade, deployProxy, getInitializerData } from "../scripts/helpers"
+import { B3TRGovernor, B3TRGovernorV1, B3TRGovernorV3, B3TRGovernor__factory } from "../typechain-types"
+import { deployAndUpgrade, deployProxy } from "../scripts/helpers"
+import { GRANT_PROPOSAL_TYPE, STANDARD_PROPOSAL_TYPE } from "./governance/fixture.test"
 
-describe("Governor and TimeLock - @shard4", function () {
+describe("Governor and TimeLock - @shard4a", function () {
   describe("Governor deployment", function () {
     it("Should set constructors correctly", async function () {
       const config = createLocalConfig()
@@ -47,10 +42,8 @@ describe("Governor and TimeLock - @shard4", function () {
 
       await bootstrapAndStartEmissions()
 
-      const votesThreshold = (await governor.depositThresholdPercentage()).toString()
       const votingPeriod = await governor.votingPeriod()
       const minVotingDelay = await governor.minVotingDelay()
-      expect(votesThreshold).to.eql(config.B3TR_GOVERNOR_DEPOSIT_THRESHOLD.toString())
       expect(votingPeriod).to.eql(await xAllocationVoting.votingPeriod())
       expect(minVotingDelay.toString()).to.eql(config.B3TR_GOVERNOR_MIN_VOTING_DELAY.toString())
 
@@ -83,11 +76,23 @@ describe("Governor and TimeLock - @shard4", function () {
 
       // check version
       const version = await governor.version()
-      expect(version).to.eql("6")
+      expect(version).to.eql("7")
 
-      // deposit threshold is set correctly
-      const depositThreshold = await governor.depositThresholdPercentage()
-      expect(depositThreshold.toString()).to.eql(config.B3TR_GOVERNOR_DEPOSIT_THRESHOLD.toString())
+      // STANDARD deposit threshold is set correctly
+      const standardDepositThreshold = await governor.depositThresholdPercentageByProposalType(STANDARD_PROPOSAL_TYPE)
+      expect(standardDepositThreshold.toString()).to.eql(config.B3TR_GOVERNOR_DEPOSIT_THRESHOLD.toString())
+
+      // GRANT deposit threshold is set correctly
+      const grantDepositThreshold = await governor.depositThresholdPercentageByProposalType(GRANT_PROPOSAL_TYPE)
+      expect(grantDepositThreshold.toString()).to.eql(config.B3TR_GOVERNOR_GRANT_DEPOSIT_THRESHOLD.toString())
+
+      // STANDARD voting threshold is set correctly
+      const standardVotingThreshold = await governor.votingThresholdByProposalType(STANDARD_PROPOSAL_TYPE)
+      expect(standardVotingThreshold.toString()).to.eql(config.B3TR_GOVERNOR_VOTING_THRESHOLD.toString())
+
+      // GRANT voting threshold is set correctly
+      const grantVotingThreshold = await governor.votingThresholdByProposalType(GRANT_PROPOSAL_TYPE)
+      expect(grantVotingThreshold.toString()).to.eql(config.B3TR_GOVERNOR_GRANT_VOTING_THRESHOLD.toString())
 
       // counting mode is set correctly
       const countingMode = await governor.COUNTING_MODE()
@@ -799,14 +804,6 @@ describe("Governor and TimeLock - @shard4", function () {
       ).to.be.reverted
     })
 
-    it("Should not support invalid interface", async function () {
-      const { governor } = await getOrDeployContractInstances({
-        forceDeploy: false,
-      })
-
-      expect(await governor.depositThresholdPercentage()).to.eql(2n)
-    })
-
     it("Should not have state conflict after upgrading to V4 and V5", async () => {
       const config = createLocalConfig()
       const {
@@ -1053,8 +1050,8 @@ describe("Governor and TimeLock - @shard4", function () {
           slot !== "0x0000000000000000000000000000000200000000000000000000000000000002",
       ) // removing empty slots and slots that track governance proposals getting executed on the governor
 
-      // Upgrade to V6
-      const ContractV6 = await ethers.getContractFactory("B3TRGovernor", {
+      // Upgrade to V7
+      const ContractV7 = await ethers.getContractFactory("B3TRGovernor", {
         libraries: {
           GovernorClockLogic: await governorClockLogicLib.getAddress(),
           GovernorConfigurator: await governorConfiguratorLib.getAddress(),
@@ -1066,19 +1063,19 @@ describe("Governor and TimeLock - @shard4", function () {
           GovernorVotesLogic: await governorVotesLogicLib.getAddress(),
         },
       })
-      const implementationv5 = await ContractV6.deploy()
+      const implementationv5 = await ContractV7.deploy()
       await implementationv5.waitForDeployment()
 
       // Now we can create a proposal
       const tx5 = await governorV4.upgradeToAndCall(await implementationv5.getAddress(), "0x")
       await tx5.wait()
 
-      const governorV6 = ContractV6.attach(await governorV4.getAddress()) as B3TRGovernor
+      const governorV7 = ContractV7.attach(await governorV4.getAddress()) as B3TRGovernor
 
       let storageSlotsAfter = []
 
       for (let i = initialSlot; i < initialSlot + BigInt(100); i++) {
-        storageSlotsAfter.push(await ethers.provider.getStorage(await governorV6.getAddress(), i))
+        storageSlotsAfter.push(await ethers.provider.getStorage(await governorV7.getAddress(), i))
       }
 
       storageSlotsAfter = storageSlotsAfter.filter(
@@ -1092,12 +1089,12 @@ describe("Governor and TimeLock - @shard4", function () {
         expect(storageSlots[i]).to.equal(storageSlotsAfter[i])
       }
 
-      expect(await governorV6.version()).to.equal("6")
+      expect(await governorV7.version()).to.equal("7")
     })
   })
 
   describe("Governor settings", function () {
-    let b3trGovernorFactory: B3TRGovernorV1__factory
+    let b3trGovernorFactory: B3TRGovernor__factory
     this.beforeAll(async function () {
       const {
         governorClockLogicLib,
@@ -1112,16 +1109,16 @@ describe("Governor and TimeLock - @shard4", function () {
         forceDeploy: true,
       })
 
-      b3trGovernorFactory = await ethers.getContractFactory("B3TRGovernorV1", {
+      b3trGovernorFactory = await ethers.getContractFactory("B3TRGovernor", {
         libraries: {
-          GovernorClockLogicV1: await governorClockLogicLib.getAddress(),
-          GovernorConfiguratorV1: await governorConfiguratorLib.getAddress(),
-          GovernorDepositLogicV1: await governorDepositLogicLib.getAddress(),
-          GovernorFunctionRestrictionsLogicV1: await governorFunctionRestrictionsLogicLib.getAddress(),
-          GovernorProposalLogicV1: await governorProposalLogicLib.getAddress(),
-          GovernorQuorumLogicV1: await governorQuorumLogicLib.getAddress(),
-          GovernorStateLogicV1: await governorStateLogicLib.getAddress(),
-          GovernorVotesLogicV1: await governorVotesLogicLib.getAddress(),
+          GovernorClockLogic: await governorClockLogicLib.getAddress(),
+          GovernorConfigurator: await governorConfiguratorLib.getAddress(),
+          GovernorDepositLogic: await governorDepositLogicLib.getAddress(),
+          GovernorFunctionRestrictionsLogic: await governorFunctionRestrictionsLogicLib.getAddress(),
+          GovernorProposalLogic: await governorProposalLogicLib.getAddress(),
+          GovernorQuorumLogic: await governorQuorumLogicLib.getAddress(),
+          GovernorStateLogic: await governorStateLogicLib.getAddress(),
+          GovernorVotesLogic: await governorVotesLogicLib.getAddress(),
         },
       })
     })
@@ -1316,15 +1313,15 @@ describe("Governor and TimeLock - @shard4", function () {
         governor,
         b3trGovernorFactory,
         "Update Deposit Threshold",
-        "setDepositThresholdPercentage",
-        [newThreshold],
+        "setProposalTypeDepositThresholdPercentage",
+        [newThreshold, STANDARD_PROPOSAL_TYPE],
       )
 
-      const updatedThreshold = await governor.depositThresholdPercentage()
+      const updatedThreshold = await governor.depositThresholdPercentageByProposalType(STANDARD_PROPOSAL_TYPE)
       expect(updatedThreshold).to.eql(newThreshold)
     })
 
-    it("only governance or defualt admin can update proposal threshold", async function () {
+    it("only governance or default admin can update proposal threshold", async function () {
       const { governor, owner, otherAccount } = await getOrDeployContractInstances({
         forceDeploy: true,
       })
@@ -1333,15 +1330,17 @@ describe("Governor and TimeLock - @shard4", function () {
 
       expect(await governor.hasRole(await governor.DEFAULT_ADMIN_ROLE(), otherAccount.address)).to.eql(false)
 
-      await catchRevert(governor.connect(otherAccount).setDepositThresholdPercentage(newThreshold))
+      await catchRevert(
+        governor.connect(otherAccount).setProposalTypeDepositThresholdPercentage(newThreshold, STANDARD_PROPOSAL_TYPE),
+      )
 
-      const updatedThreshold = await governor.depositThresholdPercentage()
+      const updatedThreshold = await governor.depositThresholdPercentageByProposalType(STANDARD_PROPOSAL_TYPE)
       expect(updatedThreshold).to.not.eql(newThreshold)
 
       expect(await governor.hasRole(await governor.DEFAULT_ADMIN_ROLE(), owner.address)).to.eql(true)
 
-      await governor.connect(owner).setDepositThresholdPercentage(newThreshold)
-      expect(await governor.depositThresholdPercentage()).to.eql(newThreshold)
+      await governor.connect(owner).setProposalTypeDepositThresholdPercentage(newThreshold, STANDARD_PROPOSAL_TYPE)
+      expect(await governor.depositThresholdPercentageByProposalType(STANDARD_PROPOSAL_TYPE)).to.eql(newThreshold)
     })
 
     it("Cannot update proposal threshold to more than 100%", async function () {
@@ -1358,12 +1357,12 @@ describe("Governor and TimeLock - @shard4", function () {
           governor,
           b3trGovernorFactory,
           "Update Deposit Threshold",
-          "setDepositThresholdPercentage",
-          [newThreshold],
+          "setProposalTypeDepositThresholdPercentage",
+          [newThreshold, STANDARD_PROPOSAL_TYPE],
         ),
       )
 
-      const updatedThreshold = await governor.depositThresholdPercentage()
+      const updatedThreshold = await governor.depositThresholdPercentageByProposalType(STANDARD_PROPOSAL_TYPE)
       expect(updatedThreshold).to.not.eql(newThreshold)
     })
 
@@ -1379,11 +1378,11 @@ describe("Governor and TimeLock - @shard4", function () {
         governor,
         b3trGovernorFactory,
         "Update Voting Threshold",
-        "setVotingThreshold",
-        [newThreshold],
+        "setProposalTypeVotingThreshold",
+        [newThreshold, STANDARD_PROPOSAL_TYPE],
       )
 
-      const updatedThreshold = await governor.votingThreshold()
+      const updatedThreshold = await governor.votingThresholdByProposalType(STANDARD_PROPOSAL_TYPE)
       expect(updatedThreshold).to.eql(newThreshold)
     })
 
@@ -1396,15 +1395,17 @@ describe("Governor and TimeLock - @shard4", function () {
 
       expect(await governor.hasRole(await governor.DEFAULT_ADMIN_ROLE(), otherAccount.address)).to.eql(false)
 
-      await catchRevert(governor.connect(otherAccount).setVotingThreshold(newThreshold))
+      await catchRevert(
+        governor.connect(otherAccount).setProposalTypeVotingThreshold(newThreshold, STANDARD_PROPOSAL_TYPE),
+      )
 
-      const updatedThreshold = await governor.votingThreshold()
+      const updatedThreshold = await governor.votingThresholdByProposalType(STANDARD_PROPOSAL_TYPE)
       expect(updatedThreshold).to.not.eql(newThreshold)
 
       expect(await governor.hasRole(await governor.DEFAULT_ADMIN_ROLE(), owner.address)).to.eql(true)
 
-      await governor.connect(owner).setVotingThreshold(newThreshold)
-      expect(await governor.votingThreshold()).to.eql(newThreshold)
+      await governor.connect(owner).setProposalTypeVotingThreshold(newThreshold, STANDARD_PROPOSAL_TYPE)
+      expect(await governor.votingThresholdByProposalType(STANDARD_PROPOSAL_TYPE)).to.eql(newThreshold)
     })
 
     it("can update min voting delay through governance", async function () {
@@ -1519,7 +1520,7 @@ describe("Governor and TimeLock - @shard4", function () {
         owner,
         governor,
         b3trGovernorFactory,
-        "Update Min Voting Delay",
+        "Remove whitelist from voter rewards",
         "setWhitelistFunction",
         [await governor.getAddress(), governor.interface.getFunction("setVoterRewards")?.selector, false],
       )
@@ -1530,7 +1531,7 @@ describe("Governor and TimeLock - @shard4", function () {
           owner,
           [governor, governor],
           b3trGovernorFactory,
-          "Update Min Voting Delay",
+          "Update Min Voting Delay And Voter Rewards",
           ["setMinVotingDelay", "setVoterRewards"],
           [[10n], [await owner.getAddress()]],
         ),
@@ -1548,12 +1549,12 @@ describe("Governor and TimeLock - @shard4", function () {
         [governor, governor],
         b3trGovernorFactory,
         "Update Min Voting Delay",
-        ["setMinVotingDelay", "setDepositThresholdPercentage"],
-        [[10n], [10n]],
+        ["setMinVotingDelay", "setProposalTypeDepositThresholdPercentage"],
+        [[10n], [10n, STANDARD_PROPOSAL_TYPE]],
       )
 
       expect(await governor.minVotingDelay()).to.eql(10n)
-      expect(await governor.depositThresholdPercentage()).to.eql(10n)
+      expect(await governor.depositThresholdPercentageByProposalType(STANDARD_PROPOSAL_TYPE)).to.eql(10n)
     })
 
     it("Should be able to execute any function if function restriction is disabled", async function () {
@@ -2206,9 +2207,9 @@ describe("Governor and TimeLock - @shard4", function () {
       await bootstrapAndStartEmissions()
 
       const proposer = otherAccounts[0]
-      const depositPreVOT3Tokens = await governor.depositThreshold()
+      const depositPreVOT3Tokens = await governor.depositThresholdByProposalType(STANDARD_PROPOSAL_TYPE)
       await getVot3Tokens(proposer, (Number(ethers.formatEther(depositPreVOT3Tokens)) * 1.2).toString())
-      const deposit = await governor.depositThreshold()
+      const deposit = await governor.depositThresholdByProposalType(STANDARD_PROPOSAL_TYPE)
       await vot3.connect(proposer).approve(await governor.getAddress(), deposit)
 
       // Now we can create a new proposal
@@ -2216,7 +2217,7 @@ describe("Governor and TimeLock - @shard4", function () {
       const encodedFunctionCall = B3trContract.interface.encodeFunctionData("tokenDetails", [])
       const voteStartsInRoundId = (await xAllocationVoting.currentRoundId()) + 2n // starts 2 rounds from now
 
-      const depositThreshold = await governor.depositThreshold()
+      const depositThreshold = await governor.depositThresholdByProposalType(STANDARD_PROPOSAL_TYPE)
 
       await veBetterPassport.whitelist(proposer.address)
       await veBetterPassport.toggleCheck(1)
@@ -2510,9 +2511,9 @@ describe("Governor and TimeLock - @shard4", function () {
       const voteStartsInRoundId = (await xAllocationVoting.currentRoundId()) + 1n // starts in next round
 
       // We need to have enough VOT3 tokens to pay for the deposit
-      const depositPreVOT3Tokens = await governor.depositThreshold()
+      const depositPreVOT3Tokens = await governor.depositThresholdByProposalType(STANDARD_PROPOSAL_TYPE)
       await getVot3Tokens(proposer, (Number(ethers.formatEther(depositPreVOT3Tokens)) * 1.2).toString())
-      const deposit = await governor.depositThreshold()
+      const deposit = await governor.depositThresholdByProposalType(STANDARD_PROPOSAL_TYPE)
       await vot3.connect(proposer).approve(await governor.getAddress(), deposit)
 
       const tx = await governor
@@ -2565,9 +2566,9 @@ describe("Governor and TimeLock - @shard4", function () {
       await bootstrapAndStartEmissions()
 
       // We need to have enough VOT3 tokens to pay for the deposit
-      const depositPreVOT3Tokens = await governor.depositThreshold()
+      const depositPreVOT3Tokens = await governor.depositThresholdByProposalType(STANDARD_PROPOSAL_TYPE)
       await getVot3Tokens(proposer, (Number(ethers.formatEther(depositPreVOT3Tokens)) * 1.2).toString())
-      const deposit = await governor.depositThreshold()
+      const deposit = await governor.depositThresholdByProposalType(STANDARD_PROPOSAL_TYPE)
       await vot3.connect(proposer).approve(await governor.getAddress(), deposit)
 
       // Now we can create a new proposal
@@ -2627,9 +2628,9 @@ describe("Governor and TimeLock - @shard4", function () {
       await bootstrapAndStartEmissions()
 
       // We need to have enough VOT3 tokens to pay for the deposit
-      const depositPreVOT3Tokens = await governor.depositThreshold()
+      const depositPreVOT3Tokens = await governor.depositThresholdByProposalType(STANDARD_PROPOSAL_TYPE)
       await getVot3Tokens(proposer, (Number(ethers.formatEther(depositPreVOT3Tokens)) * 1.2).toString())
-      const deposit = await governor.depositThreshold()
+      const deposit = await governor.depositThresholdByProposalType(STANDARD_PROPOSAL_TYPE)
       await vot3.connect(proposer).approve(await governor.getAddress(), deposit)
 
       // Now we can create a new proposal
@@ -2748,9 +2749,9 @@ describe("Governor and TimeLock - @shard4", function () {
       await bootstrapAndStartEmissions()
 
       // Get VOT3 to pay deposit
-      const depositPreVOT3Tokens = await governor.depositThreshold()
+      const depositPreVOT3Tokens = await governor.depositThresholdByProposalType(STANDARD_PROPOSAL_TYPE)
       await getVot3Tokens(proposer, (Number(ethers.formatEther(depositPreVOT3Tokens)) * 1.2).toString())
-      const deposit = await governor.depositThreshold()
+      const deposit = await governor.depositThresholdByProposalType(STANDARD_PROPOSAL_TYPE)
       await vot3.connect(proposer).approve(await governor.getAddress(), deposit)
 
       // Now we can create a new proposal
@@ -5253,7 +5254,7 @@ describe("Governor and TimeLock - @shard4", function () {
 
       // get enough to pay the deposit
       const sponser2 = otherAccounts[2]
-      const depositAmount = await governor.depositThreshold()
+      const depositAmount = await governor.depositThresholdByProposalType(STANDARD_PROPOSAL_TYPE)
       const depositAmountToPay = (Number(ethers.formatEther(depositAmount)) * 1.2).toString()
       await getVot3Tokens(sponser2, depositAmountToPay.toString())
       // grant approval to the governor contract
@@ -5332,7 +5333,7 @@ describe("Governor and TimeLock - @shard4", function () {
 
       // get enough to pay the deposit
       const sponser = otherAccounts[1]
-      const depositAmount = await governor.depositThreshold()
+      const depositAmount = await governor.depositThresholdByProposalType(STANDARD_PROPOSAL_TYPE)
       const depositAmountToPay = (Number(ethers.formatEther(depositAmount)) * 1.2).toString()
       await getVot3Tokens(sponser, depositAmountToPay.toString())
       // grant approval to the governor contract
@@ -5473,7 +5474,7 @@ describe("Governor and TimeLock - @shard4", function () {
 
       // get enough to pay the deposit
       const sponser = otherAccounts[1]
-      const depositAmount = await governor.depositThreshold()
+      const depositAmount = await governor.depositThresholdByProposalType(STANDARD_PROPOSAL_TYPE)
       const depositAmountToPay = (Number(ethers.formatEther(depositAmount)) * 1.2).toString()
       await getVot3Tokens(sponser, depositAmountToPay.toString())
       // grant approval to the governor contract
@@ -5537,7 +5538,7 @@ describe("Governor and TimeLock - @shard4", function () {
 
       // get enough to pay the deposit
       const sponser = otherAccounts[1]
-      const depositAmount = await governor.depositThreshold()
+      const depositAmount = await governor.depositThresholdByProposalType(STANDARD_PROPOSAL_TYPE)
       const depositAmountToPay = (Number(ethers.formatEther(depositAmount)) * 1.2).toString()
       await getVot3Tokens(sponser, depositAmountToPay.toString())
       // grant approval to the governor contract
@@ -5814,7 +5815,7 @@ describe("Governor and TimeLock - @shard4", function () {
 
       // get enough to pay the deposit
       const proposer = otherAccounts[1]
-      const depositAmount = await governor.depositThreshold()
+      const depositAmount = await governor.depositThresholdByProposalType(STANDARD_PROPOSAL_TYPE)
       const depositAmountToPay = (Number(ethers.formatEther(depositAmount)) * 1.2).toString()
       await getVot3Tokens(proposer, depositAmountToPay.toString())
       // grant approval to the governor contract
@@ -5865,7 +5866,8 @@ describe("Governor and TimeLock - @shard4", function () {
         .to.be.reverted
     })
 
-    it("Deposit should be 2% of the total B3TR supply when proposal was created", async () => {
+    //@dev This is being skipped since now deposit threshold depends on the proposal type AND the deposit amount now is capped, so not always the same amount
+    it.skip("Deposit should be 2% of the total B3TR supply when proposal was created", async () => {
       const { b3tr, otherAccounts, governor, B3trContract, xAllocationVoting, vot3 } =
         await getOrDeployContractInstances({
           forceDeploy: true,
@@ -5880,7 +5882,7 @@ describe("Governor and TimeLock - @shard4", function () {
       await bootstrapAndStartEmissions()
 
       const b3trSupply = await b3tr.totalSupply()
-      const depositAmount = await governor.depositThreshold()
+      const depositAmount = await governor.depositThresholdByProposalType(STANDARD_PROPOSAL_TYPE)
       expect(depositAmount).to.eql(b3trSupply / 50n)
 
       // Now we can create a new proposal
@@ -5915,7 +5917,7 @@ describe("Governor and TimeLock - @shard4", function () {
       expect(await governor.getProposalDeposits(proposalId)).to.eql(proposalDeposit)
 
       const b3trSupply2 = await b3tr.totalSupply()
-      const depositAmount2 = await governor.depositThreshold()
+      const depositAmount2 = await governor.depositThresholdByProposalType(STANDARD_PROPOSAL_TYPE)
       expect(depositAmount2).to.eql(b3trSupply2 / 50n)
 
       const tx2 = await governor

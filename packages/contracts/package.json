@@ -45,11 +45,16 @@
     "format": "eslint . --ext .ts --fix",
     "generate-docs": "npx hardhat docgen",
     "upgrade:contract": "npx hardhat run scripts/upgrade/upgrades/\"$CONTRACT_TO_UPGRADE\"/\"$CONTRACT_TO_UPGRADE\"-\"$CONTRACT_VERSION\".ts",
+    "upgrade:contract:local": "npx hardhat run scripts/upgrade/upgrades/\"$CONTRACT_TO_UPGRADE\"/\"$CONTRACT_TO_UPGRADE\"-\"$CONTRACT_VERSION\".ts --network vechain_solo",
+    "upgrade:contract:testnet": "npx hardhat run scripts/upgrade/upgrades/\"$CONTRACT_TO_UPGRADE\"/\"$CONTRACT_TO_UPGRADE\"-\"$CONTRACT_VERSION\".ts --network vechain_testnet",
+    "upgrade:contract:testnet-staging": "npx hardhat run scripts/upgrade/upgrades/\"$CONTRACT_TO_UPGRADE\"/\"$CONTRACT_TO_UPGRADE\"-\"$CONTRACT_VERSION\".ts --network vechain_testnet",
+    "upgrade:contract:mainnet": "npx hardhat run scripts/upgrade/upgrades/\"$CONTRACT_TO_UPGRADE\"/\"$CONTRACT_TO_UPGRADE\"-\"$CONTRACT_VERSION\".ts --network vechain_mainnet",
     "deploy:contract": "npx hardhat run scripts/deploy/deploys/\"$CONTRACT_TO_DEPLOY\".ts",
     "call:contract": "npx hardhat run scripts/functionCalls/calls/\"$FUNCTION_TO_CALL\".ts",
     "rename-contracts": "ts-node scripts/renameContracts.ts",
     "verify:testnet": "npx hardhat verify --network vechain_testnet",
-    "verify:mainnet": "npx hardhat verify --network vechain_mainnet"
+    "verify:mainnet": "npx hardhat verify --network vechain_mainnet",
+    "estimate-voting-gas:mainnet": "npx hardhat run scripts/helpers/estimateVotingGas.ts --network vechain_mainnet"
   },
   "dependencies": {
     "@nomicfoundation/hardhat-chai-matchers": "^2.0.2",
@@ -70,7 +75,7 @@
     "@vechain/sdk-network": "1.2.0-rc.2",
     "@vechain/sdk-hardhat-plugin": "1.2.0-rc.2",
     "archiver": "^7.0.1",
-    "axios": "^1.7.2",
+    "axios": "^1.11.0",
     "chai": "^4.2.0",
     "dotenv": "^16.3.1",
     "form-data": "^4.0.0",

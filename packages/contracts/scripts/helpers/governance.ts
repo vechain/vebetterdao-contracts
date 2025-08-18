@@ -1,10 +1,10 @@
 import { ethers } from "hardhat"
 
-import { B3TRGovernorV1, XAllocationVoting } from "../../typechain-types"
+import { B3TRGovernor, XAllocationVoting } from "../../typechain-types"
 import { uploadBlobToIPFS } from "./ipfs"
 
 export const proposeUpgradeGovernance = async (
-  governor: B3TRGovernorV1,
+  governor: B3TRGovernor,
   xAllocationVoting: XAllocationVoting,
 ): Promise<void> => {
   ////////////////////////////
@@ -52,6 +52,7 @@ export const proposeUpgradeGovernance = async (
   const GovernorVotesLogic = await ethers.getContractFactory("GovernorVotesLogic", {
     libraries: {
       GovernorClockLogic: await GovernorClockLogicLib.getAddress(),
+      GovernorProposalLogic: await GovernorProposalLogicLib.getAddress(),
     },
   })
   const GovernorVotesLogicLib = await GovernorVotesLogic.deploy()

@@ -19,7 +19,7 @@ export const upgradeConfig: Record<string, UpgradeContract> = {
   },
   B3TRGovernor: {
     name: "b3tr-governor",
-    versions: ["v2", "v3", "v4", "v5", "v6"],
+    versions: ["v2", "v3", "v4", "v5", "v6", "v7"],
     configAddressField: "b3trGovernorAddress",
     descriptions: {
       v2: "Give ability to contract admins to call governance only functions",
@@ -27,18 +27,20 @@ export const upgradeConfig: Record<string, UpgradeContract> = {
       v4: "Integrate VeBetterPassport contract",
       v5: "Vechain Nodes x GM upgrades feature",
       v6: "Proposal Execution: Add GM Pool for GM Holder Rewards (Align IVoterRwards)",
+      v7: "Proposal Execution + Grants Feature: Add extra voting power based on support tokens + deposit threshold cap + proposal type concept",
     },
   },
   XAllocationVoting: {
     name: "x-allocation-voting",
     configAddressField: "xAllocationVotingContractAddress",
-    versions: ["v2", "v3", "v4", "v5", "v6"],
+    versions: ["v2", "v3", "v4", "v5", "v6", "v7"],
     descriptions: {
       v2: "Integrate VeBetterPassport contract",
       v3: "Update X2Earn interface to include new endorsement feature",
       v4: "Update X2Earn interface to include node cooldown feature",
       v5: "Fix casting votes multiple times for same app in single transaction",
       v6: "Proposal Execution: Add GM Pool for GM Holder Rewards (Align IVoterRwards and IEmissions)",
+      v7: "Proposal Execution: Count proposal deposits to x-allocation voting power",
     },
   },
   "XAllocation Pool": {

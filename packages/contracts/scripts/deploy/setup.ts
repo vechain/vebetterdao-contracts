@@ -1,12 +1,12 @@
 import {
   B3TR,
-  B3TRGovernorV1,
   Emissions,
   TokenAuction,
   Treasury,
   VOT3,
   VoterRewards,
   X2EarnApps,
+  B3TRGovernor,
   XAllocationVoting,
 } from "../../typechain-types"
 import { SeedStrategy, getSeedAccounts, getTestKeys } from "../helpers/seedAccounts"
@@ -15,7 +15,7 @@ import { App, endorseXApps, registerXDapps } from "../helpers/xApp"
 import { airdropB3trFromTreasury, airdropVTHO } from "../helpers/airdrop"
 import { mintVechainNodes, proposeUpgradeGovernance } from "../helpers"
 import { convertB3trForVot3 } from "../helpers/swap"
-import { EnvConfig, getContractsConfig, shouldEndorseXApps } from "@repo/config/contracts"
+import { EnvConfig, shouldEndorseXApps } from "@repo/config/contracts"
 
 const accounts = getTestKeys(17)
 const xDappCreatorAccounts = accounts.slice(0, 8)
@@ -86,7 +86,7 @@ export const setupEnvironment = async (
   emissions: Emissions,
   treasury: Treasury,
   x2EarnApps: X2EarnApps,
-  governor: B3TRGovernorV1,
+  governor: B3TRGovernor,
   xAllocationVoting: XAllocationVoting,
   b3tr: B3TR,
   vot3: VOT3,
@@ -133,7 +133,7 @@ export const setupLocalEnvironment = async (
   emissions: Emissions,
   treasury: Treasury,
   x2EarnApps: X2EarnApps,
-  governor: B3TRGovernorV1,
+  governor: B3TRGovernor,
   xAllocationVoting: XAllocationVoting,
   b3tr: B3TR,
   vot3: VOT3,
@@ -163,6 +163,7 @@ export const setupLocalEnvironment = async (
 
   // Seed the first 5 accounts with some tokens
   const treasuryAddress = await treasury.getAddress()
+  // 5+ 8 accounts: 13 accounts
   const allAccounts = getSeedAccounts(SeedStrategy.FIXED, 5 + APPS.length, 0)
   const seedAccounts = allAccounts.slice(0, 5)
   const endorserAccounts = allAccounts
@@ -177,6 +178,7 @@ export const setupLocalEnvironment = async (
 
   await convertB3trForVot3(b3tr, vot3, seedAccounts)
 
+  // Deprecated with stargateNFTAddress
   /**
    * First seed account will have a Mjolnir X Node
    * Second seed account will have a Thunder X Node
@@ -184,16 +186,18 @@ export const setupLocalEnvironment = async (
    * Forth seed account will have a Mjölnir Economic Node
    * Fifth seed account will have a Strength Economic Node
    * Remaining accounts with have a Mjolnir X Node -> These will have an endorsement score of 100
+   * BEWARE : The first 8 accounts have to hold those nodes : Check if it is the case before running the script
    */
-  await mintVechainNodes(vechainNodesMock, endorserAccounts, padNodeTypes([7, 6, 5, 3, 1], endorserAccounts.length))
 
+  // If the first 8 accounts does not have the correct nodes, run the following line
+  // await mintVechainNodes(vechainNodesMock, endorserAccounts, padNodeTypes([7, 6, 5, 3, 1], endorserAccounts.length))
   await startEmissions(emissionsContract, admin)
 
   if (endorseApps) {
     // Get unendorsed XAPPs
     const unedorsedApps = await x2EarnApps.unendorsedAppIds()
-    // const appsToEndorse = unedorsedApps.slice(0, unedorsedApps.length / 2)
     await endorseXApps(endorserAccounts, x2EarnApps, unedorsedApps, vechainNodesMock)
+    // If this fails, check if the first 8 accounts have the correct nodes [7, 6, 5, 3, 1, 7, 7, 7]
   }
   await proposeUpgradeGovernance(governor, xAllocationVoting)
 

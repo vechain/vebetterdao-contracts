@@ -31,7 +31,7 @@ import { createTestConfig } from "./helpers/config"
 import { getImplementationAddress } from "@openzeppelin/upgrades-core"
 import { deployAndUpgrade, deployProxy, upgradeProxy } from "../scripts/helpers"
 import {
-  B3TRGovernor,
+  B3TRGovernorV4,
   B3TRGovernorV5,
   Emissions,
   EmissionsV2,
@@ -477,14 +477,6 @@ describe("VoterRewards - @shard10", () => {
         treasury,
         x2EarnApps,
         xAllocationPool,
-        governorClockLogicLib,
-        governorConfiguratorLib,
-        governorDepositLogicLib,
-        governorFunctionRestrictionsLogicLib,
-        governorProposalLogicLib,
-        governorQuorumLogicLib,
-        governorStateLogicLib,
-        governorVotesLogicLib,
         governorClockLogicLibV1,
         governorConfiguratorLibV1,
         governorDepositLogicLibV1,
@@ -501,6 +493,14 @@ describe("VoterRewards - @shard10", () => {
         governorQuorumLogicLibV3,
         governorStateLogicLibV3,
         governorVotesLogicLibV3,
+        governorClockLogicLibV4,
+        governorConfiguratorLibV4,
+        governorDepositLogicLibV4,
+        governorFunctionRestrictionsLogicLibV4,
+        governorProposalLogicLibV4,
+        governorQuorumLogicLibV4,
+        governorStateLogicLibV4,
+        governorVotesLogicLibV4,
         veBetterPassport,
       } = await getOrDeployContractInstances({
         forceDeploy: true,
@@ -536,8 +536,8 @@ describe("VoterRewards - @shard10", () => {
       ])) as VoterRewardsV1
 
       // Deploy XAllocationVoting
-      const xAllocationVoting = (await deployAndUpgrade(
-        ["XAllocationVotingV1", "XAllocationVoting"],
+      const xAllocationVotingV2 = (await deployAndUpgrade(
+        ["XAllocationVotingV1", "XAllocationVotingV2"],
         [
           [
             {
@@ -564,14 +564,14 @@ describe("VoterRewards - @shard10", () => {
       )) as XAllocationVoting
 
       // Deploy Governor
-      const governor = (await deployAndUpgrade(
-        ["B3TRGovernorV1", "B3TRGovernorV2", "B3TRGovernorV3", "B3TRGovernor"],
+      const governorV4 = (await deployAndUpgrade(
+        ["B3TRGovernorV1", "B3TRGovernorV2", "B3TRGovernorV3", "B3TRGovernorV4"],
         [
           [
             {
               vot3Token: await vot3.getAddress(),
               timelock: await timeLock.getAddress(),
-              xAllocationVoting: await xAllocationVoting.getAddress(),
+              xAllocationVoting: await xAllocationVotingV2.getAddress(),
               b3tr: await b3tr.getAddress(),
               quorumPercentage: config.B3TR_GOVERNOR_QUORUM_PERCENTAGE, // quorum percentage
               initialDepositThreshold: config.B3TR_GOVERNOR_DEPOSIT_THRESHOLD, // deposit threshold
@@ -626,50 +626,50 @@ describe("VoterRewards - @shard10", () => {
               GovernorVotesLogicV3: await governorVotesLogicLibV3.getAddress(),
             },
             {
-              GovernorClockLogic: await governorClockLogicLib.getAddress(),
-              GovernorConfigurator: await governorConfiguratorLib.getAddress(),
-              GovernorDepositLogic: await governorDepositLogicLib.getAddress(),
-              GovernorFunctionRestrictionsLogic: await governorFunctionRestrictionsLogicLib.getAddress(),
-              GovernorProposalLogic: await governorProposalLogicLib.getAddress(),
-              GovernorQuorumLogic: await governorQuorumLogicLib.getAddress(),
-              GovernorStateLogic: await governorStateLogicLib.getAddress(),
-              GovernorVotesLogic: await governorVotesLogicLib.getAddress(),
+              GovernorClockLogicV4: await governorClockLogicLibV4.getAddress(),
+              GovernorConfiguratorV4: await governorConfiguratorLibV4.getAddress(),
+              GovernorDepositLogicV4: await governorDepositLogicLibV4.getAddress(),
+              GovernorFunctionRestrictionsLogicV4: await governorFunctionRestrictionsLogicLibV4.getAddress(),
+              GovernorProposalLogicV4: await governorProposalLogicLibV4.getAddress(),
+              GovernorQuorumLogicV4: await governorQuorumLogicLibV4.getAddress(),
+              GovernorStateLogicV4: await governorStateLogicLibV4.getAddress(),
+              GovernorVotesLogicV4: await governorVotesLogicLibV4.getAddress(),
             },
           ],
         },
-      )) as B3TRGovernor
+      )) as B3TRGovernorV4
 
-      await xAllocationPool.connect(owner).setXAllocationVotingAddress(await xAllocationVoting.getAddress())
+      await xAllocationPool.connect(owner).setXAllocationVotingAddress(await xAllocationVotingV2.getAddress())
 
       // Grant Vote registrar role to XAllocationVoting
       await voterRewardsV1
         .connect(owner)
-        .grantRole(await voterRewardsV1.VOTE_REGISTRAR_ROLE(), await xAllocationVoting.getAddress())
+        .grantRole(await voterRewardsV1.VOTE_REGISTRAR_ROLE(), await xAllocationVotingV2.getAddress())
       // Grant Vote registrar role to Governor
       await voterRewardsV1
         .connect(owner)
-        .grantRole(await voterRewardsV1.VOTE_REGISTRAR_ROLE(), await governor.getAddress())
+        .grantRole(await voterRewardsV1.VOTE_REGISTRAR_ROLE(), await governorV4.getAddress())
 
       // Grant admin role to voter rewards for registering x allocation voting
-      await xAllocationVoting
+      await xAllocationVotingV2
         .connect(owner)
-        .grantRole(await xAllocationVoting.DEFAULT_ADMIN_ROLE(), emissions.getAddress())
+        .grantRole(await xAllocationVotingV2.DEFAULT_ADMIN_ROLE(), emissions.getAddress())
 
       // Set xAllocationGovernor in emissions
-      await emissions.connect(owner).setXAllocationsGovernorAddress(await xAllocationVoting.getAddress())
+      await emissions.connect(owner).setXAllocationsGovernorAddress(await xAllocationVotingV2.getAddress())
       await emissions.connect(owner).setVote2EarnAddress(await voterRewardsV1.getAddress())
 
       // Setup XAllocationPool addresses
-      await xAllocationPool.connect(owner).setXAllocationVotingAddress(await xAllocationVoting.getAddress())
+      await xAllocationPool.connect(owner).setXAllocationVotingAddress(await xAllocationVotingV2.getAddress())
       await xAllocationPool.connect(owner).setEmissionsAddress(await emissions.getAddress())
 
       //Set the emissions address and the admin as the ROUND_STARTER_ROLE in XAllocationVoting
-      const roundStarterRole = await xAllocationVoting.ROUND_STARTER_ROLE()
-      await xAllocationVoting
+      const roundStarterRole = await xAllocationVotingV2.ROUND_STARTER_ROLE()
+      await xAllocationVotingV2
         .connect(owner)
         .grantRole(roundStarterRole, await emissions.getAddress())
         .then(async tx => await tx.wait())
-      await xAllocationVoting
+      await xAllocationVotingV2
         .connect(owner)
         .grantRole(roundStarterRole, owner.address)
         .then(async tx => await tx.wait())
@@ -694,22 +694,22 @@ describe("VoterRewards - @shard10", () => {
       // Bootstrap emissions
       await bootstrapAndStartEmissions()
 
-      const roundId = await xAllocationVoting.currentRoundId()
+      const roundId = await xAllocationVotingV2.currentRoundId()
 
       expect(roundId).to.equal(1)
 
-      expect(await xAllocationVoting.roundDeadline(roundId)).to.lt(await emissions.getNextCycleBlock())
+      expect(await xAllocationVotingV2.roundDeadline(roundId)).to.lt(await emissions.getNextCycleBlock())
 
       await veBetterPassport.whitelist(voter1.address)
       await veBetterPassport.whitelist(voter2.address)
       await veBetterPassport.whitelist(voter3.address)
       await veBetterPassport.toggleCheck(1)
 
-      await xAllocationVoting.connect(voter1).castVote(roundId, [app1], [ethers.parseEther("1000")])
-      await xAllocationVoting
+      await xAllocationVotingV2.connect(voter1).castVote(roundId, [app1], [ethers.parseEther("1000")])
+      await xAllocationVotingV2
         .connect(voter2)
         .castVote(roundId, [app1, app2], [ethers.parseEther("200"), ethers.parseEther("100")])
-      await xAllocationVoting
+      await xAllocationVotingV2
         .connect(voter3)
         .castVote(roundId, [app1, app2], [ethers.parseEther("500"), ethers.parseEther("500")])
 
@@ -726,16 +726,16 @@ describe("VoterRewards - @shard10", () => {
       expect(await voterRewardsV1.cycleToVoterToTotal(1, voter3)).to.equal(ethers.parseEther("31.622776601"))
 
       // Votes should be tracked correctly
-      let appVotes = await xAllocationVoting.getAppVotes(roundId, app1)
+      let appVotes = await xAllocationVotingV2.getAppVotes(roundId, app1)
       expect(appVotes).to.eql(ethers.parseEther("1700"))
-      appVotes = await xAllocationVoting.getAppVotes(roundId, app2)
+      appVotes = await xAllocationVotingV2.getAppVotes(roundId, app2)
       expect(appVotes).to.eql(ethers.parseEther("600"))
 
-      let totalVotes = await xAllocationVoting.totalVotes(roundId)
+      let totalVotes = await xAllocationVotingV2.totalVotes(roundId)
       expect(totalVotes).to.eql(ethers.parseEther("2300"))
 
       // Total voters should be tracked correctly
-      let totalVoters = await xAllocationVoting.totalVoters(roundId)
+      let totalVoters = await xAllocationVotingV2.totalVoters(roundId)
       expect(totalVoters).to.eql(BigInt(3))
 
       // Voter rewards checks
@@ -781,12 +781,12 @@ describe("VoterRewards - @shard10", () => {
       await waitForRoundToEnd(Number(roundId))
 
       // Votes should be the same after round ended
-      appVotes = await xAllocationVoting.getAppVotes(roundId, app1)
+      appVotes = await xAllocationVotingV2.getAppVotes(roundId, app1)
       expect(appVotes).to.eql(ethers.parseEther("1700"))
-      appVotes = await xAllocationVoting.getAppVotes(roundId, app2)
+      appVotes = await xAllocationVotingV2.getAppVotes(roundId, app2)
       expect(appVotes).to.eql(ethers.parseEther("600"))
 
-      totalVotes = await xAllocationVoting.totalVotes(roundId)
+      totalVotes = await xAllocationVotingV2.totalVotes(roundId)
       expect(totalVotes).to.eql(ethers.parseEther("2300"))
 
       await waitForNextCycle()
@@ -813,17 +813,17 @@ describe("VoterRewards - @shard10", () => {
       // Second round
       await emissions.connect(voter1).distribute() // Anyone can distribute the cycle
 
-      const roundId2 = await xAllocationVoting.currentRoundId()
+      const roundId2 = await xAllocationVotingV2.currentRoundId()
 
       expect(roundId2).to.equal(2)
 
-      expect(await xAllocationVoting.roundDeadline(roundId)).to.lt(await emissions.getNextCycleBlock())
+      expect(await xAllocationVotingV2.roundDeadline(roundId)).to.lt(await emissions.getNextCycleBlock())
 
-      await xAllocationVoting.connect(voter1).castVote(roundId2, [app2], [ethers.parseEther("1000")])
-      await xAllocationVoting
+      await xAllocationVotingV2.connect(voter1).castVote(roundId2, [app2], [ethers.parseEther("1000")])
+      await xAllocationVotingV2
         .connect(voter2)
         .castVote(roundId2, [app1, app2], [ethers.parseEther("100"), ethers.parseEther("500")])
-      await xAllocationVoting
+      await xAllocationVotingV2
         .connect(voter3)
         .castVote(roundId2, [app1, app2], [ethers.parseEther("500"), ethers.parseEther("500")])
 
@@ -840,16 +840,16 @@ describe("VoterRewards - @shard10", () => {
       expect(await voterRewardsV2.cycleToVoterToTotal(2, voter3)).to.equal(ethers.parseEther("31.622776601"))
 
       // Votes should be tracked correctly
-      appVotes = await xAllocationVoting.getAppVotes(roundId2, app1)
+      appVotes = await xAllocationVotingV2.getAppVotes(roundId2, app1)
       expect(appVotes).to.eql(ethers.parseEther("600"))
-      appVotes = await xAllocationVoting.getAppVotes(roundId2, app2)
+      appVotes = await xAllocationVotingV2.getAppVotes(roundId2, app2)
       expect(appVotes).to.eql(ethers.parseEther("2000"))
 
-      totalVotes = await xAllocationVoting.totalVotes(roundId2)
+      totalVotes = await xAllocationVotingV2.totalVotes(roundId2)
       expect(totalVotes).to.eql(ethers.parseEther("2600"))
 
       // Total voters should be tracked correctly
-      totalVoters = await xAllocationVoting.totalVoters(roundId2)
+      totalVoters = await xAllocationVotingV2.totalVoters(roundId2)
       expect(totalVoters).to.eql(BigInt(3))
 
       // Voter rewards checks
@@ -863,12 +863,12 @@ describe("VoterRewards - @shard10", () => {
       await waitForRoundToEnd(Number(roundId2))
 
       // Votes should be the same after round ended
-      appVotes = await xAllocationVoting.getAppVotes(roundId2, app1)
+      appVotes = await xAllocationVotingV2.getAppVotes(roundId2, app1)
       expect(appVotes).to.eql(ethers.parseEther("600"))
-      appVotes = await xAllocationVoting.getAppVotes(roundId2, app2)
+      appVotes = await xAllocationVotingV2.getAppVotes(roundId2, app2)
       expect(appVotes).to.eql(ethers.parseEther("2000"))
 
-      totalVotes = await xAllocationVoting.totalVotes(roundId2)
+      totalVotes = await xAllocationVotingV2.totalVotes(roundId2)
       expect(totalVotes).to.eql(ethers.parseEther("2600"))
 
       await waitForNextCycle()
@@ -936,14 +936,14 @@ describe("VoterRewards - @shard10", () => {
       // start round
       await emissions.connect(voter1).distribute() // Anyone can distribute the cycle
 
-      const roundId3 = await xAllocationVoting.currentRoundId()
+      const roundId3 = await xAllocationVotingV2.currentRoundId()
 
       expect(roundId3).to.equal(3)
 
-      await xAllocationVoting
+      await xAllocationVotingV2
         .connect(voter1)
         .castVote(roundId3, [app1, app2], [ethers.parseEther("0"), ethers.parseEther("1000")])
-      await xAllocationVoting
+      await xAllocationVotingV2
         .connect(voter2)
         .castVote(roundId3, [app1, app2], [ethers.parseEther("100"), ethers.parseEther("500")])
 
@@ -991,20 +991,20 @@ describe("VoterRewards - @shard10", () => {
       // start round
       await emissions.connect(voter1).distribute() // Anyone can distribute the cycle
 
-      const roundId4 = await xAllocationVoting.currentRoundId()
+      const roundId4 = await xAllocationVotingV2.currentRoundId()
 
       expect(roundId4).to.equal(4)
 
-      await xAllocationVoting
+      await xAllocationVotingV2
         .connect(voter1)
         .castVote(roundId4, [app1, app2], [ethers.parseEther("0"), ethers.parseEther("1000")])
-      await xAllocationVoting
+      await xAllocationVotingV2
         .connect(voter2)
         .castVote(roundId4, [app1, app2], [ethers.parseEther("100"), ethers.parseEther("500")])
 
       // Wait for round to end
-      const deadline = await xAllocationVoting.roundDeadline(roundId4)
-      const currentBlock = await xAllocationVoting.clock()
+      const deadline = await xAllocationVotingV2.roundDeadline(roundId4)
+      const currentBlock = await xAllocationVotingV2.clock()
       await moveBlocks(parseInt((deadline - currentBlock + BigInt(1)).toString()))
 
       await expect(voterRewardsV4.connect(voter1).claimReward(4, voter1)).to.emit(voterRewardsV4, "RewardClaimed")
@@ -1065,6 +1065,14 @@ describe("VoterRewards - @shard10", () => {
         governorStateLogicLibV5,
         governorVotesLogicLibV5,
         governorProposalLogicLibV5,
+        governorClockLogicLibV6,
+        governorConfiguratorLibV6,
+        governorDepositLogicLibV6,
+        governorFunctionRestrictionsLogicLibV6,
+        governorProposalLogicLibV6,
+        governorQuorumLogicLibV6,
+        governorStateLogicLibV6,
+        governorVotesLogicLibV6,
         minterAccount,
       } = await getOrDeployContractInstances({
         forceDeploy: true,
@@ -1241,7 +1249,7 @@ describe("VoterRewards - @shard10", () => {
               GovernorConfiguratorV1: await governorConfiguratorLibV1.getAddress(),
               GovernorDepositLogicV1: await governorDepositLogicLibV1.getAddress(),
               GovernorFunctionRestrictionsLogicV1: await governorFunctionRestrictionsLogicLibV1.getAddress(),
-              GovernorProposalLogicV1: await governorQuorumLogicLibV1.getAddress(),
+              GovernorProposalLogicV1: await governorProposalLogicLibV1.getAddress(),
               GovernorQuorumLogicV1: await governorQuorumLogicLibV1.getAddress(),
               GovernorStateLogicV1: await governorStateLogicLibV1.getAddress(),
               GovernorVotesLogicV1: await governorVotesLogicLibV1.getAddress(),
@@ -1271,8 +1279,8 @@ describe("VoterRewards - @shard10", () => {
               GovernorConfiguratorV5: await governorConfiguratorLibV5.getAddress(),
               GovernorDepositLogicV5: await governorDepositLogicLibV5.getAddress(),
               GovernorFunctionRestrictionsLogicV5: await governorFunctionRestrictionsLogicLibV5.getAddress(),
-              GovernorQuorumLogicV5: await governorQuorumLogicLibV5.getAddress(),
               GovernorProposalLogicV5: await governorProposalLogicLibV5.getAddress(),
+              GovernorQuorumLogicV5: await governorQuorumLogicLibV5.getAddress(),
               GovernorStateLogicV5: await governorStateLogicLibV5.getAddress(),
               GovernorVotesLogicV5: await governorVotesLogicLibV5.getAddress(),
             },
@@ -1427,7 +1435,6 @@ describe("VoterRewards - @shard10", () => {
       storageSlots = storageSlots.filter(
         slot => slot !== "0x0000000000000000000000000000000000000000000000000000000000000000",
       ) // removing empty slots
-
       // Upgrade Emissions and Voter Rewards to support GM Pool
       const emissionsLatest = (await upgradeProxy(
         "EmissionsV2",
@@ -1450,7 +1457,7 @@ describe("VoterRewards - @shard10", () => {
       )) as unknown as VoterRewards
 
       // Upgrade contracts that use interfaces
-      await upgradeProxy("XAllocationVotingV5", "XAllocationVoting", await xAllocationVoting.getAddress(), [], {
+      await upgradeProxy("XAllocationVotingV5", "XAllocationVotingV6", await xAllocationVoting.getAddress(), [], {
         version: 6,
       })
 
@@ -1458,17 +1465,17 @@ describe("VoterRewards - @shard10", () => {
         version: 6,
       })
 
-      await upgradeProxy("B3TRGovernorV5", "B3TRGovernor", await governor.getAddress(), [], {
+      await upgradeProxy("B3TRGovernorV5", "B3TRGovernorV6", await governor.getAddress(), [], {
         version: 6,
         libraries: {
-          GovernorClockLogic: await governorClockLogicLib.getAddress(),
-          GovernorConfigurator: await governorConfiguratorLib.getAddress(),
-          GovernorDepositLogic: await governorDepositLogicLib.getAddress(),
-          GovernorFunctionRestrictionsLogic: await governorFunctionRestrictionsLogicLib.getAddress(),
-          GovernorProposalLogic: await governorProposalLogicLib.getAddress(),
-          GovernorQuorumLogic: await governorQuorumLogicLib.getAddress(),
-          GovernorStateLogic: await governorStateLogicLib.getAddress(),
-          GovernorVotesLogic: await governorVotesLogicLib.getAddress(),
+          GovernorClockLogicV6: await governorClockLogicLibV6.getAddress(),
+          GovernorConfiguratorV6: await governorConfiguratorLibV6.getAddress(),
+          GovernorDepositLogicV6: await governorDepositLogicLibV6.getAddress(),
+          GovernorFunctionRestrictionsLogicV6: await governorFunctionRestrictionsLogicLibV6.getAddress(),
+          GovernorProposalLogicV6: await governorProposalLogicLibV6.getAddress(),
+          GovernorQuorumLogicV6: await governorQuorumLogicLibV6.getAddress(),
+          GovernorStateLogicV6: await governorStateLogicLibV6.getAddress(),
+          GovernorVotesLogicV6: await governorVotesLogicLibV6.getAddress(),
         },
       })
 

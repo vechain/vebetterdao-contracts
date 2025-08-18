@@ -132,7 +132,7 @@ describe("X-Allocation Voting - @shard14", function () {
       })
 
       expect(await xAllocationVoting.name()).to.eql("XAllocationVoting")
-      expect(await xAllocationVoting.version()).to.eql("6")
+      expect(await xAllocationVoting.version()).to.eql("7")
     })
 
     it("Counting mode is set correctly", async function () {
@@ -506,7 +506,7 @@ describe("X-Allocation Voting - @shard14", function () {
         forceDeploy: true,
       })
 
-      expect(await xAllocationVoting.version()).to.equal("6")
+      expect(await xAllocationVoting.version()).to.equal("7")
     })
 
     it("Should not break storage when upgrading to V2, V3, V4, V5 and V6", async () => {
@@ -753,7 +753,7 @@ describe("X-Allocation Voting - @shard14", function () {
       // Upgrade to V5 (using the V4 contract address)
       const xAllocationVotingV6 = (await upgradeProxy(
         "XAllocationVotingV5",
-        "XAllocationVoting",
+        "XAllocationVotingV6",
         await xAllocationVotingV4.getAddress(), // Use V4's address
         [],
         {
@@ -966,19 +966,7 @@ describe("X-Allocation Voting - @shard14", function () {
 
     describe("Voting threshold", function () {
       it("can update voting threshold through governance", async function () {
-        const {
-          owner,
-          xAllocationVoting,
-          governorClockLogicLib,
-          governorConfiguratorLib,
-          governorDepositLogicLib,
-          governorFunctionRestrictionsLogicLib,
-          governorProposalLogicLib,
-          governorQuorumLogicLib,
-          governorStateLogicLib,
-          governorVotesLogicLib,
-          veBetterPassport,
-        } = await getOrDeployContractInstances({
+        const { owner, xAllocationVoting, veBetterPassport } = await getOrDeployContractInstances({
           forceDeploy: true,
         })
 
@@ -986,39 +974,29 @@ describe("X-Allocation Voting - @shard14", function () {
         await veBetterPassport.toggleCheck(1)
 
         const newThreshold = 10n
-        await createProposalAndExecuteIt(
+        const executionTX = await createProposalAndExecuteIt(
           owner,
           owner,
           xAllocationVoting,
-          await ethers.getContractFactory("B3TRGovernor", {
-            libraries: {
-              GovernorClockLogic: await governorClockLogicLib.getAddress(),
-              GovernorConfigurator: await governorConfiguratorLib.getAddress(),
-              GovernorDepositLogic: await governorDepositLogicLib.getAddress(),
-              GovernorFunctionRestrictionsLogic: await governorFunctionRestrictionsLogicLib.getAddress(),
-              GovernorProposalLogic: await governorProposalLogicLib.getAddress(),
-              GovernorQuorumLogic: await governorQuorumLogicLib.getAddress(),
-              GovernorStateLogic: await governorStateLogicLib.getAddress(),
-              GovernorVotesLogic: await governorVotesLogicLib.getAddress(),
-            },
-          }),
+          await ethers.getContractFactory("XAllocationVoting"),
           "Update Voting Threshold",
           "setVotingThreshold",
           [newThreshold],
         )
+        await executionTX.wait()
 
         const updatedThreshold = await xAllocationVoting.votingThreshold()
         expect(updatedThreshold).to.eql(newThreshold)
       })
 
       it("only governance can update voting threshold", async function () {
-        const { xAllocationVoting, owner } = await getOrDeployContractInstances({
+        const { xAllocationVoting, otherAccount } = await getOrDeployContractInstances({
           forceDeploy: true,
         })
 
         const newThreshold = 10n
 
-        await catchRevert(xAllocationVoting.connect(owner).setVotingThreshold(newThreshold))
+        await catchRevert(xAllocationVoting.connect(otherAccount).setVotingThreshold(newThreshold))
 
         const updatedThreshold = await xAllocationVoting.votingThreshold()
         expect(updatedThreshold).to.not.eql(newThreshold)
@@ -1051,9 +1029,9 @@ describe("X-Allocation Voting - @shard14", function () {
       })
 
       it("Only governance can change quorum percentage", async function () {
-        const { xAllocationVoting, owner } = await getOrDeployContractInstances({ forceDeploy: true })
+        const { xAllocationVoting, otherAccount } = await getOrDeployContractInstances({ forceDeploy: true })
 
-        await expect(xAllocationVoting.connect(owner).updateQuorumNumerator(1)).to.be.reverted
+        await expect(xAllocationVoting.connect(otherAccount).updateQuorumNumerator(1)).to.be.reverted
       })
 
       it("Cannot set the quorum nominator higher than the denominator", async function () {
@@ -1140,8 +1118,8 @@ describe("X-Allocation Voting - @shard14", function () {
 
     describe("Voting period", function () {
       it("Can set voting period only through governance", async function () {
-        const { xAllocationVoting, owner } = await getOrDeployContractInstances({ forceDeploy: false })
-        await expect(xAllocationVoting.connect(owner).setVotingPeriod(10)).to.be.reverted
+        const { xAllocationVoting, otherAccount } = await getOrDeployContractInstances({ forceDeploy: false })
+        await expect(xAllocationVoting.connect(otherAccount).setVotingPeriod(10)).to.be.reverted
       })
 
       it("Can set voting period if less than emissions cycle duration", async function () {

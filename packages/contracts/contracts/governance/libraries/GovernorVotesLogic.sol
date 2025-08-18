@@ -247,10 +247,11 @@ library GovernorVotesLogic {
       revert GovernorPersonhoodVerificationFailed(voter, explanation);
     }
 
-    uint256 weight = self.vot3.getPastVotes(voter, proposalSnapshot);
+    uint256 weight = self.vot3.getPastVotes(voter, proposalSnapshot); // aka voting power without quadratic voting
     uint256 power = Math.sqrt(weight) * 1e9;
+    GovernorTypes.ProposalType proposalType = GovernorProposalLogic.proposalType(self, proposalId);
 
-    _checkVotingThreshold(self, weight);
+    _checkVotingThreshold(self, weight, proposalType);
 
     _countVote(self, proposalId, voter, support, weight, power);
 
@@ -265,9 +266,14 @@ library GovernorVotesLogic {
    * @notice Checks if the voting threshold is met.
    * @param self - GovernorStorage
    * @param weight - The weight of the vote.
+   * @param proposalType - The type of proposal.
    */
-  function _checkVotingThreshold(GovernorStorageTypes.GovernorStorage storage self, uint256 weight) private view {
-    uint256 threshold = GovernorConfigurator.getVotingThreshold(self);
+  function _checkVotingThreshold(
+    GovernorStorageTypes.GovernorStorage storage self,
+    uint256 weight,
+    GovernorTypes.ProposalType proposalType
+  ) private view {
+    uint256 threshold = GovernorConfigurator.getVotingThreshold(self, proposalType);
     if (weight < threshold) {
       revert GovernorVotingThresholdNotMet(threshold, weight);
     }

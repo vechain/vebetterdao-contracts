@@ -76,7 +76,7 @@ abstract contract RoundVotesCountingUpgradeable is Initializable, XAllocationVot
 
   /// @dev Error thrown when trying to vote for the same app multiple times in one transaction
   error DuplicateAppVote();
-
+  
   /**
    * @dev Initializes the contract
    */
@@ -162,7 +162,7 @@ abstract contract RoundVotesCountingUpgradeable is Initializable, XAllocationVot
 
     // Get the total voting power of the voter to use in the for loop to check
     // if the total weight of votes cast by the voter is greater than the voter's available voting power
-    uint256 voterAvailableVotes = getVotes(voter, roundStart);
+    uint256 voterAvailableVotes = _getVotingPower(voter, roundStart);
 
     // Iterate through the apps and weights to calculate the total weight of votes cast by the voter
     for (uint256 i; i < apps.length; i++) {
@@ -220,6 +220,13 @@ abstract contract RoundVotesCountingUpgradeable is Initializable, XAllocationVot
 
     // Emit the AllocationVoteCast event
     emit AllocationVoteCast(voter, roundId, apps, weights);
+  }
+
+  function _getVotingPower(address voter, uint256 roundStart) internal virtual returns (uint256) {
+    uint256 voterAvailableVotesWithDeposit = getDepositVotingPower(voter, roundStart);
+    uint256 voterAvailableVotes = getVotes(voter, roundStart) + voterAvailableVotesWithDeposit;
+
+    return voterAvailableVotes;
   }
 
   /**

@@ -28,7 +28,7 @@ async function main() {
   console.log(`Deploying NodeManagement contract`)
 
   // Deploy NodeManagement
-  const nodeManagement = (await deployProxy("NodeManagement", [
+  const nodeManagement = (await deployProxy("NodeManagementV3", [
     contractsConfig.VECHAIN_NODES_CONTRACT_ADDRESS,
     TEMP_ADMIN,
     TEMP_ADMIN,

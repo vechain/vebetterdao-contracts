@@ -24,6 +24,7 @@ interface XAppMetadata {
   app_urls: AppUrl[]
   ve_world: {
     banner: string
+    featured_image: string
   }
 }
 
@@ -68,6 +69,7 @@ const generateMetadata = async (file: string): Promise<XAppMetadata> => {
   metadata.banner = toIPFSURL(imagesIpfsUrl, "banner.png", "media")
   metadata.logo = toIPFSURL(imagesIpfsUrl, "logo.png", "media")
   metadata.ve_world.banner = toIPFSURL(imagesIpfsUrl, "banner.png", "media")
+  metadata.ve_world.featured_image = toIPFSURL(imagesIpfsUrl, "featured_image.png", "media")
 
   return metadata
 }
@@ -82,13 +84,14 @@ const validateMediaFiles = async (filename: string) => {
   }
 
   // media must contain 2 files: a logo and a banner
-  if (media.length !== 2) {
+  if (media.length !== 3) {
     throw new Error(`Invalid media files for ${filename}`)
   }
 
   const logo = await fs.readFile(`${MEDIA_PATH}/${filename}/logo.png`)
   const banner = await fs.readFile(`${MEDIA_PATH}/${filename}/banner.png`)
-  if (!logo || !banner) {
+  const ve_world_banner = await fs.readFile(`${MEDIA_PATH}/${filename}/ve_world_banner.png`)
+  if (!logo || !banner || !ve_world_banner) {
     throw new Error(`Invalid media files for ${filename}`)
   }
 }

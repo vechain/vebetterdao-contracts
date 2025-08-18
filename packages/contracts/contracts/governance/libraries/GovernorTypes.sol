@@ -28,6 +28,8 @@ import { IXAllocationVotingGovernor } from "../../interfaces/IXAllocationVotingG
 import { IB3TR } from "../../interfaces/IB3TR.sol";
 import { IVOT3 } from "../../interfaces/IVOT3.sol";
 import { TimelockControllerUpgradeable } from "@openzeppelin/contracts-upgradeable/governance/TimelockControllerUpgradeable.sol";
+import { IGalaxyMember } from "../../interfaces/IGalaxyMember.sol";
+import { IGrantsManager } from "../../interfaces/IGrantsManager.sol";
 
 library GovernorTypes {
   /**
@@ -100,13 +102,37 @@ library GovernorTypes {
 
   // ProposalState enum to store the state of a proposal
   enum ProposalState {
-    Pending,
-    Active,
-    Canceled,
-    Defeated,
-    Succeeded,
-    Queued,
-    Executed,
+    Pending, 
+    Active, 
+    Canceled, 
+    Defeated, 
+    Succeeded, 
+    Queued, 
+    Executed, 
     DepositNotMet
+  }
+
+  /**
+   * @dev Struct containing data for v7 initialization
+   * @param grantDepositThreshold The deposit threshold percentage for grant proposals
+   * @param grantVotingThreshold The voting threshold for grant proposals
+   * @param grantQuorum The quorum percentage for grant proposals
+   */
+  struct InitializationDataV7 {
+    uint256 grantDepositThreshold;
+    uint256 grantVotingThreshold;
+    uint256 grantQuorum;
+    uint256 grantDepositThresholdCap;
+    uint256 standardDepositThresholdCap;
+    uint256 standardGMWeight;
+    uint256 grantGMWeight;
+    IGalaxyMember galaxyMember;
+    IGrantsManager grantsManager;
+  }
+
+  // ProposalType enum to distinguish between different types of proposals
+  enum ProposalType {
+    Standard,
+    Grant
   }
 }
