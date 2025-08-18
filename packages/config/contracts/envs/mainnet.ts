@@ -11,6 +11,19 @@ export function createMainnetConfig() {
     B3TR_GOVERNOR_DEPOSIT_THRESHOLD: 2, // Percentage of total B3TR supply needed to be deposited to create a proposal
     B3TR_GOVERNOR_MIN_VOTING_DELAY: 25920, // 3 days, proposal needs to be created at least 3 days before it can be voted on
     B3TR_GOVERNOR_VOTING_THRESHOLD: BigInt("1000000000000000000"), // 1 vote
+    //Grants proposal types
+    B3TR_GOVERNOR_GRANT_DEPOSIT_THRESHOLD: 2, // Percentage of total B3TR supply needed to be deposited to create a proposal
+    B3TR_GOVERNOR_GRANT_VOTING_THRESHOLD: BigInt("1000000000000000000"), // 1 vote
+    B3TR_GOVERNOR_GRANT_QUORUM_PERCENTAGE: 2, // 2 -> Need 2% of voters to pass
+
+    //Deposit threshold cap for grants and standard proposals
+    B3TR_GOVERNOR_GRANT_DEPOSIT_THRESHOLD_CAP: BigInt("3500000000000000000000000"), // 3.5M B3TR
+    B3TR_GOVERNOR_STANDARD_DEPOSIT_THRESHOLD_CAP: BigInt("5000000000000000000000000"), // 5M B3TR
+
+    // GM weight requirements for proposal types
+    B3TR_GOVERNOR_STANDARD_GM_WEIGHT: 2, // Requires GM level 2 (Moon) for standard proposals
+    B3TR_GOVERNOR_GRANT_GM_WEIGHT: 2, // Requires GM level 2 (Moon) for grant proposals
+
     /*
       For ambiguous functions (functions with same name), the function signature is used to differentiate them
       e.g., instead of using "setVoterRewards", we use "setVoterRewards(address)"
@@ -165,5 +178,13 @@ export function createMainnetConfig() {
       2500000000000000000000000n,
       12500000000000000000000000n,
     ],
+
+    // Stargate contracts - TODO: Update these with the actual contract addresses
+    STARGATE_NFT_CONTRACT_ADDRESS: "0x1856c533ac2d94340aaa8544d35a5c1d4a21dee7",
+    STARGATE_DELEGATE_CONTRACT_ADDRESS: "0x4cb1c9ef05b529c093371264fab2c93cc6cddb0e",
+    NODE_MANAGEMENT_CONTRACT_ADDRESS: "0xB0EF9D89C6b49CbA6BBF86Bf2FDf0Eee4968c6AB",
+
+    // Milestones
+    MINIMUM_MILESTONE_COUNT: 3,
   })
 }

@@ -9,6 +9,19 @@ export function createTestnetStagingConfig() {
     B3TR_GOVERNOR_DEPOSIT_THRESHOLD: 2, // Percentage of total B3TR supply needed to be deposited to create a proposal
     B3TR_GOVERNOR_VOTING_THRESHOLD: BigInt("1000000000000000000"), // 1 vote
     B3TR_GOVERNOR_MIN_VOTING_DELAY: 60, // 10 minutes
+    //Grants proposal types
+    B3TR_GOVERNOR_GRANT_DEPOSIT_THRESHOLD: 2, // Percentage of total B3TR supply needed to be deposited to create a proposal
+    B3TR_GOVERNOR_GRANT_VOTING_THRESHOLD: BigInt("1000000000000000000"), // 1 vote
+    B3TR_GOVERNOR_GRANT_QUORUM_PERCENTAGE: 2, // 2 -> Need 2% of voters to pass
+
+    //Deposit threshold cap for grants and standard proposals
+    B3TR_GOVERNOR_GRANT_DEPOSIT_THRESHOLD_CAP: BigInt("15000000000000000000000"), // 15K B3TR
+    B3TR_GOVERNOR_STANDARD_DEPOSIT_THRESHOLD_CAP: BigInt("25000000000000000000000"), // 25K B3TR
+
+    // GM weight requirements for proposal types
+    B3TR_GOVERNOR_STANDARD_GM_WEIGHT: 2, // Requires GM level 2 (Moon) for standard proposals
+    B3TR_GOVERNOR_GRANT_GM_WEIGHT: 2, // Requires GM level 2 (Moon) for grant proposals
+
     /*
       For ambiguous functions (functions with same name), the function signature is used to differentiate them
       e.g., instead of using "setVoterRewards", we use "setVoterRewards(address)"
@@ -20,10 +33,10 @@ export function createTestnetStagingConfig() {
         "setMinVotingDelay",
         "setWhitelistFunction",
         "setIsFunctionRestrictionEnabled",
-        "updateQuorumNumerator",
+        "updateQuorumNumeratorByType",
         "updateDelay",
-        "setDepositThresholdPercentage",
-        "setVotingThreshold",
+        "setProposalTypeDepositThresholdPercentage",
+        "setProposalTypeVotingThreshold",
         "upgradeToAndCall",
       ],
       Treasury: ["transferB3TR"],
@@ -130,8 +143,7 @@ export function createTestnetStagingConfig() {
     MIGRATION_ADDRESS: "0x865306084235Bf804c8Bba8a8d56890940ca8F0b", // 10th account from mnemonic of solo network
     MIGRATION_AMOUNT: BigInt("3750000000000000000000000"), // 3.75 million B3TR tokens from pilot show
 
-    // Version 2
-    VECHAIN_NODES_CONTRACT_ADDRESS: "0xb81E9C5f9644Dec9e5e3Cac86b4461A222072302", // The contract address of the VeChainNodes contract on mainnet
+    VECHAIN_NODES_CONTRACT_ADDRESS: "0x0747b39abc0de3d11c8ddfe2e7eed00aaa8d475c", // The contract address of the VeChainNodes contract on testnet staging
     XAPP_GRACE_PERIOD: 17280, // 2 days -> max time in blocks to be unendorsed by node before being removed from the XAlloction voting rounds
     // X 2 Earn Rewards Pool
     X_2_EARN_INITIAL_IMPACT_KEYS: [
@@ -192,5 +204,14 @@ export function createTestnetStagingConfig() {
       2500000000000000000000000n,
       12500000000000000000000000n,
     ],
+
+    // Stargate and NFTs related contracts -> they are already deployed from stargate project
+    // See from more details: {https://github.com/vechain/stargate-contracts/blob/main/README.md }
+    STARGATE_NFT_CONTRACT_ADDRESS: "0x1ec1d168574603ec35b9d229843b7c2b44bcb770",
+    STARGATE_DELEGATE_CONTRACT_ADDRESS: "0x7240e3bc0d26431512d5b67dbd26d199205bffe8",
+    NODE_MANAGEMENT_CONTRACT_ADDRESS: "0x8bcbfc20ee39c94f4e60afc5d78c402f70b4f3b2",
+
+    // Milestones
+    MINIMUM_MILESTONE_COUNT: 2, // test-compatibility
   })
 }

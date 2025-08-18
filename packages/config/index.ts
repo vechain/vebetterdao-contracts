@@ -53,11 +53,14 @@ export type AppConfig = {
   x2EarnAppsContractAddress: string
   x2EarnCreatorContractAddress: string
   x2EarnRewardsPoolContractAddress: string
+  tokenAuctionContractAddress: string
   nodeManagementContractAddress: string
   veBetterPassportContractAddress: string
   b3trGovernorLibraries: B3TRGovernorLibraries
   passportLibraries: PassportLibraries
   b3trMultiSigAddress?: string
+  stargateNFTContractAddress: string
+  grantsManagerContractAddress: string
   nodeUrl: string
   indexerUrl?: string
   network: Network

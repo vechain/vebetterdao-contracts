@@ -1,4 +1,5 @@
 import { defineConfig } from "../defineConfig"
+
 export function createTestnetConfig() {
   return defineConfig({
     NEXT_PUBLIC_APP_ENV: "testnet",
@@ -84,7 +85,7 @@ export function createTestnetConfig() {
     TREASURY_TRANSFER_LIMIT_VOT3: BigInt("0"),
 
     // Endorsement
-    VECHAIN_NODES_CONTRACT_ADDRESS: "0xb81E9C5f9644Dec9e5e3Cac86b4461A222072302", // The contract address of the VeChainNodes contract on mainnet
+    VECHAIN_NODES_CONTRACT_ADDRESS: "0x0747b39abc0de3d11c8ddfe2e7eed00aaa8d475c", // The contract address of the VeChainNodes contract on testnet
     XAPP_GRACE_PERIOD: 120960, // 2 weeks -> max time to be unendorsed by node before being removed from the XAlloction voting rounds (blocks)
     // Passport
     VEPASSPORT_BOT_SIGNALING_THRESHOLD: 2, // Address must be signaled more than X times to be considered a bot
@@ -130,5 +131,14 @@ export function createTestnetConfig() {
       2500000000000000000000000n,
       12500000000000000000000000n,
     ],
+
+    // Stargate and NFTs related contracts -> they are already deployed from stargate project
+    // See from more details: {https://github.com/vechain/stargate-contracts/blob/main/README.md }
+    STARGATE_NFT_CONTRACT_ADDRESS: "0x1ec1d168574603ec35b9d229843b7c2b44bcb770",
+    STARGATE_DELEGATE_CONTRACT_ADDRESS: "0x7240e3bc0d26431512d5b67dbd26d199205bffe8",
+    NODE_MANAGEMENT_CONTRACT_ADDRESS: "0x8bcbfc20ee39c94f4e60afc5d78c402f70b4f3b2",
+
+    // Milestones
+    MINIMUM_MILESTONE_COUNT: 2, // test-compatibility
   })
 }
