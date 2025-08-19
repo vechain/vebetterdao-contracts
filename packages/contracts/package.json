@@ -1,10 +1,26 @@
 {
   "name": "@vechain/vebetterdao-contracts",
   "version": "6.0.1",
-  "main": "index.ts",
-  "types": "index.ts",
+  "main": "dist/cjs/index.js",
+  "module": "dist/esm/index.js",
+  "types": "dist/esm/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "license": "MIT",
+  "exports": {
+    ".": {
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.js"
+    },
+    "./artifacts/*": "./artifacts/*",
+    "./typechain-types/*": "./typechain-types/*"
+  },
   "scripts": {
+    "clean": "rm -rf dist artifacts typechain-types cache node_modules",
+    "build": "yarn run build:cjs && yarn run build:esm",
+    "build:cjs": "tsc -p tsconfig.cjs.json",
+    "build:esm": "tsc -p tsconfig.esm.json",
     "test:thor-solo": "npx hardhat test",
     "test:hardhat": "npx hardhat test --network hardhat",
     "test:hardhat:shard": "npx hardhat test --network hardhat --grep \"$SHARD\"",
@@ -40,7 +56,6 @@
     "get-all-apps-from-creator:staging": "npx hardhat run scripts/data/getAllAppsFromCreator.ts --network vechain_testnet",
     "start-solo": "docker compose up -d",
     "stop-solo": "docker compose down",
-    "clean": "rm -rf dist artifacts typechain-types cache node_modules",
     "lint": "eslint . --ext .ts",
     "format": "eslint . --ext .ts --fix",
     "generate-docs": "npx hardhat docgen",

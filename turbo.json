@@ -27,8 +27,8 @@
       "cache": false
     },
     "build": {
-      "dependsOn": ["^compile", "@repo/config#check-or-generate-local-config"],
-      "outputs": [".next/**", "!.next/cache/**"]
+      "dependsOn": ["@vechain/vebetterdao-contracts#compile", "@repo/config#check-or-generate-local-config"],
+      "outputs": ["dist/**"]
     },
     "lint": {
       "cache": false

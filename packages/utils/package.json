@@ -11,6 +11,9 @@
     "FormattingUtils",
     "HexUtils"
   ],
+  "exports": {
+    ".": "./index.ts"
+  },
   "dependencies": {
     "nft.storage": "^7.1.1",
     "thor-devkit": "^2.0.9",

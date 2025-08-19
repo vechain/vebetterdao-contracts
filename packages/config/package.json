@@ -8,6 +8,10 @@
     "local",
     "generateMockLocalConfig"
   ],
+  "exports": {
+    ".": "./index.ts",
+    "./contracts": "./contracts/index.ts"
+  },
   "dependencies": {
     "@repo/constants": "*"
   },

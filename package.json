@@ -1,5 +1,5 @@
 {
-  "name": "b3tr-monorepo",
+  "name": "vebetterdao-contracts",
   "private": true,
   "scripts": {
     "test:coverage:solidity": "dotenv -v NEXT_PUBLIC_APP_ENV=local -v IS_TEST_COVERAGE=true -e .env.example turbo run test:coverage:solidity",

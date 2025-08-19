@@ -6,6 +6,9 @@
     "network",
     "ipfs"
   ],
+  "exports": {
+    ".": "./index.ts"
+  },
   "dependencies": {
     "@vechain/connex-types": "^2.1.0"
   }
