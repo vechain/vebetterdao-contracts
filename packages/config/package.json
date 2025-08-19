@@ -10,7 +10,15 @@
   ],
   "exports": {
     ".": "./index.ts",
-    "./contracts": "./contracts/index.ts"
+    "./contracts": "./contracts/index.ts",
+    "./contracts/defineConfig": "./contracts/defineConfig.ts",
+    "./contracts/type": "./contracts/type.ts",
+    "./contracts/envs/local": "./contracts/envs/local.ts",
+    "./contracts/envs/e2e": "./contracts/envs/e2e.ts",
+    "./contracts/envs/galactica-test": "./contracts/envs/galactica-test.ts",
+    "./contracts/envs/mainnet": "./contracts/envs/mainnet.ts",
+    "./contracts/envs/testnet": "./contracts/envs/testnet.ts",
+    "./contracts/envs/testnetStaging": "./contracts/envs/testnetStaging.ts"
   },
   "dependencies": {
     "@repo/constants": "*"
