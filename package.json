@@ -112,5 +112,8 @@
     "*.{json,html}": [
       "prettier --write --ignore-unknown"
     ]
+  },
+  "resolutions": {
+    "elliptic": "6.6.1"
   }
 }
