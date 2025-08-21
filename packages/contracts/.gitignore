@@ -1,3 +1,5 @@
+dist
+
 node_modules
 .env
 coverage
@@ -11,3 +13,6 @@ artifacts
 .vscode/*
 
 docs
+
+# GalaxyMember metadata
+metadata/galaxyMember/metadata.zip

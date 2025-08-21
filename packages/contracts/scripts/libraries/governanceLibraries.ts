@@ -44,6 +44,7 @@ export async function governanceLibraries(latestOnly: boolean = false) {
   const GovernorVotesLogic = await ethers.getContractFactory("GovernorVotesLogic", {
     libraries: {
       GovernorClockLogic: await GovernorClockLogicLib.getAddress(),
+      GovernorProposalLogic: await GovernorProposalLogicLib.getAddress(),
     },
   })
   const GovernorVotesLogicLib = await GovernorVotesLogic.deploy()
@@ -351,6 +352,74 @@ export async function governanceLibraries(latestOnly: boolean = false) {
   const GovernorStateLogicLibV5 = await GovernorStateLogicV5.deploy()
   await GovernorStateLogicLibV5.waitForDeployment()
 
+  /// ---------------------- Version 6 ----------------------
+
+  // Deploy Governor Clock Logic
+
+  const GovernorClockLogicV6 = await ethers.getContractFactory("GovernorClockLogicV6")
+  const GovernorClockLogicLibV6 = await GovernorClockLogicV6.deploy()
+  await GovernorClockLogicLibV6.waitForDeployment()
+
+  // Deploy Governor Configurator
+  const GovernorConfiguratorV6 = await ethers.getContractFactory("GovernorConfiguratorV6")
+  const GovernorConfiguratorLibV6 = await GovernorConfiguratorV6.deploy()
+  await GovernorConfiguratorLibV6.waitForDeployment()
+
+  // Deploy Governor Function Restrictions Logic
+  const GovernorFunctionRestrictionsLogicV6 = await ethers.getContractFactory("GovernorFunctionRestrictionsLogicV6")
+  const GovernorFunctionRestrictionsLogicLibV6 = await GovernorFunctionRestrictionsLogicV6.deploy()
+  await GovernorFunctionRestrictionsLogicLibV6.waitForDeployment()
+
+  // Deploy Governor Governance Logic
+  const GovernorGovernanceLogicV6 = await ethers.getContractFactory("GovernorGovernanceLogicV6")
+  const GovernorGovernanceLogicLibV6 = await GovernorGovernanceLogicV6.deploy()
+  await GovernorGovernanceLogicLibV6.waitForDeployment()
+
+  // Deploy Governor Quorum Logic
+  const GovernorQuorumLogicV6 = await ethers.getContractFactory("GovernorQuorumLogicV6", {
+    libraries: {
+      GovernorClockLogicV6: await GovernorClockLogicLibV6.getAddress(),
+    },
+  })
+  const GovernorQuorumLogicLibV6 = await GovernorQuorumLogicV6.deploy()
+  await GovernorQuorumLogicLibV6.waitForDeployment()
+
+  // Deploy Governor Proposal Logic
+  const GovernorProposalLogicV6 = await ethers.getContractFactory("GovernorProposalLogicV6", {
+    libraries: {
+      GovernorClockLogicV6: await GovernorClockLogicLibV6.getAddress(),
+    },
+  })
+  const GovernorProposalLogicLibV6 = await GovernorProposalLogicV6.deploy()
+  await GovernorProposalLogicLibV6.waitForDeployment()
+
+  // Deploy Governor Votes Logic
+  const GovernorVotesLogicV6 = await ethers.getContractFactory("GovernorVotesLogicV6", {
+    libraries: {
+      GovernorClockLogicV6: await GovernorClockLogicLibV6.getAddress(),
+    },
+  })
+  const GovernorVotesLogicLibV6 = await GovernorVotesLogicV6.deploy()
+  await GovernorVotesLogicLibV6.waitForDeployment()
+
+  // Deploy Governor Deposit Logic
+  const GovernorDepositLogicV6 = await ethers.getContractFactory("GovernorDepositLogicV6", {
+    libraries: {
+      GovernorClockLogicV6: await GovernorClockLogicLibV6.getAddress(),
+    },
+  })
+  const GovernorDepositLogicLibV6 = await GovernorDepositLogicV6.deploy()
+  await GovernorDepositLogicLibV6.waitForDeployment()
+
+  // Deploy Governor State Logic
+  const GovernorStateLogicV6 = await ethers.getContractFactory("GovernorStateLogicV6", {
+    libraries: {
+      GovernorClockLogicV6: await GovernorClockLogicLibV6.getAddress(),
+    },
+  })
+  const GovernorStateLogicLibV6 = await GovernorStateLogicV6.deploy()
+  await GovernorStateLogicLibV6.waitForDeployment()
+
   return {
     GovernorClockLogicLibV1,
     GovernorConfiguratorLibV1,
@@ -397,5 +466,14 @@ export async function governanceLibraries(latestOnly: boolean = false) {
     GovernorVotesLogicLib,
     GovernorDepositLogicLib,
     GovernorStateLogicLib,
+    GovernorClockLogicLibV6,
+    GovernorConfiguratorLibV6,
+    GovernorFunctionRestrictionsLogicLibV6,
+    GovernorGovernanceLogicLibV6,
+    GovernorQuorumLogicLibV6,
+    GovernorProposalLogicLibV6,
+    GovernorVotesLogicLibV6,
+    GovernorDepositLogicLibV6,
+    GovernorStateLogicLibV6,
   }
 }

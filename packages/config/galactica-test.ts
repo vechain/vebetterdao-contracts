@@ -19,6 +19,9 @@ const config: AppConfig = {
   nodeManagementContractAddress: "0x26e42706e85d1252ed407e0ec50f75f8b2b7f7c8",
   veBetterPassportContractAddress: "0xd79aaffd53e619854e4e5929a7bbd84e4b14ff44",
   x2EarnCreatorContractAddress: "0xe88d4b189b58ee90751498b6033f63b497cfa97d",
+  tokenAuctionContractAddress: "0x0000000000000000000000000000000000000000",
+  stargateNFTContractAddress: "0xe88d4b189b58ee90751498b6033f63b497cfa97d",
+  grantsManagerContractAddress: "0x0000000000000000000000000000000000000001",
   indexerUrl: "https://b3tr.testnet.vechain.org/api/v1",
   nodeUrl: "https://galactica.live.dev.node.vechain.org",
   network: {

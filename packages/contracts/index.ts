@@ -13,7 +13,7 @@ import X2EarnAppsJson from "./artifacts/contracts/X2EarnApps.sol/X2EarnApps.json
 import TreasuryJson from "./artifacts/contracts/Treasury.sol/Treasury.json"
 import X2EarnRewardsPoolJson from "./artifacts/contracts/X2EarnRewardsPool.sol/X2EarnRewardsPool.json"
 import VechainNodesJson from "./artifacts/contracts/mocks/VechainNodes/TokenAuction.sol/TokenAuction.json"
-import NodeManagementJson from "./artifacts/contracts/NodeManagement.sol/NodeManagement.json"
+import NodeManagementV3Json from "./artifacts/contracts/mocks/Stargate/NodeManagement/NodeManagementV3.sol/NodeManagementV3.json"
 import VeBetterPassportJson from "./artifacts/contracts/ve-better-passport/VeBetterPassport.sol/VeBetterPassport.json"
 
 export {
@@ -31,7 +31,7 @@ export {
   Treasury__factory,
   X2EarnRewardsPool__factory,
   TokenAuction__factory,
-  NodeManagement__factory,
+  NodeManagementV3__factory as NodeManagement__factory,
   VeBetterPassport__factory,
 } from "./typechain-types"
 
@@ -51,6 +51,6 @@ export {
   TreasuryJson,
   X2EarnRewardsPoolJson,
   VechainNodesJson,
-  NodeManagementJson,
+  NodeManagementV3Json as NodeManagementJson,
   VeBetterPassportJson,
 }

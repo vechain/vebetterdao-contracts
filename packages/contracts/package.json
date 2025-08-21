@@ -1,16 +1,34 @@
 {
   "name": "@vechain/vebetterdao-contracts",
-  "version": "6.0.1",
-  "main": "index.ts",
-  "types": "index.ts",
+  "version": "7.0.2",
+  "main": "dist/cjs/index.js",
+  "module": "dist/esm/index.js",
+  "types": "dist/esm/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "license": "MIT",
+  "exports": {
+    ".": {
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.js",
+      "types": "./dist/esm/index.d.ts"
+    },
+    "./typechain-types": {
+      "import": "./dist/esm/typechain-types/index.js",
+      "require": "./dist/cjs/typechain-types/index.js",
+      "types": "./dist/esm/typechain-types/index.d.ts"
+    }
+  },
+  "prepublishOnly": "yarn compile",
   "scripts": {
+    "clean": "rm -rf dist artifacts typechain-types cache node_modules",
     "test:thor-solo": "npx hardhat test",
     "test:hardhat": "npx hardhat test --network hardhat",
     "test:hardhat:shard": "npx hardhat test --network hardhat --grep \"$SHARD\"",
     "test:coverage:solidity": "hardhat coverage",
     "coverage:report": "nyc report --reporter=lcov --reporter=text --reporter=html --temp-dir=./coverage",
-    "compile": "npx hardhat compile",
+    "compile": "npx hardhat compile && tsc -b ./tsconfig.esm.json ./tsconfig.cjs.json",
     "deploy": "npx hardhat run scripts/deploy",
     "deploy:local": "npx hardhat run scripts/deploy --network vechain_solo",
     "deploy:testnet-staging": "npx hardhat run scripts/deploy --network vechain_testnet",
@@ -40,16 +58,20 @@
     "get-all-apps-from-creator:staging": "npx hardhat run scripts/data/getAllAppsFromCreator.ts --network vechain_testnet",
     "start-solo": "docker compose up -d",
     "stop-solo": "docker compose down",
-    "clean": "rm -rf dist artifacts typechain-types cache node_modules",
     "lint": "eslint . --ext .ts",
     "format": "eslint . --ext .ts --fix",
     "generate-docs": "npx hardhat docgen",
     "upgrade:contract": "npx hardhat run scripts/upgrade/upgrades/\"$CONTRACT_TO_UPGRADE\"/\"$CONTRACT_TO_UPGRADE\"-\"$CONTRACT_VERSION\".ts",
+    "upgrade:contract:local": "npx hardhat run scripts/upgrade/upgrades/\"$CONTRACT_TO_UPGRADE\"/\"$CONTRACT_TO_UPGRADE\"-\"$CONTRACT_VERSION\".ts --network vechain_solo",
+    "upgrade:contract:testnet": "npx hardhat run scripts/upgrade/upgrades/\"$CONTRACT_TO_UPGRADE\"/\"$CONTRACT_TO_UPGRADE\"-\"$CONTRACT_VERSION\".ts --network vechain_testnet",
+    "upgrade:contract:testnet-staging": "npx hardhat run scripts/upgrade/upgrades/\"$CONTRACT_TO_UPGRADE\"/\"$CONTRACT_TO_UPGRADE\"-\"$CONTRACT_VERSION\".ts --network vechain_testnet",
+    "upgrade:contract:mainnet": "npx hardhat run scripts/upgrade/upgrades/\"$CONTRACT_TO_UPGRADE\"/\"$CONTRACT_TO_UPGRADE\"-\"$CONTRACT_VERSION\".ts --network vechain_mainnet",
     "deploy:contract": "npx hardhat run scripts/deploy/deploys/\"$CONTRACT_TO_DEPLOY\".ts",
     "call:contract": "npx hardhat run scripts/functionCalls/calls/\"$FUNCTION_TO_CALL\".ts",
     "rename-contracts": "ts-node scripts/renameContracts.ts",
     "verify:testnet": "npx hardhat verify --network vechain_testnet",
-    "verify:mainnet": "npx hardhat verify --network vechain_mainnet"
+    "verify:mainnet": "npx hardhat verify --network vechain_mainnet",
+    "estimate-voting-gas:mainnet": "npx hardhat run scripts/helpers/estimateVotingGas.ts --network vechain_mainnet"
   },
   "dependencies": {
     "@nomicfoundation/hardhat-chai-matchers": "^2.0.2",
@@ -61,16 +83,14 @@
     "@openzeppelin/contracts": "5.0.2",
     "@openzeppelin/contracts-upgradeable": "5.0.2",
     "@openzeppelin/upgrades-core": "^1.32.5",
-    "@repo/config": "*",
-    "@repo/utils": "*",
     "@typechain/hardhat": "^8.0.0",
     "@types/chai": "^4.2.0",
     "@types/mocha": ">=9.1.0",
     "@vechain/sdk-core": "1.2.0-rc.2",
-    "@vechain/sdk-network": "1.2.0-rc.2",
     "@vechain/sdk-hardhat-plugin": "1.2.0-rc.2",
+    "@vechain/sdk-network": "1.2.0-rc.2",
     "archiver": "^7.0.1",
-    "axios": "^1.7.2",
+    "axios": "^1.11.0",
     "chai": "^4.2.0",
     "dotenv": "^16.3.1",
     "form-data": "^4.0.0",
@@ -90,7 +110,9 @@
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^3.0.0",
     "@nomicfoundation/hardhat-verify": "^2.0.12",
+    "@repo/config": "*",
     "@repo/eslint-config": "*",
+    "@repo/utils": "*",
     "@typechain/ethers-v6": "^0.4.3",
     "@types/archiver": "^6.0.3",
     "@types/inquirer": "^9.0.7",

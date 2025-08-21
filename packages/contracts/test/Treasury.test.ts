@@ -148,8 +148,12 @@ describe("Treasury - @shard7", () => {
     })
     describe("VET", () => {
       it("should transfer VET", async () => {
+        //Since timelock is the only with governance role, let's grant to a wallet to simulate
+        await treasuryProxy.connect(owner).grantRole(await treasuryProxy.GOVERNANCE_ROLE(), owner.address)
+
         expect(await treasuryProxy.getVETBalance()).to.eql(ethers.parseEther("10"))
-        await treasuryProxy.transferVET(otherAccount.address, ethers.parseEther("1"))
+        //Transfer VET to other account using the wallet with governance role
+        await treasuryProxy.connect(owner).transferVET(otherAccount.address, ethers.parseEther("1"))
         expect(await treasuryProxy.getVETBalance()).to.eql(ethers.parseEther("9"))
       })
       it("should revert if not enough balance", async () => {

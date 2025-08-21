@@ -38,6 +38,8 @@ import {
   X2EarnRewardsPool,
   XAllocationPool,
   XAllocationVoting,
+  XAllocationVotingV2,
+  B3TRGovernorV4,
 } from "../typechain-types"
 import { endorseApp } from "./helpers/xnodes"
 import { createLocalConfig } from "@repo/config/contracts/envs/local"
@@ -374,14 +376,14 @@ describe("VeBetterPassport - @shard8", function () {
         governorQuorumLogicLibV3,
         governorStateLogicLibV3,
         governorVotesLogicLibV3,
-        governorClockLogicLib,
-        governorConfiguratorLib,
-        governorDepositLogicLib,
-        governorFunctionRestrictionsLogicLib,
-        governorProposalLogicLib,
-        governorQuorumLogicLib,
-        governorStateLogicLib,
-        governorVotesLogicLib,
+        governorClockLogicLibV4,
+        governorConfiguratorLibV4,
+        governorDepositLogicLibV4,
+        governorFunctionRestrictionsLogicLibV4,
+        governorProposalLogicLibV4,
+        governorQuorumLogicLibV4,
+        governorStateLogicLibV4,
+        governorVotesLogicLibV4,
         B3trContract,
         creators,
       } = await getOrDeployContractInstances({
@@ -498,7 +500,7 @@ describe("VeBetterPassport - @shard8", function () {
       )) as VoterRewards
 
       const xAllocationVoting = (await deployAndUpgrade(
-        ["XAllocationVotingV1", "XAllocationVoting"],
+        ["XAllocationVotingV1", "XAllocationVotingV2"],
         [
           [
             {
@@ -522,7 +524,7 @@ describe("VeBetterPassport - @shard8", function () {
         {
           versions: [undefined, 2],
         },
-      )) as XAllocationVoting
+      )) as XAllocationVotingV2
 
       const veBetterPassportV1 = (await initializeProxy(
         veBetterPassportContractAddress,
@@ -565,7 +567,7 @@ describe("VeBetterPassport - @shard8", function () {
       )) as VeBetterPassportV1
 
       const governor = (await deployAndUpgrade(
-        ["B3TRGovernorV1", "B3TRGovernorV2", "B3TRGovernorV3", "B3TRGovernor"],
+        ["B3TRGovernorV1", "B3TRGovernorV2", "B3TRGovernorV3", "B3TRGovernorV4"],
         [
           [
             {
@@ -626,18 +628,18 @@ describe("VeBetterPassport - @shard8", function () {
               GovernorVotesLogicV3: await governorVotesLogicLibV3.getAddress(),
             },
             {
-              GovernorClockLogic: await governorClockLogicLib.getAddress(),
-              GovernorConfigurator: await governorConfiguratorLib.getAddress(),
-              GovernorDepositLogic: await governorDepositLogicLib.getAddress(),
-              GovernorFunctionRestrictionsLogic: await governorFunctionRestrictionsLogicLib.getAddress(),
-              GovernorProposalLogic: await governorProposalLogicLib.getAddress(),
-              GovernorQuorumLogic: await governorQuorumLogicLib.getAddress(),
-              GovernorStateLogic: await governorStateLogicLib.getAddress(),
-              GovernorVotesLogic: await governorVotesLogicLib.getAddress(),
+              GovernorClockLogicV4: await governorClockLogicLibV4.getAddress(),
+              GovernorConfiguratorV4: await governorConfiguratorLibV4.getAddress(),
+              GovernorDepositLogicV4: await governorDepositLogicLibV4.getAddress(),
+              GovernorFunctionRestrictionsLogicV4: await governorFunctionRestrictionsLogicLibV4.getAddress(),
+              GovernorProposalLogicV4: await governorProposalLogicLibV4.getAddress(),
+              GovernorQuorumLogicV4: await governorQuorumLogicLibV4.getAddress(),
+              GovernorStateLogicV4: await governorStateLogicLibV4.getAddress(),
+              GovernorVotesLogicV4: await governorVotesLogicLibV4.getAddress(),
             },
           ],
         },
-      )) as B3TRGovernor
+      )) as B3TRGovernorV4
 
       await veBetterPassportV1
         .connect(owner)

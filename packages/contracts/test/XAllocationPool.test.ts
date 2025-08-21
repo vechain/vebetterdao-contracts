@@ -1155,7 +1155,7 @@ describe("X-Allocation Pool - @shard13", async function () {
           ((100n - BigInt(config.X_ALLOCATION_POOL_BASE_ALLOCATION_PERCENTAGE)) *
             BigInt(config.X_ALLOCATION_POOL_APP_SHARES_MAX_CAP) *
             config.INITIAL_X_ALLOCATION) /
-          100n ** 2n
+          10000n
 
         // Get max allocations
         const maxAppAllocation = await xAllocationPool.getMaxAppAllocation(round1)

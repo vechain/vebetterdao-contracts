@@ -10,6 +10,8 @@ import { IVoterRewards } from "../interfaces/IVoterRewards.sol";
 import { IXAllocationVotingGovernor } from "../interfaces/IXAllocationVotingGovernor.sol";
 import { GovernorTypes } from "../governance/libraries/GovernorTypes.sol";
 import { IVeBetterPassport } from "./IVeBetterPassport.sol";
+import { IGalaxyMember } from "./IGalaxyMember.sol";
+import { IGrantsManager } from "./IGrantsManager.sol";
 
 /**
  * @dev Interface of the {B3TRGovernor} core.
@@ -38,6 +40,16 @@ interface IB3TRGovernor is IERC165, IERC6372 {
    * @dev Token deposits are disabled in this contract.
    */
   error GovernorDisabledDeposit();
+
+  /**
+   * @dev Thrown when the proposer does not fit the requirement (GM weight ATM)
+   */
+  error GMLevelAboveMaxLevel(uint256 gmLevel);
+
+  /**
+   * @dev The GM level is not in the valid range - 0 to max level.
+   */
+  error GovernorInvalidProposer(address proposer, uint256 requiredWeight);
 
   /**
    * @dev The `account` is not a proposer.
@@ -148,6 +160,11 @@ interface IB3TRGovernor is IERC165, IERC6372 {
   error UnauthorizedAccess(address user);
 
   /**
+   * @dev The grantee cannot deposit for their own grant.
+   */
+  error GranteeCannotDepositOwnGrant(uint256 proposalId);
+
+  /**
    * @dev Emitted when a proposal is created
    */
   event ProposalCreated(
@@ -222,6 +239,44 @@ interface IB3TRGovernor is IERC165, IERC6372 {
    */
   event VeBetterPassportSet(address indexed oldVeBetterPassport, address indexed newVeBetterPassport);
 
+  /**
+   * @dev Emitted when a proposal is created with type information.
+   */
+  event ProposalCreatedWithType(uint256 indexed proposalId, GovernorTypes.ProposalType proposalType);
+
+  /**
+   * @dev Emitted when the quorum numerator for a specific proposal type is updated.
+   */
+  event QuorumNumeratorUpdatedByType(
+    uint256 oldNumerator,
+    uint256 newNumerator,
+    GovernorTypes.ProposalType proposalType
+  );
+  /**
+   * @dev Emitted when the `votingThreshold` for a proposal type is set.
+   */
+  event VotingThresholdSetV2(
+    GovernorTypes.ProposalType proposalType,
+    uint256 oldVotingThreshold,
+    uint256 newVotingThreshold
+  );
+
+  /**
+   * @dev Emitted when the deposit threshold percentage for a proposal type is set.
+   */
+  event DepositThresholdSetV2(
+    GovernorTypes.ProposalType proposalType,
+    uint256 oldDepositThreshold,
+    uint256 newDepositThreshold
+  );
+  /**
+   * @dev Emitted when the deposit threshold cap for a proposal type is set.
+   */
+  event DepositThresholdCapSet(
+    GovernorTypes.ProposalType proposalType,
+    uint256 oldDepositThresholdCap,
+    uint256 newDepositThresholdCap
+  );
   /**
    * @notice module:core
    * @dev Name of the governor instance (used in building the ERC712 domain separator).
@@ -304,19 +359,21 @@ interface IB3TRGovernor is IERC165, IERC6372 {
    * @notice module:core
    * @dev The number of votes in support of a proposal required in order for a proposal to become active.
    */
-  function depositThreshold() external view returns (uint256);
+  function depositThresholdByProposalType(GovernorTypes.ProposalType proposalTypeValue) external view returns (uint256);
 
   /**
    * @notice module:core
-   * @dev The deposit threshold percentage of the total supply of B3TR tokens that need to be deposited to create a proposal
+   * @dev The proposal Threshold Percentage for all type of proposal
    */
-  function depositThresholdPercentage() external view returns (uint256);
+  function depositThresholdPercentageByProposalType(
+    GovernorTypes.ProposalType proposalTypeValue
+  ) external view returns (uint256);
 
   /**
    * @notice module:core
-   * @dev The minimum number of vote tokens needed to cast a vote
+   * @dev The voting threshold for a proposal type
    */
-  function votingThreshold() external view returns (uint256);
+  function votingThresholdByProposalType(GovernorTypes.ProposalType proposalTypeValue) external view returns (uint256);
 
   /**
    * @notice module:core
@@ -402,7 +459,7 @@ interface IB3TRGovernor is IERC165, IERC6372 {
    * @dev Create a new proposal. Specify the allocation round when vote should become active.
    * The duration is specified by {IGovernor-votingPeriod}.
    *
-   * Emits a {ProposalCreated} event.
+   * Emits a {ProposalCreated} and {ProposalCreatedWithType} event.
    */
   function propose(
     address[] memory targets,
@@ -412,6 +469,20 @@ interface IB3TRGovernor is IERC165, IERC6372 {
     uint256 startRoundId,
     uint256 depositAmount
   ) external returns (uint256 proposalId);
+
+  /**
+   * @dev Create a grant proposal. Grantee cannot deposit for it's own grant.
+   */
+  function proposeGrant(
+    address[] memory targets,
+    uint256[] memory values,
+    bytes[] memory calldatas,
+    string memory description,
+    uint256 startRoundId,
+    uint256 depositAmount,
+    address grantsReceiver,
+    string memory milestonesDetailsMetadataURI
+  ) external returns (uint256);
 
   /**
    * @dev Queue a proposal. Some governors require this step to be performed before execution can happen. If queuing
@@ -525,4 +596,68 @@ interface IB3TRGovernor is IERC165, IERC6372 {
    * @param newVeBetterPassport The new VeBetterPassport contract
    */
   function setVeBetterPassport(IVeBetterPassport newVeBetterPassport) external;
+
+  /**
+   * @notice module:core
+   * @dev The type of a proposal.
+   */
+  function proposalType(uint256 proposalId) external view returns (GovernorTypes.ProposalType);
+
+  /**
+   * @notice Set the GalaxyMember contract
+   * @param newGalaxyMember The new GalaxyMember contract
+   */
+  function setGalaxyMember(IGalaxyMember newGalaxyMember) external;
+
+  /**
+   * @notice Get the GalaxyMember contract
+   * @return The current GalaxyMember contract
+   */
+  function getGalaxyMemberContract() external view returns (IGalaxyMember);
+
+  /**
+   * @notice Set the GrantsManager contract
+   * @param newGrantsManager The new GrantsManager contract
+   */
+  function setGrantsManager(IGrantsManager newGrantsManager) external;
+
+  /**
+   * @notice Get the GrantsManager contract
+   * @return The current GrantsManager contract
+   */
+  function getGrantsManagerContract() external view returns (IGrantsManager);
+
+  /**
+   * @notice Get the GM weight for a proposal type
+   * @param proposalTypeValue The type of the proposal
+   * @return The GM weight for the proposal type
+   */
+  function getRequiredGMLevelByProposalType(
+    GovernorTypes.ProposalType proposalTypeValue
+  ) external view returns (uint256);
+
+  /**
+   * @notice Set the GM weight for a proposal type
+   * @param proposalTypeValue The type of the proposal
+   * @param newGMWeight The new GM weight for the proposal type
+   * @notice e.g. setRequiredGMLevelByProposalType(0, 1) = GM level 1 is required to create a standard proposal
+   */
+  function setRequiredGMLevelByProposalType(GovernorTypes.ProposalType proposalTypeValue, uint256 newGMWeight) external;
+
+  /**
+   * @notice Returns the deposit threshold cap for a proposal type.
+   * @param proposalTypeValue The type of proposal.
+   * @return uint256 The deposit threshold cap for the proposal type.
+   */
+  function depositThresholdCapByProposalType(
+    GovernorTypes.ProposalType proposalTypeValue
+  ) external view returns (uint256);
+
+  /**
+   * @notice Get the deposit voting power for a given account at a given timepoint
+   * @param account The address of the account
+   * @param timepoint The timepoint
+   * @return The deposit voting power
+   */
+  function getDepositVotingPower(address account, uint256 timepoint) external view returns (uint256);
 }

@@ -9,6 +9,19 @@ export function createGalacticaTestConfig() {
     B3TR_GOVERNOR_DEPOSIT_THRESHOLD: 2, // Percentage of total B3TR supply needed to be deposited to create a proposal
     B3TR_GOVERNOR_MIN_VOTING_DELAY: 1, // 1 -> 1 block before the vote starts
     B3TR_GOVERNOR_VOTING_THRESHOLD: BigInt("1000000000000000000"), // 1 vote
+    //Grants proposal types
+    B3TR_GOVERNOR_GRANT_DEPOSIT_THRESHOLD: 2, // Percentage of total B3TR supply needed to be deposited to create a proposal
+    B3TR_GOVERNOR_GRANT_VOTING_THRESHOLD: BigInt("1000000000000000000"), // 1 vote
+    B3TR_GOVERNOR_GRANT_QUORUM_PERCENTAGE: 2, // 2 -> Need 2% of voters to pass
+
+    //Deposit threshold cap for grants and standard proposals
+    B3TR_GOVERNOR_GRANT_DEPOSIT_THRESHOLD_CAP: BigInt("3500000000000000000000000"), // 3.5M B3TR
+    B3TR_GOVERNOR_STANDARD_DEPOSIT_THRESHOLD_CAP: BigInt("5000000000000000000000000"), // 5M B3TR
+
+    // GM weight requirements for proposal types
+    B3TR_GOVERNOR_STANDARD_GM_WEIGHT: 2, // Requires GM level 2 (Moon) for standard proposals
+    B3TR_GOVERNOR_GRANT_GM_WEIGHT: 2, // Requires GM level 2 (Moon) for grant proposals
+
     /*
       For ambiguous functions (functions with same name), the function signature is used to differentiate them
       e.g., instead of using "setVoterRewards", we use "setVoterRewards(address)"
@@ -22,8 +35,8 @@ export function createGalacticaTestConfig() {
         "setMinVotingDelay",
         "setWhitelistFunction",
         "setIsFunctionRestrictionEnabled",
-        "setDepositThresholdPercentage",
-        "setVotingThreshold",
+        "setProposalTypeDepositThresholdPercentage",
+        "setProposalTypeVotingThreshold",
       ],
       Treasury: ["transferVET", "transferB3TR"],
       XAllocationVoting: [
@@ -195,5 +208,13 @@ export function createGalacticaTestConfig() {
       2500000000000000000000000n,
       12500000000000000000000000n,
     ],
+
+    // Stargate contracts - contracts will be deployed as mocks on galactica test network
+    STARGATE_NFT_CONTRACT_ADDRESS: "0x0000000000000000000000000000000000000000",
+    STARGATE_DELEGATE_CONTRACT_ADDRESS: "0x0000000000000000000000000000000000000000",
+    NODE_MANAGEMENT_CONTRACT_ADDRESS: "0x0000000000000000000000000000000000000000",
+
+    // Milestones
+    MINIMUM_MILESTONE_COUNT: 2, // test-compatibility
   })
 }

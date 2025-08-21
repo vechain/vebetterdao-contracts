@@ -1,7 +1,10 @@
-Welcome to the VeBetterDAO Smart Contracts repository! This open-source repository houses the smart contracts powering the decentralized VeBetterDAO on the VeChain Thor blockchain. Dive into a world of transparent and auditable governance mechanisms, leveraging Solidity, Hardhat, and more to ensure robust decentralized operations.
+# VeBetterDAO Smart Contracts
 
-The complete documentation for the VeBetterDAO and the contracts can be found [here](https://docs.vebetterdao.org).
-Or visit the [Github Pages](https://vechain.github.io/vebetterdao-contracts) for the latest documentation extracted from the contracts source code.
+Open-source repository that houses the smart contracts powering the decentralized VeBetterDAO on the VeChain Thor blockchain.
+
+The complete documentation for the VeBetterDAO and the contracts can be found [on the official documentation website](https://docs.vebetterdao.org) and [here](https://vechain.github.io/vebetterdao-contracts) for the latest documentation extracted from the contracts source code.
+
+## Changelog
 
 Our contracts are upgradeable and versioned. See the [contracts changelog](/packages/contracts/CONTRACTS_CHANGELOG.md) for more information on the changes introduced in each of new upgraded version.
 
@@ -49,6 +52,12 @@ You can install the package via NPM to get the ABIs, contract addresses and inte
 
 ```bash
 yarn add @vechain/vebetterdao-contracts
+```
+
+Make sure you include the line below in your .yarnrc.yml for code editors to recognize types.
+
+```
+nodeLinker: node-modules
 ```
 
 #### Usage (with [SDK](https://docs.vechain.org/developer-resources/sdks-and-providers/sdk)):

@@ -1,4 +1,6 @@
 import { ethers } from "hardhat"
+import { getOrDeployContractInstances } from "./deploy"
+
 export const VTHO_CONTRACT_ADDRESS = "0x0000000000000000000000000000456E65726779"
 
 const VTHO_ABI = [
@@ -40,4 +42,11 @@ export const fundTreasuryVET = async (to: string, value: number) => {
     to,
     value: ethers.parseEther(value.toString()),
   })
+}
+
+export const fundInB3TR = async (to: string, value: number) => {
+  const [owner] = await ethers.getSigners()
+  const instance = await getOrDeployContractInstances({})
+  if (!instance?.b3tr) throw new Error("B3TR contract not found")
+  await instance.b3tr.connect(owner).transfer(to, ethers.parseEther(value.toString()))
 }

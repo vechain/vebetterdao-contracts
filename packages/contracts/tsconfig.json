@@ -1,13 +1,14 @@
 {
   "compilerOptions": {
-    "target": "es2020",
-    "module": "commonjs",
-    "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "declaration": true
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "declaration": true,
+    "types": ["node"]
   },
-  "exclude": ["node_modules"]
+  "include": ["index.ts", "artifacts/contracts/**/*.json", "typechain-types/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
 }

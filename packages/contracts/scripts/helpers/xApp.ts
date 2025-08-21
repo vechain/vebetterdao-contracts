@@ -5,6 +5,7 @@ import {
   XAllocationVoting__factory,
   X2EarnApps,
   TokenAuction,
+  StargateNFT,
 } from "../../typechain-types"
 import { type TransactionClause, Clause, Address, ABIContract } from "@vechain/sdk-core"
 import { TransactionUtils } from "@repo/utils"
@@ -59,6 +60,7 @@ export const endorseXApps = async (
   }
   console.log("Endorsing x-apps...")
 
+  // 8 apps
   for (let i = 0; i < apps.length; i++) {
     const owner = endorsers[i].key.address
     const nodeId = await vechainNodesMock.ownerToId(owner.toString())

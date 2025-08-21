@@ -32,6 +32,8 @@ import { DoubleEndedQueue } from "@openzeppelin/contracts/utils/structs/DoubleEn
 import { TimelockControllerUpgradeable } from "@openzeppelin/contracts-upgradeable/governance/TimelockControllerUpgradeable.sol";
 import { Checkpoints } from "@openzeppelin/contracts/utils/structs/Checkpoints.sol";
 import { IVeBetterPassport } from "../../interfaces/IVeBetterPassport.sol";
+import { IGrantsManager } from "../../interfaces/IGrantsManager.sol";
+import { IGalaxyMember } from "../../interfaces/IGalaxyMember.sol";
 
 /// @title GovernorStorageTypes
 /// @notice Library for defining storage types used in the Governor contract.
@@ -51,7 +53,8 @@ library GovernorStorageTypes {
     uint256 minVotingDelay;
     // ------------------------------- Quorum Storage -------------------------------
     // quorum numerator history
-    Checkpoints.Trace208 quorumNumeratorHistory;
+    // @dev This is deprecated since we are using proposalTypeQuorum for the quorum numerator history
+    Checkpoints.Trace208 quorumNumeratorHistory_DEPRECATED;
     // ------------------------------- Timelock Storage -------------------------------
     // Timelock contract
     TimelockControllerUpgradeable timelock;
@@ -73,9 +76,10 @@ library GovernorStorageTypes {
     IVOT3 vot3;
     // ------------------------------- Desposits Storage -------------------------------
     // mapping to track deposits made to proposals by address
-    mapping(uint256 => mapping(address => uint256)) deposits;
+    mapping(uint256 proposalId => mapping(address user => uint256 amount)) deposits;
     // percentage of the total supply of B3TR tokens that need to be deposited in VOT3 to create a proposal
-    uint256 depositThresholdPercentage;
+    // @dev This is deprecated since we are using proposalTypeDepositThresholdPercentage for the deposit threshold percentage
+    uint256 depositThresholdPercentage_DEPRECATED;
     // ------------------------------- Voting Storage -------------------------------
     // mapping to store the votes for a proposal
     mapping(uint256 => GovernorTypes.ProposalVote) proposalVotes;
@@ -84,7 +88,8 @@ library GovernorStorageTypes {
     // mapping to store the total votes for a proposal
     mapping(uint256 => uint256) proposalTotalVotes;
     // minimum amount of tokens needed to cast a vote
-    uint256 votingThreshold;
+    // @dev This is deprecated since we are using proposalTypeVotingThreshold for the voting threshold
+    uint256 votingThreshold_DEPRECATED;
     // ------------------------------- Version 3 -------------------------------
 
     // ------------------------------- Voting Storage -------------------------------
@@ -94,5 +99,25 @@ library GovernorStorageTypes {
 
     // ------------------------------- Passport -------------------------------
     IVeBetterPassport veBetterPassport;
+
+    // ------------------------------- Version 7 -------------------------------
+    // mapping to store the proposal type for each proposal
+    mapping(uint256 => GovernorTypes.ProposalType) proposalType;
+    // mapping to store the deposit threshold percentage for each proposal type
+    mapping(GovernorTypes.ProposalType => uint256) proposalTypeDepositThresholdPercentage;
+    // mapping to store the voting threshold for each proposal type
+    mapping(GovernorTypes.ProposalType => uint256) proposalTypeVotingThreshold;
+    // mapping to store the quorum history for each proposal type
+    mapping(GovernorTypes.ProposalType => Checkpoints.Trace208) proposalTypeQuorum;
+    // mapping to store the deposit threshold cap for each proposal type
+    mapping(GovernorTypes.ProposalType => uint256) proposalTypeDepositThresholdCap;
+    // GrantsManager contract
+    IGrantsManager grantsManager;
+    // GalaxyMember contract
+    IGalaxyMember galaxyMember;
+    // mapping to store the GM weight required for each proposal type
+    mapping(GovernorTypes.ProposalType => uint256) requiredGMLevelByProposalType;
+    // Checkpoints to store the deposits user
+    mapping(address user => Checkpoints.Trace208 timepoint) depositsVotingPower;
   }
 }

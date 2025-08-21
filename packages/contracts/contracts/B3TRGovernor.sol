@@ -49,6 +49,8 @@ import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import { IVeBetterPassport } from "./interfaces/IVeBetterPassport.sol";
+import { IGrantsManager } from "./interfaces/IGrantsManager.sol";
+import { IGalaxyMember } from "./interfaces/IGalaxyMember.sol";
 
 /**
  * @title B3TRGovernor
@@ -79,6 +81,9 @@ import { IVeBetterPassport } from "./interfaces/IVeBetterPassport.sol";
  * - Difference from V4: Updated all libraries to use new version of IVoterRewards that supports GM Upgrades.
  * ------------------ VERSION 6 ------------------
  * - Updated all libraries to use new version of IVoterRewards that supports GM Rewards Pool.
+ ------------------ VERSION 7 ------------------
+ * - Added proposal type concept, STANDARD (0n) for existing proposals and GRANT (1n) for new grants proposals.
+ * - Added deposit threshold cap based on proposal type.
  */
 contract B3TRGovernor is
   IB3TRGovernor,
@@ -169,6 +174,12 @@ contract B3TRGovernor is
 
   function initializeV4(IVeBetterPassport _veBetterPassport) public reinitializer(4) {
     __GovernorStorage_init_v4(_veBetterPassport);
+  }
+
+  function initializeV7(
+    GovernorTypes.InitializationDataV7 memory initializationDataV7
+  ) public onlyRole(DEFAULT_ADMIN_ROLE) reinitializer(7) {
+    __GovernorStorage_init_v7(initializationDataV7);
   }
 
   /**
@@ -286,30 +297,13 @@ contract B3TRGovernor is
   }
 
   /**
-   * @notice Returns the deposit threshold
-   * @return uint256 The deposit threshold
-   */
-  function depositThreshold() external view returns (uint256) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    return GovernorDepositLogic.depositThreshold($);
-  }
-
-  /**
-   * @notice See {Governor-depositThreshold}.
-   * @return uint256 The deposit threshold percentage
-   */
-  function depositThresholdPercentage() external view returns (uint256) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    return $.depositThresholdPercentage;
-  }
-
-  /**
-   * @notice See {Governor-votingThreshold}.
+   * @notice Returns the voting threshold for a proposal type
+   * @param proposalTypeValue The type of the proposal
    * @return uint256 The voting threshold
    */
-  function votingThreshold() external view returns (uint256) {
+  function votingThresholdByProposalType(GovernorTypes.ProposalType proposalTypeValue) external view returns (uint256) {
     GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    return $.votingThreshold;
+    return $.proposalTypeVotingThreshold[proposalTypeValue];
   }
 
   /**
@@ -577,7 +571,7 @@ contract B3TRGovernor is
    * @return string The version of the governor
    */
   function version() external pure returns (string memory) {
-    return "6";
+    return "7";
   }
 
   /**
@@ -657,6 +651,118 @@ contract B3TRGovernor is
   function veBetterPassport() external view returns (IVeBetterPassport) {
     GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
     return $.veBetterPassport;
+  }
+
+  /**
+   * @notice Returns the proposal type of a proposal.
+   * @param proposalId The id of the proposal
+   * @return GovernorTypes.ProposalType The proposal type
+   */
+  function proposalType(uint256 proposalId) external view returns (GovernorTypes.ProposalType) {
+    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
+    return GovernorProposalLogic.proposalType($, proposalId);
+  }
+
+  /** GovernorStorageTypes.GovernorStorage storage self = $.governor.getGovernorStorage();
+   * @notice Returns the deposit threshold for a proposal type.
+   * @param proposalTypeValue The type of proposal.
+   * @return uint256 The deposit threshold for the proposal type.
+   */
+  function depositThresholdByProposalType(
+    GovernorTypes.ProposalType proposalTypeValue
+  ) external view returns (uint256) {
+    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
+    return GovernorDepositLogic.depositThresholdByProposalType($, proposalTypeValue);
+  }
+
+  /**
+   * @notice Returns the deposit threshold percentage for a proposal type.
+   * @param proposalTypeValue The type of proposal.
+   * @return uint256 The deposit threshold percentage for the proposal type.
+   */
+  function depositThresholdPercentageByProposalType(
+    GovernorTypes.ProposalType proposalTypeValue
+  ) external view returns (uint256) {
+    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
+    return GovernorConfigurator.getDepositThresholdPercentage($, proposalTypeValue);
+  }
+
+  /**
+   * @notice Returns the quorum for a timepoint, in terms of number of votes: `supply * numerator / denominator`.
+   * @param blockNumber The block number to get the quorum for
+   * @param proposalTypeValue The type of proposal
+   * @return uint256 The quorum
+   */
+  function quorumByProposalType(
+    uint256 blockNumber,
+    GovernorTypes.ProposalType proposalTypeValue
+  ) external view returns (uint256) {
+    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
+    return GovernorQuorumLogic.quorumByProposalType($, blockNumber, proposalTypeValue);
+  }
+
+  /**
+   * @notice Returns the quorum numerator for a specific proposal type.
+   * @param proposalTypeValue The type of proposal
+   * @return uint256 The quorum numerator
+   */
+  function quorumNumeratorByProposalType(GovernorTypes.ProposalType proposalTypeValue) external view returns (uint256) {
+    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
+    return GovernorQuorumLogic.quorumNumeratorByProposalType($, proposalTypeValue);
+  }
+  /**
+   * @notice Returns the quorum numerator at a specific timepoint using the GovernorQuorumFraction library.
+   * @param timepoint The timepoint to get the quorum numerator for
+   * @return uint256 The quorum numerator at the given timepoint
+   */
+  function quorumNumeratorByProposalType(
+    uint256 timepoint,
+    GovernorTypes.ProposalType proposalTypeValue
+  ) external view returns (uint256) {
+    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
+    return GovernorQuorumLogic.quorumNumeratorByProposalType($, timepoint, proposalTypeValue);
+  }
+
+  /**
+   * @notice Returns the deposit threshold cap for a proposal type.
+   * @param proposalTypeValue The type of proposal.
+   * @return uint256 The deposit threshold cap for the proposal type.
+   */
+  function depositThresholdCapByProposalType(
+    GovernorTypes.ProposalType proposalTypeValue
+  ) external view returns (uint256) {
+    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
+    return GovernorConfigurator.getDepositThresholdCap($, proposalTypeValue);
+  }
+
+  /**
+   * @notice Get the GalaxyMember contract
+   * @return The current GalaxyMember contract
+   */
+  function getGalaxyMemberContract() external view returns (IGalaxyMember) {
+    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
+    return $.galaxyMember;
+  }
+
+  /**
+   * @notice Get the GrantsManager contract
+   * @return The current GrantsManager contract
+   */
+  function getGrantsManagerContract() external view returns (IGrantsManager) {
+    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
+    return $.grantsManager;
+  }
+
+  /**
+   * @notice Get the GM weight for a proposal type
+   * @param proposalTypeValue The type of the proposal
+   * @return The GM weight for the proposal type
+   */
+  function getRequiredGMLevelByProposalType(
+    GovernorTypes.ProposalType proposalTypeValue
+  ) external view returns (uint256) {
+    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
+    return $.requiredGMLevelByProposalType[proposalTypeValue];
   }
 
   // ------------------ SETTERS ------------------ //
@@ -869,26 +975,6 @@ contract B3TRGovernor is
   }
 
   /**
-   * @notice Update the deposit threshold. This operation can only be performed through a governance proposal.
-   * Emits a {DepositThresholdSet} event.
-   * @param newDepositThreshold The new deposit threshold
-   */
-  function setDepositThresholdPercentage(uint256 newDepositThreshold) public onlyRoleOrGovernance(DEFAULT_ADMIN_ROLE) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    GovernorConfigurator.setDepositThresholdPercentage($, newDepositThreshold);
-  }
-
-  /**
-   * @notice Update the voting threshold. This operation can only be performed through a governance proposal.
-   * Emits a {VotingThresholdSet} event.
-   * @param newVotingThreshold The new voting threshold
-   */
-  function setVotingThreshold(uint256 newVotingThreshold) public onlyRoleOrGovernance(DEFAULT_ADMIN_ROLE) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    GovernorConfigurator.setVotingThreshold($, newVotingThreshold);
-  }
-
-  /**
    * @notice Update the min voting delay before vote can start.
    * This operation can only be performed through a governance proposal.
    * Emits a {MinVotingDelaySet} event.
@@ -943,6 +1029,147 @@ contract B3TRGovernor is
   ) public onlyRoleOrGovernance(CONTRACTS_ADDRESS_MANAGER_ROLE) {
     GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
     GovernorConfigurator.setVeBetterPassport($, newVeBetterPassport);
+  }
+
+  /**
+   * @notice Propose a grant
+   * @param targets The list of target addresses
+   * @param values The list of values to send
+   * @param calldatas The list of call data
+   * @param description The proposal description
+   * @param startRoundId The round in which the proposal should start
+   * @param depositAmount The amount of deposit for the proposal
+   * @param grantsReceiver The address of the grants receiver
+   * @param milestonesDetailsMetadataURI The IPFS hash containing the milestones descriptions
+   * @return The proposal id
+   */
+  function proposeGrant(
+    address[] memory targets,
+    uint256[] memory values,
+    bytes[] memory calldatas,
+    string memory description,
+    uint256 startRoundId,
+    uint256 depositAmount,
+    address grantsReceiver,
+    string memory milestonesDetailsMetadataURI
+  ) external returns (uint256) {
+    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
+    return
+      GovernorProposalLogic.proposeGrant(
+        $,
+        targets,
+        values,
+        calldatas,
+        description,
+        startRoundId,
+        depositAmount,
+        grantsReceiver,
+        milestonesDetailsMetadataURI
+      );
+  }
+
+  /**
+   * @notice Changes the quorum numerator for a specific proposal type.
+   * This operation can only be performed through a governance proposal.
+   * Emits a {QuorumNumeratorUpdatedByType} event.
+   * @param newQuorumNumerator The new quorum numerator
+   * @param proposalTypeValue The proposal type
+   */
+  function updateQuorumNumeratorByType(
+    uint256 newQuorumNumerator,
+    GovernorTypes.ProposalType proposalTypeValue
+  ) external onlyRoleOrGovernance(DEFAULT_ADMIN_ROLE) {
+    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
+    GovernorQuorumLogic.updateQuorumNumeratorByType($, newQuorumNumerator, proposalTypeValue);
+  }
+
+  /**
+   * @notice Update the deposit threshold for a proposal type. This operation can only be performed through a governance proposal.
+   * Emits a {DepositThresholdSetV2} event.
+   * @param newDepositThreshold The new deposit threshold
+   * @param proposalTypeValue The proposal type
+   */
+  function setProposalTypeDepositThresholdPercentage(
+    uint256 newDepositThreshold,
+    GovernorTypes.ProposalType proposalTypeValue
+  ) public onlyRoleOrGovernance(DEFAULT_ADMIN_ROLE) {
+    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
+    GovernorConfigurator.setProposalTypeDepositThresholdPercentage($, proposalTypeValue, newDepositThreshold);
+  }
+
+  /**
+   * @notice Update the voting threshold for a proposal type. This operation can only be performed through a governance proposal.
+   * Emits a {VotingThresholdSetV2} event.
+   * @param newVotingThreshold The new voting threshold
+   * @param proposalTypeValue The proposal type
+   */
+  function setProposalTypeVotingThreshold(
+    uint256 newVotingThreshold,
+    GovernorTypes.ProposalType proposalTypeValue
+  ) public onlyRoleOrGovernance(DEFAULT_ADMIN_ROLE) {
+    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
+    GovernorConfigurator.setProposalTypeVotingThreshold($, proposalTypeValue, newVotingThreshold);
+  }
+
+  /**
+   * @notice Update the deposit threshold cap for a proposal type. This operation can only be performed through a governance proposal or by the DEFAULT_ADMIN_ROLE
+   * Emits a {DepositThresholdCapSet} event.
+   * @param newDepositThresholdCap The new deposit threshold cap
+   * @param proposalTypeValue The proposal type
+   */
+  function setProposalTypeDepositThresholdCap(
+    uint256 newDepositThresholdCap,
+    GovernorTypes.ProposalType proposalTypeValue
+  ) public onlyRoleOrGovernance(DEFAULT_ADMIN_ROLE) {
+    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
+    GovernorConfigurator.setProposalTypeDepositThresholdCap($, proposalTypeValue, newDepositThresholdCap);
+  }
+
+  /**
+   * @notice Set the GalaxyMember contract
+   * @param newGalaxyMember The new GalaxyMember contract
+   */
+  function setGalaxyMember(
+    IGalaxyMember newGalaxyMember
+  ) external onlyRoleOrGovernance(CONTRACTS_ADDRESS_MANAGER_ROLE) {
+    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
+    GovernorConfigurator.setGalaxyMemberContract($, newGalaxyMember);
+  }
+
+  /**
+   * @notice Set the GrantsManager contract
+   * @param newGrantsManager The new GrantsManager contract
+   */
+  function setGrantsManager(
+    IGrantsManager newGrantsManager
+  ) external onlyRoleOrGovernance(CONTRACTS_ADDRESS_MANAGER_ROLE) {
+    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
+    GovernorConfigurator.setGrantsManagerContract($, newGrantsManager);
+  }
+
+  /**
+   * @notice Set the GM weight for a proposal type
+   * @param proposalTypeValue The type of the proposal
+   * @param newGMWeight The new GM weight for the proposal type
+   * @notice e.g. setRequiredGMLevelByProposalType(0, 1) = GM level 1 is required to create a standard proposal
+   */
+  function setRequiredGMLevelByProposalType(
+    GovernorTypes.ProposalType proposalTypeValue,
+    uint256 newGMWeight
+  ) external onlyRoleOrGovernance(DEFAULT_ADMIN_ROLE) {
+    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
+    GovernorConfigurator.setRequiredGMLevelByProposalType($, proposalTypeValue, newGMWeight);
+  }
+
+  /**
+   * @notice Get the deposit voting power for a given account at a given timepoint
+   * @param account The address of the account
+   * @param timepoint The timepoint
+   * @return The deposit voting power
+   */
+  function getDepositVotingPower(address account, uint256 timepoint) public view returns (uint256) {
+    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
+    return GovernorDepositLogic.getDepositVotingPower($, account, timepoint);
   }
 
   // ------------------ Overrides ------------------ //

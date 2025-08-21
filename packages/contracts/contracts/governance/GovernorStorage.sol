@@ -27,6 +27,11 @@ import { GovernorStorageTypes } from "./libraries/GovernorStorageTypes.sol";
 import { GovernorTypes } from "./libraries/GovernorTypes.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { IVeBetterPassport } from "../interfaces/IVeBetterPassport.sol";
+import { Checkpoints } from "@openzeppelin/contracts/utils/structs/Checkpoints.sol";
+import "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import { GovernorClockLogic } from "./libraries/GovernorClockLogic.sol";
+
+using Checkpoints for Checkpoints.Trace208;
 
 /// @title GovernorStorage
 /// @notice Contract used as storage of the B3TRGovernor contract.
@@ -85,14 +90,83 @@ contract GovernorStorage is Initializable {
     governorStorage.minVotingDelay = initializationData.initialMinVotingDelay;
 
     // Set the governor deposit storage
-    governorStorage.depositThresholdPercentage = initializationData.initialDepositThreshold;
+    governorStorage.depositThresholdPercentage_DEPRECATED = initializationData.initialDepositThreshold;
 
     // Set the governor votes storage
-    governorStorage.votingThreshold = initializationData.initialVotingThreshold;
+    governorStorage.votingThreshold_DEPRECATED = initializationData.initialVotingThreshold;
   }
 
   function __GovernorStorage_init_v4(IVeBetterPassport veBetterPassport) internal onlyInitializing {
     GovernorStorageTypes.GovernorStorage storage governorStorage = getGovernorStorage();
     governorStorage.veBetterPassport = veBetterPassport;
+  }
+
+  function __GovernorStorage_init_v7(
+    GovernorTypes.InitializationDataV7 memory initializationDataV7
+  ) internal onlyInitializing {
+    GovernorStorageTypes.GovernorStorage storage governorStorage = getGovernorStorage();
+
+    // Set deposit threshold for Standard proposal type
+    governorStorage.proposalTypeDepositThresholdPercentage[GovernorTypes.ProposalType.Standard] = governorStorage
+      .depositThresholdPercentage_DEPRECATED;
+
+    // Set deposit threshold for Grant proposal type
+    governorStorage.proposalTypeDepositThresholdPercentage[GovernorTypes.ProposalType.Grant] = initializationDataV7
+      .grantDepositThreshold;
+
+    // Set voting threshold for Standard proposal type
+    governorStorage.proposalTypeVotingThreshold[GovernorTypes.ProposalType.Standard] = governorStorage
+      .votingThreshold_DEPRECATED;
+
+    // Set voting threshold for Grant proposal type
+    governorStorage.proposalTypeVotingThreshold[GovernorTypes.ProposalType.Grant] = initializationDataV7
+      .grantVotingThreshold;
+
+    Checkpoints.Trace208 storage quorumNumeratorHistory_DEPRECATED = governorStorage.quorumNumeratorHistory_DEPRECATED;
+
+    Checkpoints.Trace208 storage proposalTypeQuorum = governorStorage.proposalTypeQuorum[
+      GovernorTypes.ProposalType.Standard
+    ];
+
+    // For each checkpoint in the old structure
+    for (uint256 i = 0; i < quorumNumeratorHistory_DEPRECATED._checkpoints.length; i++) {
+      // Get the old checkpoint data
+      uint48 timepoint = quorumNumeratorHistory_DEPRECATED._checkpoints[i]._key;
+      uint208 quorumNumerator = quorumNumeratorHistory_DEPRECATED._checkpoints[i]._value;
+
+      // Push it to the new structure with the same timepoint and value
+      proposalTypeQuorum.push(
+        timepoint, // Use the same timepoint from the old checkpoint
+        quorumNumerator // Use the same value from the old checkpoint
+      );
+    }
+
+    // Set quorum for GRANT - manually implement the logic from _updateQuorumNumeratorByType
+    governorStorage.proposalTypeQuorum[GovernorTypes.ProposalType.Grant].push(
+      GovernorClockLogic.clock(governorStorage),
+      SafeCast.toUint208(initializationDataV7.grantQuorum)
+    );
+
+    // Set deposit threshold cap for Standard proposal type
+    governorStorage.proposalTypeDepositThresholdCap[GovernorTypes.ProposalType.Standard] = initializationDataV7
+      .standardDepositThresholdCap;
+
+    // Set deposit threshold cap for Grant proposal type
+    governorStorage.proposalTypeDepositThresholdCap[GovernorTypes.ProposalType.Grant] = initializationDataV7
+      .grantDepositThresholdCap;
+
+    // Set GM weight for Standard proposal type
+    governorStorage.requiredGMLevelByProposalType[GovernorTypes.ProposalType.Standard] = initializationDataV7.standardGMWeight;
+
+    // Set GM weight for Grant proposal type
+    governorStorage.requiredGMLevelByProposalType[GovernorTypes.ProposalType.Grant] = initializationDataV7.grantGMWeight;
+
+    // Set GalaxyMember contract
+    require(address(initializationDataV7.galaxyMember) != address(0), "B3TRGovernor: GalaxyMember address cannot be zero");
+    governorStorage.galaxyMember = initializationDataV7.galaxyMember;
+
+    // Set GrantsManager contract
+    require(address(initializationDataV7.grantsManager) != address(0), "B3TRGovernor: GrantsManager address cannot be zero");
+    governorStorage.grantsManager = initializationDataV7.grantsManager;
   }
 }
