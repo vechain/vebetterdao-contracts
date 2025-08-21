@@ -51,6 +51,12 @@ You can install the package via NPM to get the ABIs, contract addresses and inte
 yarn add @vechain/vebetterdao-contracts
 ```
 
+Make sure you include the line below in your .yarnrc.yml for code editors to recognize types.
+
+```
+nodeLinker: node-modules
+```
+
 #### Usage (with [SDK](https://docs.vechain.org/developer-resources/sdks-and-providers/sdk)):
 
 ```javascript

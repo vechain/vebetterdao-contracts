@@ -11,6 +11,15 @@
     "FormattingUtils",
     "HexUtils"
   ],
+  "exports": {
+    ".": "./index.ts",
+    "./AddressUtils": "./AddressUtils/index.ts",
+    "./FormattingUtils": "./FormattingUtils/index.ts",
+    "./HexUtils": "./HexUtils/index.ts",
+    "./ContractUtils": "./ContractUtils/index.ts",
+    "./PicassoUtils": "./PicassoUtils/index.ts",
+    "./TransactionUtils": "./TransactionUtils/index.ts"
+  },
   "dependencies": {
     "nft.storage": "^7.1.1",
     "thor-devkit": "^2.0.9",

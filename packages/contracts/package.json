@@ -1,16 +1,34 @@
 {
   "name": "@vechain/vebetterdao-contracts",
-  "version": "6.0.1",
-  "main": "index.ts",
-  "types": "index.ts",
+  "version": "7.0.0",
+  "main": "dist/cjs/index.js",
+  "module": "dist/esm/index.js",
+  "types": "dist/esm/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "license": "MIT",
+  "exports": {
+    ".": {
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.js",
+      "types": "./dist/esm/index.d.ts"
+    },
+    "./typechain-types": {
+      "import": "./dist/esm/typechain-types/index.js",
+      "require": "./dist/cjs/typechain-types/index.js",
+      "types": "./dist/esm/typechain-types/index.d.ts"
+    }
+  },
+  "prepublishOnly": "yarn compile",
   "scripts": {
+    "clean": "rm -rf dist artifacts typechain-types cache node_modules",
     "test:thor-solo": "npx hardhat test",
     "test:hardhat": "npx hardhat test --network hardhat",
     "test:hardhat:shard": "npx hardhat test --network hardhat --grep \"$SHARD\"",
     "test:coverage:solidity": "hardhat coverage",
     "coverage:report": "nyc report --reporter=lcov --reporter=text --reporter=html --temp-dir=./coverage",
-    "compile": "npx hardhat compile",
+    "compile": "npx hardhat compile && tsc -b ./tsconfig.esm.json ./tsconfig.cjs.json",
     "deploy": "npx hardhat run scripts/deploy",
     "deploy:local": "npx hardhat run scripts/deploy --network vechain_solo",
     "deploy:testnet-staging": "npx hardhat run scripts/deploy --network vechain_testnet",
@@ -40,7 +58,6 @@
     "get-all-apps-from-creator:staging": "npx hardhat run scripts/data/getAllAppsFromCreator.ts --network vechain_testnet",
     "start-solo": "docker compose up -d",
     "stop-solo": "docker compose down",
-    "clean": "rm -rf dist artifacts typechain-types cache node_modules",
     "lint": "eslint . --ext .ts",
     "format": "eslint . --ext .ts --fix",
     "generate-docs": "npx hardhat docgen",
@@ -66,14 +83,12 @@
     "@openzeppelin/contracts": "5.0.2",
     "@openzeppelin/contracts-upgradeable": "5.0.2",
     "@openzeppelin/upgrades-core": "^1.32.5",
-    "@repo/config": "*",
-    "@repo/utils": "*",
     "@typechain/hardhat": "^8.0.0",
     "@types/chai": "^4.2.0",
     "@types/mocha": ">=9.1.0",
     "@vechain/sdk-core": "1.2.0-rc.2",
-    "@vechain/sdk-network": "1.2.0-rc.2",
     "@vechain/sdk-hardhat-plugin": "1.2.0-rc.2",
+    "@vechain/sdk-network": "1.2.0-rc.2",
     "archiver": "^7.0.1",
     "axios": "^1.11.0",
     "chai": "^4.2.0",
@@ -95,7 +110,9 @@
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^3.0.0",
     "@nomicfoundation/hardhat-verify": "^2.0.12",
+    "@repo/config": "*",
     "@repo/eslint-config": "*",
+    "@repo/utils": "*",
     "@typechain/ethers-v6": "^0.4.3",
     "@types/archiver": "^6.0.3",
     "@types/inquirer": "^9.0.7",
