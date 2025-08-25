@@ -15,6 +15,7 @@ import X2EarnRewardsPoolJson from "./artifacts/contracts/X2EarnRewardsPool.sol/X
 import VechainNodesJson from "./artifacts/contracts/mocks/VechainNodes/TokenAuction.sol/TokenAuction.json"
 import NodeManagementV3Json from "./artifacts/contracts/mocks/Stargate/NodeManagement/NodeManagementV3.sol/NodeManagementV3.json"
 import VeBetterPassportJson from "./artifacts/contracts/ve-better-passport/VeBetterPassport.sol/VeBetterPassport.json"
+import GrantsManagerJson from "./artifacts/contracts/GrantsManager.sol/GrantsManager.json"
 
 export {
   VOT3__factory,
@@ -33,6 +34,7 @@ export {
   TokenAuction__factory,
   NodeManagementV3__factory as NodeManagement__factory,
   VeBetterPassport__factory,
+  GrantsManager__factory,
 } from "./typechain-types"
 
 export {
@@ -53,4 +55,5 @@ export {
   VechainNodesJson,
   NodeManagementV3Json as NodeManagementJson,
   VeBetterPassportJson,
+  GrantsManagerJson,
 }
