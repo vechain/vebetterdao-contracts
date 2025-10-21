@@ -6,6 +6,7 @@ This document provides a detailed log of upgrades to the smart contract suite, e
 
 | Date                | Contract(s)                                                                                                                   | Summary                                                                                                                                      |
 | ------------------- | ----------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| 21 October 2025     | `XAllocationVoting` version `8`, `VoterRewards` version `6`, `RelayerRewardsPool` version `1`                                 | Added auto-voting functionality with relayer rewards system and early access period                                                          |
 | 6 August 2025       | `B3TRGovernor` version `7`, `XAllocationVoting` version `7`                                                                   | Added grant proposal type with separate thresholds, added deposit threshold cap, and enabled deposit-based voting power in allocation voting |
 | 1 July 2025         | `GalaxyMember` version `5`, `NodeManagement` version `3`                                                                      | Use NodeManagementV3, avoid calls to legacy VeChain Nodes contract                                                                           |
 | 9 May 2025          | `Emissions` version `3`, `GalaxyMember` version `4`, `VoterRewards` version `5`                                               | Restoring the GM NFT System - Proposal Execution                                                                                             |
@@ -28,6 +29,90 @@ This document provides a detailed log of upgrades to the smart contract suite, e
 | 4th September 2024  | `X2EarnRewardsPool` version `2`                                                                                               | - Added impact key management and proof building                                                                                             |
 | 31st August 2024    | `VoterRewards` version `2`                                                                                                    | - Added quadratic rewarding features                                                                                                         |
 | 29th August 2024    | `B3TRGovernor` version `2`                                                                                                    | Updated access control modifiers                                                                                                             |
+
+---
+
+## Upgrade `XAllocationVoting` to Version `8`, `VoterRewards` to Version `6`, and introduce `RelayerRewardsPool` Version `1`
+
+Added auto-voting functionality allowing users to enable automatic voting with predefined app preferences. Relayers perform voting/claiming actions during an early access period and receive proportional rewards from fees.
+
+### Changes 🚀
+
+- **Upgraded Contract(s):**
+  - `XAllocationVoting.sol` to version `8`
+  - `VoterRewards.sol` to version `6`
+- **New Contract(s):**
+  - `RelayerRewardsPool.sol` version `1`
+- **New Modules/Libraries:**
+  - `AutoVotingLogicUpgradeable.sol` module for XAllocationVoting
+  - `AutoVotingLogic.sol` library with core auto-voting logic
+  - `XAllocationVotingDataTypes.sol` library defining AutoVotingStorage struct
+
+### Storage Changes 📦
+
+- **`XAllocationVoting`**:
+  - Added `AutoVotingLogicUpgradeable` module with `AutoVotingStorage` struct
+  - Added `_autoVotingEnabled` checkpoints to track auto-voting status per user
+  - Added `_userVotingPreferences` to store app preferences for auto-voting
+  - Added `_totalAutoVotingUsers` checkpoints to track total users with auto-voting enabled
+
+- **`VoterRewards`**:
+  - Added `xAllocationVoting` to store XAllocationVoting contract address
+  - Added `relayerRewardsPool` to store RelayerRewardsPool contract address
+
+- **`RelayerRewardsPool`**:
+  - `totalRewards` mapping to track rewards per round
+  - `relayerActions` and `relayerWeightedActions` mappings for action tracking
+  - `totalActions` and `totalWeightedActions` for expected actions per round
+  - `completedActions` and `completedWeightedActions` for completed actions tracking
+  - `claimed` mapping to prevent double claiming
+  - `registeredRelayers` mapping and `relayerAddresses` array for relayer management
+  - `voteWeight` and `claimWeight` for weighted action calculations
+  - `earlyAccessBlocks` for early access period duration
+  - `relayerFeePercentage`, `relayerFeeDenominator`, and `feeCap` for fee configuration
+
+### New Features 🚀
+
+- **`XAllocationVoting`**:
+  - Added `toggleAutoVoting()` to enable/disable auto-voting
+  - Added `setUserVotingPreferences()` to set app preferences (max 15 apps)
+  - Added `isUserAutoVotingEnabled()` and timepoint-based variants for checking auto-voting status
+  - Added `getUserVotingPreferences()` to query user preferences
+  - Added `getTotalAutoVotingUsersAtRoundStart()` and timepoint-based variant
+  - Auto-voting users have votes cast automatically by relayers during early access period
+
+- **`AutoVotingLogic` library**:
+  - Added `prepareAutoVoteArrays()` to filter eligible apps and calculate equal vote weights
+  - Added validation logic for personhood, voting power (min 1 VOT3), and app preferences
+  - Added duplicate app detection and app existence validation
+
+- **`VoterRewards`**:
+  - Added relayer fee calculation and deduction from rewards for auto-voting users
+  - Added `claimReward()` integration with `RelayerRewardsPool` for fee distribution
+  - Added `getRelayerFee()` to query fee amount
+  - Added `setXAllocationVoting()` and `setRelayerRewardsPool()` for contract configuration
+  - Added `initializeV6()` for contract upgrade initialization
+  - Early access validation prevents auto-voting users from self-voting/claiming during early access
+
+- **`RelayerRewardsPool`**:
+  - Added `registerRelayer()` and `unregisterRelayer()` for relayer management
+  - Added `setTotalActionsForRound()` to configure expected actions based on auto-voting users
+  - Added `reduceExpectedActionsForRound()` to adjust for users unable to vote
+  - Added `registerRelayerAction()` to track relayer actions with weighted scoring
+  - Added `claimRewards()` for relayers to claim proportional rewards
+  - Added `deposit()` for funding relayer rewards pool
+  - Added `calculateRelayerFee()` to compute fee with cap
+  - Added `validateVoteDuringEarlyAccess()` and `validateClaimDuringEarlyAccess()` for access control
+  - Added `isVoteEarlyAccessActive()` and `isClaimEarlyAccessActive()` for period checking
+  - Added `getMissedAutoVotingUsersCount()` to track missed users
+  - Added configurable weights (`setVoteWeight()`, `setClaimWeight()`) for different action types
+  - Added fee configuration functions (`setRelayerFeePercentage()`, `setFeeCap()`, etc.)
+  - Added early access period configuration (`setEarlyAccessBlocks()`)
+  - Added contract address setters for B3TR, Emissions, and XAllocationVoting
+
+### Bug Fixes 🐛
+
+- None.
 
 ---
 
