@@ -23,16 +23,15 @@
 
 pragma solidity 0.8.20;
 
-import "./x-allocation-voting-governance/XAllocationVotingGovernor.sol";
-import "./x-allocation-voting-governance/modules/RoundVotesCountingUpgradeable.sol";
-import "./x-allocation-voting-governance/modules/VotesUpgradeable.sol";
-import "./x-allocation-voting-governance/modules/VotesQuorumFractionUpgradeable.sol";
-import "./x-allocation-voting-governance/modules/VotingSettingsUpgradeable.sol";
-import "./x-allocation-voting-governance/modules/RoundEarningsSettingsUpgradeable.sol";
-import "./x-allocation-voting-governance/modules/RoundFinalizationUpgradeable.sol";
-import "./x-allocation-voting-governance/modules/RoundsStorageUpgradeable.sol";
-import "./x-allocation-voting-governance/modules/ExternalContractsUpgradeable.sol";
-import "./x-allocation-voting-governance/modules/AutoVotingLogicUpgradeable.sol";
+import "./x-allocation-voting-governance/XAllocationVotingGovernorV7.sol";
+import "./x-allocation-voting-governance/modules/RoundVotesCountingUpgradeableV7.sol";
+import "./x-allocation-voting-governance/modules/VotesUpgradeableV7.sol";
+import "./x-allocation-voting-governance/modules/VotesQuorumFractionUpgradeableV7.sol";
+import "./x-allocation-voting-governance/modules/VotingSettingsUpgradeableV7.sol";
+import "./x-allocation-voting-governance/modules/RoundEarningsSettingsUpgradeableV7.sol";
+import "./x-allocation-voting-governance/modules/RoundFinalizationUpgradeableV7.sol";
+import "./x-allocation-voting-governance/modules/RoundsStorageUpgradeableV7.sol";
+import "./x-allocation-voting-governance/modules/ExternalContractsUpgradeableV7.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
@@ -61,23 +60,19 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
  * ----- Version 7 -----
  * - Proposal Execution: Count proposal deposits to x-allocation voting power
  *
- *
- * ----- Version 8 -----
- *  - Added autovoting functionality allowing users to enable automatic voting with predefined app preferences
  */
-contract XAllocationVoting is
-  XAllocationVotingGovernor,
-  VotingSettingsUpgradeable,
-  RoundVotesCountingUpgradeable,
-  VotesUpgradeable,
-  VotesQuorumFractionUpgradeable,
-  RoundEarningsSettingsUpgradeable,
-  ExternalContractsUpgradeable,
-  RoundsStorageUpgradeable,
-  RoundFinalizationUpgradeable,
+contract XAllocationVotingV7 is
+  XAllocationVotingGovernorV7,
+  VotingSettingsUpgradeableV7,
+  RoundVotesCountingUpgradeableV7,
+  VotesUpgradeableV7,
+  VotesQuorumFractionUpgradeableV7,
+  RoundEarningsSettingsUpgradeableV7,
+  ExternalContractsUpgradeableV7,
+  RoundsStorageUpgradeableV7,
+  RoundFinalizationUpgradeableV7,
   AccessControlUpgradeable,
-  UUPSUpgradeable,
-  AutoVotingLogicUpgradeable
+  UUPSUpgradeable
 {
   /// @notice Role identifier for the address that can start a new round
   bytes32 public constant ROUND_STARTER_ROLE = keccak256("ROUND_STARTER_ROLE");
@@ -156,26 +151,19 @@ contract XAllocationVoting is
     _grantRole(CONTRACTS_ADDRESS_MANAGER_ROLE, data.contractsAddressManager);
   }
 
+  function initializeV2(IVeBetterPassport _veBetterPassport) public reinitializer(2) {
+    __ExternalContracts_init_v2(_veBetterPassport);
+  }
+
+  /**
+   * @dev Initializes the contract with the B3TRGovernor contract.
+   * @param _b3trGovernor The address of the B3TRGovernor contract.
+   */
+  function initializeV7(IB3TRGovernor _b3trGovernor) public onlyRole(UPGRADER_ROLE) reinitializer(7) {
+    __ExternalContracts_init_v3(_b3trGovernor);
+  }
+
   // ---------- Setters ---------- //
-
-  /**
-   * @dev Toggle autovoting for the caller
-   */
-  function toggleAutoVoting(address user) public {
-    if (_msgSender() != user) {
-      revert InvalidCaller(_msgSender());
-    }
-
-    _toggleAutoVoting(user);
-  }
-
-  /**
-   * @dev Set the voting preferences for the caller
-   */
-  function setUserVotingPreferences(bytes32[] memory appIds) public {
-    _setUserVotingPreferences(_msgSender(), appIds);
-  }
-
   /**
    * @dev Set the address of the X2EarnApps contract
    */
@@ -195,31 +183,6 @@ contract XAllocationVoting is
    */
   function setVoterRewardsAddress(IVoterRewards newVoterRewards) external onlyRole(CONTRACTS_ADDRESS_MANAGER_ROLE) {
     _setVoterRewards(newVoterRewards);
-  }
-
-  /**
-   * @dev Set the VeBetterPassport contract
-   */
-  function setVeBetterPassport(
-    IVeBetterPassport newVeBetterPassport
-  ) external onlyRole(CONTRACTS_ADDRESS_MANAGER_ROLE) {
-    _setVeBetterPassport(newVeBetterPassport);
-  }
-
-  /**
-   * @dev Set the B3TRGovernor contract
-   */
-  function setB3TRGovernor(IB3TRGovernor newB3TRGovernor) external onlyRole(CONTRACTS_ADDRESS_MANAGER_ROLE) {
-    _setB3TRGovernor(newB3TRGovernor);
-  }
-
-  /**
-   * @dev Set the address of the RelayerRewardsPool contract
-   */
-  function setRelayerRewardsPoolAddress(
-    IRelayerRewardsPool newRelayerRewardsPool
-  ) external onlyRole(CONTRACTS_ADDRESS_MANAGER_ROLE) {
-    _setRelayerRewardsPool(newRelayerRewardsPool);
   }
 
   /**
@@ -268,77 +231,21 @@ contract XAllocationVoting is
     super.updateQuorumNumerator(newQuorumNumerator);
   }
 
+  /**
+   * @dev Set the VeBetterPassport contract
+   */
+  function setVeBetterPassport(IVeBetterPassport newVeBetterPassport) external onlyRole(GOVERNANCE_ROLE) {
+    _setVeBetterPassport(newVeBetterPassport);
+  }
+
+  /**
+   * @dev Set the B3TRGovernor contract
+   */
+  function setB3TRGovernor(IB3TRGovernor newB3TRGovernor) external onlyRole(GOVERNANCE_ROLE) {
+    _setB3TRGovernor(newB3TRGovernor);
+  }
+
   // ---------- Getters ---------- //
-
-  /**
-   * @dev Checks if auto-voting is enabled for an account
-   * @param user The address to check
-   * @return Whether auto-voting is enabled for the account
-   */
-  function isUserAutoVotingEnabled(address user) public view returns (bool) {
-    return _isAutoVotingEnabled(user);
-  }
-
-  /**
-   * @dev Checks if auto-voting is enabled for an account at the start of the current cycle
-   * @notice Status changes mid-cycle will only take effect in the next cycle
-   */
-  function isUserAutoVotingEnabledInCurrentRound(address account) public view returns (bool) {
-    uint256 lastEmissionBlock = emissions().lastEmissionBlock();
-    return _isAutoVotingEnabledAtTimepoint(account, uint48(lastEmissionBlock));
-  }
-
-  /**
-   * @dev Checks if auto-voting is enabled for an account at the start of a specific round
-   * @notice Useful function for frontend to consume
-   */
-  function isUserAutoVotingEnabledForRound(address account, uint256 roundId) public view returns (bool) {
-    return _isAutoVotingEnabledAtTimepoint(account, uint48(roundSnapshot(roundId)));
-  }
-
-  /**
-   * @dev Check if auto-voting is enabled for an account at a specific
-   * @param account The address to check
-   * @param timepoint block number
-   */
-  function isUserAutoVotingEnabledAtTimepoint(address account, uint48 timepoint) public view returns (bool) {
-    return _isAutoVotingEnabledAtTimepoint(account, timepoint);
-  }
-
-  /**
-   * @dev Get the voting preferences for an account
-   */
-  function getUserVotingPreferences(address account) public view returns (bytes32[] memory) {
-    return _getUserVotingPreferences(account);
-  }
-
-  /**
-   * @dev Get the total number of users who enabled auto-voting at the last emission block
-   */
-  function getTotalAutoVotingUsersAtRoundStart() public view returns (uint208) {
-    uint256 lastEmissionBlock = emissions().lastEmissionBlock();
-    return _getTotalAutoVotingUsersAtTimepoint(uint48(lastEmissionBlock));
-  }
-
-  /**
-   * @dev Get the total number of users who enabled autovoting at a specific timepoint
-   */
-  function getTotalAutoVotingUsersAtTimepoint(uint48 timepoint) public view returns (uint208) {
-    return _getTotalAutoVotingUsersAtTimepoint(timepoint);
-  }
-
-  /**
-   * @dev Returns the X2EarnApps contract
-   * @return IX2EarnApps The X2EarnApps contract interface
-   */
-  function x2EarnApps()
-    public
-    view
-    override(ExternalContractsUpgradeable, XAllocationVotingGovernor, AutoVotingLogicUpgradeable)
-    returns (IX2EarnApps)
-  {
-    return ExternalContractsUpgradeable.x2EarnApps();
-  }
 
   /**
    * Returns the quorum for a given round
@@ -349,19 +256,24 @@ contract XAllocationVoting is
 
   // ---------- Required overrides ---------- //
 
-  function votingPeriod() public view override(XAllocationVotingGovernor, VotingSettingsUpgradeable) returns (uint256) {
+  function votingPeriod()
+    public
+    view
+    override(XAllocationVotingGovernorV7, VotingSettingsUpgradeableV7)
+    returns (uint256)
+  {
     return super.votingPeriod();
   }
 
   function quorum(
     uint256 blockNumber
-  ) public view override(XAllocationVotingGovernor, VotesQuorumFractionUpgradeable) returns (uint256) {
+  ) public view override(XAllocationVotingGovernorV7, VotesQuorumFractionUpgradeableV7) returns (uint256) {
     return super.quorum(blockNumber);
   }
 
   function supportsInterface(
     bytes4 interfaceId
-  ) public view override(AccessControlUpgradeable, XAllocationVotingGovernor) returns (bool) {
+  ) public view override(AccessControlUpgradeable, XAllocationVotingGovernorV7) returns (bool) {
     return super.supportsInterface(interfaceId);
   }
 

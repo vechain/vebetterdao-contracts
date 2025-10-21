@@ -23,7 +23,7 @@
 
 pragma solidity 0.8.20;
 
-import { XAllocationVotingGovernor } from "../XAllocationVotingGovernor.sol";
+import { XAllocationVotingGovernorV3 } from "../XAllocationVotingGovernorV3.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { X2EarnAppsDataTypes } from "../../../../libraries/X2EarnAppsDataTypes.sol";
@@ -32,7 +32,7 @@ import { X2EarnAppsDataTypes } from "../../../../libraries/X2EarnAppsDataTypes.s
  * @title RoundsStorageUpgradeable
  * @dev Extension of {XAllocationVotingGovernor} for storing rounds data and managing the rounds lifecycle.
  */
-abstract contract RoundsStorageUpgradeable is Initializable, XAllocationVotingGovernor {
+abstract contract RoundsStorageUpgradeable is Initializable, XAllocationVotingGovernorV3 {
   struct RoundCore {
     address proposer;
     uint48 voteStart;

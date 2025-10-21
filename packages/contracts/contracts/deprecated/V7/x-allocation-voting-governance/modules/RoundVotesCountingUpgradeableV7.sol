@@ -23,19 +23,22 @@
 
 pragma solidity 0.8.20;
 
-import { XAllocationVotingGovernorV3 } from "../XAllocationVotingGovernorV3.sol";
+import { XAllocationVotingGovernorV7 } from "../XAllocationVotingGovernorV7.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /**
- * @title RoundVotesCountingUpgradeable
+ * @title RoundVotesCountingUpgradeableV7
  *
  * @dev Extension of {XAllocationVotingGovernor} for counting votes for allocation rounds.
  *
  * In every round users can vote a fraction of their balance for the eligible apps in that round.
+ *
+ * ----- Version 5 -----
+ * - Fixed duplicate app voting in same transaction in {_countVote}
  */
-abstract contract RoundVotesCountingUpgradeable is Initializable, XAllocationVotingGovernorV3 {
+abstract contract RoundVotesCountingUpgradeableV7 is Initializable, XAllocationVotingGovernorV7 {
   struct RoundVote {
     // Total votes received for each app
     mapping(bytes32 appId => uint256) votesReceived;
@@ -70,6 +73,9 @@ abstract contract RoundVotesCountingUpgradeable is Initializable, XAllocationVot
 
   //@notice emitted when a the minimum number of tokens needed to cast a vote is updated
   event VotingThresholdSet(uint256 oldVotingThreshold, uint256 newVotingThreshold);
+
+  /// @dev Error thrown when trying to vote for the same app multiple times in one transaction
+  error DuplicateAppVote();
 
   /**
    * @dev Initializes the contract
@@ -156,11 +162,17 @@ abstract contract RoundVotesCountingUpgradeable is Initializable, XAllocationVot
 
     // Get the total voting power of the voter to use in the for loop to check
     // if the total weight of votes cast by the voter is greater than the voter's available voting power
-    uint256 voterAvailableVotes = getVotes(voter, roundStart);
+    uint256 voterAvailableVotes = _getVotingPower(voter, roundStart);
 
     // Iterate through the apps and weights to calculate the total weight of votes cast by the voter
     for (uint256 i; i < apps.length; i++) {
-      // Update the total weight of votes cast by the voter
+      // Check current app against ALL previous apps
+      for (uint256 j; j < i; j++) {
+        if (apps[i] == apps[j]) {
+          revert DuplicateAppVote();
+        }
+      }
+
       totalWeight += weights[i];
 
       if (totalWeight > voterAvailableVotes) {
@@ -208,6 +220,13 @@ abstract contract RoundVotesCountingUpgradeable is Initializable, XAllocationVot
 
     // Emit the AllocationVoteCast event
     emit AllocationVoteCast(voter, roundId, apps, weights);
+  }
+
+  function _getVotingPower(address voter, uint256 roundStart) internal virtual returns (uint256) {
+    uint256 voterAvailableVotesWithDeposit = getDepositVotingPower(voter, roundStart);
+    uint256 voterAvailableVotes = getVotes(voter, roundStart) + voterAvailableVotesWithDeposit;
+
+    return voterAvailableVotes;
   }
 
   /**

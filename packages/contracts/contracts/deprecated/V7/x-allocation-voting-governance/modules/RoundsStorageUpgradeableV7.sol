@@ -23,16 +23,16 @@
 
 pragma solidity 0.8.20;
 
-import { XAllocationVotingGovernor } from "../XAllocationVotingGovernor.sol";
+import { XAllocationVotingGovernorV7 } from "../XAllocationVotingGovernorV7.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import { X2EarnAppsDataTypes } from "../../libraries/X2EarnAppsDataTypes.sol";
+import { X2EarnAppsDataTypes } from "../../../../libraries/X2EarnAppsDataTypes.sol";
 
 /**
- * @title RoundsStorageUpgradeable
+ * @title RoundsStorageUpgradeableV7
  * @dev Extension of {XAllocationVotingGovernor} for storing rounds data and managing the rounds lifecycle.
  */
-abstract contract RoundsStorageUpgradeable is Initializable, XAllocationVotingGovernor {
+abstract contract RoundsStorageUpgradeableV7 is Initializable, XAllocationVotingGovernorV7 {
   struct RoundCore {
     address proposer;
     uint48 voteStart;
@@ -102,16 +102,6 @@ abstract contract RoundsStorageUpgradeable is Initializable, XAllocationVotingGo
     round.proposer = proposer;
     round.voteStart = SafeCast.toUint48(snapshot);
     round.voteDuration = SafeCast.toUint32(duration);
-
-    /**
-     * Auto-voting:
-     * 1. Get the number of users with auto-voting enabled at round start
-     * 2. Set the total actions for this round in RelayerRewardsPool
-     */
-    uint208 totalAutoVotingUsers = _getTotalAutoVotingUsersAtTimepoint(SafeCast.toUint48(snapshot));
-    if (totalAutoVotingUsers > 0) {
-      relayerRewardsPool().setTotalActionsForRound(roundId, totalAutoVotingUsers);
-    }
 
     emit RoundCreated(roundId, proposer, snapshot, snapshot + duration, apps);
 

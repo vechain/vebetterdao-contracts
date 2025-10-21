@@ -24,17 +24,17 @@
 pragma solidity 0.8.20;
 
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import { XAllocationVotingGovernorV3 } from "../XAllocationVotingGovernorV3.sol";
+import { XAllocationVotingGovernorV7 } from "../XAllocationVotingGovernorV7.sol";
 
 /**
- * @title RoundEarningsSettingsUpgradeable
+ * @title RoundEarningsSettingsUpgradeableV7
  * @notice Extension of {XAllocationVotingGovernor} to handle the settings for the x-allocation earnings calculations:
  * - baseAllocationPercentage: The base allocation percentage to be divided among the x-apps each round
  * - appSharesCap: The maximum percentage of shares an x-app can reach in each round
  *
  * Since the base allocation percentage and app shares cap can be updated, we store the values for each round.
  */
-abstract contract RoundEarningsSettingsUpgradeable is Initializable, XAllocationVotingGovernorV3 {
+abstract contract RoundEarningsSettingsUpgradeableV7 is Initializable, XAllocationVotingGovernorV7 {
   /// @custom:storage-location erc7201:b3tr.storage.XAllocationVotingGovernor.RoundEarningsSettings
   struct EarningsSettingsStorage {
     uint256 baseAllocationPercentage;

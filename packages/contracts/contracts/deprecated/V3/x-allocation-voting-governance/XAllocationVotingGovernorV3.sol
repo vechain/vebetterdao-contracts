@@ -26,16 +26,15 @@ pragma solidity 0.8.20;
 import { ERC165Upgradeable } from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
 import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
-import { IXAllocationVotingGovernor, IERC6372 } from "../interfaces/IXAllocationVotingGovernor.sol";
-import { IXAllocationPool } from "../interfaces/IXAllocationPool.sol";
+import { IXAllocationVotingGovernorV3 } from "../interfaces/IXAllocationVotingGovernorV3.sol";
+import { IERC6372 } from "@openzeppelin/contracts/interfaces/IERC6372.sol";
+import { IXAllocationPool } from "../../../interfaces/IXAllocationPool.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import { IX2EarnApps } from "../interfaces/IX2EarnApps.sol";
-import { IEmissions } from "../interfaces/IEmissions.sol";
-import { IVoterRewards } from "../interfaces/IVoterRewards.sol";
-import { IVeBetterPassport } from "../interfaces/IVeBetterPassport.sol";
-import { IRelayerRewardsPool, RelayerAction } from "../interfaces/IRelayerRewardsPool.sol";
+import { IX2EarnAppsV2 } from "../../V2/interfaces/IX2EarnAppsV2.sol";
+import { IEmissions } from "../../../interfaces/IEmissions.sol";
+import { IVoterRewards } from "../../../interfaces/IVoterRewards.sol";
+import { IVeBetterPassport } from "../../../interfaces/IVeBetterPassport.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import { IB3TRGovernor } from "../interfaces/IB3TRGovernor.sol";
 
 /**
  * @title XAllocationVotingGovernor
@@ -45,30 +44,19 @@ import { IB3TRGovernor } from "../interfaces/IB3TRGovernor.sol";
  * - A counting module must implement {quorum}, {_quorumReached}, {_voteSucceeded}, and {_countVote}
  * - A voting module must implement {_getVotes}, {clock}, and {CLOCK_MODE}
  * - A settings module must implement {votingPeriod}
- * - An external contracts module must implement {x2EarnApps}, {emissions}, {voterRewards} and {b3trGovernor}
+ * - An external contracts module must implement {x2EarnApps}, {emissions} and {voterRewards}
  * - A rounds storage module must implement {_startNewRound}, {roundSnapshot}, {roundDeadline}, and {currentRoundId}
  * - A rounds finalization module must implement {finalize}
  * - A earnings settings module must implement {_snapshotRoundEarningsCap}
  *
  * ----- Version 2 -----
  * - Integrated VeBetterPassport
- *
- * ----- Version 5 -----
- * - Fixed duplicate app voting in same transaction in {RoundVotesCountingUpgradeable._countVote}
- *
- * ----- Version 7 -----
- * - Added B3TRGovernor contract to the contract
- *
- * ----- Version 8 -----
- * - Added autovoting functionality allowing users to enable automatic voting with predefined app preferences
- * - Added refactoring to code for voting
- * - Integrate RelayerRewardsPool contract to handle relayer rewards for autovoting
  */
-abstract contract XAllocationVotingGovernor is
+abstract contract XAllocationVotingGovernorV3 is
   Initializable,
   ContextUpgradeable,
   ERC165Upgradeable,
-  IXAllocationVotingGovernor
+  IXAllocationVotingGovernorV3
 {
   bytes32 private constant ALL_ROUND_STATES_BITMAP = bytes32((2 ** (uint8(type(RoundState).max) + 1)) - 1);
 
@@ -120,116 +108,31 @@ abstract contract XAllocationVotingGovernor is
   /**
    * @dev Cast a vote for a set of x-2-earn applications.
    * @notice Only addresses with a valid passport can vote.
-   * @notice Reverts if autovoting is enabled for the voter.
    */
   function castVote(uint256 roundId, bytes32[] memory appIds, uint256[] memory voteWeights) public virtual {
+    _validateStateBitmap(roundId, _encodeStateBitmap(RoundState.Active));
+
     require(appIds.length == voteWeights.length, "XAllocationVotingGovernor: apps and weights length mismatch");
     require(appIds.length > 0, "XAllocationVotingGovernor: no apps to vote for");
 
-    if (this.isUserAutoVotingEnabledAtTimepoint(_msgSender(), SafeCast.toUint48(currentRoundSnapshot()))) {
-      revert AutoVotingEnabled(_msgSender());
+    uint256 _currentRoundSnapshot = currentRoundSnapshot();
+
+    (bool isPerson, string memory explanation) = veBetterPassport().isPersonAtTimepoint(
+      _msgSender(),
+      SafeCast.toUint48(_currentRoundSnapshot)
+    );
+
+    // Check if the voter or the delegator of personhood to the voter is a person and returning error with the reason
+    if (!isPerson) {
+      revert GovernorPersonhoodVerificationFailed(_msgSender(), explanation);
     }
 
-    validatePersonhoodForCurrentRound(_msgSender());
+    address voter = _msgSender();
 
-    _handleCastVote(_msgSender(), roundId, appIds, voteWeights, false);
+    _countVote(roundId, voter, appIds, voteWeights);
   }
 
   // ---------- Internal and Private ---------- //
-
-  /**
-   * @dev Cast a vote for a set of x-2-earn applications on behalf of an account (used for autovoting).
-   * @notice Reverts if autovoting is not enabled for the voter.
-   */
-  function castVoteOnBehalfOf(address voter, uint256 roundId) public {
-    if (!this.isUserAutoVotingEnabledAtTimepoint(voter, SafeCast.toUint48(roundSnapshot(roundId)))) {
-      revert AutoVotingNotEnabled(voter);
-    }
-
-    _checkEarlyAccessEligibility(roundId, voter);
-
-    (bool isPerson, ) = veBetterPassport().isPersonAtTimepoint(voter, SafeCast.toUint48(currentRoundSnapshot()));
-
-    bytes32[] memory appIds = _getUserVotingPreferences(voter);
-
-    (bytes32[] memory finalAppIds, uint256[] memory voteWeights, uint256 votingPower) = _prepareAutoVoteArrays(
-      voter,
-      roundId,
-      appIds
-    );
-
-    // We disable auto-voting if,
-    // - voter is not a person
-    // - there are no eligible apps
-    // - voter has insufficient voting power
-    if (!isPerson || finalAppIds.length == 0) {
-      // Only toggle and reduce expected actions if autovoting is enabled
-      if (_isAutoVotingEnabled(voter)) {
-        _toggleAutoVoting(voter);
-        relayerRewardsPool().reduceExpectedActionsForRound(roundId, 1);
-      }
-      emit AutoVoteSkipped(voter, roundId, isPerson, finalAppIds.length, votingPower);
-      return;
-    }
-
-    _handleCastVote(voter, roundId, finalAppIds, voteWeights, true);
-  }
-
-  /**  @dev Internal function to handle common voting logic
-   * @param voter The address casting the vote
-   * @param roundId The round ID to vote in
-   * @param appIds Array of app IDs to vote for
-   * @param voteWeights Array of vote weights for each app
-   * @param isAutoVote Whether this is an auto vote (affects events and relayer rewards)
-   */
-  function _handleCastVote(
-    address voter,
-    uint256 roundId,
-    bytes32[] memory appIds,
-    uint256[] memory voteWeights,
-    bool isAutoVote
-  ) internal {
-    _validateStateBitmap(roundId, _encodeStateBitmap(RoundState.Active));
-
-    _countVote(roundId, voter, appIds, voteWeights);
-
-    if (isAutoVote) {
-      relayerRewardsPool().registerRelayerAction(_msgSender(), voter, roundId, RelayerAction.VOTE);
-      emit AllocationAutoVoteCast(voter, roundId, appIds, voteWeights);
-    }
-  }
-
-  /**
-   * @dev Validate that the voter is a person at the current round snapshot
-   * @param voter The voter address
-   */
-  function validatePersonhoodForCurrentRound(address voter) public view returns (bool) {
-    (bool isPerson, string memory explanation) = veBetterPassport().isPersonAtTimepoint(
-      voter,
-      SafeCast.toUint48(currentRoundSnapshot())
-    );
-    if (!isPerson) {
-      revert GovernorPersonhoodVerificationFailed(voter, explanation);
-    }
-    return isPerson;
-  }
-
-  /**
-   * @dev Gets total voting power (voting power + deposit voting power) for an account and validates it meets the minimum threshold for auto-voting
-   */
-  function getAndValidateVotingPower(address account, uint256 timepoint) public view returns (uint256, bool) {
-    uint256 voterAvailableVotes = getTotalVotingPower(account, timepoint);
-    bool isValid = voterAvailableVotes >= 1 ether;
-    return (voterAvailableVotes, isValid);
-  }
-
-  /**
-   * @dev Check if the caller is eligible to perform relayer actions during early access period
-   * @param roundId The current round ID
-   */
-  function _checkEarlyAccessEligibility(uint256 roundId, address voter) internal view {
-    relayerRewardsPool().validateVoteDuringEarlyAccess(roundId, voter, _msgSender());
-  }
 
   /**
    * @dev Check that the current state of a round matches the requirements described by the `allowedStates` bitmap.
@@ -250,7 +153,7 @@ abstract contract XAllocationVotingGovernor is
   function supportsInterface(
     bytes4 interfaceId
   ) public view virtual override(IERC165, ERC165Upgradeable) returns (bool) {
-    return interfaceId == type(IXAllocationVotingGovernor).interfaceId || super.supportsInterface(interfaceId);
+    return interfaceId == type(IXAllocationVotingGovernorV3).interfaceId || super.supportsInterface(interfaceId);
   }
 
   /**
@@ -265,7 +168,7 @@ abstract contract XAllocationVotingGovernor is
    * @dev Returns the version of the governor.
    */
   function version() public view virtual returns (string memory) {
-    return "8";
+    return "3";
   }
 
   /**
@@ -310,19 +213,6 @@ abstract contract XAllocationVotingGovernor is
    */
   function getVotes(address account, uint256 timepoint) public view virtual returns (uint256) {
     return _getVotes(account, timepoint, "");
-  }
-
-  /**
-   * @dev Get the total voting power (VOT3 tokens + deposits) for a voter at a given timepoint
-   * @param voter The address of the voter
-   * @param roundStart The start of the round (timepoint)
-   * @return Combined voting power from held tokens and proposal deposits
-   */
-  function getTotalVotingPower(address voter, uint256 roundStart) public view virtual returns (uint256) {
-    uint256 voterAvailableVotesWithDeposit = getDepositVotingPower(voter, roundStart);
-    uint256 voterAvailableVotes = getVotes(voter, roundStart) + voterAvailableVotesWithDeposit;
-
-    return voterAvailableVotes;
   }
 
   /**
@@ -431,7 +321,7 @@ abstract contract XAllocationVotingGovernor is
   /**
    * @dev Returns the X2EarnApps contract.
    */
-  function x2EarnApps() public view virtual returns (IX2EarnApps);
+  function x2EarnApps() public view virtual returns (IX2EarnAppsV2);
 
   /**
    * @dev Returns the VeBetterPassport contract.
@@ -447,55 +337,4 @@ abstract contract XAllocationVotingGovernor is
    * @dev Returns the VoterRewards contract.
    */
   function voterRewards() public view virtual returns (IVoterRewards);
-
-  /**
-   * @dev Returns the B3TRGovernor contract.
-   */
-  function b3trGovernor() public view virtual returns (IB3TRGovernor);
-
-  /**
-   * @dev Returns the deposit voting power for a given account at a given timepoint.
-   */
-  function getDepositVotingPower(address account, uint256 timepoint) public view virtual returns (uint256) {
-    return b3trGovernor().getDepositVotingPower(account, timepoint);
-  }
-
-  /**
-   * @dev Returns the RelayerRewardsPool contract.
-   */
-  function relayerRewardsPool() public view virtual returns (IRelayerRewardsPool);
-
-  /**
-   * @dev Toggles autovoting for an account
-   */
-  function _toggleAutoVoting(address account) internal virtual;
-
-  /**
-   * @dev Checks if autovoting is enabled for an account
-   */
-  function _isAutoVotingEnabled(address account) internal view virtual returns (bool);
-
-  /**
-   * @dev Checks if autovoting is enabled for an account at a specific timepoint
-   */
-  function _isAutoVotingEnabledAtTimepoint(address account, uint48 timepoint) internal view virtual returns (bool);
-
-  /**
-   * @dev Returns the voting preferences for an account
-   */
-  function _getUserVotingPreferences(address account) internal view virtual returns (bytes32[] memory);
-
-  /**
-   * @dev Gets the total number of users who enabled autovoting at a specific timepoint
-   */
-  function _getTotalAutoVotingUsersAtTimepoint(uint48 timepoint) internal view virtual returns (uint208);
-
-  /**
-   * @dev Prepares arrays for auto-voting by filtering eligible apps and calculating vote weights
-   */
-  function _prepareAutoVoteArrays(
-    address voter,
-    uint256 roundId,
-    bytes32[] memory preferredApps
-  ) internal virtual returns (bytes32[] memory finalAppIds, uint256[] memory voteWeights, uint256 votingPower);
 }

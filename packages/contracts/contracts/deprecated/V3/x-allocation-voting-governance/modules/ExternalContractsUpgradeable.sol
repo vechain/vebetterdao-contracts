@@ -23,7 +23,7 @@
 
 pragma solidity 0.8.20;
 
-import { XAllocationVotingGovernor } from "../XAllocationVotingGovernor.sol";
+import { XAllocationVotingGovernorV3 } from "../XAllocationVotingGovernorV3.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { IEmissions } from "../../../../interfaces/IEmissions.sol";
 import { IX2EarnAppsV2 } from "../../../V2/interfaces/IX2EarnAppsV2.sol";
@@ -34,7 +34,7 @@ import { IVeBetterPassport } from "../../../../interfaces/IVeBetterPassport.sol"
  * @title ExternalContractsUpgradeable
  * @dev Extension of {XAllocationVotingGovernor} that handles the storage of external contracts for the XAllocationVotingGovernor.
  */
-abstract contract ExternalContractsUpgradeable is Initializable, XAllocationVotingGovernor {
+abstract contract ExternalContractsUpgradeable is Initializable, XAllocationVotingGovernorV3 {
   /// @custom:storage-location erc7201:b3tr.storage.XAllocationVotingGovernor.ExternalContracts
   struct ExternalContractsStorage {
     IX2EarnAppsV2 _x2EarnApps;

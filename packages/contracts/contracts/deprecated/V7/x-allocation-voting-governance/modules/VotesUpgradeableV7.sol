@@ -23,7 +23,7 @@
 
 pragma solidity 0.8.20;
 
-import { XAllocationVotingGovernorV3 } from "../XAllocationVotingGovernorV3.sol";
+import { XAllocationVotingGovernorV7 } from "../XAllocationVotingGovernorV7.sol";
 import { IVotes } from "@openzeppelin/contracts/governance/utils/IVotes.sol";
 import { IERC5805 } from "@openzeppelin/contracts/interfaces/IERC5805.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
@@ -31,11 +31,11 @@ import { Time } from "@openzeppelin/contracts/utils/types/Time.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 /**
- * @title VotesUpgradeable
+ * @title VotesUpgradeableV7
  * @dev Extension of {XAllocationVotingGovernor} for voting weight extraction from an {ERC20Votes} token, or since v4.5 an {ERC721Votes}
  * token.
  */
-abstract contract VotesUpgradeable is Initializable, XAllocationVotingGovernorV3 {
+abstract contract VotesUpgradeableV7 is Initializable, XAllocationVotingGovernorV7 {
   /// @custom:storage-location erc7201:b3tr.storage.XAllocationVotingGovernor.VotesUpgradeable
   struct VotesStorage {
     IERC5805 _token;

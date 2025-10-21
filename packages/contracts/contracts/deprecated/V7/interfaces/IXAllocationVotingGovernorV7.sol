@@ -21,7 +21,7 @@ import { IERC6372 } from "@openzeppelin/contracts/interfaces/IERC6372.sol";
  * where shares should be calculated. Anyone can finalize the failed round,
  * but it will be automatically done when a new round starts.
  */
-interface IXAllocationVotingGovernor is IERC165, IERC6372 {
+interface IXAllocationVotingGovernorV7 is IERC165, IERC6372 {
   enum RoundState {
     Active,
     Failed,
@@ -86,38 +86,6 @@ interface IXAllocationVotingGovernor is IERC165, IERC6372 {
   error XAllocationVotingPersonhoodVerificationFailed(address person);
 
   /**
-   * @dev The `voter` has auto-voting not enabled.
-   */
-  error AutoVotingNotEnabled(address voter);
-
-  /**
-   * @dev The `voter` has auto-voting enabled.
-   */
-  error AutoVotingEnabled(address voter);
-
-  /**
-   * @dev Thrown when a zero address is provided for a contract address parameter
-   * @param contractName The name/type of the contract that cannot be zero address
-   */
-  error InvalidContractAddress(string contractName);
-
-  /**
-   * @dev The `caller` is not valid
-   */
-  error InvalidCaller(address caller);
-
-  /**
-   * @dev Emitted when auto-voting is skipped.
-   */
-  event AutoVoteSkipped(
-    address indexed voter,
-    uint256 indexed roundId,
-    bool isPerson,
-    uint256 appCount,
-    uint256 votingPower
-  );
-
-  /**
    * @dev Emitted when a round is created.
    */
   event RoundCreated(uint256 roundId, address proposer, uint256 voteStart, uint256 voteEnd, bytes32[] appsIds);
@@ -127,26 +95,6 @@ interface IXAllocationVotingGovernor is IERC165, IERC6372 {
    *
    */
   event AllocationVoteCast(address indexed voter, uint256 indexed roundId, bytes32[] appsIds, uint256[] voteWeights);
-
-  /**
-   * @dev Emitted when a vote is cast on behalf of an account.
-   */
-  event AllocationAutoVoteCast(
-    address indexed voter,
-    uint256 indexed roundId,
-    bytes32[] appsIds,
-    uint256[] voteWeights
-  );
-
-  /**
-   * @dev Emitted when autovoting is toggled for an account.
-   */
-  event AutoVotingToggled(address indexed account, bool enabled);
-
-  /**
-   * @dev Emitted when the preferred apps are updated for an account.
-   */
-  event PreferredAppsUpdated(address indexed account, bytes32[] apps);
 
   /**
    * @notice module:core
@@ -304,40 +252,6 @@ interface IXAllocationVotingGovernor is IERC165, IERC6372 {
   function castVote(uint256 roundId, bytes32[] memory appsIds, uint256[] memory voteWeights) external;
 
   /**
-   * @dev Toggle autovoting for a user
-   * @param user The address to toggle autovoting for
-   * @notice This function is only callable by the VOT3 contract or the user themselves
-   */
-  function toggleAutoVoting(address user) external;
-
-  /**
-   * @dev Check if autovoting is enabled for an account
-   * @param user The address to check
-   * @return Whether autovoting is enabled for the account
-   */
-  function isUserAutoVotingEnabled(address user) external view returns (bool);
-
-  /**
-   * @dev Check if autovoting is enabled for an account
-   * @param account The address to check
-   * @return Whether autovoting is enabled for the account
-   */
-  function isUserAutoVotingEnabledInCurrentRound(address account) external view returns (bool);
-
-  /**
-   * @dev Check if autovoting is enabled for an account at a specific round
-   * @param account The address to check
-   * @param roundId The round id to check
-   * @return Whether autovoting is enabled for the account at the specific round
-   */
-  function isUserAutoVotingEnabledForRound(address account, uint256 roundId) external view returns (bool);
-
-  /**
-   * @dev Check if autovoting is enabled for an account at a specific timepoint
-   */
-  function isUserAutoVotingEnabledAtTimepoint(address account, uint48 timepoint) external view returns (bool);
-
-  /**
    * @dev Returns the current allocation round round.
    */
   function currentRoundId() external view returns (uint256);
@@ -353,8 +267,7 @@ interface IXAllocationVotingGovernor is IERC165, IERC6372 {
   function currentRoundDeadline() external view returns (uint256);
 
   /**
-   * 
-   @dev Returns if quorum was reached for a specific round.
+   * @dev Returns if quorum was reached for a specific round.
    */
   function quorumReached(uint256 roundId) external view returns (bool);
 
@@ -392,24 +305,4 @@ interface IXAllocationVotingGovernor is IERC165, IERC6372 {
    * @dev Returns the max amount of shares an app can get in a round.
    */
   function getRoundAppSharesCap(uint256 roundId) external view returns (uint256);
-
-  /**
-   * @dev Validates if an account is a person
-   */
-  function validatePersonhoodForCurrentRound(address account) external view returns (bool);
-
-  /**
-   * @dev Gets total voting power (voting power + deposit voting power) and validates it's greater than zero
-   */
-  function getAndValidateVotingPower(address account, uint256 timepoint) external view returns (uint256, bool);
-
-  /**
-   * @dev Get the total voting power (VOT3 tokens + deposits) for a voter at a given timepoint
-   */
-  function getTotalVotingPower(address voter, uint256 roundStart) external view returns (uint256);
-
-  /**
-   * @dev Get the total number of users who enabled auto-voting at the round start
-   */
-  function getTotalAutoVotingUsersAtRoundStart() external view returns (uint208);
 }

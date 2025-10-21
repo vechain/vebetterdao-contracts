@@ -25,15 +25,13 @@ pragma solidity 0.8.20;
 
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
-import "./interfaces/IGalaxyMember.sol";
-import "./interfaces/IEmissions.sol";
-import "./interfaces/IB3TR.sol";
+import "../../interfaces/IGalaxyMember.sol";
+import "../../interfaces/IEmissions.sol";
+import "../../interfaces/IB3TR.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "@openzeppelin/contracts/utils/structs/Checkpoints.sol";
 import "@openzeppelin/contracts/utils/types/Time.sol";
-import "./interfaces/IXAllocationVotingGovernor.sol";
-import "./interfaces/IRelayerRewardsPool.sol";
 
 /**
  * @title VoterRewards
@@ -68,7 +66,6 @@ import "./interfaces/IRelayerRewardsPool.sol";
  *
  * ------------------ Version 4 Changes ------------------
  * - Update the contract to use new Galaxy Member interface.
- *
  * ------------------ Version 5 Changes ------------------
  * - Create a seperate pool for GM rewards.
  * - Updated the registerVote function to support GM rewards pool.
@@ -76,12 +73,8 @@ import "./interfaces/IRelayerRewardsPool.sol";
  * - Added a function to get the total GM Weight for a user in a specific cycle.
  * - Added a function to get the total GM Weight in a specific cycle.
  * - Added the abiltity to be able to update GM Multipliers mid cycle.
- *
- * ------------------ Version 6 Changes ------------------
- * - Added relayer fees for auto-voting claims
- * - Added RelayerRewardsPool integration for fee distribution
  */
-contract VoterRewards is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPSUpgradeable {
+contract VoterRewardsV5 is AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPSUpgradeable {
   using Checkpoints for Checkpoints.Trace208; // Checkpoints library for managing checkpoints of the selected level of the user
 
   /// @notice The role that can register votes for rewards calculation.
@@ -127,9 +120,6 @@ contract VoterRewards is AccessControlUpgradeable, ReentrancyGuardUpgradeable, U
     mapping(uint256 cycle => mapping(address voter => uint256 gmWeight)) cycleToVoterToGMWeight;
     // Incoming GM Multipliers, these are the multipliers that will be used for the next cycle
     mapping(uint256 cycle => GMMultiplier[] incomingGMMultipliers) cycleToIncomingGMMultipliers;
-    // --------------------------- V6 Additions --------------------------- //
-    IXAllocationVotingGovernor xAllocationVoting;
-    IRelayerRewardsPool relayerRewardsPool;
   }
 
   // keccak256(abi.encode(uint256(keccak256("b3tr.storage.VoterRewards")) - 1)) & ~bytes32(uint256(0xff))
@@ -195,22 +185,6 @@ contract VoterRewards is AccessControlUpgradeable, ReentrancyGuardUpgradeable, U
   /// @param multiplier - The percentage multiplier for the level of the Galaxy Member NFT.
   event GMVoteRegistered(uint256 indexed cycle, uint256 indexed tokenId, uint256 indexed level, uint256 multiplier);
 
-  /// @notice Emitted when a relayer takes a fee.
-  /// @param relayer - The address of the relayer.
-  /// @param fee - The amount of fee taken by the relayer.
-  /// @param cycle - The cycle in which the fee was taken.
-  /// @param voter - The address of the voter.
-  event RelayerFeeTaken(address indexed relayer, uint256 fee, uint256 indexed cycle, address indexed voter);
-
-  /// @notice Emitted when the XAllocationVoting contract address is set.
-  /// @param newAddress - The address of the new XAllocationVoting contract.
-  event XAllocationVotingAddressUpdated(address indexed newAddress);
-
-  /// @notice Emitted when the RelayerRewardsPool contract address is set.
-  /// @param newAddress - The address of the new RelayerRewardsPool contract.
-  /// @param oldAddress - The address of the old RelayerRewardsPool contract.
-  event RelayerRewardsPoolAddressUpdated(address indexed newAddress, address indexed oldAddress);
-
   /// @custom:oz-upgrades-unsafe-allow constructor
   constructor() {
     _disableInitializers();
@@ -272,43 +246,6 @@ contract VoterRewards is AccessControlUpgradeable, ReentrancyGuardUpgradeable, U
     for (uint256 i; i < levels.length; i++) {
       _setLevelToMultiplier(levels[i], multipliers[i]);
     }
-  }
-
-  /// @notice Reinitializes the contract with relayer fee settings for version 6.
-  function initializeV6(
-    IXAllocationVotingGovernor _xAllocationVoting,
-    IRelayerRewardsPool _relayerRewardsPool
-  ) external reinitializer(6) {
-    VoterRewardsStorage storage $ = _getVoterRewardsStorage();
-
-    require(address(_xAllocationVoting) != address(0), "VoterRewards: invalid xAllocationVoting");
-    require(address(_relayerRewardsPool) != address(0), "VoterRewards: invalid relayerRewardsPool");
-
-    $.xAllocationVoting = _xAllocationVoting;
-    $.relayerRewardsPool = _relayerRewardsPool;
-  }
-
-  /// @notice Set the XAllocationVoting contract.
-  /// @param _xAllocationVoting - The address of the XAllocationVoting contract.
-  function setXAllocationVoting(address _xAllocationVoting) external onlyRole(CONTRACTS_ADDRESS_MANAGER_ROLE) {
-    require(_xAllocationVoting != address(0), "VoterRewards: Invalid address");
-
-    VoterRewardsStorage storage $ = _getVoterRewardsStorage();
-    $.xAllocationVoting = IXAllocationVotingGovernor(_xAllocationVoting);
-
-    emit XAllocationVotingAddressUpdated(_xAllocationVoting);
-  }
-
-  /// @notice Set the RelayerRewardsPool contract.
-  /// @param _relayerRewardsPool - The address of the RelayerRewardsPool contract.
-  function setRelayerRewardsPool(address _relayerRewardsPool) external onlyRole(CONTRACTS_ADDRESS_MANAGER_ROLE) {
-    require(_relayerRewardsPool != address(0), "VoterRewards: Invalid address");
-
-    VoterRewardsStorage storage $ = _getVoterRewardsStorage();
-    address oldAddress = address($.relayerRewardsPool);
-    $.relayerRewardsPool = IRelayerRewardsPool(_relayerRewardsPool);
-
-    emit RelayerRewardsPoolAddressUpdated(_relayerRewardsPool, oldAddress);
   }
 
   /// @notice Upgrade the implementation of the VoterRewards contract.
@@ -391,46 +328,30 @@ contract VoterRewards is AccessControlUpgradeable, ReentrancyGuardUpgradeable, U
     require(voter != address(0), "VoterRewards: voter cannot be the zero address");
     VoterRewardsStorage storage $ = _getVoterRewardsStorage();
 
+    // Check if the cycle has ended before claiming rewards.
     require($.emissions.isCycleEnded(cycle), "VoterRewards: cycle must be ended");
 
-    uint48 emissionCycleStartBlock = SafeCast.toUint48($.xAllocationVoting.roundSnapshot(cycle));
-    bool hadAutoVotingEnabled = $.xAllocationVoting.isUserAutoVotingEnabledAtTimepoint(voter, emissionCycleStartBlock);
+    // Get the voter reward for the voter in the cycle.
+    uint256 reward = getReward(cycle, voter);
+    // Get the GM reward for the voter in the cycle.
+    uint256 gmReward = getGMReward(cycle, voter);
 
-    if (hadAutoVotingEnabled) {
-      _checkEarlyAccessEligibility(cycle, voter);
-    }
+    uint256 totalReward = reward + gmReward;
 
-    (uint256 netReward, uint256 netGmReward, uint256 fee) = _getRewardsAndFees(cycle, voter);
-    uint256 totalNetReward = netReward + netGmReward;
-    uint256 totalRequiredNetReward = totalNetReward + fee;
-
-    // Ensure user has actual rewards to claim (not just fees to pay)
-    require(totalNetReward > 0, "VoterRewards: reward must be greater than 0");
-
-    // Ensure contract has enough balance for both user rewards and relayer fees
+    require(totalReward > 0, "VoterRewards: reward must be greater than 0");
     require(
-      $.b3tr.balanceOf(address(this)) >= totalRequiredNetReward,
+      $.b3tr.balanceOf(address(this)) >= totalReward,
       "VoterRewards: not enough B3TR in the contract to pay reward"
     );
 
     // Reset the reward-weighted votes for the voter in the cycle.
     $.cycleToVoterToTotal[cycle][voter] = 0;
     $.cycleToVoterToGMWeight[cycle][voter] = 0;
+    // transfer reward to voter
+    require($.b3tr.transfer(voter, totalReward), "VoterRewards: transfer failed");
 
-    if (fee > 0) {
-      require($.b3tr.approve(address($.relayerRewardsPool), fee), "VoterRewards: pool fee approval failed");
-      $.relayerRewardsPool.deposit(fee, cycle);
-
-      // Register CLAIM action for the relayer
-      $.relayerRewardsPool.registerRelayerAction(msg.sender, voter, cycle, RelayerAction.CLAIM);
-
-      emit RelayerFeeTaken(msg.sender, fee, cycle, voter);
-    }
-
-    // Transfer the remaining reward to the voter
-    require($.b3tr.transfer(voter, totalNetReward), "VoterRewards: voter transfer failed");
-
-    emit RewardClaimedV2(cycle, voter, netReward, netGmReward);
+    // Emit an event to log the reward claimed by the voter.
+    emit RewardClaimedV2(cycle, voter, reward, gmReward);
   }
 
   // ----------------- Getters ----------------- //
@@ -465,91 +386,76 @@ contract VoterRewards is AccessControlUpgradeable, ReentrancyGuardUpgradeable, U
   /// @param cycle - The cycle in which the rewards are claimed.
   /// @param voter - The address of the voter.
   function getReward(uint256 cycle, address voter) public view virtual returns (uint256) {
-    (uint256 netReward, , ) = _getRewardsAndFees(cycle, voter);
-    return netReward;
+    VoterRewardsStorage storage $ = _getVoterRewardsStorage();
+
+    // Get the total reward-weighted votes for the voter in the cycle.
+    uint256 total = $.cycleToVoterToTotal[cycle][voter];
+
+    // If total is zero, return 0
+    if (total == 0) {
+      return 0;
+    }
+
+    // Get the total reward-weighted votes in the cycle.
+    uint256 totalCycle = $.cycleToTotal[cycle];
+
+    // If totalCycle is zero, return 0
+    if (totalCycle == 0) {
+      return 0;
+    }
+
+    // Get the emissions for voter rewards in the cycle.
+    uint256 emissionsAmount = $.emissions.getVote2EarnAmount(cycle);
+
+    // If emissionsAmount is zero, return 0
+    if (emissionsAmount == 0) {
+      return 0;
+    }
+
+    // Scale up the numerator before division to improve precision
+    uint256 scaledNumerator = total * emissionsAmount * SCALING_FACTOR; // Scale by a factor of SCALING_FACTOR for precision
+    uint256 reward = scaledNumerator / totalCycle;
+
+    // Scale down the reward to the original scale
+    return reward / SCALING_FACTOR;
   }
 
   /// @notice Get the GM reward for a user in a specific cycle.
   /// @param cycle - The cycle in which the rewards are claimed.
   /// @param voter - The address of the voter.
   function getGMReward(uint256 cycle, address voter) public view virtual returns (uint256) {
-    (, uint256 netGmReward, ) = _getRewardsAndFees(cycle, voter);
-    return netGmReward;
-  }
-
-  /// @notice Get the fee for a user in a specific cycle.
-  /// @param cycle - The cycle in which the rewards are claimed.
-  /// @param voter - The address of the voter.
-  function getRelayerFee(uint256 cycle, address voter) public view virtual returns (uint256) {
-    (, , uint256 fee) = _getRewardsAndFees(cycle, voter);
-    return fee;
-  }
-
-  /// @notice Internal helper to calculate both rewards and apply fees consistently
-  /// @param cycle - The cycle to calculate for
-  /// @param voter - The voter address
-  /// @return netReward - Net voting reward after fee
-  /// @return netGmReward - Net GM reward after fee
-  function _getRewardsAndFees(
-    uint256 cycle,
-    address voter
-  ) private view returns (uint256 netReward, uint256 netGmReward, uint256 fee) {
     VoterRewardsStorage storage $ = _getVoterRewardsStorage();
 
-    // Calculate raw rewards
-    uint256 rawReward = _calculateRawReward(
-      $.cycleToVoterToTotal[cycle][voter],
-      $.emissions.getVote2EarnAmount(cycle),
-      $.cycleToTotal[cycle]
-    );
-    uint256 rawGmReward = _calculateRawReward(
-      $.cycleToVoterToGMWeight[cycle][voter],
-      $.emissions.getGMAmount(cycle),
-      $.cycleToTotalGMWeight[cycle]
-    );
+    // Get the total GM Weight for the voter in the cycle.
+    uint256 total = $.cycleToVoterToGMWeight[cycle][voter];
 
-    uint256 totalReward = rawReward + rawGmReward;
-
-    // If no rewards, return zeros
-    if (totalReward == 0) {
-      return (0, 0, 0);
-    }
-
-    // Check if fee applies for auto-voting users
-    uint48 emissionCycleStartBlock = SafeCast.toUint48($.xAllocationVoting.roundSnapshot(cycle));
-    if ($.xAllocationVoting.isUserAutoVotingEnabledAtTimepoint(voter, emissionCycleStartBlock)) {
-      fee = $.relayerRewardsPool.calculateRelayerFee(totalReward);
-
-      // Use the same proportional formula
-      netReward = rawReward - ((fee * rawReward) / totalReward);
-      netGmReward = rawGmReward - ((fee * rawGmReward) / totalReward);
-    } else {
-      // No fee applies
-      netReward = rawReward;
-      netGmReward = rawGmReward;
-      fee = 0;
-    }
-
-    return (netReward, netGmReward, fee);
-  }
-
-  /// @notice Generic reward calculation helper
-  /// @param voterTotal - The voter's total for this reward type
-  /// @param emissionsAmount - The emissions amount for this reward type
-  /// @param cycleTotal - The total for all voters in this cycle for this reward type
-  /// @return reward - The calculated raw reward
-  function _calculateRawReward(
-    uint256 voterTotal,
-    uint256 emissionsAmount,
-    uint256 cycleTotal
-  ) private pure returns (uint256 reward) {
-    if (voterTotal == 0 || cycleTotal == 0 || emissionsAmount == 0) {
+    // If total is zero, return 0
+    if (total == 0) {
       return 0;
     }
 
-    uint256 scaledNumerator = voterTotal * emissionsAmount * SCALING_FACTOR;
-    uint256 scaledReward = scaledNumerator / cycleTotal;
-    return scaledReward / SCALING_FACTOR;
+    // Get the total GM Weight in the cycle.
+    uint256 totalCycle = $.cycleToTotalGMWeight[cycle];
+
+    // If totalCycle is zero, return 0
+    if (totalCycle == 0) {
+      return 0;
+    }
+
+    // Get the emissions for GM rewards in the cycle.
+    uint256 emissionsAmount = $.emissions.getGMAmount(cycle);
+
+    // If emissionsAmount is zero, return 0
+    if (emissionsAmount == 0) {
+      return 0;
+    }
+
+    // Scale up the numerator before division to improve precision
+    uint256 scaledNumerator = total * emissionsAmount * SCALING_FACTOR; // Scale by a factor of SCALING_FACTOR for precision
+    uint256 reward = scaledNumerator / totalCycle;
+
+    // Scale down the reward to the original scale
+    return reward / SCALING_FACTOR;
   }
 
   /// @notice Get the total reward-weighted votes for a user in a specific cycle.
@@ -605,18 +511,6 @@ contract VoterRewards is AccessControlUpgradeable, ReentrancyGuardUpgradeable, U
   function b3tr() external view returns (IB3TR) {
     VoterRewardsStorage storage $ = _getVoterRewardsStorage();
     return $.b3tr;
-  }
-
-  /// @notice Get the RelayerRewardsPool contract.
-  function relayerRewardsPool() external view returns (IRelayerRewardsPool) {
-    VoterRewardsStorage storage $ = _getVoterRewardsStorage();
-    return $.relayerRewardsPool;
-  }
-
-  /// @notice Get the XAllocationVoting contract.
-  function xAllocationVoting() external view returns (IXAllocationVotingGovernor) {
-    VoterRewardsStorage storage $ = _getVoterRewardsStorage();
-    return $.xAllocationVoting;
   }
 
   /// @notice Check if quadratic rewarding is disabled at a specific block number.
@@ -711,7 +605,7 @@ contract VoterRewards is AccessControlUpgradeable, ReentrancyGuardUpgradeable, U
   /// @dev This should be updated every time a new version of implementation is deployed
   /// @return string The version of the contract
   function version() external pure virtual returns (string memory) {
-    return "6";
+    return "5";
   }
 
   /// @dev Clock used for flagging checkpoints.
@@ -720,14 +614,6 @@ contract VoterRewards is AccessControlUpgradeable, ReentrancyGuardUpgradeable, U
   }
 
   // ----------------- Private Functions ----------------- //
-  /**
-   * @dev Check if the caller is eligible to perform relayer actions during early access period
-   * @param roundId The current round ID
-   */
-  function _checkEarlyAccessEligibility(uint256 roundId, address voter) internal view {
-    VoterRewardsStorage storage $ = _getVoterRewardsStorage();
-    $.relayerRewardsPool.validateClaimDuringEarlyAccess(roundId, voter, msg.sender);
-  }
 
   /// @notice Scales the vote power based on the quadratic rewarding status.
   /// @param votes - The total votes cast by the voter.
