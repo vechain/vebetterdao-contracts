@@ -24,7 +24,10 @@
     "@vechain/sdk-core": "1.2.0-rc.2",
     "@vechain/sdk-network": "1.2.0-rc.2",
     "nft.storage": "^7.1.1",
-    "thor-devkit": "^2.0.9"
+    "thor-devkit": "^2.0.9",
+    "dayjs": "^1.11.13",
+    "lodash": "^4.17.21",
+    "bignumber.js": "^9.1.2"
   },
   "devDependencies": {
     "happy-dom": "^15.10.2",
