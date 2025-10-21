@@ -22,7 +22,8 @@ const config: AppConfig = {
   tokenAuctionContractAddress: "0x0000000000000000000000000000000000000000",
   stargateNFTContractAddress: "0xe88d4b189b58ee90751498b6033f63b497cfa97d",
   grantsManagerContractAddress: "0x0000000000000000000000000000000000000001",
-  indexerUrl: "https://b3tr.testnet.vechain.org/api/v1",
+  relayerRewardsPoolContractAddress: "0x0000000000000000000000000000000000000000",
+  indexerUrl: "https://indexer.testnet.vechain.org/api/v1",
   nodeUrl: "https://galactica.live.dev.node.vechain.org",
   network: {
     id: "galactica-test",
@@ -72,6 +73,9 @@ const config: AppConfig = {
     passportPoPScoreLogicAddress: "0x0d13b581cc841e7e3b5d2c8e39ccc216552c2419",
     passportSignalingLogicAddress: "0xf8d1b6f619c2e871212f5acfd02e2b9f8992e642",
     passportWhitelistAndBlacklistLogicAddress: "0x74482f595001a01f320a81e1b986cf5bd28b87c0",
+  },
+  xAllocationVotingLibraries: {
+    autoVotingLogicAddress: "0x0000000000000000000000000000000000000000",
   },
 }
 export default config

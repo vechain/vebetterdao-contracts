@@ -3,6 +3,7 @@ import { execSync } from "child_process"
 import { EnvConfig } from "@repo/config/contracts"
 import { upgradeConfig } from "./upgradesConfig"
 import { getConfig } from "@repo/config"
+import { ethers } from "hardhat"
 
 async function upgradeContract() {
   try {
@@ -34,11 +35,14 @@ async function upgradeContract() {
       choices: versionChoices,
     })
 
+    const deployer = (await ethers.getSigners())[0]
+
     console.log(`You are about to upgrade the following contract:`)
     console.log(`\nContract: ${selectedContract.name}`)
     console.log(`Contract address: ${(config as any)[selectedContract.configAddressField]}`)
     console.log(`Version: ${version}`)
     console.log(`Upgrade description: ${selectedContract.descriptions[version]}`)
+    console.log(`Upgrader wallet: ${deployer.address}`)
     console.log(`Environment: ${env}\n`)
 
     // Confirm the upgrade

@@ -1,5 +1,6 @@
 {
   "root": true,
+  "ignorePatterns": ["scripts/**/*.ts", "test/**/*.ts"],
   "extends": ["@repo/eslint-config/library.js"],
   "parser": "@typescript-eslint/parser",
   "plugins": ["@typescript-eslint"],

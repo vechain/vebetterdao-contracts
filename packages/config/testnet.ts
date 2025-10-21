@@ -23,7 +23,8 @@ const config: AppConfig = {
   b3trMultiSigAddress: "0x15bDc96B5C490A7948dA856B4Db32408DDD89a4B",
   stargateNFTContractAddress: "0x1ec1d168574603ec35b9d229843b7c2b44bcb770",
   grantsManagerContractAddress: "0x0000000000000000000000000000000000000001",
-  indexerUrl: "https://b3tr.testnet.vechain.org/api/v1",
+  relayerRewardsPoolContractAddress: "0x0000000000000000000000000000000000000000",
+  indexerUrl: "https://indexer.testnet.vechain.org/api/v1",
   nodeUrl: "https://testnet.vechain.org",
   network: {
     id: "testnet",
@@ -76,6 +77,9 @@ const config: AppConfig = {
     passportPoPScoreLogicAddress: "0x01a488CF0f941098bE0e7dB14DE6046F1b51C164",
     passportSignalingLogicAddress: "0xd2599f2BBf3E3f45344d3FDFb1680f784eC3C911",
     passportWhitelistAndBlacklistLogicAddress: "0x1596e69Bd430388A860CEf94721aB39a12bcC1d1",
+  },
+  xAllocationVotingLibraries: {
+    autoVotingLogicAddress: "0x0000000000000000000000000000000000000000",
   },
 }
 export default config

@@ -14,7 +14,10 @@
     "./contracts/defineConfig": "./contracts/defineConfig.ts",
     "./contracts/type": "./contracts/type.ts",
     "./contracts/envs/local": "./contracts/envs/local.ts",
-    "./local": "./local.ts"
+    "./local": "./local.ts",
+    "./testnet-staging": "./testnet-staging.ts",
+    "./mainnet": "./mainnet.ts",
+    "./galactica-test": "./galactica-test.ts"
   },
   "dependencies": {
     "@repo/constants": "*"
