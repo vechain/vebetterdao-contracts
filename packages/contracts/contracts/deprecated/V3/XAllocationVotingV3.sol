@@ -23,7 +23,7 @@
 
 pragma solidity 0.8.20;
 
-import "./x-allocation-voting-governance/XAllocationVotingGovernor.sol";
+import "./x-allocation-voting-governance/XAllocationVotingGovernorV3.sol";
 import "./x-allocation-voting-governance/modules/RoundVotesCountingUpgradeable.sol";
 import "./x-allocation-voting-governance/modules/VotesUpgradeable.sol";
 import "./x-allocation-voting-governance/modules/VotesQuorumFractionUpgradeable.sol";
@@ -52,7 +52,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
  * Updated the contract to use the new X2EarnApps interface
  */
 contract XAllocationVotingV3 is
-  XAllocationVotingGovernor,
+  XAllocationVotingGovernorV3,
   VotingSettingsUpgradeable,
   RoundVotesCountingUpgradeable,
   VotesUpgradeable,
@@ -231,19 +231,24 @@ contract XAllocationVotingV3 is
 
   // ---------- Required overrides ---------- //
 
-  function votingPeriod() public view override(XAllocationVotingGovernor, VotingSettingsUpgradeable) returns (uint256) {
+  function votingPeriod()
+    public
+    view
+    override(XAllocationVotingGovernorV3, VotingSettingsUpgradeable)
+    returns (uint256)
+  {
     return super.votingPeriod();
   }
 
   function quorum(
     uint256 blockNumber
-  ) public view override(XAllocationVotingGovernor, VotesQuorumFractionUpgradeable) returns (uint256) {
+  ) public view override(XAllocationVotingGovernorV3, VotesQuorumFractionUpgradeable) returns (uint256) {
     return super.quorum(blockNumber);
   }
 
   function supportsInterface(
     bytes4 interfaceId
-  ) public view override(AccessControlUpgradeable, XAllocationVotingGovernor) returns (bool) {
+  ) public view override(AccessControlUpgradeable, XAllocationVotingGovernorV3) returns (bool) {
     return super.supportsInterface(interfaceId);
   }
 

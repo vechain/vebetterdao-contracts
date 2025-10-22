@@ -103,6 +103,16 @@ abstract contract RoundsStorageUpgradeable is Initializable, XAllocationVotingGo
     round.voteStart = SafeCast.toUint48(snapshot);
     round.voteDuration = SafeCast.toUint32(duration);
 
+    /**
+     * Auto-voting:
+     * 1. Get the number of users with auto-voting enabled at round start
+     * 2. Set the total actions for this round in RelayerRewardsPool
+     */
+    uint208 totalAutoVotingUsers = _getTotalAutoVotingUsersAtTimepoint(SafeCast.toUint48(snapshot));
+    if (totalAutoVotingUsers > 0) {
+      relayerRewardsPool().setTotalActionsForRound(roundId, totalAutoVotingUsers);
+    }
+
     emit RoundCreated(roundId, proposer, snapshot, snapshot + duration, apps);
 
     // Using a named return variable to avoid stack too deep errors

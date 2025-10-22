@@ -30,6 +30,8 @@ import { IX2EarnApps } from "../../interfaces/IX2EarnApps.sol";
 import { IVoterRewards } from "../../interfaces/IVoterRewards.sol";
 import { IVeBetterPassport } from "../../interfaces/IVeBetterPassport.sol";
 import { IB3TRGovernor } from "../../interfaces/IB3TRGovernor.sol";
+import { IRelayerRewardsPool } from "../../interfaces/IRelayerRewardsPool.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /**
  * @title ExternalContractsUpgradeable
@@ -43,6 +45,7 @@ abstract contract ExternalContractsUpgradeable is Initializable, XAllocationVoti
     IVoterRewards _voterRewards;
     IVeBetterPassport _veBetterPassport;
     IB3TRGovernor _b3trGovernor;
+    IRelayerRewardsPool _relayerRewardsPool;
   }
 
   // keccak256(abi.encode(uint256(keccak256("b3tr.storage.XAllocationVotingGovernor.ExternalContracts")) - 1)) & ~bytes32(uint256(0xff))
@@ -63,6 +66,10 @@ abstract contract ExternalContractsUpgradeable is Initializable, XAllocationVoti
   event VoterRewardsSet(address oldContractAddress, address newContractAddress);
   // @dev Emit when the VeBetterPassport contract is set
   event VeBetterPassportSet(address oldContractAddress, address newContractAddress);
+  // @dev Emit when the RelayerRewardsPool contract is set
+  event RelayerRewardsPoolSet(address oldContractAddress, address newContractAddress);
+  // @dev Emit when the B3TRGovernor contract is set
+  event B3TRGovernorSet(address oldContractAddress, address newContractAddress);
 
   /**
    * @dev Initializes the contract
@@ -89,21 +96,11 @@ abstract contract ExternalContractsUpgradeable is Initializable, XAllocationVoti
     $._voterRewards = initialVoterRewards;
   }
 
-  function __ExternalContracts_init_v2(IVeBetterPassport _veBetterPassport) internal onlyInitializing {
-    ExternalContractsStorage storage $ = _getExternalContractsStorage();
-    $._veBetterPassport = _veBetterPassport;
-  }
-
-  function __ExternalContracts_init_v3(IB3TRGovernor _b3trGovernor) internal onlyInitializing {
-    ExternalContractsStorage storage $ = _getExternalContractsStorage();
-    $._b3trGovernor = _b3trGovernor;
-  }
-
   // ------- Getters ------- //
   /**
    * @dev The X2EarnApps contract.
    */
-  function x2EarnApps() public view override returns (IX2EarnApps) {
+  function x2EarnApps() public view virtual override returns (IX2EarnApps) {
     ExternalContractsStorage storage $ = _getExternalContractsStorage();
     return $._x2EarnApps;
   }
@@ -137,6 +134,14 @@ abstract contract ExternalContractsUpgradeable is Initializable, XAllocationVoti
     return $._b3trGovernor;
   }
 
+  /**
+   * @dev Get the RelayerRewardsPool contract
+   */
+  function relayerRewardsPool() public view override returns (IRelayerRewardsPool) {
+    ExternalContractsStorage storage $ = _getExternalContractsStorage();
+    return $._relayerRewardsPool;
+  }
+
   // ------- Internal Functions ------- //
 
   /**
@@ -145,11 +150,11 @@ abstract contract ExternalContractsUpgradeable is Initializable, XAllocationVoti
    * Emits a {EmissionContractSet} event
    */
   function _setEmissions(IEmissions newEmisionsAddress) internal virtual {
-    require(address(newEmisionsAddress) != address(0), "XAllocationVotingGovernor: emissions is the zero address");
-    ExternalContractsStorage storage $ = _getExternalContractsStorage();
+    if (address(newEmisionsAddress) == address(0)) revert InvalidContractAddress("emissions");
 
-    emit EmissionsSet(address($._emissions), address(newEmisionsAddress));
+    ExternalContractsStorage storage $ = _getExternalContractsStorage();
     $._emissions = IEmissions(newEmisionsAddress);
+    emit EmissionsSet(address($._emissions), address(newEmisionsAddress));
   }
 
   /**
@@ -159,12 +164,12 @@ abstract contract ExternalContractsUpgradeable is Initializable, XAllocationVoti
    * Emits a {X2EarnAppsSet} event
    */
   function _setX2EarnApps(IX2EarnApps newX2EarnApps) internal virtual {
-    require(address(newX2EarnApps) != address(0), "XAllocationVotingGovernor: new X2EarnApps is the zero address");
+    if (address(newX2EarnApps) == address(0)) revert InvalidContractAddress("X2EarnApps");
 
     ExternalContractsStorage storage $ = _getExternalContractsStorage();
 
-    emit X2EarnAppsSet(address($._x2EarnApps), address(newX2EarnApps));
     $._x2EarnApps = newX2EarnApps;
+    emit X2EarnAppsSet(address($._x2EarnApps), address(newX2EarnApps));
   }
 
   /**
@@ -172,12 +177,12 @@ abstract contract ExternalContractsUpgradeable is Initializable, XAllocationVoti
    * @param newVoterRewards The new voter rewards contract address
    */
   function _setVoterRewards(IVoterRewards newVoterRewards) internal virtual {
-    require(address(newVoterRewards) != address(0), "XAllocationVotingGovernor: new voter rewards is the zero address");
+    if (address(newVoterRewards) == address(0)) revert InvalidContractAddress("voter rewards");
 
     ExternalContractsStorage storage $ = _getExternalContractsStorage();
 
-    emit VoterRewardsSet(address($._voterRewards), address(newVoterRewards));
     $._voterRewards = newVoterRewards;
+    emit VoterRewardsSet(address($._voterRewards), address(newVoterRewards));
   }
 
   /**
@@ -185,13 +190,12 @@ abstract contract ExternalContractsUpgradeable is Initializable, XAllocationVoti
    * @param newVeBetterPassport The new VeBetterPassport contract address
    */
   function _setVeBetterPassport(IVeBetterPassport newVeBetterPassport) internal virtual {
-    require(
-      address(newVeBetterPassport) != address(0),
-      "XAllocationVotingGovernor: new VeBetterPassport is the zero address"
-    );
+    if (address(newVeBetterPassport) == address(0)) revert InvalidContractAddress("VeBetterPassport");
 
     ExternalContractsStorage storage $ = _getExternalContractsStorage();
+
     $._veBetterPassport = newVeBetterPassport;
+    emit VeBetterPassportSet(address($._veBetterPassport), address(newVeBetterPassport));
   }
 
   /**
@@ -199,8 +203,24 @@ abstract contract ExternalContractsUpgradeable is Initializable, XAllocationVoti
    * @param newB3TRGovernor The new B3TRGovernor contract address
    */
   function _setB3TRGovernor(IB3TRGovernor newB3TRGovernor) internal virtual {
-    require(address(newB3TRGovernor) != address(0), "XAllocationVotingGovernor: new B3TRGovernor is the zero address");
+    if (address(newB3TRGovernor) == address(0)) revert InvalidContractAddress("B3TRGovernor");
+
     ExternalContractsStorage storage $ = _getExternalContractsStorage();
+
     $._b3trGovernor = newB3TRGovernor;
+    emit B3TRGovernorSet(address($._b3trGovernor), address(newB3TRGovernor));
+  }
+
+  /**
+   * @dev Sets the RelayerRewardsPool contract
+   * @param newRelayerRewardsPool The new RelayerRewardsPool contract address
+   */
+  function _setRelayerRewardsPool(IRelayerRewardsPool newRelayerRewardsPool) internal virtual {
+    if (address(newRelayerRewardsPool) == address(0)) revert InvalidContractAddress("RelayerRewardsPool");
+
+    ExternalContractsStorage storage $ = _getExternalContractsStorage();
+    $._relayerRewardsPool = newRelayerRewardsPool;
+
+    emit RelayerRewardsPoolSet(address($._relayerRewardsPool), address(newRelayerRewardsPool));
   }
 }

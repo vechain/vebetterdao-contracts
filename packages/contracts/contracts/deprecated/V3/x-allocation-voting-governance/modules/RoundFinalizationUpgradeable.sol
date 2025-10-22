@@ -23,7 +23,7 @@
 
 pragma solidity 0.8.20;
 
-import { XAllocationVotingGovernor } from "../XAllocationVotingGovernor.sol";
+import { XAllocationVotingGovernorV3 } from "../XAllocationVotingGovernorV3.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 /**
@@ -33,7 +33,7 @@ import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/I
  * so we can calculate the earnings for the x-2-earn-apps upon that round. By always pointing each round at the last succeeded one, if a round fails,
  * it will be enough to look at what round the previous one points to.
  */
-abstract contract RoundFinalizationUpgradeable is Initializable, XAllocationVotingGovernor {
+abstract contract RoundFinalizationUpgradeable is Initializable, XAllocationVotingGovernorV3 {
   /// @custom:storage-location erc7201:b3tr.storage.XAllocationVotingGovernor.RoundFinalization
   struct RoundFinalizationStorage {
     mapping(uint256 roundId => uint256) _latestSucceededRoundId;

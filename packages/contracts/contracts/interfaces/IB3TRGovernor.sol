@@ -277,6 +277,13 @@ interface IB3TRGovernor is IERC165, IERC6372 {
     uint256 oldDepositThresholdCap,
     uint256 newDepositThresholdCap
   );
+
+  /// @dev Emitted when the voting power is seeded.
+  event VotingPowerSeeded(address indexed walletAddress, uint256 indexed deposit);
+
+  /// @dev Emitted when a deposit is withdrawn from a proposal.
+  event ProposalWithdraw(address indexed withdrawer, uint256 indexed proposalId, uint256 amount);
+
   /**
    * @notice module:core
    * @dev Name of the governor instance (used in building the ERC712 domain separator).

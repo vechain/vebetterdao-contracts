@@ -23,7 +23,7 @@
 
 pragma solidity 0.8.20;
 
-import { XAllocationVotingGovernor } from "../XAllocationVotingGovernor.sol";
+import { XAllocationVotingGovernorV3 } from "../XAllocationVotingGovernorV3.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -35,7 +35,7 @@ import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
  *
  * In every round users can vote a fraction of their balance for the eligible apps in that round.
  */
-abstract contract RoundVotesCountingUpgradeable is Initializable, XAllocationVotingGovernor {
+abstract contract RoundVotesCountingUpgradeable is Initializable, XAllocationVotingGovernorV3 {
   struct RoundVote {
     // Total votes received for each app
     mapping(bytes32 appId => uint256) votesReceived;

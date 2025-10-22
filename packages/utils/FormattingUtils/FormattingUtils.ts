@@ -1,5 +1,6 @@
 import { BigNumber } from "bignumber.js"
 import { isFinite } from "lodash"
+import dayjs from "dayjs"
 
 export const ROUND_DECIMAL_ZERO = 0
 export const ROUND_DECIMAL_DEFAULT = 2
@@ -210,4 +211,24 @@ export function formatToHumanNumber(
   }
 
   return amountString
+}
+
+/**
+ * Format the time left for a proposal
+ * @param endAtUnix - The end time of the proposal in Unix timestamp (seconds or milliseconds)
+ * @returns The time left in the format "dd | hh | mm"
+ */
+export const formatTimeLeft = (endAtUnix: number) => {
+  const parsedDate = endAtUnix < 1e11 ? dayjs.unix(endAtUnix) : dayjs(endAtUnix)
+  const now = dayjs()
+  const days = parsedDate.diff(now, "day")
+  const hours = parsedDate.diff(now, "hour") % 24
+  const minutes = parsedDate.diff(now, "minute") % 60
+
+  //if any is negative, return 0
+  if (days < 0 || hours < 0 || minutes < 0) {
+    return "0d | 0h | 0m"
+  }
+
+  return `${days}d | ${hours}h | ${minutes}m`
 }

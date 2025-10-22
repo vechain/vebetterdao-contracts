@@ -190,7 +190,7 @@ export const setupLocalEnvironment = async (
    */
 
   // If the first 8 accounts does not have the correct nodes, run the following line
-  // await mintVechainNodes(vechainNodesMock, endorserAccounts, padNodeTypes([7, 6, 5, 3, 1], endorserAccounts.length))
+  await mintVechainNodes(vechainNodesMock, endorserAccounts, padNodeTypes([7, 6, 5, 3, 1], endorserAccounts.length))
   await startEmissions(emissionsContract, admin)
 
   if (endorseApps) {

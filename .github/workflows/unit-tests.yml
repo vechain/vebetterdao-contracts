@@ -146,6 +146,10 @@ jobs:
             label: VOT3
           - shard: shard10
             label: VoterRewards
+          - shard: shard10a
+            label: VoterRewards - Upgrade
+          - shard: shard10b
+            label: VoterRewards - Relayer Claim Rewards
           - shard: shard11
             label: X2EarnCreator
           - shard: shard12
@@ -154,6 +158,10 @@ jobs:
             label: X-Allocation Pool
           - shard: shard14
             label: X-Allocation Voting
+          - shard: shard14a
+            label: X-Allocation Voting - Upgrade
+          - shard: shard14b
+            label: X-Allocation Voting - Auto Voting
           - shard: shard15
             label: X-Apps
           - shard: shard16
@@ -162,6 +170,8 @@ jobs:
             label: X-Apps Additional Tests A
           - shard: shard17b
             label: X-Apps Additional Tests B
+          - shard: shard18
+            label: RelayerRewardsPool
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3

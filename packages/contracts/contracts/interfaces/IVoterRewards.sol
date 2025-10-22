@@ -144,6 +144,10 @@ interface IVoterRewards {
   /// @return address The B3TR contract address
   function b3tr() external view returns (address);
 
+  /// @notice Gets the RelayerRewardsPool contract address
+  /// @return address The RelayerRewardsPool contract address
+  function relayerRewardsPool() external view returns (address);
+
   /// @notice Gets the galaxy member contract address
   /// @return address The galaxy member contract address
   function galaxyMember() external view returns (address);
@@ -210,6 +214,12 @@ interface IVoterRewards {
   /// @param level The level to query
   /// @return uint256 The multiplier value
   function levelToMultiplier(uint256 level) external view returns (uint256);
+
+  /// @notice Gets relayer fee for voter in cycle
+  /// @param cycle The reward cycle
+  /// @param voter The voter's address
+  /// @return uint256 The relayer fee amount
+  function getRelayerFee(uint256 cycle, address voter) external view returns (uint256);
 
   /// @notice Gets the proxiable UUID
   /// @return bytes32 The UUID
