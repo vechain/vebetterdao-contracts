@@ -23,7 +23,8 @@ import {
 } from "../../typechain-types"
 import { getOrDeployContractInstances } from "../helpers"
 import { ContractFactory, ContractTransactionReceipt } from "ethers"
-import { ethers, expect } from "hardhat"
+import { ethers } from "hardhat"
+import { expect } from "chai"
 import {
   bootstrapAndStartEmissions,
   bootstrapEmissions,
