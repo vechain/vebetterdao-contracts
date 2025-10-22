@@ -1,6 +1,5 @@
 import { HardhatUserConfig } from "hardhat/config"
 import "@nomicfoundation/hardhat-toolbox"
-import "@nomiclabs/hardhat-truffle5"
 import "@vechain/sdk-hardhat-plugin"
 import "hardhat-contract-sizer"
 import "hardhat-ignore-warnings"
