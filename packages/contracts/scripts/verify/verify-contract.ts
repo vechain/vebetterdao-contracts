@@ -362,14 +362,22 @@ function copySourceFiles(metadata: any, tempDir: string, contractsBaseDir: strin
     if (path.isAbsolute(sourcePath)) {
       sourceFilePath = sourcePath
     } else {
-      // Try relative to contracts directory first
-      sourceFilePath = path.join(contractsBaseDir, sourcePath)
+      // Try multiple resolution strategies
+      const { packageDir } = getProjectPaths()
 
-      // If not found, try relative to project root
-      if (!fs.existsSync(sourceFilePath)) {
-        const { packageDir } = getProjectPaths()
-        sourceFilePath = path.join(packageDir, sourcePath)
-      }
+      const possiblePaths = [
+        // 1. Try relative to package directory (handles "contracts/DBAPool.sol")
+        path.join(packageDir, sourcePath),
+        // 2. Try relative to contracts directory (handles "DBAPool.sol")
+        path.join(contractsBaseDir, sourcePath),
+        // 3. Try stripping "contracts/" prefix if present (handles "contracts/DBAPool.sol" when contractsBaseDir already includes "contracts")
+        sourcePath.startsWith("contracts/")
+          ? path.join(contractsBaseDir, sourcePath.replace(/^contracts\//, ""))
+          : null,
+      ].filter(Boolean) as string[]
+
+      // Find the first path that exists
+      sourceFilePath = possiblePaths.find(p => fs.existsSync(p)) || possiblePaths[0]
     }
 
     if (fs.existsSync(sourceFilePath)) {
@@ -384,9 +392,19 @@ function copySourceFiles(metadata: any, tempDir: string, contractsBaseDir: strin
       // Copy the file
       fs.copyFileSync(sourceFilePath, destPath)
       copiedFiles.push(sourcePath)
-      console.log(`Copied: ${sourcePath}`)
+      console.log(`   ✓ Copied: ${sourcePath}`)
     } else {
-      console.warn(`Warning: Source file not found: ${sourceFilePath}`)
+      console.error(`   ✗ ERROR: Source file not found: ${sourceFilePath}`)
+      console.error(`     Tried paths:`)
+      const { packageDir } = getProjectPaths()
+      const attemptedPaths = [
+        path.join(packageDir, sourcePath),
+        path.join(contractsBaseDir, sourcePath),
+        sourcePath.startsWith("contracts/")
+          ? path.join(contractsBaseDir, sourcePath.replace(/^contracts\//, ""))
+          : null,
+      ].filter(Boolean) as string[]
+      attemptedPaths.forEach(p => console.error(`       - ${p}`))
     }
   }
 

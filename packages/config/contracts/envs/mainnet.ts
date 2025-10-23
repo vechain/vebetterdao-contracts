@@ -186,5 +186,14 @@ export function createMainnetConfig() {
 
     // Milestones
     MINIMUM_MILESTONE_COUNT: 3,
+
+    // XAllocationPoolV7 unallocated funds
+    X_ALLOCATION_POOL_UNALLOCATED_FUNDS_ROUND_IDS: [66, 67, 68],
+    X_ALLOCATION_POOL_UNALLOCATED_FUNDS_V7: [
+      152963918069760000000000n,
+      168129850245120000000000n,
+      179381993472000000000000n,
+    ],
+    DBA_DISTRIBUTION_START_ROUND: 66,
   })
 }

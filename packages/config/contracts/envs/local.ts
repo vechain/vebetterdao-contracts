@@ -221,6 +221,11 @@ export function createLocalConfig() {
     NODE_MANAGEMENT_CONTRACT_ADDRESS: process.env.LOCAL_NODE_MANAGEMENT_CONTRACT_ADDRESS || ZERO_ADDRESS,
 
     // Milestones
-    MINIMUM_MILESTONE_COUNT: 2, // test-compatibility
+    MINIMUM_MILESTONE_COUNT: 2, // test-compatibility,
+
+    // XAllocationPoolV7 unallocated funds
+    X_ALLOCATION_POOL_UNALLOCATED_FUNDS_ROUND_IDS: [],
+    X_ALLOCATION_POOL_UNALLOCATED_FUNDS_V7: [],
+    DBA_DISTRIBUTION_START_ROUND: 1,
   })
 }
