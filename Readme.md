@@ -45,7 +45,9 @@ Our contracts are upgradeable and versioned. See the [contracts changelog](/pack
   "X2EarnRewardsPool": "0x6Bee7DDab6c99d5B2Af0554EaEA484CE18F52631",
   "XAllocationPool": "0x4191776F05f4bE4848d3f4d587345078B439C7d3",
   "XAllocationVoting": "0x89A00Bb0947a30FF95BEeF77a66AEdE3842Fe5B7",
-  "VeBetterPassport": "0x35a267671d8EDD607B2056A9a13E7ba7CF53c8b3"
+  "VeBetterPassport": "0x35a267671d8EDD607B2056A9a13E7ba7CF53c8b3",
+  "RelayerRewardsPool": "0x34b56f892c9e977b9ba2e43ba64c27d368ab3c86",
+  "DynamicBaseAllocationPool": "0x98c1d097c39969bb5de754266f60d22bd105b368"
 ```
 
 ## Testnet contract addresses
@@ -63,6 +65,8 @@ Our contracts are upgradeable and versioned. See the [contracts changelog](/pack
   "X2EarnRewardsPool": "0x5F8f86B8D0Fa93cdaE20936d150175dF0205fB38",
   "XAllocationPool": "0x9B9CA9D0C41Add1d204f90BA0E9a6844f1843A84",
   "XAllocationVoting": "0x5859ff910d8b0c127364c98E24233b0af7443c1c",
+  "RelayerRewardsPool": "0x92b5a7484970d9b2ad981e8135ff14e6f996dc04",
+  "DynamicBaseAllocationPool": "0xf710edf9c2f5e00563034a8954f8733d04fd9943",
   "B3TRFaucet": "0x5e9c1F0f52aC6b5004122059053b00017EAfB561"
 ```
 
