@@ -24,6 +24,7 @@ const config: AppConfig = {
   stargateNFTContractAddress: "0x1ec1d168574603ec35b9d229843b7c2b44bcb770",
   grantsManagerContractAddress: "0x0000000000000000000000000000000000000001",
   relayerRewardsPoolContractAddress: "0x0000000000000000000000000000000000000000",
+  dbaPoolContractAddress: "0x0000000000000000000000000000000000000000",
   indexerUrl: "https://indexer.testnet.vechain.org/api/v1",
   nodeUrl: "https://testnet.vechain.org",
   network: {

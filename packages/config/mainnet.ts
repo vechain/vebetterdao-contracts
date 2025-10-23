@@ -25,6 +25,7 @@ const config: AppConfig = {
   stargateNFTContractAddress: "0x1856c533ac2d94340aaa8544d35a5c1d4a21dee7",
   grantsManagerContractAddress: "0x055d20914657834c914d7c44bf65b566ab4b45a2",
   relayerRewardsPoolContractAddress: "0x34b56f892c9e977b9ba2e43ba64c27d368ab3c86",
+  dbaPoolContractAddress: "0x98c1d097c39969bb5de754266f60d22bd105b368",
   b3trGovernorLibraries: {
     governorClockLogicAddress: "0xed6137b125bc40834fa06e800c5a72013ef9d91c",
     governorConfiguratorAddress: "0xc2428c4608f97d21034ae32f104587c9c045a8a2",

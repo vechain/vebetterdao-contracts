@@ -100,4 +100,11 @@ export type ContractsConfig = {
 
   // Milestones
   MINIMUM_MILESTONE_COUNT: number
+
+  // XAllocationPoolV7 unallocated funds
+  X_ALLOCATION_POOL_UNALLOCATED_FUNDS_ROUND_IDS: number[]
+  X_ALLOCATION_POOL_UNALLOCATED_FUNDS_V7: bigint[]
+
+  // DBA distribution start round
+  DBA_DISTRIBUTION_START_ROUND: number
 }

@@ -23,7 +23,7 @@
 
 pragma solidity 0.8.20;
 
-import { IXAllocationPoolV3 as IXAllocationPool } from "./interfaces/IXAllocationPoolV3.sol";
+import { IXAllocationPoolV6 as IXAllocationPool } from "./interfaces/IXAllocationPoolV6.sol";
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import { Checkpoints } from "@openzeppelin/contracts/utils/structs/Checkpoints.sol";
 import { Time } from "@openzeppelin/contracts/utils/types/Time.sol";
@@ -34,7 +34,7 @@ import { IEmissions } from "../../interfaces/IEmissions.sol";
 import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import { IB3TR } from "../../interfaces/IB3TR.sol";
 import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import { IX2EarnAppsV2 } from "../V2/interfaces/IX2EarnAppsV2.sol";
+import { IX2EarnApps } from "../../interfaces/IX2EarnApps.sol";
 import { IX2EarnRewardsPool } from "../../interfaces/IX2EarnRewardsPool.sol";
 
 /**
@@ -48,11 +48,15 @@ import { IX2EarnRewardsPool } from "../../interfaces/IX2EarnRewardsPool.sol";
  * ---------------------- Version 2 ----------------------------------------
  * - Added the abilty to toggle quadratic funding on and off.
  * ---------------------- Version 3 ----------------------------------------
- * - Use new interface IX2EarnAppsV2 that supports endorsement.
+ * - Use new interface IX2EarnApps that supports endorsement.
  * ---------------------- Version 4 ----------------------------------------
- * - Use new interface IX2EarnAppsV2 that supports endorsement cooldown.
+ * - Updated the X2EarnApps interface to support node cooldown functionality
+ * ---------------------- Version 5 ----------------------------------------
+ * - Updated the X2EarnRewardsPool and X2EarnApps interfaces to support app rewards management feature
+ * ---------------------- Version 6 ----------------------------------------
+ * - Updated the Emissions contract interface to support GM Rewards Pool
  */
-contract XAllocationPoolV3 is IXAllocationPool, AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPSUpgradeable {
+contract XAllocationPoolV6 is IXAllocationPool, AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPSUpgradeable {
   using Checkpoints for Checkpoints.Trace208; // Checkpoints library for managing the voting mechanism used in the XAllocationVoting contract
 
   uint256 public constant PERCENTAGE_PRECISION_SCALING_FACTOR = 1e4;
@@ -67,7 +71,7 @@ contract XAllocationPoolV3 is IXAllocationPool, AccessControlUpgradeable, Reentr
     IEmissions _emissions;
     IB3TR b3tr;
     ITreasury treasury;
-    IX2EarnAppsV2 x2EarnApps;
+    IX2EarnApps x2EarnApps;
     IX2EarnRewardsPool x2EarnRewardsPool;
     mapping(bytes32 appId => mapping(uint256 => bool)) claimedRewards; // Mapping to store the claimed rewards for each app in each round
     Checkpoints.Trace208 quadraticFundingDisabled; // checkpoints for the quadratic funding status for each round
@@ -120,7 +124,7 @@ contract XAllocationPoolV3 is IXAllocationPool, AccessControlUpgradeable, Reentr
     XAllocationPoolStorage storage $ = _getXAllocationPoolStorage();
     $.b3tr = IB3TR(_b3trAddress);
     $.treasury = ITreasury(_treasury);
-    $.x2EarnApps = IX2EarnAppsV2(_x2EarnApps);
+    $.x2EarnApps = IX2EarnApps(_x2EarnApps);
     $.x2EarnRewardsPool = IX2EarnRewardsPool(_x2EarnRewardsPool);
 
     require(_admin != address(0), "XAllocationPool: new admin is the zero address");
@@ -191,7 +195,7 @@ contract XAllocationPoolV3 is IXAllocationPool, AccessControlUpgradeable, Reentr
     require(x2EarnApps_ != address(0), "XAllocationPool: new x2EarnApps is the zero address");
 
     XAllocationPoolStorage storage $ = _getXAllocationPoolStorage();
-    $.x2EarnApps = IX2EarnAppsV2(x2EarnApps_);
+    $.x2EarnApps = IX2EarnApps(x2EarnApps_);
 
     emit X2EarnAppsContractSet(address($.x2EarnApps), x2EarnApps_);
   }
@@ -634,7 +638,7 @@ contract XAllocationPoolV3 is IXAllocationPool, AccessControlUpgradeable, Reentr
   /**
    * @dev Returns the x2EarnApp contract.
    */
-  function x2EarnApps() external view returns (IX2EarnAppsV2) {
+  function x2EarnApps() external view returns (IX2EarnApps) {
     XAllocationPoolStorage storage $ = _getXAllocationPoolStorage();
     return $.x2EarnApps;
   }
@@ -644,7 +648,7 @@ contract XAllocationPoolV3 is IXAllocationPool, AccessControlUpgradeable, Reentr
    * @return string The version of the contract
    */
   function version() external pure virtual returns (string memory) {
-    return "3";
+    return "6";
   }
 
   /**

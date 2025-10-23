@@ -55,6 +55,11 @@ import { IX2EarnRewardsPool } from "./interfaces/IX2EarnRewardsPool.sol";
  * - Updated the X2EarnRewardsPool and X2EarnApps interfaces to support app rewards management feature
  * ---------------------- Version 6 ----------------------------------------
  * - Updated the Emissions contract interface to support GM Rewards Pool
+ * ---------------------- Version 7 ----------------------------------------
+ * - Changed the name of the variable "treasury" to "unallocatedFundsReceiver"
+ * - Track the unallocated funds for each round
+ * - Added admin function to manually set the unallocated funds for a given round
+ * - Added a getter to see if all apps have claimed their rewards for a given round
  */
 contract XAllocationPool is IXAllocationPool, AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPSUpgradeable {
   using Checkpoints for Checkpoints.Trace208; // Checkpoints library for managing the voting mechanism used in the XAllocationVoting contract
@@ -70,11 +75,17 @@ contract XAllocationPool is IXAllocationPool, AccessControlUpgradeable, Reentran
     IXAllocationVotingGovernor _xAllocationVoting;
     IEmissions _emissions;
     IB3TR b3tr;
-    ITreasury treasury;
+    // Although this is marked as an ITreasury, it is just used as a receiver address to send the unallocated funds
+    // The original name of this variable was "treasury"
+    ITreasury unallocatedFundsReceiver;
     IX2EarnApps x2EarnApps;
     IX2EarnRewardsPool x2EarnRewardsPool;
     mapping(bytes32 appId => mapping(uint256 => bool)) claimedRewards; // Mapping to store the claimed rewards for each app in each round
     Checkpoints.Trace208 quadraticFundingDisabled; // checkpoints for the quadratic funding status for each round
+    // -------------------------------- version 7 storage --------------------------------
+    // it will show 0 for all the rounds before v7
+    // until all allocation rewards for all apps are claimed the "unallocatedFunds" must be considered provisional.
+    mapping(uint256 roundId => uint256 amount) unallocatedFunds;
   }
 
   // keccak256(abi.encode(uint256(keccak256("b3tr.storage.XAllocationPool")) - 1)) & ~bytes32(uint256(0xff))
@@ -123,7 +134,7 @@ contract XAllocationPool is IXAllocationPool, AccessControlUpgradeable, Reentran
 
     XAllocationPoolStorage storage $ = _getXAllocationPoolStorage();
     $.b3tr = IB3TR(_b3trAddress);
-    $.treasury = ITreasury(_treasury);
+    $.unallocatedFundsReceiver = ITreasury(_treasury);
     $.x2EarnApps = IX2EarnApps(_x2EarnApps);
     $.x2EarnRewardsPool = IX2EarnRewardsPool(_x2EarnRewardsPool);
 
@@ -133,18 +144,25 @@ contract XAllocationPool is IXAllocationPool, AccessControlUpgradeable, Reentran
     _grantRole(CONTRACTS_ADDRESS_MANAGER_ROLE, contractsAddressManager);
   }
 
-  // @dev Emit when the xAllocationVoting contract is set
-  event XAllocationVotingSet(address oldContractAddress, address newContractAddress);
-  // @dev Emit when the emissions contract is set
-  event EmissionsContractSet(address oldContractAddress, address newContractAddress);
-  // @dev Emit when the treasury contract is set
-  event TreasuryContractSet(address oldContractAddress, address newContractAddress);
-  // @dev Emit when the x2EarnApps contract is set
-  event X2EarnAppsContractSet(address oldContractAddress, address newContractAddress);
+  /**
+   * @dev Initializes version 7 of the contract with historical unallocated funds data.
+   * This function seeds the unallocatedFunds mapping with historical data for past rounds.
+   *
+   * @param roundIds Array of round IDs for which to set unallocated funds.
+   * @param amounts Array of unallocated fund amounts corresponding to each round ID.
+   */
+  function initializeV7(
+    uint256[] memory roundIds,
+    uint256[] memory amounts
+  ) public onlyRole(UPGRADER_ROLE) reinitializer(7) {
+    require(roundIds.length == amounts.length, "XAllocationPool: arrays length mismatch");
 
-  /// @notice Emits true if quadratic funding is disabled, false otherwise.
-  /// @param isDisabled - The flag to enable or disable quadratic funding.
-  event QuadraticFundingToggled(bool indexed isDisabled);
+    XAllocationPoolStorage storage $ = _getXAllocationPoolStorage();
+
+    for (uint256 i = 0; i < roundIds.length; i++) {
+      $.unallocatedFunds[roundIds[i]] = amounts[i];
+    }
+  }
 
   // ---------- Authorizers ---------- //
 
@@ -177,15 +195,20 @@ contract XAllocationPool is IXAllocationPool, AccessControlUpgradeable, Reentran
   }
 
   /**
-   * @dev Set the address of the treasury contract.
+   * @dev Set the address of the unallocated funds receiver contract or wallet.
    */
-  function setTreasuryAddress(address treasury_) external onlyRole(CONTRACTS_ADDRESS_MANAGER_ROLE) {
-    require(treasury_ != address(0), "XAllocationPool: new treasury is the zero address");
+  function setUnallocatedFundsReceiverAddress(
+    address _receiverAddress
+  ) external onlyRole(CONTRACTS_ADDRESS_MANAGER_ROLE) {
+    require(_receiverAddress != address(0), "XAllocationPool: receiver address is the zero address");
 
     XAllocationPoolStorage storage $ = _getXAllocationPoolStorage();
-    $.treasury = ITreasury(treasury_);
 
-    emit TreasuryContractSet(address($.treasury), treasury_);
+    address oldReceiverAddress = address($.unallocatedFundsReceiver);
+
+    $.unallocatedFundsReceiver = ITreasury(_receiverAddress);
+
+    emit UnallocatedFundsReceiverSet(oldReceiverAddress, _receiverAddress);
   }
 
   /**
@@ -272,12 +295,14 @@ contract XAllocationPool is IXAllocationPool, AccessControlUpgradeable, Reentran
       "XAllocationPool: Deposit of rewards allocation to x2EarnRewardsPool failed"
     );
 
-    // Transfer the unallocated rewards to the treasury
+    // Transfer the unallocated rewards to the unallocated funds receiver (treasury or dbapool)
     if (unallocatedAmount > 0) {
       require(
-        $.b3tr.transfer(address($.treasury), unallocatedAmount),
-        "XAllocationPool: Transfer of unallocated rewards to treasury failed"
+        $.b3tr.transfer(address($.unallocatedFundsReceiver), unallocatedAmount),
+        "XAllocationPool: Transfer of unallocated rewards failed"
       );
+
+      $.unallocatedFunds[roundId] += unallocatedAmount;
     }
 
     // emit event
@@ -604,6 +629,32 @@ contract XAllocationPool is IXAllocationPool, AccessControlUpgradeable, Reentran
   }
 
   /**
+   * @dev Returns the unallocated funds for a given round.
+   * @param roundId The round ID for which to return the unallocated funds.
+   * @return The unallocated funds for the given round.
+   */
+  function unallocatedFunds(uint256 roundId) external view returns (uint256) {
+    XAllocationPoolStorage storage $ = _getXAllocationPoolStorage();
+    return $.unallocatedFunds[roundId];
+  }
+
+  /**
+   * @dev Returns true if all the funds for a given round have been claimed.
+   * @param roundId The round ID for which to return the all funds claimed status.
+   * @return True if all the funds for the given round have been claimed, false otherwise.
+   */
+  function allFundsClaimed(uint256 roundId) external view returns (bool) {
+    XAllocationPoolStorage storage $ = _getXAllocationPoolStorage();
+    bytes32[] memory eligibleApps = $._xAllocationVoting.getAppIdsOfRound(roundId);
+    for (uint256 i = 0; i < eligibleApps.length; i++) {
+      if (!$.claimedRewards[eligibleApps[i]][roundId]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
    * @dev Returns the XAllocationVotingGovernor contract.
    */
   function xAllocationVoting() public view returns (IXAllocationVotingGovernor) {
@@ -620,11 +671,11 @@ contract XAllocationPool is IXAllocationPool, AccessControlUpgradeable, Reentran
   }
 
   /**
-   * @dev Returns the emissions contract.
+   * @dev Returns the unallocated funds receiver contract or wallet.
    */
-  function treasury() external view returns (ITreasury) {
+  function unallocatedFundsReceiver() external view returns (ITreasury) {
     XAllocationPoolStorage storage $ = _getXAllocationPoolStorage();
-    return $.treasury;
+    return $.unallocatedFundsReceiver;
   }
 
   /**
@@ -648,7 +699,7 @@ contract XAllocationPool is IXAllocationPool, AccessControlUpgradeable, Reentran
    * @return string The version of the contract
    */
   function version() external pure virtual returns (string memory) {
-    return "6";
+    return "7";
   }
 
   /**

@@ -37,7 +37,7 @@ describe("X-Allocation Pool - @shard13", async function () {
         forceDeploy: true,
       })
 
-      expect(await xAllocationPool.treasury()).to.eql(await treasury.getAddress())
+      expect(await xAllocationPool.unallocatedFundsReceiver()).to.eql(await treasury.getAddress())
       expect(await xAllocationPool.b3tr()).to.eql(await b3tr.getAddress())
       expect(await xAllocationPool.emissions()).to.eql(await emissions.getAddress())
       expect(await xAllocationPool.x2EarnApps()).to.eql(await x2EarnApps.getAddress())
@@ -234,7 +234,7 @@ describe("X-Allocation Pool - @shard13", async function () {
         forceDeploy: true,
       })
 
-      expect(await xAllocationPool.version()).to.equal("6")
+      expect(await xAllocationPool.version()).to.equal("7")
     })
 
     it("Should not have state conflict after upgrading to V6", async () => {
@@ -396,11 +396,15 @@ describe("X-Allocation Pool - @shard13", async function () {
         },
       )) as XAllocationPool
 
-      const storageSlotsAfter = []
+      let storageSlotsAfter = []
 
       for (let i = initialSlot; i < initialSlot + BigInt(100); i++) {
         storageSlotsAfter.push(await ethers.provider.getStorage(await xAllocationPool.getAddress(), i))
       }
+
+      storageSlotsAfter = storageSlotsAfter.filter(
+        slot => slot !== "0x0000000000000000000000000000000000000000000000000000000000000000",
+      ) // removing empty slots
 
       // Check if storage slots are the same after upgrade
       for (let i = 0; i < storageSlots.length; i++) {
@@ -499,12 +503,121 @@ describe("X-Allocation Pool - @shard13", async function () {
       expect(app1round1Earnings1[0]).to.eql(1144n)
       expect(app2round1Earnings2[0]).to.eql(5993n)
       expect(app3round1Earnings3[0]).to.eql(2861n)
+
+      // Capture storage slots before upgrading to V7
+      let storageSlotsBeforeV7 = []
+
+      for (let i = initialSlot; i < initialSlot + BigInt(100); i++) {
+        storageSlotsBeforeV7.push(await ethers.provider.getStorage(await xAllocationPool.getAddress(), i))
+      }
+
+      storageSlotsBeforeV7 = storageSlotsBeforeV7.filter(
+        slot => slot !== "0x0000000000000000000000000000000000000000000000000000000000000000",
+      ) // removing empty slots
+
+      // Upgrade to V7
+      const xAllocationPoolV7 = (await upgradeProxy(
+        "XAllocationPoolV6",
+        "XAllocationPool",
+        await xAllocationPool.getAddress(),
+        [[], []],
+        {
+          version: 7,
+        },
+      )) as XAllocationPool
+
+      let storageSlotsAfterV7 = []
+
+      for (let i = initialSlot; i < initialSlot + BigInt(100); i++) {
+        storageSlotsAfterV7.push(await ethers.provider.getStorage(await xAllocationPoolV7.getAddress(), i))
+      }
+
+      storageSlotsAfterV7 = storageSlotsAfterV7.filter(
+        slot => slot !== "0x0000000000000000000000000000000000000000000000000000000000000000",
+      ) // removing empty slots
+
+      // Check if storage slots are the same after upgrade to V7
+      for (let i = 0; i < storageSlotsBeforeV7.length; i++) {
+        expect(storageSlotsBeforeV7[i]).to.equal(storageSlotsAfterV7[i])
+      }
+
+      // Verify all historical round earnings are still intact after V7 upgrade
+      const app1round1EarningsAfterV7 = await xAllocationPoolV7.roundEarnings(round1, app1Id)
+      const app2round1EarningsAfterV7 = await xAllocationPoolV7.roundEarnings(round1, app2Id)
+      const app3round1EarningsAfterV7 = await xAllocationPoolV7.roundEarnings(round1, app3Id)
+
+      expect(app1round1EarningsAfterV7[0]).to.eql(1144n)
+      expect(app2round1EarningsAfterV7[0]).to.eql(5993n)
+      expect(app3round1EarningsAfterV7[0]).to.eql(2861n)
+
+      const app1round2EarningsAfterV7 = await xAllocationPoolV7.roundEarnings(round2, app1Id)
+      const app2round2EarningsAfterV7 = await xAllocationPoolV7.roundEarnings(round2, app2Id)
+      const app3round2EarningsAfterV7 = await xAllocationPoolV7.roundEarnings(round2, app3Id)
+
+      expect(app1round2EarningsAfterV7[0]).to.eql(1144n)
+      expect(app2round2EarningsAfterV7[0]).to.eql(5993n)
+      expect(app3round2EarningsAfterV7[0]).to.eql(2861n)
+
+      const app1round3EarningsAfterV7 = await xAllocationPoolV7.roundEarnings(round3, app1Id)
+      const app2round3EarningsAfterV7 = await xAllocationPoolV7.roundEarnings(round3, app2Id)
+      const app3round3EarningsAfterV7 = await xAllocationPoolV7.roundEarnings(round3, app3Id)
+
+      expect(app1round3EarningsAfterV7[0]).to.eql(1144n)
+      expect(app2round3EarningsAfterV7[0]).to.eql(5993n)
+      expect(app3round3EarningsAfterV7[0]).to.eql(2861n)
+
+      const app1round4EarningsAfterV7 = await xAllocationPoolV7.roundEarnings(round4, app1Id)
+      const app2round4EarningsAfterV7 = await xAllocationPoolV7.roundEarnings(round4, app2Id)
+      const app3round4EarningsAfterV7 = await xAllocationPoolV7.roundEarnings(round4, app3Id)
+
+      expect(app1round4EarningsAfterV7[0]).to.eql(3225n)
+      expect(app2round4EarningsAfterV7[0]).to.eql(5161n)
+      expect(app3round4EarningsAfterV7[0]).to.eql(1612n)
+
+      // Verify quadratic funding state persists after V7 upgrade
+      expect(await xAllocationPoolV7.isQuadraticFundingDisabledForCurrentRound()).to.eql(true)
+      expect(await xAllocationPoolV7.isQuadraticFundingDisabledForRound(round4)).to.eql(true)
+
+      // Run a new round after V7 upgrade to verify functionality
+      otherAccounts.forEach(async account => {
+        await getVot3Tokens(account, "10000")
+      })
+
+      const round5 = await startNewAllocationRound()
+
+      // Vote in round 5
+      await xAllocationVoting
+        .connect(otherAccounts[1])
+        .castVote(round5, [app2Id, app3Id], [ethers.parseEther("900"), ethers.parseEther("100")])
+      await xAllocationVoting
+        .connect(otherAccounts[2])
+        .castVote(round5, [app2Id, app3Id], [ethers.parseEther("500"), ethers.parseEther("100")])
+      await xAllocationVoting
+        .connect(otherAccounts[3])
+        .castVote(round5, [app2Id, app3Id], [ethers.parseEther("100"), ethers.parseEther("100")])
+      await xAllocationVoting
+        .connect(otherAccounts[4])
+        .castVote(round5, [app2Id, app3Id], [ethers.parseEther("100"), ethers.parseEther("100")])
+      await xAllocationVoting
+        .connect(otherAccounts[5])
+        .castVote(round5, [app1Id, app3Id], [ethers.parseEther("1000"), ethers.parseEther("100")])
+
+      await waitForRoundToEnd(round5)
+
+      const app1round5Earnings = await xAllocationPoolV7.roundEarnings(round5, app1Id)
+      const app2round5Earnings = await xAllocationPoolV7.roundEarnings(round5, app2Id)
+      const app3round5Earnings = await xAllocationPoolV7.roundEarnings(round5, app3Id)
+
+      // Should use linear calculation since quadratic funding is disabled
+      expect(app1round5Earnings[0]).to.eql(3225n)
+      expect(app2round5Earnings[0]).to.eql(5161n)
+      expect(app3round5Earnings[0]).to.eql(1612n)
     })
   })
 
   describe("Settings", async function () {
-    describe("Treasury address", async function () {
-      it("Admin with CONTRACTS_ADDRESS_MANAGER_ROLE can set treasury address", async function () {
+    describe("Unallocated funds receiver address", async function () {
+      it("Admin with CONTRACTS_ADDRESS_MANAGER_ROLE can set the unallocated funds receiver address", async function () {
         const { xAllocationPool, owner, otherAccount } = await getOrDeployContractInstances({
           forceDeploy: true,
         })
@@ -515,14 +628,14 @@ describe("X-Allocation Pool - @shard13", async function () {
 
         const newTreasuryAddress = otherAccount.address
 
-        await xAllocationPool.connect(owner).setTreasuryAddress(newTreasuryAddress)
+        await xAllocationPool.connect(owner).setUnallocatedFundsReceiverAddress(newTreasuryAddress)
 
-        const treasuryAddress = await xAllocationPool.treasury()
+        const unallocatedFundsReceiver = await xAllocationPool.unallocatedFundsReceiver()
 
-        expect(treasuryAddress).to.eql(newTreasuryAddress)
+        expect(unallocatedFundsReceiver).to.eql(newTreasuryAddress)
       })
 
-      it("Only admin with CONTRACTS_ADDRESS_MANAGER_ROLE can set treasury address", async function () {
+      it("Only admin with CONTRACTS_ADDRESS_MANAGER_ROLE can set the unallocated funds receiver address", async function () {
         const { xAllocationPool, otherAccount } = await getOrDeployContractInstances({
           forceDeploy: true,
         })
@@ -533,17 +646,19 @@ describe("X-Allocation Pool - @shard13", async function () {
 
         const newTreasuryAddress = otherAccount.address
 
-        await expect(xAllocationPool.connect(otherAccount).setTreasuryAddress(newTreasuryAddress)).to.be.reverted
+        await expect(xAllocationPool.connect(otherAccount).setUnallocatedFundsReceiverAddress(newTreasuryAddress)).to.be
+          .reverted
       })
 
-      it("Cannot set treasury address to zero address", async function () {
+      it("Cannot set the unallocated funds receiver address to zero address", async function () {
         const { xAllocationPool, owner } = await getOrDeployContractInstances({
           forceDeploy: true,
         })
 
         const newTreasuryAddress = ZERO_ADDRESS
 
-        await expect(xAllocationPool.connect(owner).setTreasuryAddress(newTreasuryAddress)).to.be.reverted
+        await expect(xAllocationPool.connect(owner).setUnallocatedFundsReceiverAddress(newTreasuryAddress)).to.be
+          .reverted
       })
     })
 
@@ -3062,6 +3177,386 @@ describe("X-Allocation Pool - @shard13", async function () {
         })
 
         await catchRevert(xAllocationPool.connect(otherAccounts[1]).toggleQuadraticFunding())
+      })
+    })
+
+    describe("Version 7 - Unallocated Funds Tracking", async function () {
+      it("Should track unallocated funds when app claims rewards with unallocated amount", async function () {
+        const {
+          xAllocationVoting,
+          otherAccounts,
+          owner,
+          xAllocationPool,
+          emissions,
+          minterAccount,
+          x2EarnApps,
+          veBetterPassport,
+          b3tr,
+          treasury,
+        } = await getOrDeployContractInstances({
+          forceDeploy: true,
+        })
+
+        const voter1 = otherAccounts[1]
+        await getVot3Tokens(voter1, "10000")
+
+        await veBetterPassport.whitelist(voter1.address)
+        await veBetterPassport.toggleCheck(1)
+
+        // Add app
+        const appId = ethers.keccak256(ethers.toUtf8Bytes("My app"))
+        const appReceiverAddress = otherAccounts[3].address
+        await x2EarnApps.connect(owner).submitApp(appReceiverAddress, appReceiverAddress, "My app", "metadataURI")
+        await endorseApp(appId, otherAccounts[3])
+
+        // Bootstrap emissions
+        await bootstrapEmissions()
+        await emissions.connect(minterAccount).start()
+
+        // Start allocation round
+        const round1 = parseInt((await xAllocationVoting.currentRoundId()).toString())
+
+        // Vote with significant amount to exceed cap and generate unallocated funds
+        await xAllocationVoting.connect(voter1).castVote(round1, [appId], [ethers.parseEther("10000")])
+
+        await waitForRoundToEnd(round1)
+        await xAllocationVoting.finalizeRound(round1)
+
+        // Check unallocated funds before claiming
+        const unallocatedFundsBefore = await xAllocationPool.unallocatedFunds(round1)
+        expect(unallocatedFundsBefore).to.eql(0n)
+
+        // Get expected unallocated amount
+        const earnings = await xAllocationPool.roundEarnings(round1, appId)
+        const expectedUnallocatedAmount = earnings[1] // unallocatedAmount
+
+        const treasuryBalanceBefore = await b3tr.balanceOf(await treasury.getAddress())
+
+        // Claim rewards
+        await xAllocationPool.connect(otherAccounts[3]).claim(round1, appId)
+
+        // Check unallocated funds after claiming
+        const unallocatedFundsAfter = await xAllocationPool.unallocatedFunds(round1)
+        expect(unallocatedFundsAfter).to.eql(expectedUnallocatedAmount)
+
+        // Verify treasury received the unallocated amount
+        const treasuryBalanceAfter = await b3tr.balanceOf(await treasury.getAddress())
+        expect(treasuryBalanceAfter).to.eql(treasuryBalanceBefore + expectedUnallocatedAmount)
+      })
+
+      it("Should track unallocated funds for multiple apps in same round", async function () {
+        const {
+          xAllocationVoting,
+          otherAccounts,
+          owner,
+          xAllocationPool,
+          emissions,
+          minterAccount,
+          x2EarnApps,
+          veBetterPassport,
+        } = await getOrDeployContractInstances({
+          forceDeploy: true,
+        })
+
+        const voter1 = otherAccounts[1]
+        await getVot3Tokens(voter1, "10000")
+
+        await veBetterPassport.whitelist(voter1.address)
+        await veBetterPassport.toggleCheck(1)
+
+        // Add two apps
+        const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app 1"))
+        const app2Id = ethers.keccak256(ethers.toUtf8Bytes("My app 2"))
+        await x2EarnApps
+          .connect(owner)
+          .submitApp(otherAccounts[3].address, otherAccounts[3].address, "My app 1", "metadataURI")
+        await x2EarnApps
+          .connect(creator1)
+          .submitApp(otherAccounts[4].address, otherAccounts[4].address, "My app 2", "metadataURI")
+        await endorseApp(app1Id, otherAccounts[3])
+        await endorseApp(app2Id, otherAccounts[4])
+
+        // Bootstrap emissions
+        await bootstrapEmissions()
+        await emissions.connect(minterAccount).start()
+
+        const round1 = parseInt((await xAllocationVoting.currentRoundId()).toString())
+
+        // Vote with significant amounts for both apps
+        await xAllocationVoting
+          .connect(voter1)
+          .castVote(round1, [app1Id, app2Id], [ethers.parseEther("8000"), ethers.parseEther("2000")])
+
+        await waitForRoundToEnd(round1)
+        await xAllocationVoting.finalizeRound(round1)
+
+        // Get expected unallocated amounts
+        const app1Earnings = await xAllocationPool.roundEarnings(round1, app1Id)
+        const app2Earnings = await xAllocationPool.roundEarnings(round1, app2Id)
+        const expectedUnallocated1 = app1Earnings[1]
+        const expectedUnallocated2 = app2Earnings[1]
+
+        // Initially, unallocated funds should be 0
+        expect(await xAllocationPool.unallocatedFunds(round1)).to.eql(0n)
+
+        // Claim for first app
+        await xAllocationPool.connect(otherAccounts[3]).claim(round1, app1Id)
+        expect(await xAllocationPool.unallocatedFunds(round1)).to.eql(expectedUnallocated1)
+
+        // Claim for second app - should accumulate
+        await xAllocationPool.connect(otherAccounts[4]).claim(round1, app2Id)
+        expect(await xAllocationPool.unallocatedFunds(round1)).to.eql(expectedUnallocated1 + expectedUnallocated2)
+      })
+
+      it("Should correctly track unallocated funds matching earnings expectations", async function () {
+        const {
+          xAllocationVoting,
+          otherAccounts,
+          owner,
+          xAllocationPool,
+          emissions,
+          minterAccount,
+          x2EarnApps,
+          veBetterPassport,
+        } = await getOrDeployContractInstances({
+          forceDeploy: true,
+        })
+
+        const voter1 = otherAccounts[1]
+        await getVot3Tokens(voter1, "1000")
+
+        await veBetterPassport.whitelist(voter1.address)
+        await veBetterPassport.toggleCheck(1)
+
+        // Add two apps
+        const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app 1"))
+        const app2Id = ethers.keccak256(ethers.toUtf8Bytes("My app 2"))
+        await x2EarnApps
+          .connect(owner)
+          .submitApp(otherAccounts[3].address, otherAccounts[3].address, "My app 1", "metadataURI")
+        await x2EarnApps
+          .connect(creator1)
+          .submitApp(otherAccounts[4].address, otherAccounts[4].address, "My app 2", "metadataURI")
+        await endorseApp(app1Id, otherAccounts[3])
+        await endorseApp(app2Id, otherAccounts[4])
+
+        // Bootstrap emissions
+        await bootstrapEmissions()
+        await emissions.connect(minterAccount).start()
+
+        const round1 = parseInt((await xAllocationVoting.currentRoundId()).toString())
+
+        // Vote with small amounts
+        await xAllocationVoting
+          .connect(voter1)
+          .castVote(round1, [app1Id, app2Id], [ethers.parseEther("100"), ethers.parseEther("100")])
+
+        await waitForRoundToEnd(round1)
+        await xAllocationVoting.finalizeRound(round1)
+
+        // Get expected unallocated amounts from earnings
+        const app1Earnings = await xAllocationPool.roundEarnings(round1, app1Id)
+        const app2Earnings = await xAllocationPool.roundEarnings(round1, app2Id)
+        const expectedUnallocated1 = app1Earnings[1]
+        const expectedUnallocated2 = app2Earnings[1]
+
+        // Initially unallocated funds should be 0
+        expect(await xAllocationPool.unallocatedFunds(round1)).to.eql(0n)
+
+        // Claim rewards for app1
+        await xAllocationPool.connect(otherAccounts[3]).claim(round1, app1Id)
+
+        // Unallocated funds should match expected amount from app1
+        expect(await xAllocationPool.unallocatedFunds(round1)).to.eql(expectedUnallocated1)
+
+        // Claim rewards for app2
+        await xAllocationPool.connect(otherAccounts[4]).claim(round1, app2Id)
+
+        // Unallocated funds should match total expected amount from both apps
+        expect(await xAllocationPool.unallocatedFunds(round1)).to.eql(expectedUnallocated1 + expectedUnallocated2)
+      })
+
+      it("Should correctly report allFundsClaimed status", async function () {
+        const {
+          xAllocationVoting,
+          otherAccounts,
+          owner,
+          xAllocationPool,
+          emissions,
+          minterAccount,
+          x2EarnApps,
+          veBetterPassport,
+        } = await getOrDeployContractInstances({
+          forceDeploy: true,
+        })
+
+        const voter1 = otherAccounts[1]
+        await getVot3Tokens(voter1, "1000")
+
+        await veBetterPassport.whitelist(voter1.address)
+        await veBetterPassport.toggleCheck(1)
+
+        // Add three apps
+        const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app 1"))
+        const app2Id = ethers.keccak256(ethers.toUtf8Bytes("My app 2"))
+        const app3Id = ethers.keccak256(ethers.toUtf8Bytes("My app 3"))
+        await x2EarnApps
+          .connect(owner)
+          .submitApp(otherAccounts[3].address, otherAccounts[3].address, "My app 1", "metadataURI")
+        await x2EarnApps
+          .connect(creator1)
+          .submitApp(otherAccounts[4].address, otherAccounts[4].address, "My app 2", "metadataURI")
+        await x2EarnApps
+          .connect(creator2)
+          .submitApp(otherAccounts[5].address, otherAccounts[5].address, "My app 3", "metadataURI")
+        await endorseApp(app1Id, otherAccounts[3])
+        await endorseApp(app2Id, otherAccounts[4])
+        await endorseApp(app3Id, otherAccounts[5])
+
+        // Bootstrap emissions
+        await bootstrapEmissions()
+        await emissions.connect(minterAccount).start()
+
+        const round1 = parseInt((await xAllocationVoting.currentRoundId()).toString())
+
+        // Vote for all apps
+        await xAllocationVoting
+          .connect(voter1)
+          .castVote(
+            round1,
+            [app1Id, app2Id, app3Id],
+            [ethers.parseEther("100"), ethers.parseEther("200"), ethers.parseEther("300")],
+          )
+
+        await waitForRoundToEnd(round1)
+        await xAllocationVoting.finalizeRound(round1)
+
+        // Initially, all funds are not claimed
+        expect(await xAllocationPool.allFundsClaimed(round1)).to.eql(false)
+
+        // Claim for first app
+        await xAllocationPool.connect(otherAccounts[3]).claim(round1, app1Id)
+        expect(await xAllocationPool.allFundsClaimed(round1)).to.eql(false)
+
+        // Claim for second app
+        await xAllocationPool.connect(otherAccounts[4]).claim(round1, app2Id)
+        expect(await xAllocationPool.allFundsClaimed(round1)).to.eql(false)
+
+        // Claim for third app - now all should be claimed
+        await xAllocationPool.connect(otherAccounts[5]).claim(round1, app3Id)
+        expect(await xAllocationPool.allFundsClaimed(round1)).to.eql(true)
+      })
+
+      it("Should return true for allFundsClaimed when single app claims in round", async function () {
+        const {
+          xAllocationVoting,
+          otherAccounts,
+          owner,
+          xAllocationPool,
+          emissions,
+          minterAccount,
+          x2EarnApps,
+          veBetterPassport,
+        } = await getOrDeployContractInstances({
+          forceDeploy: true,
+        })
+
+        const voter1 = otherAccounts[1]
+        await getVot3Tokens(voter1, "1000")
+
+        await veBetterPassport.whitelist(voter1.address)
+        await veBetterPassport.toggleCheck(1)
+
+        // Add single app
+        const appId = ethers.keccak256(ethers.toUtf8Bytes("My app"))
+        await x2EarnApps
+          .connect(owner)
+          .submitApp(otherAccounts[3].address, otherAccounts[3].address, "My app", "metadataURI")
+        await endorseApp(appId, otherAccounts[3])
+
+        // Bootstrap emissions
+        await bootstrapEmissions()
+        await emissions.connect(minterAccount).start()
+
+        const round1 = parseInt((await xAllocationVoting.currentRoundId()).toString())
+
+        await xAllocationVoting.connect(voter1).castVote(round1, [appId], [ethers.parseEther("100")])
+
+        await waitForRoundToEnd(round1)
+        await xAllocationVoting.finalizeRound(round1)
+
+        // Before claiming, all funds are not claimed
+        expect(await xAllocationPool.allFundsClaimed(round1)).to.eql(false)
+
+        // Claim for the only app
+        await xAllocationPool.connect(otherAccounts[3]).claim(round1, appId)
+
+        // After claiming, all funds should be claimed
+        expect(await xAllocationPool.allFundsClaimed(round1)).to.eql(true)
+      })
+
+      it("Should track unallocated funds across multiple rounds independently", async function () {
+        const {
+          xAllocationVoting,
+          otherAccounts,
+          owner,
+          xAllocationPool,
+          emissions,
+          minterAccount,
+          x2EarnApps,
+          veBetterPassport,
+        } = await getOrDeployContractInstances({
+          forceDeploy: true,
+        })
+
+        const voter1 = otherAccounts[1]
+        await getVot3Tokens(voter1, "10000")
+
+        await veBetterPassport.whitelist(voter1.address)
+        await veBetterPassport.toggleCheck(1)
+
+        // Add app
+        const appId = ethers.keccak256(ethers.toUtf8Bytes("My app"))
+        await x2EarnApps
+          .connect(owner)
+          .submitApp(otherAccounts[3].address, otherAccounts[3].address, "My app", "metadataURI")
+        await endorseApp(appId, otherAccounts[3])
+
+        // Bootstrap emissions
+        await bootstrapEmissions()
+        await emissions.connect(minterAccount).start()
+
+        // Round 1
+        const round1 = parseInt((await xAllocationVoting.currentRoundId()).toString())
+        await xAllocationVoting.connect(voter1).castVote(round1, [appId], [ethers.parseEther("10000")])
+        await waitForRoundToEnd(round1)
+        await xAllocationVoting.finalizeRound(round1)
+
+        const round1Earnings = await xAllocationPool.roundEarnings(round1, appId)
+        const round1UnallocatedExpected = round1Earnings[1]
+
+        await xAllocationPool.connect(otherAccounts[3]).claim(round1, appId)
+
+        // Verify round 1 unallocated funds
+        expect(await xAllocationPool.unallocatedFunds(round1)).to.eql(round1UnallocatedExpected)
+
+        // Start Round 2
+        await startNewAllocationRound()
+        const round2 = parseInt((await xAllocationVoting.currentRoundId()).toString())
+        await xAllocationVoting.connect(voter1).castVote(round2, [appId], [ethers.parseEther("8000")])
+        await waitForRoundToEnd(round2)
+        await xAllocationVoting.finalizeRound(round2)
+
+        const round2Earnings = await xAllocationPool.roundEarnings(round2, appId)
+        const round2UnallocatedExpected = round2Earnings[1]
+
+        await xAllocationPool.connect(otherAccounts[3]).claim(round2, appId)
+
+        // Verify round 2 unallocated funds
+        expect(await xAllocationPool.unallocatedFunds(round2)).to.eql(round2UnallocatedExpected)
+
+        // Verify round 1 unallocated funds remain unchanged
+        expect(await xAllocationPool.unallocatedFunds(round1)).to.eql(round1UnallocatedExpected)
       })
     })
   })
