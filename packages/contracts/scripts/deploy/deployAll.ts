@@ -18,6 +18,7 @@ import {
   GrantsManager,
   RelayerRewardsPool,
   DBAPool,
+  DBAPoolV1,
 } from "../../typechain-types"
 import { ContractsConfig } from "@repo/config/contracts/type"
 import { HttpNetworkConfig } from "hardhat/types"
@@ -927,7 +928,8 @@ export async function deployAll(config: ContractsConfig) {
   ])) as GrantsManager
 
   // DynamicBaseAllocationPool
-  const dynamicBaseAllocationPool = (await deployProxy("DBAPool", [
+  console.log("Deploying DBAPool V1...")
+  const dbaPoolV1 = (await deployProxy("DBAPoolV1", [
     {
       admin: TEMP_ADMIN, // admin
       x2EarnApps: await x2EarnApps.getAddress(),
@@ -936,7 +938,28 @@ export async function deployAll(config: ContractsConfig) {
       b3tr: await b3tr.getAddress(),
       distributionStartRound: 1, // startRound
     },
-  ])) as DBAPool
+  ])) as DBAPoolV1
+
+  // Grant UPGRADER_ROLE to deployer so we can upgrade
+  const UPGRADER_ROLE_DBA = await dbaPoolV1.UPGRADER_ROLE()
+  const grantRoleTx = await dbaPoolV1.connect(deployer).grantRole(UPGRADER_ROLE_DBA, deployer.address)
+  await grantRoleTx.wait()
+  console.log("UPGRADER_ROLE granted to deployer for DBAPool")
+
+  // Upgrade to V2
+  console.log("Upgrading DBAPool to V2...")
+  const dynamicBaseAllocationPool = (await upgradeProxy(
+    "DBAPoolV1",
+    "DBAPool",
+    await dbaPoolV1.getAddress(),
+    [], // No initialization args for V2
+    {
+      version: 2,
+      logOutput: true,
+    },
+  )) as DBAPool
+
+  console.log("DBAPool deployed and upgraded to V2")
 
   const date = new Date(performance.now() - start)
   console.log(`================  Contracts deployed in ${date.getMinutes()}m ${date.getSeconds()}s `)
