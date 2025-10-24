@@ -7,6 +7,7 @@ import {
   getOrDeployContractInstances,
   getVot3Tokens,
   waitForRoundToEnd,
+  startNewAllocationRound,
 } from "./helpers"
 import { describe, it, before } from "mocha"
 import { getImplementationAddress } from "@openzeppelin/upgrades-core"
@@ -805,6 +806,107 @@ describe("DBA Pool - @shard7b", async function () {
       expect(finalApp2Funds - initialApp2Funds).to.equal(ethers.parseEther("2800"))
       expect(await dynamicBaseAllocationPool.b3trBalance()).to.equal(0n)
       expect(await dynamicBaseAllocationPool.isDBARewardsDistributed(round1)).to.equal(true)
+    })
+
+    it("Should successfully store distributed rewards for apps", async function () {
+      this.timeout(120000)
+
+      const config = createLocalConfig()
+      config.EMISSIONS_CYCLE_DURATION = 10
+      config.INITIAL_X_ALLOCATION = ethers.parseEther("10000")
+      config.X_ALLOCATION_POOL_APP_SHARES_MAX_CAP = 50
+
+      const {
+        dynamicBaseAllocationPool,
+        owner,
+        x2EarnApps,
+        xAllocationPool,
+        xAllocationVoting,
+        emissions,
+        minterAccount,
+        otherAccounts,
+        veBetterPassport,
+        creators,
+      } = await getOrDeployContractInstances({
+        forceDeploy: true,
+        config,
+      })
+
+      await bootstrapEmissions()
+
+      await veBetterPassport.whitelist(otherAccounts[0].address)
+      await veBetterPassport.whitelist(otherAccounts[1].address)
+      await veBetterPassport.toggleCheck(1)
+
+      await getVot3Tokens(otherAccounts[0], "10000")
+      await getVot3Tokens(otherAccounts[1], "10000")
+
+      // Create two apps
+      const app1Id = ethers.keccak256(ethers.toUtf8Bytes("app1"))
+      const app2Id = ethers.keccak256(ethers.toUtf8Bytes("app2"))
+
+      await x2EarnApps
+        .connect(creators[0])
+        .submitApp(otherAccounts[5].address, otherAccounts[5].address, "app1", "metadataURI")
+      await x2EarnApps
+        .connect(creators[1])
+        .submitApp(otherAccounts[6].address, otherAccounts[6].address, "app2", "metadataURI")
+
+      await endorseApp(app1Id, otherAccounts[0])
+      await endorseApp(app2Id, otherAccounts[1])
+
+      await emissions.connect(minterAccount).start()
+      const round1 = await xAllocationVoting.currentRoundId()
+
+      // Vote heavily on app1 to exceed cap, lightly on app2
+      await xAllocationVoting.connect(otherAccounts[0]).castVote(round1, [app1Id], [ethers.parseEther("9000")])
+      await xAllocationVoting.connect(otherAccounts[1]).castVote(round1, [app2Id], [ethers.parseEther("1000")])
+
+      await waitForRoundToEnd(round1)
+
+      await xAllocationPool
+        .connect(owner)
+        .setUnallocatedFundsReceiverAddress(await dynamicBaseAllocationPool.getAddress())
+
+      await xAllocationPool.claim(round1, app1Id)
+      await xAllocationPool.claim(round1, app2Id)
+
+      const DISTRIBUTOR_ROLE = await dynamicBaseAllocationPool.DISTRIBUTOR_ROLE()
+      await dynamicBaseAllocationPool.connect(owner).grantRole(DISTRIBUTOR_ROLE, owner.address)
+
+      // Distribute to single app - should deposit all unallocated funds to X2EarnRewardsPool
+      await dynamicBaseAllocationPool.connect(owner).distributeDBARewards(round1, [app2Id])
+
+      // app 1 exceeded the cap, it received no rewards
+      const dbaRoundRewardsForApp1Round1 = await dynamicBaseAllocationPool.dbaRoundRewardsForApp(round1, app1Id)
+      expect(dbaRoundRewardsForApp1Round1).to.equal(0n)
+
+      // app 2 will receive the excess
+      const dbaRoundRewardsForApp2Round1 = await dynamicBaseAllocationPool.dbaRoundRewardsForApp(round1, app2Id)
+      expect(dbaRoundRewardsForApp2Round1).to.equal(ethers.parseEther("2800"))
+
+      const round2 = await startNewAllocationRound()
+
+      // Vote heavily on app1 to exceed cap, lightly on app2
+      await xAllocationVoting.connect(otherAccounts[0]).castVote(round2, [app1Id], [ethers.parseEther("9000")])
+      await xAllocationVoting.connect(otherAccounts[1]).castVote(round2, [app2Id], [ethers.parseEther("1000")])
+
+      await waitForRoundToEnd(round2)
+
+      await xAllocationPool.claim(round2, app1Id)
+      await xAllocationPool.claim(round2, app2Id)
+
+      // Distribute to single app - should deposit all unallocated funds to X2EarnRewardsPool
+      await dynamicBaseAllocationPool.connect(owner).distributeDBARewards(round2, [app2Id])
+
+      // app 1 exceeded the cap, it received no rewards
+      const dbaRoundRewardsForApp1Round2 = await dynamicBaseAllocationPool.dbaRoundRewardsForApp(round2, app1Id)
+      expect(dbaRoundRewardsForApp1Round2).to.equal(0n)
+
+      // app 2 will receive the excess
+      const dbaRoundRewardsForApp2Round2 = await dynamicBaseAllocationPool.dbaRoundRewardsForApp(round2, app2Id)
+      expect(dbaRoundRewardsForApp2Round2).to.equal(ethers.parseEther("2800"))
+
     })
 
     it("Should revert when trying to distribute to non-existent app", async function () {
