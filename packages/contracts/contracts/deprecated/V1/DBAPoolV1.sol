@@ -2,15 +2,15 @@
 
 pragma solidity 0.8.20;
 
-import { IX2EarnApps } from "./interfaces/IX2EarnApps.sol";
-import { IB3TR } from "./interfaces/IB3TR.sol";
+import { IX2EarnApps } from "../../interfaces/IX2EarnApps.sol";
+import { IB3TR } from "../../interfaces/IB3TR.sol";
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
-import { IXAllocationPool } from "./interfaces/IXAllocationPool.sol";
-import { IX2EarnRewardsPool } from "./interfaces/IX2EarnRewardsPool.sol";
-import { IDynamicBaseAllocationPool } from "./interfaces/IDynamicBaseAllocationPool.sol";
+import { IXAllocationPool } from "../../interfaces/IXAllocationPool.sol";
+import { IX2EarnRewardsPool } from "../../interfaces/IX2EarnRewardsPool.sol";
+import { IDynamicBaseAllocationPoolV1 as IDynamicBaseAllocationPool } from "./interfaces/IDynamicBaseAllocationPoolV1.sol";
 
 /**
  * @title DynamicBaseAllocationPool (DBA)
@@ -18,12 +18,8 @@ import { IDynamicBaseAllocationPool } from "./interfaces/IDynamicBaseAllocationP
  * Initially acts as a wallet/treasury where the VeBetter team can manually distribute
  * surplus allocations to eligible apps. Future upgrades will add on-chain calculation
  * and permissionless distribution capabilities.
- *
- * --------- Version 2 ---------
- * - Add storage to track the reward amount for each app for each round
- * - Add seed function to seed historical rewards
  */
-contract DBAPool is
+contract DBAPoolV1 is
   AccessControlUpgradeable,
   ReentrancyGuardUpgradeable,
   UUPSUpgradeable,
@@ -45,7 +41,6 @@ contract DBAPool is
     IB3TR b3tr;
     uint256 distributionStartRound; // The round from which DBA rewards distribution starts
     mapping(uint256 roundId => bool) dbaRewardsDistributed; // Tracks if DBA rewards have been distributed for a round
-    mapping(uint256 roundId => mapping(bytes32 appId => uint256 amount)) dbaRoundRewardsForApp; // Tracks the reward amount an app has received from the DBA
   }
 
   // keccak256(abi.encode(uint256(keccak256("b3tr.storage.DBAPool")) - 1)) & ~bytes32(uint256(0xff))
@@ -161,26 +156,12 @@ contract DBAPool is
         "DBAPool: Deposit of rewards allocation to x2EarnRewardsPool failed"
       );
 
-      // Track the reward amount for the app for later on-chain-retrieval
-      $.dbaRoundRewardsForApp[_roundId][appId] = amountPerApp;
-
       // Emit event for each app
       emit FundsDistributedToApp(appId, amountPerApp, _roundId);
     }
   }
 
   // ---------- Getters ---------- //
-
-  /**
-   * @notice Gets the reward amount distributed to a specific app for a specific round
-   * @param _roundId The round ID to check
-   * @param _appId The app ID to check
-   * @return The reward amount for the app for the round or 0 if no rewards have been distributed
-   */
-  function dbaRoundRewardsForApp(uint256 _roundId, bytes32 _appId) external view returns (uint256) {
-    DBAPoolStorage storage $ = _getDBAPoolStorage();
-    return $.dbaRoundRewardsForApp[_roundId][_appId];
-  }
 
   /**
    * @notice Gets the current B3TR balance of this contract
@@ -289,7 +270,7 @@ contract DBAPool is
    * @return The version string
    */
   function version() external pure returns (string memory) {
-    return "2";
+    return "1";
   }
 
   // ---------- Admin functions ---------- //
@@ -346,44 +327,5 @@ contract DBAPool is
     require(_distributionStartRound != 0, "DBAPool: distribution start round is zero");
     DBAPoolStorage storage $ = _getDBAPoolStorage();
     $.distributionStartRound = _distributionStartRound;
-  }
-
-  /**
-   * @notice Seeds the reward amounts for multiple apps across multiple rounds (batch operation)
-   * @param _roundIds Array of round IDs to seed
-   * @param _appIds Array of app IDs to seed
-   * @param _amounts Array of amounts to seed
-   */
-  function seedDBARewardsForApps(
-    uint256[] calldata _roundIds,
-    bytes32[] calldata _appIds,
-    uint256[] calldata _amounts
-  ) external onlyRole(UPGRADER_ROLE) {
-    require(_roundIds.length == _appIds.length, "DBAPool: arrays length mismatch");
-    require(_roundIds.length == _amounts.length, "DBAPool: arrays length mismatch");
-    require(_roundIds.length > 0, "DBAPool: empty arrays");
-
-    DBAPoolStorage storage $ = _getDBAPoolStorage();
-
-    for (uint256 i = 0; i < _roundIds.length; i++) {
-      uint256 roundId = _roundIds[i];
-      bytes32 appId = _appIds[i];
-      uint256 amount = _amounts[i];
-
-      // Validate amount
-      require(amount > 0, "DBAPool: amount is zero");
-
-      // Validate that the round is valid: after distribution start
-      require(roundId >= $.distributionStartRound, "DBAPool: round is invalid");
-
-      // Validate that the app exists
-      require($.x2EarnApps.appExists(appId), "DBAPool: app does not exist");
-
-      // If the app has already received rewards for the round, revert
-      require($.dbaRoundRewardsForApp[roundId][appId] == 0, "DBAPool: app has already received rewards for the round");
-
-      // Seed the reward amount
-      $.dbaRoundRewardsForApp[roundId][appId] = amount;
-    }
   }
 }
