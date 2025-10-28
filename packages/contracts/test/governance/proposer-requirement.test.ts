@@ -1,12 +1,13 @@
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers"
-import { setupGovernanceFixtureWithEmissions, setupProposer } from "./fixture.test"
-import { B3TRGovernor, VOT3, B3TR, GalaxyMember, Emissions } from "../../typechain-types"
-import { ethers } from "ethers"
-import { describe, it, beforeEach } from "mocha"
 import { expect } from "chai"
-import { getRoundId, getVot3Tokens } from "../helpers"
+import { ethers } from "ethers"
+import { beforeEach, describe, it } from "mocha"
 
-describe("Proposal - Proposer requirement - @shard4d", function () {
+import { B3TR, B3TRGovernor, Emissions, GalaxyMember, VOT3 } from "../../typechain-types"
+import { getRoundId, getVot3Tokens } from "../helpers"
+import { setupGovernanceFixtureWithEmissions, setupProposer } from "./fixture.test"
+
+describe("Governance - Proposer requirement - @shard4d", function () {
   let governor: B3TRGovernor
   let vot3: VOT3
   let b3tr: B3TR
