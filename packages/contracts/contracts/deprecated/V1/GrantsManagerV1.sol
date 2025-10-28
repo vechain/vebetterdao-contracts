@@ -23,23 +23,23 @@
 
 pragma solidity 0.8.20;
 
-import { IB3TRGovernor } from "./interfaces/IB3TRGovernor.sol";
-import { ITreasury } from "./interfaces/ITreasury.sol";
-import { IB3TR } from "./interfaces/IB3TR.sol";
-import { IGrantsManager } from "./interfaces/IGrantsManager.sol";
+import { IB3TRGovernorV7 } from "../V7/interfaces/IB3TRGovernorV7.sol";
+import { ITreasury } from "../../interfaces/ITreasury.sol";
+import { IB3TR } from "../../interfaces/IB3TR.sol";
+import { IGrantsManagerV1 } from "./interfaces/IGrantsManagerV1.sol";
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import { GovernorStateLogic } from "./governance/libraries/GovernorStateLogic.sol";
-import { GovernorProposalLogic } from "./governance/libraries/GovernorProposalLogic.sol";
-import { GovernorTypes } from "./governance/libraries/GovernorTypes.sol";
+import { GovernorStateLogicV7 } from "../V7/governance/libraries/GovernorStateLogicV7.sol";
+import { GovernorProposalLogicV7 } from "../V7/governance/libraries/GovernorProposalLogicV7.sol";
+import { GovernorTypesV7 } from "../V7/governance/libraries/GovernorTypesV7.sol";
 /**
- * @title GrantsManager
+ * @title GrantsManagerV1
  * @notice Contract that manages grant funds milestone validation and claiming
  */
-contract GrantsManager is
-  IGrantsManager,
+contract GrantsManagerV1 is
+  IGrantsManagerV1,
   AccessControlUpgradeable,
   PausableUpgradeable,
   ReentrancyGuardUpgradeable,
@@ -57,7 +57,7 @@ contract GrantsManager is
   /// @custom:storage-location erc7201:b3tr.storage.GrantsManager
   struct GrantsManagerStorage {
     mapping(uint256 proposalId => GrantProposal grantProposal) grant;
-    IB3TRGovernor governor;
+    IB3TRGovernorV7 governor;
     ITreasury treasury;
     IB3TR b3tr;
     uint256 minimumMilestoneCount;
@@ -101,7 +101,7 @@ contract GrantsManager is
     _grantRole(GOVERNANCE_ROLE, _governor);
 
     GrantsManagerStorage storage $ = _getGrantsManagerStorage();
-    $.governor = IB3TRGovernor(_governor);
+    $.governor = IB3TRGovernorV7(_governor);
     $.treasury = ITreasury(_treasury);
     $.b3tr = IB3TR(_b3tr);
     $.minimumMilestoneCount = _minimumMilestoneCount;
@@ -244,14 +244,10 @@ contract GrantsManager is
   function isGrantInDevelopment(uint256 proposalId) public view returns (bool) {
     GrantsManagerStorage storage $ = _getGrantsManagerStorage();
     GrantProposal memory grant = $.grant[proposalId];
-    GovernorTypes.ProposalState proposalState = $.governor.state(proposalId);
-    
+    GovernorTypesV7.ProposalState proposalState = $.governor.state(proposalId);
+
     // If proposal is not in a valid state, it's not in development
-    if (
-      proposalState != GovernorTypes.ProposalState.Executed &&
-      proposalState != GovernorTypes.ProposalState.InDevelopment &&
-      proposalState != GovernorTypes.ProposalState.Completed
-    ) {
+    if (proposalState != GovernorTypesV7.ProposalState.Executed) {
       return false;
     }
 
@@ -273,14 +269,10 @@ contract GrantsManager is
   function isGrantCompleted(uint256 proposalId) public view returns (bool) {
     GrantsManagerStorage storage $ = _getGrantsManagerStorage();
     GrantProposal memory grant = $.grant[proposalId];
-    GovernorTypes.ProposalState proposalState = $.governor.state(proposalId);
+    GovernorTypesV7.ProposalState proposalState = $.governor.state(proposalId);
 
-    // If proposal is not in a valid state, it's not completed
-    if (
-      proposalState != GovernorTypes.ProposalState.Executed &&
-      proposalState != GovernorTypes.ProposalState.InDevelopment &&
-      proposalState != GovernorTypes.ProposalState.Completed
-    ) {
+    // If proposal is not executed, it's not completed
+    if (proposalState != GovernorTypesV7.ProposalState.Executed) {
       return false;
     }
 
@@ -490,7 +482,7 @@ contract GrantsManager is
       revert MilestoneNotApprovedByAdmin(proposalId, milestoneIndex);
     }
 
-    // check that the milestone is not already  if (GovernorStateLogic.state($.governor, proposalId) == GovernorTypes.ProposalState.Canceled) {
+    // check that the milestone is not already  if (GovernorStateLogic.state($.governor, proposalId) == GovernorTypesV7.ProposalState.Canceled) {
     if (_milestoneState == MilestoneState.Claimed) {
       revert MilestoneAlreadyClaimed(proposalId, milestoneIndex);
     }
@@ -529,7 +521,7 @@ contract GrantsManager is
    */
   function grantState(uint256 proposalId) external view returns (GrantState) {
     GrantsManagerStorage storage $ = _getGrantsManagerStorage();
-    GovernorTypes.ProposalState proposalState = $.governor.state(proposalId);
+    GovernorTypesV7.ProposalState proposalState = $.governor.state(proposalId);
 
     if (isGrantRejected(proposalId)) {
       return GrantState.Canceled;
@@ -553,7 +545,7 @@ contract GrantsManager is
    */
   function setGovernorContract(address _governor) external onlyRole(DEFAULT_ADMIN_ROLE) {
     GrantsManagerStorage storage $ = _getGrantsManagerStorage();
-    $.governor = IB3TRGovernor(_governor);
+    $.governor = IB3TRGovernorV7(_governor);
   }
 
   /**
@@ -737,8 +729,8 @@ contract GrantsManager is
    */
   function _checkProposalState(uint256 proposalId) internal view {
     GrantsManagerStorage storage $ = _getGrantsManagerStorage();
-    GovernorTypes.ProposalState proposalState = $.governor.state(proposalId);
-    if (proposalState != GovernorTypes.ProposalState.Executed) {
+    GovernorTypesV7.ProposalState proposalState = $.governor.state(proposalId);
+    if (proposalState != GovernorTypesV7.ProposalState.Executed) {
       revert ProposalNotExecuted(proposalId);
     }
   }
@@ -760,7 +752,7 @@ contract GrantsManager is
    * @return The version of the contract
    */
   function version() external pure returns (uint256) {
-    return 2;
+    return 1;
   }
 
   // ------------------ Overrides ------------------ //

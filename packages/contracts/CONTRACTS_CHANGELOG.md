@@ -6,6 +6,7 @@ This document provides a detailed log of upgrades to the smart contract suite, e
 
 | Date                | Contract(s)                                                                                                                   | Summary                                                                                                                                      |
 | ------------------- | ----------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| 27 October 2025     | `B3TRGovernor` version `8` and `GrantsManager` version `2`                                                                    | Give ability to mark proposals as in development/completed                                                                                   |
 | 27 October 2025     | `DBAPool` version `2`                                                                                                         | Add tracking of DBA rewards per app per round and seed function for historical data                                                          |
 | 21 October 2025     | `XAllocationVoting` version `8`, `VoterRewards` version `6`, `RelayerRewardsPool` version `1`                                 | Added auto-voting functionality with relayer rewards system and early access period                                                          |
 | 23 October 2025     | `XAllocationPool` version `7`, `DBAPool` version `1`                                                                          | Store unallocated funds for each round and deployed new contract                                                                             |
@@ -31,6 +32,75 @@ This document provides a detailed log of upgrades to the smart contract suite, e
 | 4th September 2024  | `X2EarnRewardsPool` version `2`                                                                                               | - Added impact key management and proof building                                                                                             |
 | 31st August 2024    | `VoterRewards` version `2`                                                                                                    | - Added quadratic rewarding features                                                                                                         |
 | 29th August 2024    | `B3TRGovernor` version `2`                                                                                                    | Updated access control modifiers                                                                                                             |
+
+---
+
+## Upgrade `B3TRGovernor` to Version `8` and `GrantsManager` to Version `2`
+
+Introduces proposal development lifecycle tracking with dedicated states for in-development and completed proposals, enabling better governance visibility and management of proposal implementation status.
+
+---
+
+### Changes 🚀
+
+- **Upgraded Contract(s):**
+  - `B3TRGovernor.sol` to version `8`
+  - `GrantsManager.sol` to version `2`
+
+---
+
+### Storage Changes 📦
+
+- **`B3TRGovernor`**:
+
+  **➕ Added (V8)**
+  - `proposalDevelopmentState` → Mapping to track the development status of executed proposals (`proposalId => ProposalDevelopmentState`)
+    - `PendingDevelopment`: Proposal is not in a development phase
+    - `InDevelopment`: Development phase is in progress
+    - `Completed`: Development phase is completed
+
+  **🔐 New Role**
+  - `PROPOSAL_STATE_MANAGER_ROLE` → Allows marking proposals as in development or completed
+
+  **📦 Size Optimization**
+  - Removed deprecated initializers (`initialize()`, `initializeV4()`, `initializeV7()`) to reduce contract size
+
+---
+
+### New Features 🚀
+
+- **`B3TRGovernor`**:
+
+  #### New Proposal States:
+  - `InDevelopment` - Indicates proposal implementation is actively being developed
+  - `Completed` - Indicates proposal implementation has been finished
+
+  #### Key Functions Added:
+  - `markAsInDevelopment(uint256 proposalId)` - Mark an executed/succeeded proposal as in development
+  - `markAsCompleted(uint256 proposalId)` - Mark an in-development proposal as completed
+  - `resetDevelopmentState(uint256 proposalId)` - Reset the development state of a proposal back to pending development
+
+  #### State Transition Flow:
+
+  ```
+  Executed/Succeeded → InDevelopment → Completed
+  ```
+
+  #### Enhanced Cancel Logic:
+  - Proposals in `InDevelopment`, `Completed`, `DepositNotMet`, or `Defeated` states **cannot** be canceled
+  - Only `active`, `pending`, `queued`, or `succeeded` proposals can be canceled
+
+---
+
+- **`GrantsManager`**:
+
+  #### Updated Functions:
+  - `isGrantInDevelopment()` - Now considers `InDevelopment` and `Completed` states in addition to `Executed`
+  - `isGrantCompleted()` - Now considers `InDevelopment` and `Completed` states in addition to `Executed`
+
+  #### Integration:
+  - Aligns with B3TRGovernor's new development state tracking
+  - Milestone management reflects proposal development lifecycle
 
 ---
 

@@ -23,23 +23,23 @@
 
 pragma solidity 0.8.20;
 
-import { GovernorProposalLogic } from "./governance/libraries/GovernorProposalLogic.sol";
-import { GovernorStateLogic } from "./governance/libraries/GovernorStateLogic.sol";
-import { GovernorVotesLogic } from "./governance/libraries/GovernorVotesLogic.sol";
-import { GovernorQuorumLogic } from "./governance/libraries/GovernorQuorumLogic.sol";
-import { GovernorDepositLogic } from "./governance/libraries/GovernorDepositLogic.sol";
-import { GovernorStorageTypes } from "./governance/libraries/GovernorStorageTypes.sol";
-import { GovernorClockLogic } from "./governance/libraries/GovernorClockLogic.sol";
-import { GovernorFunctionRestrictionsLogic } from "./governance/libraries/GovernorFunctionRestrictionsLogic.sol";
-import { GovernorGovernanceLogic } from "./governance/libraries/GovernorGovernanceLogic.sol";
-import { GovernorConfigurator } from "./governance/libraries/GovernorConfigurator.sol";
-import { GovernorTypes } from "./governance/libraries/GovernorTypes.sol";
-import { GovernorStorage } from "./governance/GovernorStorage.sol";
-import { IVoterRewards } from "./interfaces/IVoterRewards.sol";
-import { IVOT3 } from "./interfaces/IVOT3.sol";
-import { IB3TR } from "./interfaces/IB3TR.sol";
-import { IB3TRGovernor } from "./interfaces/IB3TRGovernor.sol";
-import { IXAllocationVotingGovernor } from "./interfaces/IXAllocationVotingGovernor.sol";
+import { GovernorProposalLogicV7 } from "./governance/libraries/GovernorProposalLogicV7.sol";
+import { GovernorStateLogicV7 } from "./governance/libraries/GovernorStateLogicV7.sol";
+import { GovernorVotesLogicV7 } from "./governance/libraries/GovernorVotesLogicV7.sol";
+import { GovernorQuorumLogicV7 } from "./governance/libraries/GovernorQuorumLogicV7.sol";
+import { GovernorDepositLogicV7 } from "./governance/libraries/GovernorDepositLogicV7.sol";
+import { GovernorStorageTypesV7 } from "./governance/libraries/GovernorStorageTypesV7.sol";
+import { GovernorClockLogicV7 } from "./governance/libraries/GovernorClockLogicV7.sol";
+import { GovernorFunctionRestrictionsLogicV7 } from "./governance/libraries/GovernorFunctionRestrictionsLogicV7.sol";
+import { GovernorGovernanceLogicV7 } from "./governance/libraries/GovernorGovernanceLogicV7.sol";
+import { GovernorConfiguratorV7 } from "./governance/libraries/GovernorConfiguratorV7.sol";
+import { GovernorTypesV7 } from "./governance/libraries/GovernorTypesV7.sol";
+import { GovernorStorageV7 } from "./governance/GovernorStorageV7.sol";
+import { IVoterRewards } from "../../interfaces/IVoterRewards.sol";
+import { IVOT3 } from "../../interfaces/IVOT3.sol";
+import { IB3TR } from "../../interfaces/IB3TR.sol";
+import { IB3TRGovernorV7 } from "./interfaces/IB3TRGovernorV7.sol";
+import { IXAllocationVotingGovernor } from "../../interfaces/IXAllocationVotingGovernor.sol";
 import { TimelockControllerUpgradeable } from "@openzeppelin/contracts-upgradeable/governance/TimelockControllerUpgradeable.sol";
 import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import { IERC1155Receiver } from "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
@@ -48,9 +48,9 @@ import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import { IVeBetterPassport } from "./interfaces/IVeBetterPassport.sol";
-import { IGrantsManager } from "./interfaces/IGrantsManager.sol";
-import { IGalaxyMember } from "./interfaces/IGalaxyMember.sol";
+import { IVeBetterPassport } from "../../interfaces/IVeBetterPassport.sol";
+import { IGrantsManagerV1 } from "../V1/interfaces/IGrantsManagerV1.sol";
+import { IGalaxyMember } from "../../interfaces/IGalaxyMember.sol";
 
 /**
  * @title B3TRGovernor
@@ -85,9 +85,9 @@ import { IGalaxyMember } from "./interfaces/IGalaxyMember.sol";
  * - Added proposal type concept, STANDARD (0n) for existing proposals and GRANT (1n) for new grants proposals.
  * - Added deposit threshold cap based on proposal type.
  */
-contract B3TRGovernor is
-  IB3TRGovernor,
-  GovernorStorage,
+contract B3TRGovernorV7 is
+  IB3TRGovernorV7,
+  GovernorStorageV7,
   AccessControlUpgradeable,
   UUPSUpgradeable,
   PausableUpgradeable
@@ -100,8 +100,6 @@ contract B3TRGovernor is
   bytes32 public constant CONTRACTS_ADDRESS_MANAGER_ROLE = keccak256("CONTRACTS_ADDRESS_MANAGER_ROLE");
   /// @notice The role that can execute a proposal
   bytes32 public constant PROPOSAL_EXECUTOR_ROLE = keccak256("PROPOSAL_EXECUTOR_ROLE");
-  /// @notice The role that can mark a proposal in development/completed state
-  bytes32 public constant PROPOSAL_STATE_MANAGER_ROLE = keccak256("PROPOSAL_STATE_MANAGER_ROLE");
 
   /// @custom:oz-upgrades-unsafe-allow constructor
   constructor() {
@@ -119,8 +117,8 @@ contract B3TRGovernor is
    * governance protocol (since v4.6).
    */
   modifier onlyGovernance() {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    GovernorGovernanceLogic.checkGovernance($, _msgSender(), _msgData(), address(this));
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    GovernorGovernanceLogicV7.checkGovernance($, _msgSender(), _msgData(), address(this));
     _;
   }
 
@@ -129,9 +127,9 @@ contract B3TRGovernor is
    * @param role The role to check against
    */
   modifier onlyRoleOrGovernance(bytes32 role) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
     if (!hasRole(role, _msgSender()))
-      GovernorGovernanceLogic.checkGovernance($, _msgSender(), _msgData(), address(this));
+      GovernorGovernanceLogicV7.checkGovernance($, _msgSender(), _msgData(), address(this));
     _;
   }
 
@@ -149,11 +147,47 @@ contract B3TRGovernor is
   }
 
   /**
+   * @notice Initializes the contract with the initial parameters
+   * @dev This function is called only once during the contract deployment
+   * @param data Initialization data containing the initial settings for the governor
+   */
+  function initialize(
+    GovernorTypesV7.InitializationData memory data,
+    GovernorTypesV7.InitializationRolesData memory rolesData
+  ) external initializer {
+    __GovernorStorage_init(data, "B3TRGovernor");
+    __AccessControl_init();
+    __UUPSUpgradeable_init();
+    __Pausable_init();
+
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    GovernorQuorumLogicV7.updateQuorumNumerator($, data.quorumPercentage);
+
+    // Validate and set the governor external contracts storage
+    require(address(rolesData.governorAdmin) != address(0), "B3TRGovernor: governor admin address cannot be zero");
+    _grantRole(DEFAULT_ADMIN_ROLE, rolesData.governorAdmin);
+    _grantRole(GOVERNOR_FUNCTIONS_SETTINGS_ROLE, rolesData.governorFunctionSettingsRoleAddress);
+    _grantRole(PAUSER_ROLE, rolesData.pauser);
+    _grantRole(CONTRACTS_ADDRESS_MANAGER_ROLE, rolesData.contractsAddressManager);
+    _grantRole(PROPOSAL_EXECUTOR_ROLE, rolesData.proposalExecutor);
+  }
+
+  function initializeV4(IVeBetterPassport _veBetterPassport) public reinitializer(4) {
+    __GovernorStorage_init_v4(_veBetterPassport);
+  }
+
+  function initializeV7(
+    GovernorTypesV7.InitializationDataV7 memory initializationDataV7
+  ) public onlyRole(DEFAULT_ADMIN_ROLE) reinitializer(7) {
+    __GovernorStorage_init_v7(initializationDataV7);
+  }
+
+  /**
    * @dev Function to receive VET that will be handled by the governor (disabled if executor is a third party contract)
    */
   receive() external payable virtual {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    if (GovernorGovernanceLogic.executor($) != address(this)) {
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    if (GovernorGovernanceLogicV7.executor($) != address(this)) {
       revert GovernorDisabledDeposit();
     }
   }
@@ -187,18 +221,18 @@ contract B3TRGovernor is
    * @return bool True if the proposal needs queuing, false otherwise
    */
   function proposalNeedsQueuing(uint256 proposalId) external view returns (bool) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    return GovernorProposalLogic.proposalNeedsQueuing($, proposalId);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    return GovernorProposalLogicV7.proposalNeedsQueuing($, proposalId);
   }
 
   /**
    * @notice Returns the state of a proposal
    * @param proposalId The id of the proposal
-   * @return GovernorTypes.ProposalState The state of the proposal
+   * @return GovernorTypesV7.ProposalState The state of the proposal
    */
-  function state(uint256 proposalId) external view returns (GovernorTypes.ProposalState) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    return GovernorStateLogic.state($, proposalId);
+  function state(uint256 proposalId) external view returns (GovernorTypesV7.ProposalState) {
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    return GovernorStateLogicV7.state($, proposalId);
   }
 
   /**
@@ -206,60 +240,60 @@ contract B3TRGovernor is
    * @return bool True if the proposal can start in the next round, false otherwise
    */
   function canProposalStartInNextRound() public view returns (bool) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    return GovernorProposalLogic.canProposalStartInNextRound($);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    return GovernorProposalLogicV7.canProposalStartInNextRound($);
   }
 
   /**
-   * @notice See {IB3TRGovernor-proposalProposer}.
+   * @notice See {IB3TRGovernorV7-proposalProposer}.
    * @param proposalId The id of the proposal
    * @return address The address of the proposer
    */
   function proposalProposer(uint256 proposalId) public view virtual returns (address) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    return GovernorProposalLogic.proposalProposer($, proposalId);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    return GovernorProposalLogicV7.proposalProposer($, proposalId);
   }
 
   /**
-   * @notice See {IB3TRGovernor-proposalEta}.
+   * @notice See {IB3TRGovernorV7-proposalEta}.
    * @param proposalId The id of the proposal
    * @return uint256 The ETA of the proposal
    */
   function proposalEta(uint256 proposalId) public view virtual returns (uint256) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    return GovernorProposalLogic.proposalEta($, proposalId);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    return GovernorProposalLogicV7.proposalEta($, proposalId);
   }
 
   /**
-   * @notice See {IB3TRGovernor-proposalStartRound}
+   * @notice See {IB3TRGovernorV7-proposalStartRound}
    * @param proposalId The id of the proposal
    * @return uint256 The start round of the proposal
    */
   function proposalStartRound(uint256 proposalId) public view returns (uint256) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    return GovernorProposalLogic.proposalStartRound($, proposalId);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    return GovernorProposalLogicV7.proposalStartRound($, proposalId);
   }
 
   /**
-   * @notice See {IB3TRGovernor-proposalSnapshot}.
+   * @notice See {IB3TRGovernorV7-proposalSnapshot}.
    * We take for granted that the round starts the block after it ends. But it can happen that the round is not started yet for whatever reason.
    * Knowing this, if the proposal starts 4 rounds in the future we need to consider also those extra blocks used to start the rounds.
    * @param proposalId The id of the proposal
    * @return uint256 The snapshot of the proposal
    */
   function proposalSnapshot(uint256 proposalId) external view returns (uint256) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    return GovernorProposalLogic.proposalSnapshot($, proposalId);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    return GovernorProposalLogicV7.proposalSnapshot($, proposalId);
   }
 
   /**
-   * @notice See {IB3TRGovernor-proposalDeadline}.
+   * @notice See {IB3TRGovernorV7-proposalDeadline}.
    * @param proposalId The id of the proposal
    * @return uint256 The deadline of the proposal
    */
   function proposalDeadline(uint256 proposalId) external view returns (uint256) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    return GovernorProposalLogic.proposalDeadline($, proposalId);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    return GovernorProposalLogicV7.proposalDeadline($, proposalId);
   }
 
   /**
@@ -267,31 +301,33 @@ contract B3TRGovernor is
    * @param proposalTypeValue The type of the proposal
    * @return uint256 The voting threshold
    */
-  function votingThresholdByProposalType(GovernorTypes.ProposalType proposalTypeValue) external view returns (uint256) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
+  function votingThresholdByProposalType(
+    GovernorTypesV7.ProposalType proposalTypeValue
+  ) external view returns (uint256) {
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
     return $.proposalTypeVotingThreshold[proposalTypeValue];
   }
 
   /**
-   * @notice See {IB3TRGovernor-getVotes}.
+   * @notice See {IB3TRGovernorV7-getVotes}.
    * @param account The address of the account
    * @param timepoint The timepoint to get the votes at
    * @return uint256 The number of votes
    */
   function getVotes(address account, uint256 timepoint) external view returns (uint256) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    return GovernorVotesLogic.getVotes($, account, timepoint);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    return GovernorVotesLogicV7.getVotes($, account, timepoint);
   }
 
   /**
-   * @notice Returns the quadratic voting power that `account` has.  See {IB3TRGovernor-getQuadraticVotingPower}.
+   * @notice Returns the quadratic voting power that `account` has.  See {IB3TRGovernorV7-getQuadraticVotingPower}.
    * @param account The address of the account
    * @param timepoint The timepoint to get the voting power at
    * @return uint256 The quadratic voting power
    */
   function getQuadraticVotingPower(address account, uint256 timepoint) external view returns (uint256) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    return GovernorVotesLogic.getQuadraticVotingPower($, account, timepoint);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    return GovernorVotesLogicV7.getQuadraticVotingPower($, account, timepoint);
   }
 
   /**
@@ -300,8 +336,8 @@ contract B3TRGovernor is
    * @return uint48 The current clock time
    */
   function clock() external view returns (uint48) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    return GovernorClockLogic.clock($);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    return GovernorClockLogicV7.clock($);
   }
 
   /**
@@ -310,8 +346,8 @@ contract B3TRGovernor is
    */
   // solhint-disable-next-line func-name-mixedcase
   function CLOCK_MODE() external view returns (string memory) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    return GovernorClockLogic.CLOCK_MODE($);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    return GovernorClockLogicV7.CLOCK_MODE($);
   }
 
   /**
@@ -319,7 +355,7 @@ contract B3TRGovernor is
    * @return IVOT3 The voting token
    */
   function token() external view returns (IVOT3) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
     return $.vot3;
   }
 
@@ -329,8 +365,8 @@ contract B3TRGovernor is
    * @return uint256 The quorum
    */
   function quorum(uint256 blockNumber) external view returns (uint256) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    return GovernorQuorumLogic.quorum($, blockNumber);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    return GovernorQuorumLogicV7.quorum($, blockNumber);
   }
 
   /**
@@ -338,8 +374,8 @@ contract B3TRGovernor is
    * @return uint256 The current quorum numerator
    */
   function quorumNumerator() external view returns (uint256) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    return GovernorQuorumLogic.quorumNumerator($);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    return GovernorQuorumLogicV7.quorumNumerator($);
   }
 
   /**
@@ -348,8 +384,8 @@ contract B3TRGovernor is
    * @return uint256 The quorum numerator at the given timepoint
    */
   function quorumNumerator(uint256 timepoint) external view returns (uint256) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    return GovernorQuorumLogic.quorumNumerator($, timepoint);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    return GovernorQuorumLogicV7.quorumNumerator($, timepoint);
   }
 
   /**
@@ -357,7 +393,7 @@ contract B3TRGovernor is
    * @return uint256 The quorum denominator
    */
   function quorumDenominator() external pure returns (uint256) {
-    return GovernorQuorumLogic.quorumDenominator();
+    return GovernorQuorumLogicV7.quorumDenominator();
   }
 
   /**
@@ -367,8 +403,8 @@ contract B3TRGovernor is
    * @return bool True if the function is whitelisted, false otherwise
    */
   function isFunctionWhitelisted(address target, bytes4 functionSelector) external view returns (bool) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    return GovernorFunctionRestrictionsLogic.isFunctionWhitelisted($, target, functionSelector);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    return GovernorFunctionRestrictionsLogicV7.isFunctionWhitelisted($, target, functionSelector);
   }
 
   /**
@@ -376,16 +412,16 @@ contract B3TRGovernor is
    * @return uint256 The minimum voting delay
    */
   function minVotingDelay() external view returns (uint256) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
     return $.minVotingDelay;
   }
 
   /**
-   * @notice See {IB3TRGovernor-votingPeriod}.
+   * @notice See {IB3TRGovernorV7-votingPeriod}.
    * @return uint256 The voting period
    */
   function votingPeriod() external view returns (uint256) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
     return $.xAllocationVoting.votingPeriod();
   }
 
@@ -395,8 +431,8 @@ contract B3TRGovernor is
    * @return bool True if the user has voted once, false otherwise
    */
   function hasVotedOnce(address user) external view returns (bool) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    return GovernorVotesLogic.userVotedOnce($, user);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    return GovernorVotesLogicV7.userVotedOnce($, user);
   }
 
   /**
@@ -405,8 +441,8 @@ contract B3TRGovernor is
    * @return bool True if quorum was reached, false otherwise
    */
   function quorumReached(uint256 proposalId) external view returns (bool) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    return GovernorQuorumLogic.isQuorumReached($, proposalId);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    return GovernorQuorumLogicV7.isQuorumReached($, proposalId);
   }
 
   /**
@@ -415,7 +451,7 @@ contract B3TRGovernor is
    * @return uint256 The total votes for the proposal
    */
   function proposalTotalVotes(uint256 proposalId) external view returns (uint256) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
     return $.proposalTotalVotes[proposalId];
   }
 
@@ -429,8 +465,8 @@ contract B3TRGovernor is
   function proposalVotes(
     uint256 proposalId
   ) external view returns (uint256 againstVotes, uint256 forVotes, uint256 abstainVotes) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    return GovernorVotesLogic.getProposalVotes($, proposalId);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    return GovernorVotesLogicV7.getProposalVotes($, proposalId);
   }
 
   /**
@@ -443,14 +479,14 @@ contract B3TRGovernor is
   }
 
   /**
-   * @notice See {IB3TRGovernor-hasVoted}.
+   * @notice See {IB3TRGovernorV7-hasVoted}.
    * @param proposalId The id of the proposal
    * @param account The address of the account
    * @return bool True if the account has voted, false otherwise
    */
   function hasVoted(uint256 proposalId, address account) external view returns (bool) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    return GovernorVotesLogic.hasVoted($, proposalId, account);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    return GovernorVotesLogicV7.hasVoted($, proposalId, account);
   }
 
   /**
@@ -459,8 +495,8 @@ contract B3TRGovernor is
    * @return uint256 The amount of deposits
    */
   function getProposalDeposits(uint256 proposalId) external view returns (uint256) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    return GovernorDepositLogic.getProposalDeposits($, proposalId);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    return GovernorDepositLogicV7.getProposalDeposits($, proposalId);
   }
 
   /**
@@ -469,8 +505,8 @@ contract B3TRGovernor is
    * @return bool True if the threshold is reached, false otherwise
    */
   function proposalDepositReached(uint256 proposalId) external view returns (bool) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    return GovernorDepositLogic.proposalDepositReached($, proposalId);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    return GovernorDepositLogicV7.proposalDepositReached($, proposalId);
   }
 
   /**
@@ -479,8 +515,8 @@ contract B3TRGovernor is
    * @return uint256 The deposit threshold for the proposal.
    */
   function proposalDepositThreshold(uint256 proposalId) external view returns (uint256) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    return GovernorDepositLogic.proposalDepositThreshold($, proposalId);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    return GovernorDepositLogicV7.proposalDepositThreshold($, proposalId);
   }
 
   /**
@@ -489,8 +525,8 @@ contract B3TRGovernor is
    * @return bytes32 The timelock id
    */
   function getTimelockId(uint256 proposalId) public view returns (bytes32) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    return GovernorProposalLogic.getTimelockId($, proposalId);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    return GovernorProposalLogicV7.getTimelockId($, proposalId);
   }
 
   /**
@@ -500,16 +536,16 @@ contract B3TRGovernor is
    * @return uint256 The amount of tokens deposited by the user
    */
   function getUserDeposit(uint256 proposalId, address user) external view returns (uint256) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    return GovernorDepositLogic.getUserDeposit($, proposalId, user);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    return GovernorDepositLogicV7.getUserDeposit($, proposalId, user);
   }
 
   /**
-   * @notice See {IB3TRGovernor-name}.
+   * @notice See {IB3TRGovernorV7-name}.
    * @return string The name of the governor
    */
   function name() external view returns (string memory) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
     return $.name;
   }
 
@@ -518,8 +554,8 @@ contract B3TRGovernor is
    * @return true if quadratic voting is disabled, false otherwise.
    */
   function isQuadraticVotingDisabledForCurrentRound() external view returns (bool) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    return GovernorVotesLogic.isQuadraticVotingDisabledForCurrentRound($);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    return GovernorVotesLogicV7.isQuadraticVotingDisabledForCurrentRound($);
   }
 
   /**
@@ -528,20 +564,20 @@ contract B3TRGovernor is
    * @return true if quadratic voting is disabled, false otherwise.
    */
   function isQuadraticVotingDisabledForRound(uint256 roundId) external view returns (bool) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    return GovernorVotesLogic.isQuadraticVotingDisabledForRound($, roundId);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    return GovernorVotesLogicV7.isQuadraticVotingDisabledForRound($, roundId);
   }
 
   /**
-   * @notice See {IB3TRGovernor-version}.
+   * @notice See {IB3TRGovernorV7-version}.
    * @return string The version of the governor
    */
   function version() external pure returns (string memory) {
-    return "8";
+    return "7";
   }
 
   /**
-   * @notice See {IB3TRGovernor-hashProposal}.
+   * @notice See {IB3TRGovernorV7-hashProposal}.
    * The proposal id is produced by hashing the ABI encoded `targets` array, the `values` array, the `calldatas` array
    * and the descriptionHash (bytes32 which itself is the keccak256 hash of the description string). This proposal id
    * can be produced from the proposal data which is part of the {ProposalCreated} event. It can even be computed in
@@ -562,7 +598,7 @@ contract B3TRGovernor is
     bytes[] memory calldatas,
     bytes32 descriptionHash
   ) public pure returns (uint256) {
-    return GovernorProposalLogic.hashProposal(targets, values, calldatas, descriptionHash);
+    return GovernorProposalLogicV7.hashProposal(targets, values, calldatas, descriptionHash);
   }
 
   /**
@@ -571,7 +607,7 @@ contract B3TRGovernor is
    * @return bytes32 The timelock salt
    */
   function timelockSalt(bytes32 descriptionHash) external view returns (bytes32) {
-    return GovernorGovernanceLogic.timelockSalt(descriptionHash, address(this));
+    return GovernorGovernanceLogicV7.timelockSalt(descriptionHash, address(this));
   }
 
   /**
@@ -579,7 +615,7 @@ contract B3TRGovernor is
    * @return IVoterRewardsV2 The voter rewards contract
    */
   function voterRewards() external view returns (IVoterRewards) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
     return $.voterRewards;
   }
 
@@ -588,7 +624,7 @@ contract B3TRGovernor is
    * @return IXAllocationVotingGovernor The XAllocationVotingGovernor contract
    */
   function xAllocationVoting() external view returns (IXAllocationVotingGovernor) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
     return $.xAllocationVoting;
   }
 
@@ -597,7 +633,7 @@ contract B3TRGovernor is
    * @return IB3TR The B3TR contract
    */
   function b3tr() external view returns (IB3TR) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
     return $.b3tr;
   }
 
@@ -606,7 +642,7 @@ contract B3TRGovernor is
    * @return address The address of the timelock
    */
   function timelock() external view virtual returns (address) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
     return address($.timelock);
   }
 
@@ -615,30 +651,30 @@ contract B3TRGovernor is
    * @return The current VeBetterPassport contract.
    */
   function veBetterPassport() external view returns (IVeBetterPassport) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
     return $.veBetterPassport;
   }
 
   /**
    * @notice Returns the proposal type of a proposal.
    * @param proposalId The id of the proposal
-   * @return GovernorTypes.ProposalType The proposal type
+   * @return GovernorTypesV7.ProposalType The proposal type
    */
-  function proposalType(uint256 proposalId) external view returns (GovernorTypes.ProposalType) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    return GovernorProposalLogic.proposalType($, proposalId);
+  function proposalType(uint256 proposalId) external view returns (GovernorTypesV7.ProposalType) {
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    return GovernorProposalLogicV7.proposalType($, proposalId);
   }
 
-  /** GovernorStorageTypes.GovernorStorage storage self = $.governor.getGovernorStorage();
+  /** GovernorStorageTypesV7.GovernorStorage storage self = $.governor.getGovernorStorage();
    * @notice Returns the deposit threshold for a proposal type.
    * @param proposalTypeValue The type of proposal.
    * @return uint256 The deposit threshold for the proposal type.
    */
   function depositThresholdByProposalType(
-    GovernorTypes.ProposalType proposalTypeValue
+    GovernorTypesV7.ProposalType proposalTypeValue
   ) external view returns (uint256) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    return GovernorDepositLogic.depositThresholdByProposalType($, proposalTypeValue);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    return GovernorDepositLogicV7.depositThresholdByProposalType($, proposalTypeValue);
   }
 
   /**
@@ -647,10 +683,10 @@ contract B3TRGovernor is
    * @return uint256 The deposit threshold percentage for the proposal type.
    */
   function depositThresholdPercentageByProposalType(
-    GovernorTypes.ProposalType proposalTypeValue
+    GovernorTypesV7.ProposalType proposalTypeValue
   ) external view returns (uint256) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    return GovernorConfigurator.getDepositThresholdPercentage($, proposalTypeValue);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    return GovernorConfiguratorV7.getDepositThresholdPercentage($, proposalTypeValue);
   }
 
   /**
@@ -661,10 +697,10 @@ contract B3TRGovernor is
    */
   function quorumByProposalType(
     uint256 blockNumber,
-    GovernorTypes.ProposalType proposalTypeValue
+    GovernorTypesV7.ProposalType proposalTypeValue
   ) external view returns (uint256) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    return GovernorQuorumLogic.quorumByProposalType($, blockNumber, proposalTypeValue);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    return GovernorQuorumLogicV7.quorumByProposalType($, blockNumber, proposalTypeValue);
   }
 
   /**
@@ -672,9 +708,11 @@ contract B3TRGovernor is
    * @param proposalTypeValue The type of proposal
    * @return uint256 The quorum numerator
    */
-  function quorumNumeratorByProposalType(GovernorTypes.ProposalType proposalTypeValue) external view returns (uint256) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    return GovernorQuorumLogic.quorumNumeratorByProposalType($, proposalTypeValue);
+  function quorumNumeratorByProposalType(
+    GovernorTypesV7.ProposalType proposalTypeValue
+  ) external view returns (uint256) {
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    return GovernorQuorumLogicV7.quorumNumeratorByProposalType($, proposalTypeValue);
   }
   /**
    * @notice Returns the quorum numerator at a specific timepoint using the GovernorQuorumFraction library.
@@ -683,10 +721,10 @@ contract B3TRGovernor is
    */
   function quorumNumeratorByProposalType(
     uint256 timepoint,
-    GovernorTypes.ProposalType proposalTypeValue
+    GovernorTypesV7.ProposalType proposalTypeValue
   ) external view returns (uint256) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    return GovernorQuorumLogic.quorumNumeratorByProposalType($, timepoint, proposalTypeValue);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    return GovernorQuorumLogicV7.quorumNumeratorByProposalType($, timepoint, proposalTypeValue);
   }
 
   /**
@@ -695,10 +733,10 @@ contract B3TRGovernor is
    * @return uint256 The deposit threshold cap for the proposal type.
    */
   function depositThresholdCapByProposalType(
-    GovernorTypes.ProposalType proposalTypeValue
+    GovernorTypesV7.ProposalType proposalTypeValue
   ) external view returns (uint256) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    return GovernorConfigurator.getDepositThresholdCap($, proposalTypeValue);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    return GovernorConfiguratorV7.getDepositThresholdCap($, proposalTypeValue);
   }
 
   /**
@@ -706,7 +744,7 @@ contract B3TRGovernor is
    * @return The current GalaxyMember contract
    */
   function getGalaxyMemberContract() external view returns (IGalaxyMember) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
     return $.galaxyMember;
   }
 
@@ -714,8 +752,8 @@ contract B3TRGovernor is
    * @notice Get the GrantsManager contract
    * @return The current GrantsManager contract
    */
-  function getGrantsManagerContract() external view returns (IGrantsManager) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
+  function getGrantsManagerContract() external view returns (IGrantsManagerV1) {
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
     return $.grantsManager;
   }
 
@@ -725,9 +763,9 @@ contract B3TRGovernor is
    * @return The GM weight for the proposal type
    */
   function getRequiredGMLevelByProposalType(
-    GovernorTypes.ProposalType proposalTypeValue
+    GovernorTypesV7.ProposalType proposalTypeValue
   ) external view returns (uint256) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
     return $.requiredGMLevelByProposalType[proposalTypeValue];
   }
 
@@ -748,7 +786,7 @@ contract B3TRGovernor is
   }
 
   /**
-   * @notice See {IB3TRGovernor-propose}.
+   * @notice See {IB3TRGovernorV7-propose}.
    * Callable only when contract is not paused.
    * @param targets The list of target addresses
    * @param values The list of values to send
@@ -766,12 +804,12 @@ contract B3TRGovernor is
     uint256 startRoundId,
     uint256 depositAmount
   ) external whenNotPaused returns (uint256) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    return GovernorProposalLogic.propose($, targets, values, calldatas, description, startRoundId, depositAmount);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    return GovernorProposalLogicV7.propose($, targets, values, calldatas, description, startRoundId, depositAmount);
   }
 
   /**
-   * @notice See {IB3TRGovernor-queue}.
+   * @notice See {IB3TRGovernorV7-queue}.
    * Callable only when contract is not paused.
    * @param targets The list of target addresses
    * @param values The list of values to send
@@ -785,12 +823,12 @@ contract B3TRGovernor is
     bytes[] memory calldatas,
     bytes32 descriptionHash
   ) external whenNotPaused returns (uint256) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    return GovernorProposalLogic.queue($, address(this), targets, values, calldatas, descriptionHash);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    return GovernorProposalLogicV7.queue($, address(this), targets, values, calldatas, descriptionHash);
   }
 
   /**
-   * @notice See {IB3TRGovernor-execute}.
+   * @notice See {IB3TRGovernorV7-execute}.
    * Callable only when contract is not paused.
    * @param targets The list of target addresses
    * @param values The list of values to send
@@ -804,8 +842,8 @@ contract B3TRGovernor is
     bytes[] memory calldatas,
     bytes32 descriptionHash
   ) external payable whenNotPaused onlyRoleOrOpenRole(PROPOSAL_EXECUTOR_ROLE) returns (uint256) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    return GovernorProposalLogic.execute($, address(this), targets, values, calldatas, descriptionHash);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    return GovernorProposalLogicV7.execute($, address(this), targets, values, calldatas, descriptionHash);
   }
 
   /**
@@ -822,9 +860,9 @@ contract B3TRGovernor is
     bytes[] memory calldatas,
     bytes32 descriptionHash
   ) external returns (uint256) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
     return
-      GovernorProposalLogic.cancel(
+      GovernorProposalLogicV7.cancel(
         $,
         _msgSender(),
         hasRole(DEFAULT_ADMIN_ROLE, _msgSender()),
@@ -836,26 +874,26 @@ contract B3TRGovernor is
   }
 
   /**
-   * @notice See {IB3TRGovernor-castVote}.
+   * @notice See {IB3TRGovernorV7-castVote}.
    * @param proposalId The id of the proposal
    * @param support The support value (0 = against, 1 = for, 2 = abstain)
    * @return uint256 The voting power
    */
   function castVote(uint256 proposalId, uint8 support) external returns (uint256) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    return GovernorVotesLogic.castVote($, proposalId, _msgSender(), support, "");
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    return GovernorVotesLogicV7.castVote($, proposalId, _msgSender(), support, "");
   }
 
   /**
-   * @notice See {IB3TRGovernor-castVoteWithReason}.
+   * @notice See {IB3TRGovernorV7-castVoteWithReason}.
    * @param proposalId The id of the proposal
    * @param support The support value (0 = against, 1 = for, 2 = abstain)
    * @param reason The reason for the vote
    * @return uint256 The voting power
    */
   function castVoteWithReason(uint256 proposalId, uint8 support, string calldata reason) external returns (uint256) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    return GovernorVotesLogic.castVote($, proposalId, _msgSender(), support, reason);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    return GovernorVotesLogicV7.castVote($, proposalId, _msgSender(), support, reason);
   }
 
   /**
@@ -864,8 +902,8 @@ contract B3TRGovernor is
    * @param depositor The address of the depositor
    */
   function withdraw(uint256 proposalId, address depositor) external {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    GovernorDepositLogic.withdraw($, proposalId, depositor);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    GovernorDepositLogicV7.withdraw($, proposalId, depositor);
   }
 
   /**
@@ -874,8 +912,8 @@ contract B3TRGovernor is
    * @param proposalId The id of the proposal
    */
   function deposit(uint256 amount, uint256 proposalId) external {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    GovernorDepositLogic.deposit($, amount, proposalId);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    GovernorDepositLogicV7.deposit($, amount, proposalId);
   }
 
   /**
@@ -885,8 +923,8 @@ contract B3TRGovernor is
    * @param newQuorumNumerator The new quorum numerator
    */
   function updateQuorumNumerator(uint256 newQuorumNumerator) external onlyRoleOrGovernance(DEFAULT_ADMIN_ROLE) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    GovernorQuorumLogic.updateQuorumNumerator($, newQuorumNumerator);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    GovernorQuorumLogicV7.updateQuorumNumerator($, newQuorumNumerator);
   }
 
   /**
@@ -895,8 +933,8 @@ contract B3TRGovernor is
    * The state will flip between enabled and disabled each time the function is called.
    */
   function toggleQuadraticVoting() external onlyRoleOrGovernance(DEFAULT_ADMIN_ROLE) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    GovernorVotesLogic.toggleQuadraticVoting($);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    GovernorVotesLogicV7.toggleQuadraticVoting($);
   }
 
   /**
@@ -910,8 +948,8 @@ contract B3TRGovernor is
     bytes4 functionSelector,
     bool isWhitelisted
   ) public onlyRoleOrGovernance(GOVERNOR_FUNCTIONS_SETTINGS_ROLE) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    GovernorFunctionRestrictionsLogic.setWhitelistFunction($, target, functionSelector, isWhitelisted);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    GovernorFunctionRestrictionsLogicV7.setWhitelistFunction($, target, functionSelector, isWhitelisted);
   }
 
   /**
@@ -925,8 +963,8 @@ contract B3TRGovernor is
     bytes4[] memory functionSelectors,
     bool isWhitelisted
   ) public onlyRoleOrGovernance(GOVERNOR_FUNCTIONS_SETTINGS_ROLE) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    GovernorFunctionRestrictionsLogic.setWhitelistFunctions($, target, functionSelectors, isWhitelisted);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    GovernorFunctionRestrictionsLogicV7.setWhitelistFunctions($, target, functionSelectors, isWhitelisted);
   }
 
   /**
@@ -936,8 +974,8 @@ contract B3TRGovernor is
   function setIsFunctionRestrictionEnabled(
     bool isEnabled
   ) public onlyRoleOrGovernance(GOVERNOR_FUNCTIONS_SETTINGS_ROLE) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    GovernorFunctionRestrictionsLogic.setIsFunctionRestrictionEnabled($, isEnabled);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    GovernorFunctionRestrictionsLogicV7.setIsFunctionRestrictionEnabled($, isEnabled);
   }
 
   /**
@@ -947,8 +985,8 @@ contract B3TRGovernor is
    * @param newMinVotingDelay The new minimum voting delay
    */
   function setMinVotingDelay(uint256 newMinVotingDelay) public onlyRoleOrGovernance(DEFAULT_ADMIN_ROLE) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    GovernorConfigurator.setMinVotingDelay($, newMinVotingDelay);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    GovernorConfiguratorV7.setMinVotingDelay($, newMinVotingDelay);
   }
 
   /**
@@ -957,8 +995,8 @@ contract B3TRGovernor is
    * @param newVoterRewards The new voter rewards contract
    */
   function setVoterRewards(IVoterRewards newVoterRewards) public onlyRoleOrGovernance(CONTRACTS_ADDRESS_MANAGER_ROLE) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    GovernorConfigurator.setVoterRewards($, newVoterRewards);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    GovernorConfiguratorV7.setVoterRewards($, newVoterRewards);
   }
 
   /**
@@ -969,8 +1007,8 @@ contract B3TRGovernor is
   function setXAllocationVoting(
     IXAllocationVotingGovernor newXAllocationVoting
   ) public onlyRoleOrGovernance(CONTRACTS_ADDRESS_MANAGER_ROLE) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    GovernorConfigurator.setXAllocationVoting($, newXAllocationVoting);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    GovernorConfiguratorV7.setXAllocationVoting($, newXAllocationVoting);
   }
 
   /**
@@ -982,8 +1020,8 @@ contract B3TRGovernor is
   function updateTimelock(
     TimelockControllerUpgradeable newTimelock
   ) external virtual onlyRoleOrGovernance(DEFAULT_ADMIN_ROLE) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    GovernorConfigurator.updateTimelock($, newTimelock);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    GovernorConfiguratorV7.updateTimelock($, newTimelock);
   }
 
   /**
@@ -993,8 +1031,8 @@ contract B3TRGovernor is
   function setVeBetterPassport(
     IVeBetterPassport newVeBetterPassport
   ) public onlyRoleOrGovernance(CONTRACTS_ADDRESS_MANAGER_ROLE) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    GovernorConfigurator.setVeBetterPassport($, newVeBetterPassport);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    GovernorConfiguratorV7.setVeBetterPassport($, newVeBetterPassport);
   }
 
   /**
@@ -1019,9 +1057,9 @@ contract B3TRGovernor is
     address grantsReceiver,
     string memory milestonesDetailsMetadataURI
   ) external returns (uint256) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
     return
-      GovernorProposalLogic.proposeGrant(
+      GovernorProposalLogicV7.proposeGrant(
         $,
         targets,
         values,
@@ -1035,35 +1073,6 @@ contract B3TRGovernor is
   }
 
   /**
-   * @notice Reset the development state of a proposal back to pending development
-   * @param proposalId The id of the proposal
-   * @dev This should reset the enum state back to the original one,
-   * since pending development is not tracked in {GovernorStateLogic._state} condition
-   */
-  function resetDevelopmentState(uint256 proposalId) public onlyRole(PROPOSAL_STATE_MANAGER_ROLE) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    GovernorProposalLogic.resetDevelopmentState($, proposalId);
-  }
-
-  /**
-   * @notice Mark a proposal as in development
-   * @param proposalId The id of the proposal
-   */
-  function markAsInDevelopment(uint256 proposalId) public onlyRole(PROPOSAL_STATE_MANAGER_ROLE) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    GovernorProposalLogic.markAsInDevelopment($, proposalId);
-  }
-
-  /**
-   * @notice Mark a proposal as completed
-   * @param proposalId The id of the proposal
-   */
-  function markAsCompleted(uint256 proposalId) public onlyRole(PROPOSAL_STATE_MANAGER_ROLE) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    GovernorProposalLogic.markAsCompleted($, proposalId);
-  }
-
-  /**
    * @notice Changes the quorum numerator for a specific proposal type.
    * This operation can only be performed through a governance proposal.
    * Emits a {QuorumNumeratorUpdatedByType} event.
@@ -1072,10 +1081,10 @@ contract B3TRGovernor is
    */
   function updateQuorumNumeratorByType(
     uint256 newQuorumNumerator,
-    GovernorTypes.ProposalType proposalTypeValue
+    GovernorTypesV7.ProposalType proposalTypeValue
   ) external onlyRoleOrGovernance(DEFAULT_ADMIN_ROLE) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    GovernorQuorumLogic.updateQuorumNumeratorByType($, newQuorumNumerator, proposalTypeValue);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    GovernorQuorumLogicV7.updateQuorumNumeratorByType($, newQuorumNumerator, proposalTypeValue);
   }
 
   /**
@@ -1086,10 +1095,10 @@ contract B3TRGovernor is
    */
   function setProposalTypeDepositThresholdPercentage(
     uint256 newDepositThreshold,
-    GovernorTypes.ProposalType proposalTypeValue
+    GovernorTypesV7.ProposalType proposalTypeValue
   ) public onlyRoleOrGovernance(DEFAULT_ADMIN_ROLE) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    GovernorConfigurator.setProposalTypeDepositThresholdPercentage($, proposalTypeValue, newDepositThreshold);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    GovernorConfiguratorV7.setProposalTypeDepositThresholdPercentage($, proposalTypeValue, newDepositThreshold);
   }
 
   /**
@@ -1100,10 +1109,10 @@ contract B3TRGovernor is
    */
   function setProposalTypeVotingThreshold(
     uint256 newVotingThreshold,
-    GovernorTypes.ProposalType proposalTypeValue
+    GovernorTypesV7.ProposalType proposalTypeValue
   ) public onlyRoleOrGovernance(DEFAULT_ADMIN_ROLE) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    GovernorConfigurator.setProposalTypeVotingThreshold($, proposalTypeValue, newVotingThreshold);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    GovernorConfiguratorV7.setProposalTypeVotingThreshold($, proposalTypeValue, newVotingThreshold);
   }
 
   /**
@@ -1114,10 +1123,10 @@ contract B3TRGovernor is
    */
   function setProposalTypeDepositThresholdCap(
     uint256 newDepositThresholdCap,
-    GovernorTypes.ProposalType proposalTypeValue
+    GovernorTypesV7.ProposalType proposalTypeValue
   ) public onlyRoleOrGovernance(DEFAULT_ADMIN_ROLE) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    GovernorConfigurator.setProposalTypeDepositThresholdCap($, proposalTypeValue, newDepositThresholdCap);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    GovernorConfiguratorV7.setProposalTypeDepositThresholdCap($, proposalTypeValue, newDepositThresholdCap);
   }
 
   /**
@@ -1127,8 +1136,8 @@ contract B3TRGovernor is
   function setGalaxyMember(
     IGalaxyMember newGalaxyMember
   ) external onlyRoleOrGovernance(CONTRACTS_ADDRESS_MANAGER_ROLE) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    GovernorConfigurator.setGalaxyMemberContract($, newGalaxyMember);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    GovernorConfiguratorV7.setGalaxyMemberContract($, newGalaxyMember);
   }
 
   /**
@@ -1136,10 +1145,10 @@ contract B3TRGovernor is
    * @param newGrantsManager The new GrantsManager contract
    */
   function setGrantsManager(
-    IGrantsManager newGrantsManager
+    IGrantsManagerV1 newGrantsManager
   ) external onlyRoleOrGovernance(CONTRACTS_ADDRESS_MANAGER_ROLE) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    GovernorConfigurator.setGrantsManagerContract($, newGrantsManager);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    GovernorConfiguratorV7.setGrantsManagerContract($, newGrantsManager);
   }
 
   /**
@@ -1149,11 +1158,11 @@ contract B3TRGovernor is
    * @notice e.g. setRequiredGMLevelByProposalType(0, 1) = GM level 1 is required to create a standard proposal
    */
   function setRequiredGMLevelByProposalType(
-    GovernorTypes.ProposalType proposalTypeValue,
+    GovernorTypesV7.ProposalType proposalTypeValue,
     uint256 newGMWeight
   ) external onlyRoleOrGovernance(DEFAULT_ADMIN_ROLE) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    GovernorConfigurator.setRequiredGMLevelByProposalType($, proposalTypeValue, newGMWeight);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    GovernorConfiguratorV7.setRequiredGMLevelByProposalType($, proposalTypeValue, newGMWeight);
   }
 
   /**
@@ -1163,8 +1172,8 @@ contract B3TRGovernor is
    * @return The deposit voting power
    */
   function getDepositVotingPower(address account, uint256 timepoint) public view returns (uint256) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    return GovernorDepositLogic.getDepositVotingPower($, account, timepoint);
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    return GovernorDepositLogicV7.getDepositVotingPower($, account, timepoint);
   }
 
   // ------------------ Overrides ------------------ //
@@ -1184,7 +1193,7 @@ contract B3TRGovernor is
     bytes4 interfaceId
   ) public pure override(IERC165, AccessControlUpgradeable) returns (bool) {
     return
-      interfaceId == type(IB3TRGovernor).interfaceId ||
+      interfaceId == type(IB3TRGovernorV7).interfaceId ||
       interfaceId == type(IERC1155Receiver).interfaceId ||
       interfaceId == type(IERC165).interfaceId;
   }
@@ -1195,8 +1204,8 @@ contract B3TRGovernor is
    * @return bytes4 The selector of the function
    */
   function onERC1155Received(address, address, uint256, uint256, bytes memory) public virtual returns (bytes4) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    if (GovernorGovernanceLogic.executor($) != address(this)) {
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    if (GovernorGovernanceLogicV7.executor($) != address(this)) {
       revert GovernorDisabledDeposit();
     }
     return this.onERC1155Received.selector;
@@ -1208,8 +1217,8 @@ contract B3TRGovernor is
    * @return bytes4 The selector of the function
    */
   function onERC721Received(address, address, uint256, bytes memory) public virtual returns (bytes4) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    if (GovernorGovernanceLogic.executor($) != address(this)) {
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    if (GovernorGovernanceLogicV7.executor($) != address(this)) {
       revert GovernorDisabledDeposit();
     }
     return this.onERC721Received.selector;
@@ -1227,8 +1236,8 @@ contract B3TRGovernor is
     uint256[] memory,
     bytes memory
   ) public virtual returns (bytes4) {
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    if (GovernorGovernanceLogic.executor($) != address(this)) {
+    GovernorStorageTypesV7.GovernorStorage storage $ = getGovernorStorage();
+    if (GovernorGovernanceLogicV7.executor($) != address(this)) {
       revert GovernorDisabledDeposit();
     }
     return this.onERC1155BatchReceived.selector;

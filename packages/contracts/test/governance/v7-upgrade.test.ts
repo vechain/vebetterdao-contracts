@@ -1,14 +1,20 @@
-import { describe, it } from "mocha"
+import { createLocalConfig } from "@repo/config/contracts/envs/local"
 import { expect } from "chai"
+import { ethers } from "hardhat"
+import { describe, it } from "mocha"
+
+import { deployAndUpgrade, deployProxyOnly, initializeProxy, upgradeProxy } from "../../scripts/helpers"
 import {
   B3TRGovernor,
-  B3TRGovernorV5,
   B3TRGovernorV1,
   B3TRGovernorV2,
   B3TRGovernorV3,
   B3TRGovernorV4,
+  B3TRGovernorV5,
   B3TRGovernorV6,
+  B3TRGovernorV7,
 } from "../../typechain-types"
+import { DeployInstance, getOrDeployContractInstances } from "../helpers"
 import {
   getProposalIdFromTx,
   getVot3Tokens,
@@ -17,13 +23,9 @@ import {
   waitForCurrentRoundToEnd,
   waitForNextBlock,
 } from "../helpers/common"
-import { ethers } from "hardhat"
-import { createLocalConfig } from "@repo/config/contracts/envs/local"
-import { DeployInstance, getOrDeployContractInstances } from "../helpers"
-import { deployAndUpgrade, deployProxyOnly, initializeProxy, upgradeProxy } from "../../scripts/helpers"
-import { setupProposer, STANDARD_PROPOSAL_TYPE, GRANT_PROPOSAL_TYPE, startNewRoundAndGetRoundId } from "./fixture.test"
+import { GRANT_PROPOSAL_TYPE, setupProposer, STANDARD_PROPOSAL_TYPE, startNewRoundAndGetRoundId } from "./fixture.test"
 
-describe("Governance - Upgrades - @shard4f", function () {
+describe("Governance - V7 Upgrade - @shard4f", function () {
   it("Should preserve proposal data through version upgrades and add proposal type support", async () => {
     const config = createLocalConfig()
     const {
@@ -73,7 +75,14 @@ describe("Governance - Upgrades - @shard4f", function () {
       governorQuorumLogicLibV6,
       governorStateLogicLibV6,
       governorVotesLogicLibV6,
-      governorClockLogicLib,
+      governorClockLogicLibV7,
+      governorConfiguratorLibV7,
+      governorDepositLogicLibV7,
+      governorFunctionRestrictionsLogicLibV7,
+      governorProposalLogicLibV7,
+      governorQuorumLogicLibV7,
+      governorStateLogicLibV7,
+      governorVotesLogicLibV7,
       governorConfiguratorLib,
       governorDepositLogicLib,
       governorFunctionRestrictionsLogicLib,
@@ -324,7 +333,7 @@ describe("Governance - Upgrades - @shard4f", function () {
     // Upgrade V6 -> V7 (current version with proposal types)
     const governorV7 = (await upgradeProxy(
       "B3TRGovernorV6",
-      "B3TRGovernor",
+      "B3TRGovernorV7",
       governorContractAddress,
       [
         {
@@ -342,17 +351,17 @@ describe("Governance - Upgrades - @shard4f", function () {
       {
         version: 7,
         libraries: {
-          GovernorClockLogic: await governorClockLogicLib.getAddress(),
-          GovernorConfigurator: await governorConfiguratorLib.getAddress(),
-          GovernorDepositLogic: await governorDepositLogicLib.getAddress(),
-          GovernorFunctionRestrictionsLogic: await governorFunctionRestrictionsLogicLib.getAddress(),
-          GovernorProposalLogic: await governorProposalLogicLib.getAddress(),
-          GovernorQuorumLogic: await governorQuorumLogicLib.getAddress(),
-          GovernorStateLogic: await governorStateLogicLib.getAddress(),
-          GovernorVotesLogic: await governorVotesLogicLib.getAddress(),
+          GovernorClockLogicV7: await governorClockLogicLibV7.getAddress(),
+          GovernorConfiguratorV7: await governorConfiguratorLibV7.getAddress(),
+          GovernorDepositLogicV7: await governorDepositLogicLibV7.getAddress(),
+          GovernorFunctionRestrictionsLogicV7: await governorFunctionRestrictionsLogicLibV7.getAddress(),
+          GovernorProposalLogicV7: await governorProposalLogicLibV7.getAddress(),
+          GovernorQuorumLogicV7: await governorQuorumLogicLibV7.getAddress(),
+          GovernorStateLogicV7: await governorStateLogicLibV7.getAddress(),
+          GovernorVotesLogicV7: await governorVotesLogicLibV7.getAddress(),
         },
       },
-    )) as B3TRGovernor
+    )) as B3TRGovernorV7
 
     expect(await governorV7.version()).to.equal("7")
 
@@ -450,7 +459,14 @@ describe("Governance - Upgrades - @shard4f", function () {
       governorQuorumLogicLibV6,
       governorStateLogicLibV6,
       governorVotesLogicLibV6,
-      governorClockLogicLib,
+      governorClockLogicLibV7,
+      governorConfiguratorLibV7,
+      governorDepositLogicLibV7,
+      governorFunctionRestrictionsLogicLibV7,
+      governorProposalLogicLibV7,
+      governorQuorumLogicLibV7,
+      governorStateLogicLibV7,
+      governorVotesLogicLibV7,
       governorConfiguratorLib,
       governorDepositLogicLib,
       governorFunctionRestrictionsLogicLib,
@@ -568,7 +584,7 @@ describe("Governance - Upgrades - @shard4f", function () {
 
     const governorV7 = (await upgradeProxy(
       "B3TRGovernorV6",
-      "B3TRGovernor",
+      "B3TRGovernorV7",
       await governorV6.getAddress(),
       [
         {
@@ -586,17 +602,17 @@ describe("Governance - Upgrades - @shard4f", function () {
       {
         version: 7,
         libraries: {
-          GovernorClockLogic: await governorClockLogicLib.getAddress(),
-          GovernorConfigurator: await governorConfiguratorLib.getAddress(),
-          GovernorDepositLogic: await governorDepositLogicLib.getAddress(),
-          GovernorFunctionRestrictionsLogic: await governorFunctionRestrictionsLogicLib.getAddress(),
-          GovernorProposalLogic: await governorProposalLogicLib.getAddress(),
-          GovernorQuorumLogic: await governorQuorumLogicLib.getAddress(),
-          GovernorStateLogic: await governorStateLogicLib.getAddress(),
-          GovernorVotesLogic: await governorVotesLogicLib.getAddress(),
+          GovernorClockLogicV7: await governorClockLogicLibV7.getAddress(),
+          GovernorConfiguratorV7: await governorConfiguratorLibV7.getAddress(),
+          GovernorDepositLogicV7: await governorDepositLogicLibV7.getAddress(),
+          GovernorFunctionRestrictionsLogicV7: await governorFunctionRestrictionsLogicLibV7.getAddress(),
+          GovernorProposalLogicV7: await governorProposalLogicLibV7.getAddress(),
+          GovernorQuorumLogicV7: await governorQuorumLogicLibV7.getAddress(),
+          GovernorStateLogicV7: await governorStateLogicLibV7.getAddress(),
+          GovernorVotesLogicV7: await governorVotesLogicLibV7.getAddress(),
         },
       },
-    )) as B3TRGovernor
+    )) as B3TRGovernorV7
 
     //Update standard quorum numerator
     const proposalStandardType = ethers.toBigInt(0)
@@ -671,7 +687,14 @@ describe("Governance - Upgrades - @shard4f", function () {
       governorQuorumLogicLibV6,
       governorStateLogicLibV6,
       governorVotesLogicLibV6,
-      governorClockLogicLib,
+      governorClockLogicLibV7,
+      governorConfiguratorLibV7,
+      governorDepositLogicLibV7,
+      governorFunctionRestrictionsLogicLibV7,
+      governorProposalLogicLibV7,
+      governorQuorumLogicLibV7,
+      governorStateLogicLibV7,
+      governorVotesLogicLibV7,
       governorConfiguratorLib,
       governorDepositLogicLib,
       governorFunctionRestrictionsLogicLib,
@@ -807,7 +830,7 @@ describe("Governance - Upgrades - @shard4f", function () {
 
     const governorV7 = (await upgradeProxy(
       "B3TRGovernorV6",
-      "B3TRGovernor",
+      "B3TRGovernorV7",
       await governorV6.getAddress(),
       [
         {
@@ -825,17 +848,17 @@ describe("Governance - Upgrades - @shard4f", function () {
       {
         version: 7,
         libraries: {
-          GovernorClockLogic: await governorClockLogicLib.getAddress(),
-          GovernorConfigurator: await governorConfiguratorLib.getAddress(),
-          GovernorDepositLogic: await governorDepositLogicLib.getAddress(),
-          GovernorFunctionRestrictionsLogic: await governorFunctionRestrictionsLogicLib.getAddress(),
-          GovernorProposalLogic: await governorProposalLogicLib.getAddress(),
-          GovernorQuorumLogic: await governorQuorumLogicLib.getAddress(),
-          GovernorStateLogic: await governorStateLogicLib.getAddress(),
-          GovernorVotesLogic: await governorVotesLogicLib.getAddress(),
+          GovernorClockLogicV7: await governorClockLogicLibV7.getAddress(),
+          GovernorConfiguratorV7: await governorConfiguratorLibV7.getAddress(),
+          GovernorDepositLogicV7: await governorDepositLogicLibV7.getAddress(),
+          GovernorFunctionRestrictionsLogicV7: await governorFunctionRestrictionsLogicLibV7.getAddress(),
+          GovernorProposalLogicV7: await governorProposalLogicLibV7.getAddress(),
+          GovernorQuorumLogicV7: await governorQuorumLogicLibV7.getAddress(),
+          GovernorStateLogicV7: await governorStateLogicLibV7.getAddress(),
+          GovernorVotesLogicV7: await governorVotesLogicLibV7.getAddress(),
         },
       },
-    )) as B3TRGovernor
+    )) as B3TRGovernorV7
 
     //Check if the quorum after upgrade is the same as the quorum set in the last timepoint
     const v7QuorumNumerator = await governorV7["quorumNumerator()"]()
@@ -912,7 +935,14 @@ describe("Governance - Upgrades - @shard4f", function () {
       governorQuorumLogicLibV6,
       governorStateLogicLibV6,
       governorVotesLogicLibV6,
-      governorClockLogicLib,
+      governorClockLogicLibV7,
+      governorConfiguratorLibV7,
+      governorDepositLogicLibV7,
+      governorFunctionRestrictionsLogicLibV7,
+      governorProposalLogicLibV7,
+      governorQuorumLogicLibV7,
+      governorStateLogicLibV7,
+      governorVotesLogicLibV7,
       governorConfiguratorLib,
       governorDepositLogicLib,
       governorFunctionRestrictionsLogicLib,
@@ -1026,7 +1056,7 @@ describe("Governance - Upgrades - @shard4f", function () {
 
     const governorV7 = (await upgradeProxy(
       "B3TRGovernorV6",
-      "B3TRGovernor",
+      "B3TRGovernorV7",
       await governorV6.getAddress(),
       [
         {
@@ -1044,17 +1074,17 @@ describe("Governance - Upgrades - @shard4f", function () {
       {
         version: 7,
         libraries: {
-          GovernorClockLogic: await governorClockLogicLib.getAddress(),
-          GovernorConfigurator: await governorConfiguratorLib.getAddress(),
-          GovernorDepositLogic: await governorDepositLogicLib.getAddress(),
-          GovernorFunctionRestrictionsLogic: await governorFunctionRestrictionsLogicLib.getAddress(),
-          GovernorProposalLogic: await governorProposalLogicLib.getAddress(),
-          GovernorQuorumLogic: await governorQuorumLogicLib.getAddress(),
-          GovernorStateLogic: await governorStateLogicLib.getAddress(),
-          GovernorVotesLogic: await governorVotesLogicLib.getAddress(),
+          GovernorClockLogicV7: await governorClockLogicLibV7.getAddress(),
+          GovernorConfiguratorV7: await governorConfiguratorLibV7.getAddress(),
+          GovernorDepositLogicV7: await governorDepositLogicLibV7.getAddress(),
+          GovernorFunctionRestrictionsLogicV7: await governorFunctionRestrictionsLogicLibV7.getAddress(),
+          GovernorProposalLogicV7: await governorProposalLogicLibV7.getAddress(),
+          GovernorQuorumLogicV7: await governorQuorumLogicLibV7.getAddress(),
+          GovernorStateLogicV7: await governorStateLogicLibV7.getAddress(),
+          GovernorVotesLogicV7: await governorVotesLogicLibV7.getAddress(),
         },
       },
-    )) as B3TRGovernor
+    )) as B3TRGovernorV7
 
     //Check if the quorum after upgrade is the same as the quorum initialized in previous version
     const v7QuorumNumerator = await governorV7["quorumNumerator()"]()
@@ -1137,7 +1167,14 @@ describe("Governance - Upgrades - @shard4f", function () {
       governorQuorumLogicLibV6,
       governorStateLogicLibV6,
       governorVotesLogicLibV6,
-      governorClockLogicLib,
+      governorClockLogicLibV7,
+      governorConfiguratorLibV7,
+      governorDepositLogicLibV7,
+      governorFunctionRestrictionsLogicLibV7,
+      governorProposalLogicLibV7,
+      governorQuorumLogicLibV7,
+      governorStateLogicLibV7,
+      governorVotesLogicLibV7,
       governorConfiguratorLib,
       governorDepositLogicLib,
       governorFunctionRestrictionsLogicLib,
@@ -1280,7 +1317,7 @@ describe("Governance - Upgrades - @shard4f", function () {
     // Upgrade V6 -> V7
     const governorV7 = (await upgradeProxy(
       "B3TRGovernorV6",
-      "B3TRGovernor",
+      "B3TRGovernorV7",
       await governorV6.getAddress(),
       [
         {
@@ -1298,17 +1335,17 @@ describe("Governance - Upgrades - @shard4f", function () {
       {
         version: 7,
         libraries: {
-          GovernorClockLogic: await governorClockLogicLib.getAddress(),
-          GovernorConfigurator: await governorConfiguratorLib.getAddress(),
-          GovernorDepositLogic: await governorDepositLogicLib.getAddress(),
-          GovernorFunctionRestrictionsLogic: await governorFunctionRestrictionsLogicLib.getAddress(),
-          GovernorProposalLogic: await governorProposalLogicLib.getAddress(),
-          GovernorQuorumLogic: await governorQuorumLogicLib.getAddress(),
-          GovernorStateLogic: await governorStateLogicLib.getAddress(),
-          GovernorVotesLogic: await governorVotesLogicLib.getAddress(),
+          GovernorClockLogicV7: await governorClockLogicLibV7.getAddress(),
+          GovernorConfiguratorV7: await governorConfiguratorLibV7.getAddress(),
+          GovernorDepositLogicV7: await governorDepositLogicLibV7.getAddress(),
+          GovernorFunctionRestrictionsLogicV7: await governorFunctionRestrictionsLogicLibV7.getAddress(),
+          GovernorProposalLogicV7: await governorProposalLogicLibV7.getAddress(),
+          GovernorQuorumLogicV7: await governorQuorumLogicLibV7.getAddress(),
+          GovernorStateLogicV7: await governorStateLogicLibV7.getAddress(),
+          GovernorVotesLogicV7: await governorVotesLogicLibV7.getAddress(),
         },
       },
-    )) as B3TRGovernor
+    )) as B3TRGovernorV7
     expect(await governorV7.version()).to.equal("7")
 
     const v7ProposalDepositThreshold = await governorV7.proposalDepositThreshold(proposalId)
@@ -1382,7 +1419,14 @@ describe("Governance - Upgrades - @shard4f", function () {
       governorQuorumLogicLibV6,
       governorStateLogicLibV6,
       governorVotesLogicLibV6,
-      governorClockLogicLib,
+      governorClockLogicLibV7,
+      governorConfiguratorLibV7,
+      governorDepositLogicLibV7,
+      governorFunctionRestrictionsLogicLibV7,
+      governorProposalLogicLibV7,
+      governorQuorumLogicLibV7,
+      governorStateLogicLibV7,
+      governorVotesLogicLibV7,
       governorConfiguratorLib,
       governorDepositLogicLib,
       governorFunctionRestrictionsLogicLib,
@@ -1535,7 +1579,7 @@ describe("Governance - Upgrades - @shard4f", function () {
     // Upgrade V6 -> V7
     const governorV7 = (await upgradeProxy(
       "B3TRGovernorV6",
-      "B3TRGovernor",
+      "B3TRGovernorV7",
       await governorV6.getAddress(),
       [
         {
@@ -1553,14 +1597,14 @@ describe("Governance - Upgrades - @shard4f", function () {
       {
         version: 7,
         libraries: {
-          GovernorClockLogic: await governorClockLogicLib.getAddress(),
-          GovernorConfigurator: await governorConfiguratorLib.getAddress(),
-          GovernorDepositLogic: await governorDepositLogicLib.getAddress(),
-          GovernorFunctionRestrictionsLogic: await governorFunctionRestrictionsLogicLib.getAddress(),
-          GovernorProposalLogic: await governorProposalLogicLib.getAddress(),
-          GovernorQuorumLogic: await governorQuorumLogicLib.getAddress(),
-          GovernorStateLogic: await governorStateLogicLib.getAddress(),
-          GovernorVotesLogic: await governorVotesLogicLib.getAddress(),
+          GovernorClockLogicV7: await governorClockLogicLibV7.getAddress(),
+          GovernorConfiguratorV7: await governorConfiguratorLibV7.getAddress(),
+          GovernorDepositLogicV7: await governorDepositLogicLibV7.getAddress(),
+          GovernorFunctionRestrictionsLogicV7: await governorFunctionRestrictionsLogicLibV7.getAddress(),
+          GovernorProposalLogicV7: await governorProposalLogicLibV7.getAddress(),
+          GovernorQuorumLogicV7: await governorQuorumLogicLibV7.getAddress(),
+          GovernorStateLogicV7: await governorStateLogicLibV7.getAddress(),
+          GovernorVotesLogicV7: await governorVotesLogicLibV7.getAddress(),
         },
       },
     )) as B3TRGovernor
@@ -1619,7 +1663,14 @@ describe("Governance - Upgrades - @shard4f", function () {
       governorQuorumLogicLibV6,
       governorStateLogicLibV6,
       governorVotesLogicLibV6,
-      governorClockLogicLib,
+      governorClockLogicLibV7,
+      governorConfiguratorLibV7,
+      governorDepositLogicLibV7,
+      governorFunctionRestrictionsLogicLibV7,
+      governorProposalLogicLibV7,
+      governorQuorumLogicLibV7,
+      governorStateLogicLibV7,
+      governorVotesLogicLibV7,
       governorConfiguratorLib,
       governorDepositLogicLib,
       governorFunctionRestrictionsLogicLib,
@@ -1753,7 +1804,7 @@ describe("Governance - Upgrades - @shard4f", function () {
     //Upgrade V6 -> V7
     const governorV7 = (await upgradeProxy(
       "B3TRGovernorV6",
-      "B3TRGovernor",
+      "B3TRGovernorV7",
       await governorV6.getAddress(),
       [
         {
@@ -1771,17 +1822,17 @@ describe("Governance - Upgrades - @shard4f", function () {
       {
         version: 7,
         libraries: {
-          GovernorClockLogic: await governorClockLogicLib.getAddress(),
-          GovernorConfigurator: await governorConfiguratorLib.getAddress(),
-          GovernorDepositLogic: await governorDepositLogicLib.getAddress(),
-          GovernorFunctionRestrictionsLogic: await governorFunctionRestrictionsLogicLib.getAddress(),
-          GovernorProposalLogic: await governorProposalLogicLib.getAddress(),
-          GovernorQuorumLogic: await governorQuorumLogicLib.getAddress(),
-          GovernorStateLogic: await governorStateLogicLib.getAddress(),
-          GovernorVotesLogic: await governorVotesLogicLib.getAddress(),
+          GovernorClockLogicV7: await governorClockLogicLibV7.getAddress(),
+          GovernorConfiguratorV7: await governorConfiguratorLibV7.getAddress(),
+          GovernorDepositLogicV7: await governorDepositLogicLibV7.getAddress(),
+          GovernorFunctionRestrictionsLogicV7: await governorFunctionRestrictionsLogicLibV7.getAddress(),
+          GovernorProposalLogicV7: await governorProposalLogicLibV7.getAddress(),
+          GovernorQuorumLogicV7: await governorQuorumLogicLibV7.getAddress(),
+          GovernorStateLogicV7: await governorStateLogicLibV7.getAddress(),
+          GovernorVotesLogicV7: await governorVotesLogicLibV7.getAddress(),
         },
       },
-    )) as B3TRGovernor
+    )) as B3TRGovernorV7
 
     expect(await governorV7.version()).to.equal("7")
 

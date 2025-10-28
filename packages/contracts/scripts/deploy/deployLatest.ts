@@ -16,13 +16,14 @@ import {
   VeBetterPassport,
   X2EarnCreator,
   GrantsManager,
+  GrantsManagerV1,
 } from "../../typechain-types"
 import { ContractsConfig } from "@repo/config/contracts/type"
 import { HttpNetworkConfig } from "hardhat/types"
 import { setupLocalEnvironment, setupMainnetEnvironment, setupTestEnvironment, APPS } from "./setup"
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers"
 import { shouldEndorseXApps } from "@repo/config/contracts"
-import { deployAndInitializeLatest, deployAndUpgrade, deployProxy, saveContractsToFile } from "../helpers"
+import { deployAndInitializeLatest, deployAndUpgrade, deployProxy, saveContractsToFile, upgradeProxy } from "../helpers"
 import { governanceLibraries, passportLibraries } from "../libraries"
 import {
   transferAdminRole,
@@ -531,22 +532,29 @@ export async function deployLatest(config: ContractsConfig) {
     true,
   )) as B3TRGovernor
 
-  const grantsManager = (await deployAndInitializeLatest(
+  // Deploy GrantsManager V1 first
+  const grantsManagerV1 = (await deployProxy("GrantsManagerV1", [
+    // ← Change to GrantsManagerV1
+    await governor.getAddress(), // governor address
+    await treasury.getAddress(), // treasury address
+    deployer.address, // admin
+    await b3tr.getAddress(), // b3tr address
+    config.MINIMUM_MILESTONE_COUNT, // minimum milestone count
+  ])) as GrantsManagerV1
+
+  // Grant UPGRADER_ROLE to deployer
+  await grantsManagerV1.connect(deployer).grantRole(await grantsManagerV1.UPGRADER_ROLE(), deployer.address)
+
+  // Then upgrade from V1 to V2
+  const grantsManager = (await upgradeProxy(
+    "GrantsManagerV1",
     "GrantsManager",
-    [
-      {
-        name: "initialize",
-        args: [
-          await governor.getAddress(),
-          await treasury.getAddress(),
-          TEMP_ADMIN,
-          await b3tr.getAddress(),
-          config.MINIMUM_MILESTONE_COUNT, // minimum milestone count
-        ],
-      },
-    ],
-    {},
-    true,
+    await grantsManagerV1.getAddress(),
+    [],
+    {
+      version: 2,
+      libraries: {},
+    },
   )) as GrantsManager
 
   const date = new Date(performance.now() - start)
@@ -762,6 +770,10 @@ export async function deployLatest(config: ContractsConfig) {
     .setGrantsManager(await grantsManager.getAddress())
     .then(async tx => await tx.wait())
   console.log("GrantsManager address set in Governor contract")
+
+  // Grant PROPOSAL_STATE_MANAGER_ROLE to deployer in B3TRGovernor contract
+  await governor.connect(deployer).grantRole(await governor.PROPOSAL_STATE_MANAGER_ROLE(), deployer.address)
+  console.log("PROPOSAL_STATE_MANAGER_ROLE granted to deployer in B3TRGovernor contract")
 
   // Set up X2EarnApps contract
   await x2EarnCreator.grantRole(await x2EarnCreator.MINTER_ROLE(), await x2EarnApps.getAddress())

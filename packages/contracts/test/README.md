@@ -12,12 +12,14 @@ All active shards are listed in `.github/workflows/unit-tests.yml`.
 - **shard2**: Emissions
 - **shard3a**: (available for assignment)
 - **shard3b**: Galaxy Member
-- **shard4**: Governor and TimeLock (main governance tests)
-- **shard4a**: Governance - Voting power with proposal deposit
-- **shard4b**: Governance - Milestone Creation
-- **shard4c**: Governance - Proposer requirement
-- **shard4d**: Governance - Compatibility & Thresholds
-- **shard4e**: Governance - Upgrades
+- **shard4a**: Governance - Governor and TimeLock
+- **shard4b**: Governance - Voting power with proposal deposit
+- **shard4c**: Governance - Milestone Creation
+- **shard4d**: Governance - Proposer Requirement
+- **shard4e**: Governance - V7 Compatibility & Thresholds
+- **shard4f**: Governance - V7 Upgrade
+- **shard4g**: Governance - V8 Upgrade
+- **shard4h**: Governance - V8 Compatibility
 - **shard5**: Node Management (skipped)
 - **shard6**: TimeLock
 - **shard7**: Treasury

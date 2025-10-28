@@ -198,13 +198,21 @@ export async function setupVoter(
     vot3,
     minterAccount,
   })
+  const isCheckEnabled = await veBetterPassport.isCheckEnabled(1)
+  if (!isCheckEnabled) {
+    await veBetterPassport.connect(owner).toggleCheck(1)
+  }
 
   // whitelist voter
   await veBetterPassport.connect(owner).whitelist(voter.address)
-  await veBetterPassport.connect(owner).toggleCheck(1)
   expect(await veBetterPassport.isCheckEnabled(1)).to.be.true
   // expect voter to be person
   expect(await veBetterPassport.isPerson(voter.address)).to.deep.equal([true, "User is whitelisted"])
+}
+
+export async function setupSupporter(supporter: SignerWithAddress, vot3: VOT3, amount: bigint, governor: B3TRGovernor) {
+  await getVot3Tokens(supporter, ethers.formatEther(amount))
+  await vot3.connect(supporter).approve(await governor.getAddress(), amount)
 }
 
 export async function startNewRoundAndGetRoundId(

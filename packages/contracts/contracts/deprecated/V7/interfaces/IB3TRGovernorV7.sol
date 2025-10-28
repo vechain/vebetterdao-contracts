@@ -5,13 +5,13 @@ pragma solidity 0.8.20;
 
 import { IERC165 } from "@openzeppelin/contracts/interfaces/IERC165.sol";
 import { IERC6372 } from "@openzeppelin/contracts/interfaces/IERC6372.sol";
-import { IB3TR } from "./IB3TR.sol";
-import { IVoterRewards } from "../interfaces/IVoterRewards.sol";
-import { IXAllocationVotingGovernor } from "../interfaces/IXAllocationVotingGovernor.sol";
-import { GovernorTypes } from "../governance/libraries/GovernorTypes.sol";
-import { IVeBetterPassport } from "./IVeBetterPassport.sol";
-import { IGalaxyMember } from "./IGalaxyMember.sol";
-import { IGrantsManager } from "./IGrantsManager.sol";
+import { IB3TR } from "../../../interfaces/IB3TR.sol";
+import { IVoterRewards } from "../../../interfaces/IVoterRewards.sol";
+import { IXAllocationVotingGovernor } from "../../../interfaces/IXAllocationVotingGovernor.sol";
+import { GovernorTypesV7 } from "../governance/libraries/GovernorTypesV7.sol";
+import { IVeBetterPassport } from "../../../interfaces/IVeBetterPassport.sol";
+import { IGalaxyMember } from "../../../interfaces/IGalaxyMember.sol";
+import { IGrantsManagerV1 } from "../../V1/interfaces/IGrantsManagerV1.sol";
 
 /**
  * @dev Interface of the {B3TRGovernor} core.
@@ -25,7 +25,7 @@ import { IGrantsManager } from "./IGrantsManager.sol";
  * - Added new state `DepositNotMet` to ProposalState enum
  * - Added depositThreshold() to get the minimum required deposit for a proposal and removed proposalThreshold
  */
-interface IB3TRGovernor is IERC165, IERC6372 {
+interface IB3TRGovernorV7 is IERC165, IERC6372 {
   /**
    * @dev Empty proposal or a mismatch between the parameters length for a proposal call.
    */
@@ -95,7 +95,7 @@ interface IB3TRGovernor is IERC165, IERC6372 {
    */
   error GovernorUnexpectedProposalState(
     uint256 proposalId,
-    GovernorTypes.ProposalState current,
+    GovernorTypesV7.ProposalState current,
     bytes32 expectedStates
   );
 
@@ -163,13 +163,6 @@ interface IB3TRGovernor is IERC165, IERC6372 {
    * @dev The grantee cannot deposit for their own grant.
    */
   error GranteeCannotDepositOwnGrant(uint256 proposalId);
-
-  /**
-   * @dev Thrown when a proposal is not allowed to perform a specific action.
-   * Some actions are restricted to Standard proposals only, others to Grant proposals only.
-   * eg. Executable proposals cannot be marked as in development if not executed yet but Succeeded.
-   */
-  error GovernorRestrictedProposal(uint256 proposalId, GovernorTypes.ProposalType proposalType);
 
   /**
    * @dev Emitted when a proposal is created
@@ -249,7 +242,7 @@ interface IB3TRGovernor is IERC165, IERC6372 {
   /**
    * @dev Emitted when a proposal is created with type information.
    */
-  event ProposalCreatedWithType(uint256 indexed proposalId, GovernorTypes.ProposalType proposalType);
+  event ProposalCreatedWithType(uint256 indexed proposalId, GovernorTypesV7.ProposalType proposalType);
 
   /**
    * @dev Emitted when the quorum numerator for a specific proposal type is updated.
@@ -257,13 +250,13 @@ interface IB3TRGovernor is IERC165, IERC6372 {
   event QuorumNumeratorUpdatedByType(
     uint256 oldNumerator,
     uint256 newNumerator,
-    GovernorTypes.ProposalType proposalType
+    GovernorTypesV7.ProposalType proposalType
   );
   /**
    * @dev Emitted when the `votingThreshold` for a proposal type is set.
    */
   event VotingThresholdSetV2(
-    GovernorTypes.ProposalType proposalType,
+    GovernorTypesV7.ProposalType proposalType,
     uint256 oldVotingThreshold,
     uint256 newVotingThreshold
   );
@@ -272,7 +265,7 @@ interface IB3TRGovernor is IERC165, IERC6372 {
    * @dev Emitted when the deposit threshold percentage for a proposal type is set.
    */
   event DepositThresholdSetV2(
-    GovernorTypes.ProposalType proposalType,
+    GovernorTypesV7.ProposalType proposalType,
     uint256 oldDepositThreshold,
     uint256 newDepositThreshold
   );
@@ -280,7 +273,7 @@ interface IB3TRGovernor is IERC165, IERC6372 {
    * @dev Emitted when the deposit threshold cap for a proposal type is set.
    */
   event DepositThresholdCapSet(
-    GovernorTypes.ProposalType proposalType,
+    GovernorTypesV7.ProposalType proposalType,
     uint256 oldDepositThresholdCap,
     uint256 newDepositThresholdCap
   );
@@ -290,21 +283,6 @@ interface IB3TRGovernor is IERC165, IERC6372 {
 
   /// @dev Emitted when a deposit is withdrawn from a proposal.
   event ProposalWithdraw(address indexed withdrawer, uint256 indexed proposalId, uint256 amount);
-
-  /**
-   * @dev Emitted when a proposal is marked as in development.
-   */
-  event ProposalInDevelopment(uint256 proposalId);
-
-  /**
-   * @dev Emitted when a proposal is marked as completed.
-   */
-  event ProposalCompleted(uint256 proposalId);
-
-  /**
-   * @dev Emitted when the development state of a proposal is reset back to pending development.
-   */
-  event ProposalDevelopmentStateReset(uint256 proposalId);
 
   /**
    * @notice module:core
@@ -358,7 +336,7 @@ interface IB3TRGovernor is IERC165, IERC6372 {
    * @notice module:core
    * @dev Current state of a proposal, following Compound's convention
    */
-  function state(uint256 proposalId) external view returns (GovernorTypes.ProposalState);
+  function state(uint256 proposalId) external view returns (GovernorTypesV7.ProposalState);
 
   /**
    * @notice module:core
@@ -388,21 +366,25 @@ interface IB3TRGovernor is IERC165, IERC6372 {
    * @notice module:core
    * @dev The number of votes in support of a proposal required in order for a proposal to become active.
    */
-  function depositThresholdByProposalType(GovernorTypes.ProposalType proposalTypeValue) external view returns (uint256);
+  function depositThresholdByProposalType(
+    GovernorTypesV7.ProposalType proposalTypeValue
+  ) external view returns (uint256);
 
   /**
    * @notice module:core
    * @dev The proposal Threshold Percentage for all type of proposal
    */
   function depositThresholdPercentageByProposalType(
-    GovernorTypes.ProposalType proposalTypeValue
+    GovernorTypesV7.ProposalType proposalTypeValue
   ) external view returns (uint256);
 
   /**
    * @notice module:core
    * @dev The voting threshold for a proposal type
    */
-  function votingThresholdByProposalType(GovernorTypes.ProposalType proposalTypeValue) external view returns (uint256);
+  function votingThresholdByProposalType(
+    GovernorTypesV7.ProposalType proposalTypeValue
+  ) external view returns (uint256);
 
   /**
    * @notice module:core
@@ -630,7 +612,7 @@ interface IB3TRGovernor is IERC165, IERC6372 {
    * @notice module:core
    * @dev The type of a proposal.
    */
-  function proposalType(uint256 proposalId) external view returns (GovernorTypes.ProposalType);
+  function proposalType(uint256 proposalId) external view returns (GovernorTypesV7.ProposalType);
 
   /**
    * @notice Set the GalaxyMember contract
@@ -648,13 +630,13 @@ interface IB3TRGovernor is IERC165, IERC6372 {
    * @notice Set the GrantsManager contract
    * @param newGrantsManager The new GrantsManager contract
    */
-  function setGrantsManager(IGrantsManager newGrantsManager) external;
+  function setGrantsManager(IGrantsManagerV1 newGrantsManager) external;
 
   /**
    * @notice Get the GrantsManager contract
    * @return The current GrantsManager contract
    */
-  function getGrantsManagerContract() external view returns (IGrantsManager);
+  function getGrantsManagerContract() external view returns (IGrantsManagerV1);
 
   /**
    * @notice Get the GM weight for a proposal type
@@ -662,7 +644,7 @@ interface IB3TRGovernor is IERC165, IERC6372 {
    * @return The GM weight for the proposal type
    */
   function getRequiredGMLevelByProposalType(
-    GovernorTypes.ProposalType proposalTypeValue
+    GovernorTypesV7.ProposalType proposalTypeValue
   ) external view returns (uint256);
 
   /**
@@ -671,7 +653,10 @@ interface IB3TRGovernor is IERC165, IERC6372 {
    * @param newGMWeight The new GM weight for the proposal type
    * @notice e.g. setRequiredGMLevelByProposalType(0, 1) = GM level 1 is required to create a standard proposal
    */
-  function setRequiredGMLevelByProposalType(GovernorTypes.ProposalType proposalTypeValue, uint256 newGMWeight) external;
+  function setRequiredGMLevelByProposalType(
+    GovernorTypesV7.ProposalType proposalTypeValue,
+    uint256 newGMWeight
+  ) external;
 
   /**
    * @notice Returns the deposit threshold cap for a proposal type.
@@ -679,7 +664,7 @@ interface IB3TRGovernor is IERC165, IERC6372 {
    * @return uint256 The deposit threshold cap for the proposal type.
    */
   function depositThresholdCapByProposalType(
-    GovernorTypes.ProposalType proposalTypeValue
+    GovernorTypesV7.ProposalType proposalTypeValue
   ) external view returns (uint256);
 
   /**
