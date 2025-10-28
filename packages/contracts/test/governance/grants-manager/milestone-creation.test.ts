@@ -5,7 +5,7 @@ import {
   setupGovernanceFixtureWithEmissions,
   GRANT_PROPOSAL_TYPE,
   setupVoter,
-} from "./fixture.test"
+} from "../fixture.test"
 import {
   B3TRGovernor,
   VOT3,
@@ -19,7 +19,7 @@ import {
   GrantsManager__factory,
   GovernorProposalLogic__factory,
   B3TRGovernor__factory,
-} from "../../typechain-types"
+} from "../../../typechain-types"
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers"
 import { ethers } from "hardhat"
 import { expect } from "chai"
@@ -31,7 +31,7 @@ import {
   moveBlocks,
   payDeposit,
   waitForCurrentRoundToEnd,
-} from "../helpers/common"
+} from "../../helpers/common"
 
 describe("Governance - Milestone Creation - @shard4c", function () {
   let governor: B3TRGovernor
