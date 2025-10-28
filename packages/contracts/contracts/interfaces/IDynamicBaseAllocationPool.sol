@@ -20,4 +20,6 @@ interface IDynamicBaseAllocationPool {
   function isDBARewardsDistributed(uint256 _roundId) external view returns (bool);
 
   function distributionStartRound() external view returns (uint256);
+
+  function dbaRoundRewardsForApp(uint256 _roundId, bytes32 _appId) external view returns (uint256);
 }
