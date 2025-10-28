@@ -245,9 +245,13 @@ contract GrantsManager is
     GrantsManagerStorage storage $ = _getGrantsManagerStorage();
     GrantProposal memory grant = $.grant[proposalId];
     GovernorTypes.ProposalState proposalState = $.governor.state(proposalId);
-
+    
     // If proposal is not in a valid state, it's not in development
-    if (proposalState != GovernorTypes.ProposalState.Executed) {
+    if (
+      proposalState != GovernorTypes.ProposalState.Executed &&
+      proposalState != GovernorTypes.ProposalState.InDevelopment &&
+      proposalState != GovernorTypes.ProposalState.Completed
+    ) {
       return false;
     }
 
@@ -271,8 +275,12 @@ contract GrantsManager is
     GrantProposal memory grant = $.grant[proposalId];
     GovernorTypes.ProposalState proposalState = $.governor.state(proposalId);
 
-    // If proposal is not executed, it's not completed
-    if (proposalState != GovernorTypes.ProposalState.Executed) {
+    // If proposal is not in a valid state, it's not completed
+    if (
+      proposalState != GovernorTypes.ProposalState.Executed &&
+      proposalState != GovernorTypes.ProposalState.InDevelopment &&
+      proposalState != GovernorTypes.ProposalState.Completed
+    ) {
       return false;
     }
 
@@ -752,7 +760,7 @@ contract GrantsManager is
    * @return The version of the contract
    */
   function version() external pure returns (uint256) {
-    return 1;
+    return 2;
   }
 
   // ------------------ Overrides ------------------ //
