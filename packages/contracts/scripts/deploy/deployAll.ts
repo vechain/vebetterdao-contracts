@@ -17,7 +17,9 @@ import {
   X2EarnCreator,
   GrantsManager,
   RelayerRewardsPool,
+  GrantsManagerV1,
   DBAPool,
+  DBAPoolV1,
 } from "../../typechain-types"
 import { ContractsConfig } from "@repo/config/contracts/type"
 import { HttpNetworkConfig } from "hardhat/types"
@@ -122,6 +124,15 @@ export async function deployAll(config: ContractsConfig) {
     GovernorVotesLogicLibV6,
     GovernorDepositLogicLibV6,
     GovernorStateLogicLibV6,
+    GovernorClockLogicLibV7,
+    GovernorConfiguratorLibV7,
+    GovernorDepositLogicLibV7,
+    GovernorFunctionRestrictionsLogicLibV7,
+    GovernorProposalLogicLibV7,
+    GovernorQuorumLogicLibV7,
+    GovernorStateLogicLibV7,
+    GovernorVotesLogicLibV7,
+    GovernorGovernanceLogicLibV7,
   } = await governanceLibraries()
 
   if (
@@ -796,6 +807,7 @@ export async function deployAll(config: ContractsConfig) {
       "B3TRGovernorV4",
       "B3TRGovernorV5",
       "B3TRGovernorV6",
+      "B3TRGovernorV7",
       "B3TRGovernor",
     ],
     [
@@ -838,9 +850,10 @@ export async function deployAll(config: ContractsConfig) {
           grantsManager: TEMP_ADMIN, //GrantsManager contract
         },
       ],
+      [],
     ],
     {
-      versions: [undefined, 2, 3, 4, 5, 6, 7],
+      versions: [undefined, 2, 3, 4, 5, 6, 7, 8],
       libraries: [
         {
           GovernorClockLogicV1: await GovernorClockLogicLibV1.getAddress(),
@@ -903,6 +916,16 @@ export async function deployAll(config: ContractsConfig) {
           GovernorVotesLogicV6: await GovernorVotesLogicLibV6.getAddress(),
         },
         {
+          GovernorClockLogicV7: await GovernorClockLogicLibV7.getAddress(),
+          GovernorConfiguratorV7: await GovernorConfiguratorLibV7.getAddress(),
+          GovernorDepositLogicV7: await GovernorDepositLogicLibV7.getAddress(),
+          GovernorFunctionRestrictionsLogicV7: await GovernorFunctionRestrictionsLogicLibV7.getAddress(),
+          GovernorProposalLogicV7: await GovernorProposalLogicLibV7.getAddress(),
+          GovernorQuorumLogicV7: await GovernorQuorumLogicLibV7.getAddress(),
+          GovernorStateLogicV7: await GovernorStateLogicLibV7.getAddress(),
+          GovernorVotesLogicV7: await GovernorVotesLogicLibV7.getAddress(),
+        },
+        {
           GovernorClockLogic: await GovernorClockLogicLib.getAddress(),
           GovernorConfigurator: await GovernorConfiguratorLib.getAddress(),
           GovernorDepositLogic: await GovernorDepositLogicLib.getAddress(),
@@ -917,17 +940,34 @@ export async function deployAll(config: ContractsConfig) {
     },
   )) as B3TRGovernor
 
-  // Deploy GrantsManager
-  const grantsManager = (await deployProxy("GrantsManager", [
+  // Deploy GrantsManager V1 first
+  const grantsManagerV1 = (await deployProxy("GrantsManagerV1", [
+    // ← Change to GrantsManagerV1
     await governor.getAddress(), // governor address
     await treasury.getAddress(), // treasury address
     TEMP_ADMIN, // admin
     await b3tr.getAddress(), // b3tr address
     config.MINIMUM_MILESTONE_COUNT, // minimum milestone count
-  ])) as GrantsManager
+  ])) as GrantsManagerV1
+
+  // Grant UPGRADER_ROLE to deployer
+  await grantsManagerV1.connect(deployer).grantRole(await grantsManagerV1.UPGRADER_ROLE(), deployer.address)
+
+  // Then upgrade from V1 to V2
+  const grantsManager = (await upgradeProxy(
+    "GrantsManagerV1",
+    "GrantsManager",
+    await grantsManagerV1.getAddress(),
+    [],
+    {
+      version: 2,
+      libraries: {},
+    },
+  )) as GrantsManager
 
   // DynamicBaseAllocationPool
-  const dynamicBaseAllocationPool = (await deployProxy("DBAPool", [
+  console.log("Deploying DBAPool V1...")
+  const dbaPoolV1 = (await deployProxy("DBAPoolV1", [
     {
       admin: TEMP_ADMIN, // admin
       x2EarnApps: await x2EarnApps.getAddress(),
@@ -936,7 +976,28 @@ export async function deployAll(config: ContractsConfig) {
       b3tr: await b3tr.getAddress(),
       distributionStartRound: 1, // startRound
     },
-  ])) as DBAPool
+  ])) as DBAPoolV1
+
+  // Grant UPGRADER_ROLE to deployer so we can upgrade
+  const UPGRADER_ROLE_DBA = await dbaPoolV1.UPGRADER_ROLE()
+  const grantRoleTx = await dbaPoolV1.connect(deployer).grantRole(UPGRADER_ROLE_DBA, deployer.address)
+  await grantRoleTx.wait()
+  console.log("UPGRADER_ROLE granted to deployer for DBAPool")
+
+  // Upgrade to V2
+  console.log("Upgrading DBAPool to V2...")
+  const dynamicBaseAllocationPool = (await upgradeProxy(
+    "DBAPoolV1",
+    "DBAPool",
+    await dbaPoolV1.getAddress(),
+    [], // No initialization args for V2
+    {
+      version: 2,
+      logOutput: true,
+    },
+  )) as DBAPool
+
+  console.log("DBAPool deployed and upgraded to V2")
 
   const date = new Date(performance.now() - start)
   console.log(`================  Contracts deployed in ${date.getMinutes()}m ${date.getSeconds()}s `)
@@ -1044,6 +1105,15 @@ export async function deployAll(config: ContractsConfig) {
   // Grant GrantsManager admin role to GrantsManager contract
   await governor.connect(deployer).setGrantsManager(await grantsManager.getAddress())
   console.log("GrantsManager address set in B3TRGovernor contract")
+
+  // Grant PROPOSAL_STATE_MANAGER_ROLE to deployer in B3TRGovernor contract
+  await governor.connect(deployer).grantRole(await governor.PROPOSAL_STATE_MANAGER_ROLE(), deployer.address)
+  console.log("PROPOSAL_STATE_MANAGER_ROLE granted to deployer in B3TRGovernor contract")
+
+  //Grant GrantsManager APPROVER and REJECTOR roles to deployer
+  await grantsManager.connect(deployer).grantRole(await grantsManager.GRANTS_APPROVER_ROLE(), deployer.address)
+  await grantsManager.connect(deployer).grantRole(await grantsManager.GRANTS_REJECTOR_ROLE(), deployer.address)
+  console.log("GrantsManager admin role granted to GrantsManager contract")
 
   // Grant GOVERNANCE_ROLE to deployer in XAllocationVoting contract
   await xAllocationVoting

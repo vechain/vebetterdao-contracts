@@ -118,9 +118,19 @@ import {
   GovernorClockLogicV6,
   StargateNFT,
   GrantsManager,
+  GovernorVotesLogicV7,
+  GovernorStateLogicV7,
+  GovernorQuorumLogicV7,
+  GovernorFunctionRestrictionsLogicV7,
+  GovernorProposalLogicV7,
+  GovernorDepositLogicV7,
+  GovernorConfiguratorV7,
+  GovernorClockLogicV7,
+  GrantsManagerV1,
   RelayerRewardsPool,
   AutoVotingLogic,
   DBAPool,
+  DBAPoolV1,
 } from "../../typechain-types"
 import { createLocalConfig } from "@repo/config/contracts/envs/local"
 import {
@@ -227,6 +237,14 @@ export interface DeployInstance {
   governorQuorumLogicLibV6: GovernorQuorumLogicV6
   governorStateLogicLibV6: GovernorStateLogicV6
   governorVotesLogicLibV6: GovernorVotesLogicV6
+  governorClockLogicLibV7: GovernorClockLogicV7
+  governorConfiguratorLibV7: GovernorConfiguratorV7
+  governorDepositLogicLibV7: GovernorDepositLogicV7
+  governorFunctionRestrictionsLogicLibV7: GovernorFunctionRestrictionsLogicV7
+  governorProposalLogicLibV7: GovernorProposalLogicV7
+  governorQuorumLogicLibV7: GovernorQuorumLogicV7
+  governorStateLogicLibV7: GovernorStateLogicV7
+  governorVotesLogicLibV7: GovernorVotesLogicV7
 
   // GrantsManager
   grantsManager: GrantsManager
@@ -372,6 +390,14 @@ export const getOrDeployContractInstances = async ({
     GovernorQuorumLogicLibV6,
     GovernorStateLogicLibV6,
     GovernorVotesLogicLibV6,
+    GovernorClockLogicLibV7,
+    GovernorConfiguratorLibV7,
+    GovernorDepositLogicLibV7,
+    GovernorFunctionRestrictionsLogicLibV7,
+    GovernorProposalLogicLibV7,
+    GovernorQuorumLogicLibV7,
+    GovernorStateLogicLibV7,
+    GovernorVotesLogicLibV7,
   } = await governanceLibraries()
 
   // Deploy Passport Libraries
@@ -1000,13 +1026,31 @@ export const getOrDeployContractInstances = async ({
 
   // Set the TEMP governor address before deploying the governor
   const TEMP_GOVERNOR_ADDRESS = owner.address
-  const grantsManager = (await deployProxy("GrantsManager", [
+
+  // Deploy GrantsManager V1 first
+  const grantsManagerV1 = (await deployProxy("GrantsManagerV1", [
+    // ← Change to GrantsManagerV1
     TEMP_GOVERNOR_ADDRESS, // governor address
     await treasury.getAddress(), // treasury address
     owner.address, // admin
     await b3tr.getAddress(), // b3tr address
     config.MINIMUM_MILESTONE_COUNT, // minimum milestone count
-  ])) as GrantsManager
+  ])) as GrantsManagerV1
+
+  // Grant UPGRADER_ROLE to deployer
+  await grantsManagerV1.connect(owner).grantRole(await grantsManagerV1.UPGRADER_ROLE(), owner.address)
+
+  // Then upgrade from V1 to V2
+  const grantsManager = (await upgradeProxy(
+    "GrantsManagerV1",
+    "GrantsManager",
+    await grantsManagerV1.getAddress(),
+    [],
+    {
+      version: 2,
+      libraries: {},
+    },
+  )) as GrantsManager
 
   const governor = (await deployAndUpgrade(
     [
@@ -1016,6 +1060,7 @@ export const getOrDeployContractInstances = async ({
       "B3TRGovernorV4",
       "B3TRGovernorV5",
       "B3TRGovernorV6",
+      "B3TRGovernorV7",
       "B3TRGovernor",
     ],
     [
@@ -1058,9 +1103,10 @@ export const getOrDeployContractInstances = async ({
           grantsManager: await grantsManager.getAddress(), //GrantsManager contract
         },
       ], // [levels, config.GM_MULTIPLIERS_V2] -> Will revert if emissions is not bootstrapped
+      [], // Reserved for future configuration parameters; currently no values required
     ],
     {
-      versions: [undefined, 2, 3, 4, 5, 6, 7],
+      versions: [undefined, 2, 3, 4, 5, 6, 7, 8],
       libraries: [
         {
           GovernorClockLogicV1: await GovernorClockLogicLibV1.getAddress(),
@@ -1123,6 +1169,16 @@ export const getOrDeployContractInstances = async ({
           GovernorVotesLogicV6: await GovernorVotesLogicLibV6.getAddress(),
         },
         {
+          GovernorClockLogicV7: await GovernorClockLogicLibV7.getAddress(),
+          GovernorConfiguratorV7: await GovernorConfiguratorLibV7.getAddress(),
+          GovernorDepositLogicV7: await GovernorDepositLogicLibV7.getAddress(),
+          GovernorFunctionRestrictionsLogicV7: await GovernorFunctionRestrictionsLogicLibV7.getAddress(),
+          GovernorProposalLogicV7: await GovernorProposalLogicLibV7.getAddress(),
+          GovernorQuorumLogicV7: await GovernorQuorumLogicLibV7.getAddress(),
+          GovernorStateLogicV7: await GovernorStateLogicLibV7.getAddress(),
+          GovernorVotesLogicV7: await GovernorVotesLogicLibV7.getAddress(),
+        },
+        {
           GovernorClockLogic: await GovernorClockLogicLib.getAddress(),
           GovernorConfigurator: await GovernorConfiguratorLib.getAddress(),
           GovernorDepositLogic: await GovernorDepositLogicLib.getAddress(),
@@ -1153,7 +1209,8 @@ export const getOrDeployContractInstances = async ({
     },
   )) as RelayerRewardsPool
 
-  const dynamicBaseAllocationPool = (await deployProxy("DBAPool", [
+  // Deploy DBAPool V1
+  const dbaPoolV1 = (await deployProxy("DBAPoolV1", [
     {
       admin: owner.address,
       x2EarnApps: await x2EarnApps.getAddress(),
@@ -1162,7 +1219,24 @@ export const getOrDeployContractInstances = async ({
       b3tr: await b3tr.getAddress(),
       distributionStartRound: 1,
     },
-  ])) as DBAPool
+  ])) as DBAPoolV1
+
+  // Grant UPGRADER_ROLE to owner so we can upgrade
+  const UPGRADER_ROLE = await dbaPoolV1.UPGRADER_ROLE()
+  const grantRoleTx = await dbaPoolV1.connect(owner).grantRole(UPGRADER_ROLE, owner.address)
+  await grantRoleTx.wait()
+
+  // Upgrade to V2
+  const dynamicBaseAllocationPool = (await upgradeProxy(
+    "DBAPoolV1",
+    "DBAPool",
+    await dbaPoolV1.getAddress(),
+    [], // No initialization args for V2
+    {
+      version: 2,
+      logOutput: false,
+    },
+  )) as DBAPool
 
   const contractAddresses: Record<string, string> = {
     B3TR: await b3tr.getAddress(),
@@ -1296,6 +1370,9 @@ export const getOrDeployContractInstances = async ({
   await grantsManager.connect(owner).grantRole(await grantsManager.GOVERNANCE_ROLE(), await governor.getAddress()) // prev initialized with (TEMP_GOVERNOR_ADDRESS= owner.address)
   await grantsManager.connect(owner).grantRole(await grantsManager.DEFAULT_ADMIN_ROLE(), owner.address)
 
+  // Grant PROPOSAL_STATE_MANAGER_ROLE to owner in B3TRGovernor contract
+  await governor.connect(owner).grantRole(await governor.PROPOSAL_STATE_MANAGER_ROLE(), owner.address)
+
   // Bootstrap and start emissions
   if (bootstrapAndStartEmissions) {
     await callBootstrapAndStartEmissions()
@@ -1378,6 +1455,14 @@ export const getOrDeployContractInstances = async ({
     governorQuorumLogicLibV6: GovernorQuorumLogicLibV6,
     governorStateLogicLibV6: GovernorStateLogicLibV6,
     governorVotesLogicLibV6: GovernorVotesLogicLibV6,
+    governorClockLogicLibV7: GovernorClockLogicLibV7,
+    governorConfiguratorLibV7: GovernorConfiguratorLibV7,
+    governorDepositLogicLibV7: GovernorDepositLogicLibV7,
+    governorFunctionRestrictionsLogicLibV7: GovernorFunctionRestrictionsLogicLibV7,
+    governorProposalLogicLibV7: GovernorProposalLogicLibV7,
+    governorQuorumLogicLibV7: GovernorQuorumLogicLibV7,
+    governorStateLogicLibV7: GovernorStateLogicLibV7,
+    governorVotesLogicLibV7: GovernorVotesLogicLibV7,
     passportChecksLogic: PassportChecksLogic,
     passportDelegationLogic: PassportDelegationLogic,
     passportEntityLogic: PassportEntityLogic,
