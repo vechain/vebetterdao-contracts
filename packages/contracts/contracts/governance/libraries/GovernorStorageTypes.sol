@@ -119,5 +119,12 @@ library GovernorStorageTypes {
     mapping(GovernorTypes.ProposalType => uint256) requiredGMLevelByProposalType;
     // Checkpoints to store the deposits user
     mapping(address user => Checkpoints.Trace208 timepoint) depositsVotingPower;
+    // ------------------------------- Version 8 -------------------------------
+    // Mapping to track the development status of executed proposals
+    // @dev This tracks whether a proposal that has been executed is in a development phase
+    // - PendingDevelopment: Proposal is not in a development phase
+    // - InDevelopment: Development phase is in progress
+    // - Completed: Development phase is completed
+    mapping(uint256 proposalId => GovernorTypes.ProposalDevelopmentState) proposalDevelopmentState;
   }
 }

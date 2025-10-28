@@ -165,6 +165,13 @@ interface IB3TRGovernor is IERC165, IERC6372 {
   error GranteeCannotDepositOwnGrant(uint256 proposalId);
 
   /**
+   * @dev Thrown when a proposal is not allowed to perform a specific action.
+   * Some actions are restricted to Standard proposals only, others to Grant proposals only.
+   * eg. Executable proposals cannot be marked as in development if not executed yet but Succeeded.
+   */
+  error GovernorRestrictedProposal(uint256 proposalId, GovernorTypes.ProposalType proposalType);
+
+  /**
    * @dev Emitted when a proposal is created
    */
   event ProposalCreated(
@@ -283,6 +290,21 @@ interface IB3TRGovernor is IERC165, IERC6372 {
 
   /// @dev Emitted when a deposit is withdrawn from a proposal.
   event ProposalWithdraw(address indexed withdrawer, uint256 indexed proposalId, uint256 amount);
+
+  /**
+   * @dev Emitted when a proposal is marked as in development.
+   */
+  event ProposalInDevelopment(uint256 proposalId);
+
+  /**
+   * @dev Emitted when a proposal is marked as completed.
+   */
+  event ProposalCompleted(uint256 proposalId);
+
+  /**
+   * @dev Emitted when the development state of a proposal is reset back to pending development.
+   */
+  event ProposalDevelopmentStateReset(uint256 proposalId);
 
   /**
    * @notice module:core

@@ -100,6 +100,8 @@ contract B3TRGovernor is
   bytes32 public constant CONTRACTS_ADDRESS_MANAGER_ROLE = keccak256("CONTRACTS_ADDRESS_MANAGER_ROLE");
   /// @notice The role that can execute a proposal
   bytes32 public constant PROPOSAL_EXECUTOR_ROLE = keccak256("PROPOSAL_EXECUTOR_ROLE");
+  /// @notice The role that can mark a proposal in development/completed state
+  bytes32 public constant PROPOSAL_STATE_MANAGER_ROLE = keccak256("PROPOSAL_STATE_MANAGER_ROLE");
 
   /// @custom:oz-upgrades-unsafe-allow constructor
   constructor() {
@@ -144,42 +146,6 @@ contract B3TRGovernor is
       _checkRole(role, _msgSender());
     }
     _;
-  }
-
-  /**
-   * @notice Initializes the contract with the initial parameters
-   * @dev This function is called only once during the contract deployment
-   * @param data Initialization data containing the initial settings for the governor
-   */
-  function initialize(
-    GovernorTypes.InitializationData memory data,
-    GovernorTypes.InitializationRolesData memory rolesData
-  ) external initializer {
-    __GovernorStorage_init(data, "B3TRGovernor");
-    __AccessControl_init();
-    __UUPSUpgradeable_init();
-    __Pausable_init();
-
-    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
-    GovernorQuorumLogic.updateQuorumNumerator($, data.quorumPercentage);
-
-    // Validate and set the governor external contracts storage
-    require(address(rolesData.governorAdmin) != address(0), "B3TRGovernor: governor admin address cannot be zero");
-    _grantRole(DEFAULT_ADMIN_ROLE, rolesData.governorAdmin);
-    _grantRole(GOVERNOR_FUNCTIONS_SETTINGS_ROLE, rolesData.governorFunctionSettingsRoleAddress);
-    _grantRole(PAUSER_ROLE, rolesData.pauser);
-    _grantRole(CONTRACTS_ADDRESS_MANAGER_ROLE, rolesData.contractsAddressManager);
-    _grantRole(PROPOSAL_EXECUTOR_ROLE, rolesData.proposalExecutor);
-  }
-
-  function initializeV4(IVeBetterPassport _veBetterPassport) public reinitializer(4) {
-    __GovernorStorage_init_v4(_veBetterPassport);
-  }
-
-  function initializeV7(
-    GovernorTypes.InitializationDataV7 memory initializationDataV7
-  ) public onlyRole(DEFAULT_ADMIN_ROLE) reinitializer(7) {
-    __GovernorStorage_init_v7(initializationDataV7);
   }
 
   /**
@@ -571,7 +537,7 @@ contract B3TRGovernor is
    * @return string The version of the governor
    */
   function version() external pure returns (string memory) {
-    return "7";
+    return "8";
   }
 
   /**
@@ -1066,6 +1032,35 @@ contract B3TRGovernor is
         grantsReceiver,
         milestonesDetailsMetadataURI
       );
+  }
+
+  /**
+   * @notice Reset the development state of a proposal back to pending development
+   * @param proposalId The id of the proposal
+   * @dev This should reset the enum state back to the original one,
+   * since pending development is not tracked in {GovernorStateLogic._state} condition
+   */
+  function resetDevelopmentState(uint256 proposalId) public onlyRole(PROPOSAL_STATE_MANAGER_ROLE) {
+    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
+    GovernorProposalLogic.resetDevelopmentState($, proposalId);
+  }
+
+  /**
+   * @notice Mark a proposal as in development
+   * @param proposalId The id of the proposal
+   */
+  function markAsInDevelopment(uint256 proposalId) public onlyRole(PROPOSAL_STATE_MANAGER_ROLE) {
+    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
+    GovernorProposalLogic.markAsInDevelopment($, proposalId);
+  }
+
+  /**
+   * @notice Mark a proposal as completed
+   * @param proposalId The id of the proposal
+   */
+  function markAsCompleted(uint256 proposalId) public onlyRole(PROPOSAL_STATE_MANAGER_ROLE) {
+    GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
+    GovernorProposalLogic.markAsCompleted($, proposalId);
   }
 
   /**

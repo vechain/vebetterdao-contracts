@@ -102,14 +102,16 @@ library GovernorTypes {
 
   // ProposalState enum to store the state of a proposal
   enum ProposalState {
-    Pending, 
-    Active, 
-    Canceled, 
-    Defeated, 
-    Succeeded, 
-    Queued, 
-    Executed, 
-    DepositNotMet
+    Pending,
+    Active,
+    Canceled,
+    Defeated,
+    Succeeded,
+    Queued,
+    Executed,
+    DepositNotMet,
+    InDevelopment,
+    Completed
   }
 
   /**
@@ -134,5 +136,12 @@ library GovernorTypes {
   enum ProposalType {
     Standard,
     Grant
+  }
+
+  // Proposal Development State
+  enum ProposalDevelopmentState {
+    PendingDevelopment,
+    InDevelopment,
+    Completed
   }
 }
