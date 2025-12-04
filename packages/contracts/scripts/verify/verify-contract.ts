@@ -2,6 +2,13 @@ import * as fs from "fs"
 import * as path from "path"
 import axios from "axios"
 import { glob } from "glob"
+import {
+  copySourceFiles,
+  findContractMetadata,
+  getProjectPaths,
+  pollVerificationJob as pollVerificationJobUtil,
+  submitVerification,
+} from "./verify-utils"
 
 interface NetworkInfo {
   id: string
@@ -230,37 +237,6 @@ async function main() {
 }
 
 /**
- * Determines the base paths for the project based on current working directory
- */
-function getProjectPaths() {
-  // Check if we're running from root (has packages/contracts) or from packages/contracts
-  const cwd = process.cwd()
-  const isRunningFromRoot = fs.existsSync(path.join(cwd, "packages/contracts"))
-
-  if (isRunningFromRoot) {
-    return {
-      contractsDir: path.join(cwd, "packages/contracts/contracts"),
-      artifactsDir: path.join(cwd, "packages/contracts/artifacts"),
-      packageDir: path.join(cwd, "packages/contracts"),
-    }
-  } else {
-    // Running from packages/contracts or packages/contracts/scripts/verify
-    const contractsExists = fs.existsSync(path.join(__dirname, "../../contracts"))
-    if (contractsExists) {
-      return {
-        contractsDir: path.join(__dirname, "../../contracts"),
-        artifactsDir: path.join(__dirname, "../../artifacts"),
-        packageDir: path.join(__dirname, "../.."),
-      }
-    } else {
-      throw new Error(
-        "Could not determine project structure. Please run from project root or packages/contracts directory.",
-      )
-    }
-  }
-}
-
-/**
  * Discovers all available contracts in the contracts directory
  */
 function discoverContracts(): ContractInfo[] {
@@ -290,107 +266,6 @@ function discoverContracts(): ContractInfo[] {
   }
 
   return contracts
-}
-
-/**
- * Finds contract metadata in build-info files
- */
-function findContractMetadata(contractPath: string, contractName: string): any {
-  const { artifactsDir } = getProjectPaths()
-  const buildInfoDir = path.join(artifactsDir, "build-info")
-
-  if (!fs.existsSync(buildInfoDir)) {
-    throw new Error("Build info directory not found. Make sure you have compiled the contracts.")
-  }
-
-  const buildInfoFiles = fs.readdirSync(buildInfoDir).filter(file => file.endsWith(".json"))
-
-  if (buildInfoFiles.length === 0) {
-    throw new Error("No build-info files found. Make sure you have compiled the contracts.")
-  }
-
-  // Try different path formats
-  const possiblePaths = [
-    contractPath,
-    `contracts/${contractPath}`,
-    contractPath.replace(/\\/g, "/"), // Normalize path separators
-  ]
-
-  for (const file of buildInfoFiles) {
-    const buildInfoPath = path.join(buildInfoDir, file)
-    const buildInfo = JSON.parse(fs.readFileSync(buildInfoPath, "utf8"))
-
-    if (buildInfo.output && buildInfo.output.contracts) {
-      for (const tryPath of possiblePaths) {
-        if (buildInfo.output.contracts[tryPath] && buildInfo.output.contracts[tryPath][contractName]) {
-          const contractOutput = buildInfo.output.contracts[tryPath][contractName]
-          if (contractOutput.metadata) {
-            console.log(`Found metadata in ${file} under path: ${tryPath}`)
-            return JSON.parse(contractOutput.metadata)
-          }
-        }
-      }
-    }
-  }
-
-  return null
-}
-
-/**
- * Copies source files based on metadata sources
- */
-function copySourceFiles(metadata: any, tempDir: string, contractsBaseDir: string): string[] {
-  const copiedFiles: string[] = []
-
-  if (!metadata.sources) {
-    throw new Error("No sources found in metadata")
-  }
-
-  console.log("Contract sources found in metadata:")
-
-  for (const [sourcePath, sourceInfo] of Object.entries(metadata.sources)) {
-    console.log(` - ${sourcePath}`)
-
-    // Skip node_modules dependencies - these are handled by Sourcify automatically
-    if (sourcePath.includes("node_modules") || sourcePath.startsWith("@")) {
-      continue
-    }
-
-    // Determine the source file location
-    let sourceFilePath: string
-
-    if (path.isAbsolute(sourcePath)) {
-      sourceFilePath = sourcePath
-    } else {
-      // Try relative to contracts directory first
-      sourceFilePath = path.join(contractsBaseDir, sourcePath)
-
-      // If not found, try relative to project root
-      if (!fs.existsSync(sourceFilePath)) {
-        const { packageDir } = getProjectPaths()
-        sourceFilePath = path.join(packageDir, sourcePath)
-      }
-    }
-
-    if (fs.existsSync(sourceFilePath)) {
-      // Create destination directory structure
-      const destPath = path.join(tempDir, sourcePath)
-      const destDir = path.dirname(destPath)
-
-      if (!fs.existsSync(destDir)) {
-        fs.mkdirSync(destDir, { recursive: true })
-      }
-
-      // Copy the file
-      fs.copyFileSync(sourceFilePath, destPath)
-      copiedFiles.push(sourcePath)
-      console.log(`Copied: ${sourcePath}`)
-    } else {
-      console.warn(`Warning: Source file not found: ${sourceFilePath}`)
-    }
-  }
-
-  return copiedFiles
 }
 
 /**
@@ -452,55 +327,25 @@ async function submitVerificationJobV2(
   timeout: number = 60000,
 ): Promise<VerificationJob> {
   console.log("📤 Submitting verification job to Sourcify v2...")
+  console.log(`📄 Sources: ${copiedFiles.length} files`)
 
-  try {
-    // Use the metadata-based v2 endpoint
-    const url = `https://sourcify.dev/server/v2/verify/metadata/${chainId}/${contractAddress}`
+  const result = await submitVerification(chainId, contractAddress, metadata, copiedFiles, tempDir)
 
-    // Prepare sources object
-    const sources: Record<string, string> = {}
-
-    for (const file of copiedFiles) {
-      const filePath = path.join(tempDir, file)
-      if (fs.existsSync(filePath)) {
-        sources[file] = fs.readFileSync(filePath, "utf8")
-      }
-    }
-
-    // Prepare the request body according to v2 specification
-    const requestBody = {
-      sources: sources,
-      metadata: metadata,
-    }
-
-    console.log(`📄 Sources: ${Object.keys(sources).length} files`)
-
-    const response = await axios.post(url, requestBody, {
-      headers: {
-        "Content-Type": "application/json",
-        "User-Agent": "Contract-Verification-Script/2.0",
-      },
-      timeout,
-    })
-
-    // v2 returns a verification job with verificationId
-    const data = response.data
-
-    if (response.status === 202 && data.verificationId) {
-      return {
-        jobId: data.verificationId,
-        status: "pending",
-        result: undefined,
-      }
-    }
-
-    throw new Error(`Unexpected v2 response: ${JSON.stringify(data)}`)
-  } catch (error: any) {
-    if (error.response?.status === 409) {
-      // Contract already verified
+  if (!result.success) {
+    if (result.error === "ALREADY_VERIFIED") {
       throw new Error("ALREADY_VERIFIED")
     }
-    throw error
+    throw new Error(result.error || "Verification submission failed")
+  }
+
+  if (!result.verificationId) {
+    throw new Error("No verification ID returned")
+  }
+
+  return {
+    jobId: result.verificationId,
+    status: "pending",
+    result: undefined,
   }
 }
 
@@ -514,51 +359,18 @@ async function pollVerificationJob(
 ): Promise<any> {
   console.log(`🔄 Polling verification job: ${verificationId}`)
 
-  const startTime = Date.now()
-  let attempts = 0
+  const result = await pollVerificationJobUtil(verificationId, maxWaitTime, pollInterval)
 
-  while (Date.now() - startTime < maxWaitTime) {
-    attempts++
-
-    try {
-      // Use the correct v2 job status endpoint
-      const response = await axios.get(`https://sourcify.dev/server/v2/verify/${verificationId}`, {
-        timeout: 15000,
-        headers: {
-          "User-Agent": "Contract-Verification-Script/2.0",
-        },
-      })
-
-      const data = response.data
-      console.log(`   📊 Job status (attempt ${attempts}): ${data.isJobCompleted ? "completed" : "pending"}`)
-
-      if (data.isJobCompleted) {
-        if (data.contract && data.contract.match) {
-          console.log("✅ Verification job completed successfully")
-          return data.contract
-        } else if (data.error) {
-          console.error("❌ Verification job failed")
-          throw new Error(data.error.message || "Verification job failed")
-        } else {
-          console.error("❌ Verification job completed but without success")
-          throw new Error("Verification failed - no match found")
-        }
-      }
-
-      // Job is still pending/processing, continue polling
-    } catch (error: any) {
-      if (error.response?.status === 404) {
-        throw new Error(`Verification job ${verificationId} not found`)
-      }
-      console.warn(`⚠️  Error polling job status: ${error.message}`)
-      throw error
-    }
-
-    // Wait before next poll
-    await new Promise(resolve => setTimeout(resolve, pollInterval))
+  if (!result.success) {
+    throw new Error(result.error || "Verification job failed")
   }
 
-  throw new Error(`Verification job timed out after ${maxWaitTime / 1000}s`)
+  if (result.data) {
+    console.log("✅ Verification job completed successfully")
+    return result.data
+  }
+
+  throw new Error("No contract data returned")
 }
 
 /**
