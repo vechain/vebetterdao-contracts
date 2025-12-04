@@ -12,8 +12,6 @@ import TreasuryContractJson from "./artifacts/contracts/Treasury.sol/Treasury.js
 import X2EarnAppsJson from "./artifacts/contracts/X2EarnApps.sol/X2EarnApps.json"
 import TreasuryJson from "./artifacts/contracts/Treasury.sol/Treasury.json"
 import X2EarnRewardsPoolJson from "./artifacts/contracts/X2EarnRewardsPool.sol/X2EarnRewardsPool.json"
-import VechainNodesJson from "./artifacts/contracts/mocks/VechainNodes/TokenAuction.sol/TokenAuction.json"
-import NodeManagementV3Json from "./artifacts/contracts/mocks/Stargate/NodeManagement/NodeManagementV3.sol/NodeManagementV3.json"
 import VeBetterPassportJson from "./artifacts/contracts/ve-better-passport/VeBetterPassport.sol/VeBetterPassport.json"
 import GrantsManagerJson from "./artifacts/contracts/GrantsManager.sol/GrantsManager.json"
 import DBAPoolJson from "./artifacts/contracts/DBAPool.sol/DBAPool.json"
@@ -32,8 +30,6 @@ export {
   X2EarnApps__factory,
   Treasury__factory,
   X2EarnRewardsPool__factory,
-  TokenAuction__factory,
-  NodeManagementV3__factory as NodeManagement__factory,
   VeBetterPassport__factory,
   GrantsManager__factory,
   DBAPool__factory,
@@ -54,8 +50,6 @@ export {
   X2EarnAppsJson,
   TreasuryJson,
   X2EarnRewardsPoolJson,
-  VechainNodesJson,
-  NodeManagementV3Json as NodeManagementJson,
   VeBetterPassportJson,
   GrantsManagerJson,
   DBAPoolJson,
