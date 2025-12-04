@@ -52,6 +52,10 @@ const config: HardhatUserConfig = {
   networks: {
     hardhat: {
       chainId: 1337,
+      accounts: {
+        count: 20,
+        accountsBalance: "1000000000000000000000000", // 1,000,000 ETH per account (100x default)
+      },
     },
     vechain_solo: {
       url: getSoloUrl(),
@@ -59,6 +63,7 @@ const config: HardhatUserConfig = {
         mnemonic: getMnemonic(),
         count: 20,
         path: HDKey.VET_DERIVATION_PATH,
+        accountsBalance: "1000000000000000000000000",
       },
       gas: 10000000,
     },
@@ -75,15 +80,6 @@ const config: HardhatUserConfig = {
     vechain_mainnet: {
       url: "https://mainnet.vechain.org",
       chainId: 100009,
-      accounts: {
-        mnemonic: getMnemonic(),
-        count: 20,
-        path: HDKey.VET_DERIVATION_PATH,
-      },
-      gas: 10000000,
-    },
-    galactica_test: {
-      url: "https://galactica.live.dev.node.vechain.org",
       accounts: {
         mnemonic: getMnemonic(),
         count: 20,
