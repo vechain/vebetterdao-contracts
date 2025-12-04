@@ -29,7 +29,7 @@ import { AppsStorageUpgradeable } from "./x-2-earn-apps/modules/AppsStorageUpgra
 import { ContractSettingsUpgradeable } from "./x-2-earn-apps/modules/ContractSettingsUpgradeable.sol";
 import { VoteEligibilityUpgradeable } from "./x-2-earn-apps/modules//VoteEligibilityUpgradeable.sol";
 import { EndorsementUpgradeable } from "./x-2-earn-apps/modules/EndorsementUpgradeable.sol";
-import { VechainNodesDataTypes } from "./mocks/Stargate/NodeManagement/libraries/VechainNodesDataTypes.sol";
+import { EndorsementUtils } from "./x-2-earn-apps/libraries/EndorsementUtils.sol";
 import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import { IXAllocationVotingGovernor } from "./interfaces/IXAllocationVotingGovernor.sol";
@@ -49,7 +49,7 @@ import { IXAllocationVotingGovernor } from "./interfaces/IXAllocationVotingGover
  *
  * -------------------- Version 3 --------------------
  * - The contract has been upgraded to version 3 to add node cooldown period.
- * 
+ *
  * -------------------- Version 4 --------------------
  * - Enabling by default the rewards pool for new apps submitted.
  *
@@ -62,6 +62,10 @@ import { IXAllocationVotingGovernor } from "./interfaces/IXAllocationVotingGover
  * - Upon StarGate launch, we updated the NodeManagement contract to V3. This impacted mostly
  *   EndorsementUtils library.
  *   EndorsementUpgradeable module.
+ *
+ * -------------------- Version 7 --------------------
+ * - Integrated Stargate NFT contract for node management and endorsement verification.
+ * - Updated endorsement system to use Stargate NFT for node ownership and token management.
  */
 contract X2EarnApps is
   X2EarnAppsUpgradeable,
@@ -84,12 +88,15 @@ contract X2EarnApps is
   }
 
   /**
-   * @notice Initialize the version 5 contract
+   * @notice Initialize the version 7 contract
+   * @param _stargateNft the address of the Stargate NFT contract
    *
-   * @dev This function is called only once during the contract upgrade from V4 to V5.
-   * This upgrade adds a restriction on creator NFTs holder: they can only be attached to one app.
+   * @dev This function is called only once during the contract deployment
    */
-  function initializeV5() public reinitializer(5) {}
+  function initializeV7(address _stargateNft) external onlyRole(UPGRADER_ROLE) reinitializer(7) {
+    require(_stargateNft != address(0), "X2EarnApps: Invalid Stargate NFT contract address");
+    __Endorsement_init_v7(_stargateNft);
+  }
 
   // ---------- Modifiers ------------ //
 
@@ -130,7 +137,7 @@ contract X2EarnApps is
    * @return sting The version of the contract
    */
   function version() public pure virtual returns (string memory) {
-    return "6";
+    return "7";
   }
 
   // ---------- Overrides ------------ //
@@ -295,7 +302,7 @@ contract X2EarnApps is
    * @dev See {IX2EarnApps-updateNodeEndorsementScores}.
    */
   function updateNodeEndorsementScores(
-    VechainNodesDataTypes.NodeStrengthScores calldata _nodeStrengthScores
+    EndorsementUtils.NodeStrengthScores calldata _nodeStrengthScores
   ) external onlyRole(GOVERNANCE_ROLE) {
     _updateNodeEndorsementScores(_nodeStrengthScores);
   }
@@ -332,13 +339,6 @@ contract X2EarnApps is
   }
 
   /**
-   * @dev See {IX2EarnApps-setNodeManagementContract}.
-   */
-  function setNodeManagementContract(address _nodeManagementContract) public virtual onlyRole(DEFAULT_ADMIN_ROLE) {
-    _setNodeManagementContract(_nodeManagementContract);
-  }
-
-  /**
    * @dev See {IX2EarnApps-setVeBetterPassportContract}.
    */
   function setVeBetterPassportContract(address _veBetterPassportContract) public virtual onlyRole(DEFAULT_ADMIN_ROLE) {
@@ -348,7 +348,9 @@ contract X2EarnApps is
   /**
    * @dev See {IX2EarnApps-setXAllocationVotingGovernor}.
    */
-  function setXAllocationVotingGovernor(address _xAllocationVotingGovernor) public virtual onlyRole(DEFAULT_ADMIN_ROLE) {
+  function setXAllocationVotingGovernor(
+    address _xAllocationVotingGovernor
+  ) public virtual onlyRole(DEFAULT_ADMIN_ROLE) {
     _setXAllocationVotingGovernor(_xAllocationVotingGovernor);
   }
 
@@ -362,7 +364,14 @@ contract X2EarnApps is
   /**
    * @dev See {IX2EarnApps-setX2EarnRewardsPool}.
    */
-  function setX2EarnRewardsPoolContract(address  _x2EarnRewardsPoolContract) public onlyRole(DEFAULT_ADMIN_ROLE) {
-    _setX2EarnRewardsPoolContract( _x2EarnRewardsPoolContract);
+  function setX2EarnRewardsPoolContract(address _x2EarnRewardsPoolContract) public onlyRole(DEFAULT_ADMIN_ROLE) {
+    _setX2EarnRewardsPoolContract(_x2EarnRewardsPoolContract);
+  }
+
+  /**
+   * @dev See {IX2EarnApps-setStargateNFT}.
+   */
+  function setStargateNFT(address _stargateNft) public virtual onlyRole(DEFAULT_ADMIN_ROLE) {
+    _setStargateNFT(_stargateNft);
   }
 }
