@@ -11,7 +11,7 @@ import "../utility/Pausable.sol";
 import "../utility/SafeMath.sol";
 import "../utility/interfaces/IVIP181.sol";
 
-contract ClockAuctionBase is Pausable { 
+contract ClockAuctionBase is Pausable {
     using SafeMath for uint256;
 
     struct Auction {
@@ -44,19 +44,13 @@ contract ClockAuctionBase is Pausable {
     event FeePoolAddressUpdated(address _newFeePoolAddr);
     event FeePercentUpdated(uint8 _newPercent);
 
-    function setFeePoolAddress(address payable _newFeePoolAddr)
-        public
-        onlyOwner
-    {
+    function setFeePoolAddress(address payable _newFeePoolAddr) public onlyOwner {
         require(_newFeePoolAddr != address(0), "invalid address");
         feePool = _newFeePoolAddr;
         emit FeePoolAddressUpdated(_newFeePoolAddr);
     }
 
-    function setFeePercent(uint8 _newPercent)
-        public
-        onlyOwner
-    {
+    function setFeePercent(uint8 _newPercent) public onlyOwner {
         require(_newPercent < 100, "must less than 100");
         feePercnt = _newPercent;
         emit FeePercentUpdated(_newPercent);
@@ -73,9 +67,7 @@ contract ClockAuctionBase is Pausable {
         uint64 _duration,
         uint64 _startedAt,
         address payable _seller
-    )
-        internal
-    {
+    ) internal {
         Auction memory _auction = Auction(
             _auctionId,
             _seller,
@@ -89,10 +81,11 @@ contract ClockAuctionBase is Pausable {
     }
 
     /// @dev Computes the price and transfers winnings. Does NOT transfer ownership of token.
-    function _bid(address payable _buyer, uint256 _tokenId, uint256 _bidAmount)
-        internal
-        returns (uint256)
-    {
+    function _bid(
+        address payable _buyer,
+        uint256 _tokenId,
+        uint256 _bidAmount
+    ) internal returns (uint256) {
         Auction storage auction = tokenIdToAuction[_tokenId];
 
         // Check that the bid is greater than or equal to the current price
@@ -123,9 +116,7 @@ contract ClockAuctionBase is Pausable {
 
     /// @dev Cancels an auction unconditionally.
     ///      It will removes an auction from the list of open auctions.
-    function _cancelAuction(uint256 _tokenId)
-        internal
-    {
+    function _cancelAuction(uint256 _tokenId) internal {
         delete auctionWhiteList[tokenIdToAuction[_tokenId].auctionId];
         delete tokenIdToAuction[_tokenId];
     }
@@ -134,11 +125,7 @@ contract ClockAuctionBase is Pausable {
     ///      functions (this one, that computes the duration from the auction
     ///      structure, and the other that does the price computation) so we
     ///      can easily test that the price computation works correctly.
-    function _currentPrice(Auction storage _auction)
-        internal
-        view
-        returns (uint256)
-    {
+    function _currentPrice(Auction storage _auction) internal view returns (uint256) {
         uint64 secondsPassed = uint64(block.timestamp) - _auction.startedAt;
 
         if (secondsPassed >= _auction.duration) {
@@ -149,12 +136,12 @@ contract ClockAuctionBase is Pausable {
         // Count the times of price-change.
         // The price of auction will change per 300s
         uint256 changeTimes = (uint256(secondsPassed) - 1) / 300;
-        // The total price-change times 
+        // The total price-change times
         uint256 totalTimes = (uint256(_auction.duration) - 1) / 300;
         // The amount of every change
-        uint256 perTimesChange = (uint256(_auction.endingPrice) - uint256(_auction.startingPrice)) / totalTimes;
-    
+        uint256 perTimesChange = (uint256(_auction.endingPrice) - uint256(_auction.startingPrice)) /
+            totalTimes;
+
         return uint256(uint256(_auction.startingPrice) + changeTimes * perTimesChange);
     }
-
 }

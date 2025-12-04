@@ -36,7 +36,7 @@ export function createTestConfig() {
 
     /*
         Level => B3TR Required
-  
+
         2 (Moon) => 10,000 B3TR
         3 (Mercury) => 25,000 B3TR
         4 (Venus) => 50,000 B3TR
@@ -80,7 +80,7 @@ export function createTestConfig() {
 
     /*
       Level => Percentage Multiplier
-  
+
       2 (Moon) => 10% (1.1x)
       3 (Mercury) => 20% (1.2x)
       4 (Venus) => 50% (1.5x)
@@ -110,6 +110,7 @@ export function createTestConfig() {
     // version 2
     XAPP_GRACE_PERIOD: 120960, // 120960 blocks = 2 weeks
     VECHAIN_NODES_CONTRACT_ADDRESS: "0xb81E9C5f9644Dec9e5e3Cac86b4461A222072302", // The contract address of the VeChainNodes contract on mainnet
+
     // X 2 Earn Rewards Pool
     X_2_EARN_INITIAL_IMPACT_KEYS: [
       "carbon",
@@ -180,8 +181,12 @@ export function createTestConfig() {
 
     B3TR_GOVERNOR_STANDARD_GM_WEIGHT: 1, // earth
     B3TR_GOVERNOR_GRANT_GM_WEIGHT: 1, // earth
+    STARGATE_CONTRACT_ADDRESS: "0x0000000000000000000000000000000000000000",
     STARGATE_NFT_CONTRACT_ADDRESS: "0x0000000000000000000000000000000000000000",
     STARGATE_DELEGATE_CONTRACT_ADDRESS: "0x0000000000000000000000000000000000000000",
     NODE_MANAGEMENT_CONTRACT_ADDRESS: "0x0000000000000000000000000000000000000000",
+    X_ALLOCATION_POOL_UNALLOCATED_FUNDS_ROUND_IDS: [],
+    X_ALLOCATION_POOL_UNALLOCATED_FUNDS_V7: [],
+    DBA_DISTRIBUTION_START_ROUND: 0,
   })
 }

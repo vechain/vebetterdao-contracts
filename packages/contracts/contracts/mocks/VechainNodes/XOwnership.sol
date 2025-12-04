@@ -15,9 +15,7 @@ import "./ThunderFactory.sol";
 
 import "./utility/interfaces/IVIP181Basic.sol";
 
-
 contract XOwnership is ThunderFactory, IVIP181Basic, SupportsInterface {
-
     using SafeMath for uint256;
 
     string public name = "VeChainThor Node Token";
@@ -31,23 +29,14 @@ contract XOwnership is ThunderFactory, IVIP181Basic, SupportsInterface {
         _registerInterface(InterfaceId_VIP181Metadata);
     }
 
-    function tokenURI(uint256 _tokenId)
-        external
-        view
-        returns (string memory)
-    {
+    function tokenURI(uint256 _tokenId) external view returns (string memory) {
         return Strings.strConcat(tokenMetadataBaseURI, Strings.uint2str(_tokenId));
     }
 
     /// @dev Gets the balance of the specified address
     /// @param _owner address to query the balance of
     /// @return uint256 representing the amount owned by the passed address
-    function balanceOf(address _owner)
-        public
-        override
-        view
-        returns (uint256)
-    {
+    function balanceOf(address _owner) public view override returns (uint256) {
         // Everyone can only possess one token at most
         return isToken(_owner) ? 1 : 0;
     }
@@ -55,27 +44,15 @@ contract XOwnership is ThunderFactory, IVIP181Basic, SupportsInterface {
     /// @dev Gets the owner of the specified token ID
     /// @param _tokenId uint256 ID of the token to query the owner of
     /// @return owner address currently marked as the owner of the given token ID
-    function ownerOf(uint256 _tokenId)
-        public
-        override
-        view
-        returns (address)
-    {
+    function ownerOf(uint256 _tokenId) public view override returns (address) {
         return idToOwner[_tokenId];
     }
 
-    function totalSupply()
-        public
-        view
-        returns(uint256)
-    {
+    function totalSupply() public view returns (uint256) {
         return uint256(normalTokenCount + xTokenCount);
     }
 
-    function setTokenMetadataBaseURI(string memory _newBaseURI)
-        external
-        onlyOwner
-    {
+    function setTokenMetadataBaseURI(string memory _newBaseURI) external onlyOwner {
         tokenMetadataBaseURI = _newBaseURI;
     }
 
@@ -85,11 +62,7 @@ contract XOwnership is ThunderFactory, IVIP181Basic, SupportsInterface {
     ///      Can only be called by the token owner or an approved operator.
     /// @param _to address to be approved for the given token ID
     /// @param _tokenId uint256 ID of the token to be approved
-    function approve(address _to, uint256 _tokenId)
-        public
-        override
-        whenNotPaused
-    {
+    function approve(address _to, uint256 _tokenId) public override whenNotPaused {
         address _owner = ownerOf(_tokenId);
         require(_to != _owner, "cannot approve your own token");
         require(msg.sender == _owner, "permission denied");
@@ -100,19 +73,11 @@ contract XOwnership is ThunderFactory, IVIP181Basic, SupportsInterface {
     /// @dev Gets the approved address for a token ID, or zero if no address set
     /// @param _tokenId uint256 ID of the token to query the approval of
     /// @return address currently approved for the given token ID
-    function getApproved(uint256 _tokenId)
-        public
-        override
-        view
-        returns (address)
-    {
+    function getApproved(uint256 _tokenId) public view override returns (address) {
         return tokenApprovals[_tokenId];
     }
 
-    function transfer(address _to, uint256 _tokenId)
-        public
-        whenNotPaused
-    {
+    function transfer(address _to, uint256 _tokenId) public whenNotPaused {
         require(_to != address(0), "invalid address");
         // Can only transfer your own token.
         require(ownerOf(_tokenId) == msg.sender, "permission denied");
@@ -131,11 +96,11 @@ contract XOwnership is ThunderFactory, IVIP181Basic, SupportsInterface {
     /// @param _from current owner of the token
     /// @param _to address to receive the ownership of the given token ID
     /// @param _tokenId uint256 ID of the token to be transferred
-    function transferFrom(address _from, address _to, uint256 _tokenId)
-        public
-        override
-        whenNotPaused
-    {
+    function transferFrom(
+        address _from,
+        address _to,
+        uint256 _tokenId
+    ) public override whenNotPaused {
         require(_to != address(0), "invalid address");
         // Check for approval and valid ownership
         require(ownerOf(_tokenId) == _from, "permission denied");
@@ -157,35 +122,25 @@ contract XOwnership is ThunderFactory, IVIP181Basic, SupportsInterface {
     /// @param _tokenId uint256 ID of the token to be transferred
     /// @return bool whether the msg.sender is approved for the given token ID,
     ///         is an operator of the owner, or is the owner of the token
-    function isApprovedOrOwner(address _spender, uint256 _tokenId)
-        internal
-        view
-        returns (bool)
-    {
+    function isApprovedOrOwner(address _spender, uint256 _tokenId) internal view returns (bool) {
         address _owner = ownerOf(_tokenId);
         return (_spender == _owner || getApproved(_tokenId) == _spender);
     }
 
-    function _clearApprovalAndTransfer(address _from, address _to, uint256 _tokenId)
-        internal
-    {
+    function _clearApprovalAndTransfer(address _from, address _to, uint256 _tokenId) internal {
         _clearApproval(_tokenId);
         _transfer(_from, _to, _tokenId);
     }
 
     // INTERNAL FUNCTIONS
 
-    function _approve(uint256 _tokenId, address _to)
-        internal
-    {
+    function _approve(uint256 _tokenId, address _to) internal {
         tokenApprovals[_tokenId] = _to;
         address _owner = ownerOf(_tokenId);
         emit Approval(_owner, _to, _tokenId);
     }
 
-    function _transfer(address _from, address _to, uint256 _tokenId)
-        internal
-    {
+    function _transfer(address _from, address _to, uint256 _tokenId) internal {
         require(!_exist(_to), "_to already hold a token");
         require(!_isContract(_to), "_to mustn't a contract");
 
@@ -201,15 +156,12 @@ contract XOwnership is ThunderFactory, IVIP181Basic, SupportsInterface {
         emit Transfer(_from, _to, _tokenId);
     }
 
-    function _isContract(address addr)
-        internal
-        view
-        returns (bool)
-    {
+    function _isContract(address addr) internal view returns (bool) {
         uint size;
         /* solium-disable-next-line security/no-inline-assembly */
-        assembly { size := extcodesize(addr) }
+        assembly {
+            size := extcodesize(addr)
+        }
         return size > 0;
     }
-
 }

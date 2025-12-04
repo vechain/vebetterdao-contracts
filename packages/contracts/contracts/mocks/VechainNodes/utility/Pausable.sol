@@ -21,30 +21,20 @@ contract Pausable is Ownable {
         _;
     }
 
-    modifier whenPaused {
+    modifier whenPaused() {
         require(paused, "needs protocol paused");
         _;
     }
 
     /// @dev called by the owner to pause, triggers stopped state
-    function pause()
-        public
-        onlyOwner
-        whenNotPaused
-        returns (bool)
-    {
+    function pause() public onlyOwner whenNotPaused returns (bool) {
         paused = true;
         emit Pause();
         return true;
     }
 
     /// @dev called by the owner to unpause, returns to normal state
-    function unpause() 
-        public
-        onlyOwner
-        whenPaused
-        returns (bool)
-    {
+    function unpause() public onlyOwner whenPaused returns (bool) {
         paused = false;
         emit Unpause();
         return true;

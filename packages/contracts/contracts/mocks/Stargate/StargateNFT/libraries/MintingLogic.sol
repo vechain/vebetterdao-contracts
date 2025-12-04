@@ -11,13 +11,16 @@
 
 pragma solidity 0.8.20;
 
-import {DataTypes} from "./DataTypes.sol";
-import {Token} from "./Token.sol";
-import {Clock} from "./Clock.sol";
-import {IStargateNFT} from "../../interfaces/IStargateNFT.sol";
-import {Errors} from "./Errors.sol";
-import {VetGeneratedVtho} from "./VetGeneratedVtho.sol";
-import {Levels} from "./Levels.sol";
+import { DataTypes } from "./DataTypes.sol";
+import { Token } from "./Token.sol";
+import { Clock } from "./Clock.sol";
+import { IStargateNFT } from "../../interfaces/IStargateNFT.sol";
+import { Errors } from "./Errors.sol";
+import { Levels } from "./Levels.sol";
+import { IStargate } from "../../interfaces/IStargate.sol";
+import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /// @title MintingLogic
 /// @notice Library for the StargateNFT contract to stake VET and mint NFTs, migrate tokens from the legacy nodes contract,
@@ -29,9 +32,24 @@ import {Levels} from "./Levels.sol";
 /// Eg: for x nodes the cap is 0, which means no one can mint a xnode, but every time a user migrates the cap and circulating supply is increased by 1 for that x level.
 /// By doing this we can also preserve the token ids: since we know the totalSupply of legacy nodes we can just say that all new nodes will start from previousTotalSupply + 1,
 /// while all migrated nodes will have their original token id.
+/// ------------------ Version 3 ------------------ //
+/// - When unstaking, if the token has VET held by the protocol, we transfer them to this contract by interacting with the Hayabysa Stargate contract
+/// - Removed the _autorenew parameter from stakeAndDelegate and migrateAndDelegate, since it is not needed anymore
+/// - Added the _validator parameter to stakeAndDelegate and migrateAndDelegate, since it is now required to delegate the token
+/// - Interact with the Stargate contract to delegate the token instead of the StargateDelegation contract
+/// - Removed the migrate function, since we want to enfore entering the delegation
+/// - moved the following functions to the Stargate contract:
+///   - stake
+///   - unstake
+///   - stakeAndDelegate
+///   - migrateAndDelegate
+/// - added a new mint method that mints a new nft without checking the msg.value
+/// - added a new burn method that burns a token without checking the msg.value
 library MintingLogic {
-    // ------------------ Events ------------------ //
+    using EnumerableSet for EnumerableSet.UintSet;
+    using SafeERC20 for IERC20;
 
+    // ------------------ Events ------------------ //
     /// @notice Emitted when an NFT is minted
     event TokenMinted(
         address indexed owner,
@@ -49,131 +67,109 @@ library MintingLogic {
         uint256 vetAmountStaked
     );
 
+    /**
+     * @notice Emitted when a whitelist entry is removed
+     * @param owner The address of the whitelist entry
+     */
+    event WhitelistEntryRemoved(address owner);
+
+    /// @notice Emitted when a token maturity period is boosted
+    event MaturityPeriodBoosted(
+        uint256 indexed tokenId,
+        address indexed paidBy,
+        uint256 paidAmount,
+        uint256 boostedBlocks
+    );
+
     // ------------------ Setters ------------------ //
 
-    /// @notice Stakes VET and mints an NFT
-    /// @param _levelId The ID of the token level to mint, VET as msg.value
+    /// @notice Mints an NFT
+    /// @param _levelId The ID of the token level to mint
+    /// @param _to The address to mint the NFT to
     /// @return tokenId The ID of the minted NFT
-    function stake(
-        DataTypes.StargateNFTStorage storage $,
-        uint8 _levelId
-    ) external returns (uint256 tokenId) {
-        return _stake($, _levelId);
-    }
-
-    /// @notice Stakes VET and mints an NFT, and calls the StargateDelegation contract to delegate the token.
-    /// This way the user can do both actions in a single transaction, without having to call the StargateDelegation contract separately.
-    /// @param _levelId The ID of the token level to mint, VET as msg.value
-    /// @param _autorenew Whether the token should be delegated forever
-    /// @return tokenId The ID of the minted NFT
-    function stakeAndDelegate(
+    function mint(
         DataTypes.StargateNFTStorage storage $,
         uint8 _levelId,
-        bool _autorenew
+        address _to
     ) external returns (uint256 tokenId) {
-        // Stake the token
-        tokenId = _stake($, _levelId);
-
-        // Check if the owner changed in the stake process, if yes revert
-        // (Eg: receiver is a smart contract with onERC721Received() fallback that transfers the NFT)
-        address owner = IStargateNFT(address(this)).ownerOf(tokenId);
-        if (owner != msg.sender) {
-            revert Errors.NotOwner(tokenId, msg.sender, owner);
-        }
-
-        // Delegate the token
-        $.stargateDelegation.delegate(tokenId, _autorenew);
-
-        return tokenId;
+        return _mint($, _levelId, _to);
     }
 
-    /// @notice Migrates a token from the legacy nodes contract to StargateNFT, preserving the tokenId
-    /// @param _tokenId The ID of the token to migrate
-    function migrate(DataTypes.StargateNFTStorage storage $, uint256 _tokenId) external {
-        return _migrate($, _tokenId);
+    function burn(DataTypes.StargateNFTStorage storage $, uint256 _tokenId) external {
+        _burn($, _tokenId);
+    }
+
+    function boostOnBehalfOf(
+        DataTypes.StargateNFTStorage storage $,
+        address _sender,
+        uint256 _tokenId
+    ) external {
+        // check that the token is not already boosted
+        if ($.maturityPeriodEndBlock[_tokenId] <= Clock._clock()) {
+            revert Errors.MaturityPeriodEnded(_tokenId);
+        }
+
+        uint256 requiredBoostAmount = _boostAmount($, _tokenId);
+
+        uint256 balance = $.vthoToken.balanceOf(_sender);
+        // check that the boost amount is enough
+        if ($.vthoToken.balanceOf(_sender) < requiredBoostAmount) {
+            revert Errors.InsufficientBalance(
+                address($.vthoToken),
+                _sender,
+                requiredBoostAmount,
+                balance
+            );
+        }
+
+        // check the allowance
+        uint256 allowance = $.vthoToken.allowance(_sender, address(this));
+        if (allowance < requiredBoostAmount) {
+            revert Errors.InsufficientAllowance(
+                _sender,
+                address(this),
+                allowance,
+                requiredBoostAmount
+            );
+        }
+
+        // get the boosted blocks
+        uint256 boostedBlocks = $.maturityPeriodEndBlock[_tokenId] - Clock._clock();
+        // set the maturity period end block
+        $.maturityPeriodEndBlock[_tokenId] = Clock._clock();
+
+        // burn the VTHO boost amount by transferring to a address(0)
+        $.vthoToken.safeTransferFrom(_sender, address(0), requiredBoostAmount);
+
+        // emit the event
+        emit MaturityPeriodBoosted(_tokenId, _sender, requiredBoostAmount, boostedBlocks);
+    }
+
+    /// @notice Returns the amount of VET required to boost a token's maturity period
+    /// @param _tokenId The ID of the token to boost
+    /// @return boostAmount The amount of VET required to boost the token's maturity period
+    function boostAmount(
+        DataTypes.StargateNFTStorage storage $,
+        uint256 _tokenId
+    ) external view returns (uint256) {
+        return _boostAmount($, _tokenId);
     }
 
     /// @notice Migrates a token from the legacy nodes contract to StargateNFT, and calls the
-    /// StargateDelegation contract to delegate the token. This way the user can do both actions
-    /// in a single transaction, without having to call the StargateDelegation contract separately.
+    /// Stargate contract to delegate the token. This way the user can do both actions
+    /// in a single transaction, without having to call the Stargate contract separately.
     /// @param _tokenId The ID of the token to migrate
-    /// @param _autorenew Whether the token should be delegated forever
-    function migrateAndDelegate(
-        DataTypes.StargateNFTStorage storage $,
-        uint256 _tokenId,
-        bool _autorenew
-    ) external {
+    function migrate(DataTypes.StargateNFTStorage storage $, uint256 _tokenId) external {
         // Migrate the token
         _migrate($, _tokenId);
-
-        // Check if the owner changed in the migration process, if yes revert
-        // (Eg: receiver is a smart contract with onERC721Received() fallback that transfers the NFT)
-        address owner = IStargateNFT(address(this)).ownerOf(_tokenId);
-        if (owner != msg.sender) {
-            // will revert if token owner changed during migrate proccess
-            revert Errors.NotOwner(_tokenId, msg.sender, owner);
-        }
-
-        // Delegate the token
-        $.stargateDelegation.delegate(_tokenId, _autorenew);
-    }
-
-    /// @notice Unstakes a token and returns the VET to the owner
-    /// @dev If the token has pending VTHO rewards, claim them
-    /// @param _tokenId The ID of the token to unstake
-    function unstake(DataTypes.StargateNFTStorage storage $, uint256 _tokenId) external {
-        // Get token, will revert if token does not exist
-        DataTypes.Token memory token = Token._getToken($, _tokenId);
-
-        // Validate token is staked and not delegated
-        // - if the vet amount is 0, it is not staked
-        // - if the delegation is active, it has not requested exit or is exiting
-        // If any of these conditions are true, revert
-        if (token.vetAmountStaked == 0 || $.stargateDelegation.isDelegationActive(_tokenId)) {
-            revert Errors.TokenNotEligible(_tokenId);
-        }
-
-        // Validate the caller is the token owner
-        address owner = IStargateNFT(address(this)).ownerOf(_tokenId);
-        if (owner != msg.sender) {
-            revert Errors.NotOwner(_tokenId, msg.sender, owner);
-        }
-
-        // Validate the contract has enough VET to transfer to the caller
-        if (address(this).balance < token.vetAmountStaked) {
-            revert Errors.InsufficientContractBalance(address(this).balance, token.vetAmountStaked);
-        }
-
-        // Burn the token (it will also claim any pending VTHO rewards)
-        IStargateNFT(address(this))._burnCallback(_tokenId);
-
-        // Clean up token state
-        delete $.tokens[_tokenId];
-        delete $.maturityPeriodEndBlock[_tokenId];
-
-        // Update circulating supply, update cap if token is X
-        Levels._decrementLevelCirculatingSupply($, token.levelId);
-        if ($.levels[token.levelId].isX) {
-            $.cap[token.levelId]--;
-        }
-
-        // Return VET to caller
-        (bool success, ) = owner.call{value: token.vetAmountStaked}("");
-        if (!success) {
-            revert Errors.VetTransferFailed(owner, token.vetAmountStaked);
-        }
-
-        // Emit event
-        // solhint-disable-next-line reentrancy -  This function is secure against reentrancy
-        emit TokenBurned(owner, token.levelId, _tokenId, token.vetAmountStaked);
     }
 
     // ------------------ Internal ------------------ //
-
-    /// @dev Internal function for {stake} and {stakeAndDelegate}
-    function _stake(
+    /// @dev Internal function for {mint}
+    function _mint(
         DataTypes.StargateNFTStorage storage $,
-        uint8 _levelId
+        uint8 _levelId,
+        address _to
     ) internal returns (uint256 tokenId) {
         // Get token level spec (reverts if not found)
         DataTypes.Level memory level = Levels._getLevel($, _levelId);
@@ -181,12 +177,6 @@ library MintingLogic {
         // Validate level circulating supply has not reached cap
         if (Levels._getCirculatingSupply($, _levelId) >= $.cap[_levelId]) {
             revert Errors.LevelCapReached(_levelId);
-        }
-
-        // Validate staking amount, ie msg.value
-        // is the exact amount needed for a specific NFT tier (no more, no less)
-        if (msg.value != level.vetAmountRequiredToStake) {
-            revert Errors.VetAmountMismatch(_levelId, level.vetAmountRequiredToStake, msg.value);
         }
 
         // Update token ID
@@ -201,25 +191,56 @@ library MintingLogic {
             tokenId: tokenId,
             levelId: _levelId,
             mintedAtBlock: Clock._clock(),
-            vetAmountStaked: msg.value,
-            lastVthoClaimTimestamp: Clock._timestamp()
+            vetAmountStaked: level.vetAmountRequiredToStake,
+            lastVetGeneratedVthoClaimTimestamp_deprecated: Clock._timestamp()
         });
 
         // Update the maturity period end block
         $.maturityPeriodEndBlock[tokenId] = Clock._clock() + level.maturityBlocks;
 
         // Call the mint callback on the main contract to mint the NFT
-        IStargateNFT(address(this))._safeMintCallback(msg.sender, tokenId);
+        IStargateNFT(address(this))._safeMintCallback(_to, tokenId);
 
         // solhint-disable-next-line reentrancy -  Allow emiting event after callback
-        emit TokenMinted(msg.sender, _levelId, false, tokenId, msg.value);
+        emit TokenMinted(_to, _levelId, false, tokenId, level.vetAmountRequiredToStake);
 
         return tokenId;
+    }
+
+    function _burn(DataTypes.StargateNFTStorage storage $, uint256 _tokenId) internal {
+        // Get token, will revert if token does not exist
+        DataTypes.Token memory token = Token._getToken($, _tokenId);
+
+        // Get the owner of the token
+        address owner = IStargateNFT(address(this)).ownerOf(_tokenId);
+        // Burn the token
+        IStargateNFT(address(this))._burnCallback(_tokenId);
+        // here we are already calling the _burnCallback which
+        // calls _burn and calls _update, the manager is already removed
+        // in the _update function
+
+        // Clean up token state
+        delete $.tokens[_tokenId];
+        delete $.maturityPeriodEndBlock[_tokenId];
+
+        // Update circulating supply, update cap if token is X
+        Levels._decrementLevelCirculatingSupply($, token.levelId);
+        if ($.levels[token.levelId].isX) {
+            $.cap[token.levelId]--;
+        }
+        // Emit event
+        // solhint-disable-next-line reentrancy -  This function is secure against reentrancy
+        emit TokenBurned(owner, token.levelId, _tokenId, token.vetAmountStaked);
     }
 
     /// @dev Internal function used by {migrate} and {migrateAndDelegate}
     /// @dev Refer to the migration strategy written at the top of the file
     function _migrate(DataTypes.StargateNFTStorage storage $, uint256 _tokenId) internal {
+        // Validate tokenId is not 0
+        if (_tokenId == 0) {
+            revert Errors.ValueCannotBeZero();
+        }
+
         // Validate token is not migrated yet
         // - if token level ID is not 0, it already exists on StargateNFT
         // - if token owner is 0, it does not exist in legacy nodes contract - burned or not minted
@@ -251,17 +272,8 @@ library MintingLogic {
         ) {
             revert Errors.TokenNotReadyForMigration(_tokenId);
         }
-
-        // Validate caller is token owner
-        if (owner != msg.sender) {
-            revert Errors.NotOwner(_tokenId, msg.sender, owner);
-        }
-
-        // Validate msg.value is the exact amount required for the level
+        // assume the msg.value is the exact amount required for the level
         uint256 vetAmountRequiredToStake = Levels._getLevel($, level).vetAmountRequiredToStake;
-        if (msg.value != vetAmountRequiredToStake) {
-            revert Errors.VetAmountMismatch(level, vetAmountRequiredToStake, msg.value);
-        }
 
         // Update the circulating supply and the cap
         Levels._incrementLevelCirculatingSupply($, level);
@@ -272,8 +284,8 @@ library MintingLogic {
             tokenId: _tokenId,
             levelId: level,
             mintedAtBlock: Clock._clock(),
-            vetAmountStaked: msg.value,
-            lastVthoClaimTimestamp: Clock._timestamp()
+            vetAmountStaked: vetAmountRequiredToStake,
+            lastVetGeneratedVthoClaimTimestamp_deprecated: Clock._timestamp()
         });
 
         // Update the maturity period end block
@@ -284,7 +296,7 @@ library MintingLogic {
         $.legacyNodes.downgradeTo(_tokenId, 0);
 
         // Call the mint callback on the main contract to mint the NFT
-        IStargateNFT(address(this))._safeMintCallback(msg.sender, _tokenId);
+        IStargateNFT(address(this))._safeMintCallback(owner, _tokenId);
 
         // Verify after
         // - if the token level ID on StargateNFT is zero, ie minting failed
@@ -294,6 +306,22 @@ library MintingLogic {
         }
 
         // solhint-disable-next-line reentrancy -  Allow emitting event after callback
-        emit TokenMinted(msg.sender, level, true, _tokenId, msg.value);
+        emit TokenMinted(owner, level, true, _tokenId, vetAmountRequiredToStake);
+    }
+
+    function _boostAmount(
+        DataTypes.StargateNFTStorage storage $,
+        uint256 _tokenId
+    ) internal view returns (uint256) {
+        // get the maturity period end block
+        uint64 maturityPeriodEndBlock = $.maturityPeriodEndBlock[_tokenId];
+        // if the token is already matured, the boost amount is 0
+        if (Clock._clock() > maturityPeriodEndBlock) {
+            return 0;
+        }
+        // calculate the boost amount
+        return
+            (maturityPeriodEndBlock - Clock._clock()) *
+            $.boostPricePerBlock[$.tokens[_tokenId].levelId];
     }
 }
