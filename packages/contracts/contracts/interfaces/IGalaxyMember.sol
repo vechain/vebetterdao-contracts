@@ -60,6 +60,7 @@ interface IGalaxyMember {
   event NodeAttached(uint256 indexed nodeTokenId, uint256 indexed tokenId);
   event LevelWhenAttached(uint256 indexed tokenId, uint256 indexed nodeTokenId, uint256 level);
   event LevelWhenDetached(uint256 indexed tokenId, uint256 indexed nodeTokenId, uint256 level);
+  event StargateNFTAddressUpdated(address indexed newAddress, address indexed oldAddress);
 
   /// @notice Returns the role identifier for contracts address manager
   function CONTRACTS_ADDRESS_MANAGER_ROLE() external view returns (bytes32);
@@ -300,6 +301,10 @@ interface IGalaxyMember {
   /// @param _xAllocationsGovernor New governor address
   function setXAllocationsGovernorAddress(address _xAllocationsGovernor) external;
 
+  /// @notice Sets the StargateNFT contract address
+  /// @param _stargateNFT New StargateNFT contract address
+  function setStargateNFTAddress(address _stargateNFT) external;
+
   /// @notice Checks if the contract supports an interface
   /// @param interfaceId Interface identifier
   /// @return True if interface is supported
@@ -355,4 +360,7 @@ interface IGalaxyMember {
 
   /// @notice Returns the X-Allocations governor address
   function xAllocationsGovernor() external view returns (address);
+
+  /// @notice Returns the StargateNFT contract address
+  function stargateNFT() external view returns (address);
 }

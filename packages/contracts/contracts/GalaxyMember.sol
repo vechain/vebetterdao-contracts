@@ -40,6 +40,8 @@ import { ITokenAuction } from "./mocks/Stargate/interfaces/ITokenAuction.sol";
 import { INodeManagementV3 } from "./mocks/Stargate/interfaces/INodeManagement/INodeManagementV3.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import { Time } from "@openzeppelin/contracts/utils/types/Time.sol";
+import { IGalaxyMember } from "./interfaces/IGalaxyMember.sol";
+import { IStargateNFT } from "./mocks/Stargate/interfaces/IStargateNFT.sol";
 
 /**
  * @title GalaxyMember
@@ -71,6 +73,12 @@ import { Time } from "@openzeppelin/contracts/utils/types/Time.sol";
  *   removed `setVechainNodes`
  *   updated `getNodeLevelOf` to use nodeManagement contract
  *   updated ownership conditions on `detachNode` to use nodeManagement contract
+ *
+ * --------------------------------- VERSION 6 ---------------------------------
+ * - Removes Nodemanagement and TokenAuction in favor of Stargate Contract
+ * - Replaced `nodeManagement.getNodeManager` with `stargateNFT.getTokenManager`
+ * - Replaced `nodeManagement.getNodeOwner` with `stargateNFT.ownerOf`
+ * - Replaced `nodeManagement.getNodeLevel` with `stargateNFT.getTokenLevel`
  */
 contract GalaxyMember is
   ERC721Upgradeable,
@@ -109,12 +117,16 @@ contract GalaxyMember is
     ITokenAuction vechainNodes; // Vechain Nodes contract
     INodeManagementV3 nodeManagement; // Node Management contract
     mapping(uint256 => uint256) _nodeToTokenId; // Mapping from Vechain node ID to GalaxyMember Token ID. Used to track the XNode tied to the GM token ID
+    /// @dev If the node is burnt we override the return of "getNodeIdAttached" to 0, so users can attach it to a new node after the new attachment storage will reflect and standard logic will apply
+    /// @dev If the node is not managed by the owner of the token, we return 0, so users can attach it to a new node, this happens if the node is transferred to another address and the new owner is not owner of the GM
     mapping(uint256 => uint256) _tokenIdToNode; // Mapping from GalaxyMember Token ID to Vechain node ID. Used to track the GM token ID tied to the XNode token ID
     mapping(uint8 => uint256) _nodeToFreeUpgradeLevel; // Mapping from Vechain node level to GalaxyMember level. Used to track the GM level that can be upgraded for free for a given Vechain node level
     mapping(uint256 => uint256) _tokenIdToB3TRdonated; // Mapping from GM Token ID to B3TR donated for upgrading
     mapping(address => uint256) _selectedTokenID_DEPRECATED; // Mapping from user address to selected GM token ID - DEPRECATED IN FAVOUR OF CHECKPOINTS
     // --------------------------- V3 Additions --------------------------- //
     mapping(address => Checkpoints.Trace208) _selectedTokenIDCheckpoints; // Checkpoints for selected GM token ID of the user
+    // --------------------------- V6 Additions --------------------------- //
+    IStargateNFT stargateNFT; // StargateNFT contract
   }
 
   /// @notice Storage slot for GalaxyMemberStorage
@@ -165,6 +177,9 @@ contract GalaxyMember is
   /// @dev Emitted when node is detached from a token
   event LevelWhenDetached(uint256 indexed tokenId, uint256 indexed nodeTokenId, uint256 level);
 
+  /// @dev Emitted when the StargateNFT contract address is updated
+  event StargateNFTAddressUpdated(address indexed newAddress, address indexed oldAddress);
+
   /// @notice Modifier to check if public minting is not paused
   modifier whenPublicMintingNotPaused() {
     GalaxyMemberStorage storage $ = _getGalaxyMemberStorage();
@@ -178,103 +193,12 @@ contract GalaxyMember is
     _disableInitializers();
   }
 
-  /// @notice Data for initializing the contract
-  /// @param name Name of the ERC721 token
-  /// @param symbol Symbol of the ERC721 token
-  /// @param admin Address to grant the admin role
-  /// @param upgrader Address to grant the upgrader role
-  /// @param pauser Address to grant the pauser role
-  /// @param minter Address to grant the minter role
-  /// @param contractsAddressManager Address that can update external contracts address
-  /// @param maxLevel Maximum level tokens can achieve
-  /// @param baseTokenURI Base URI for computing {tokenURI}
-  /// @param b3trToUpgradeToLevel Mapping of B3TR requirements per level
-  /// @param _b3tr B3TR token contract address
-  /// @param _treasury Address of the treasury
-  struct InitializationData {
-    string name;
-    string symbol;
-    address admin;
-    address upgrader;
-    address pauser;
-    address minter;
-    address contractsAddressManager;
-    uint256 maxLevel;
-    string baseTokenURI;
-    uint256[] b3trToUpgradeToLevel;
-    address b3tr;
-    address treasury;
-  }
-
-  /// @notice Initializes a new GalaxyMember contract
-  /// @dev Sets initial values for all relevant contract properties and state variables.
-  /// @custom:oz-upgrades-unsafe-allow constructor
-  function initialize(InitializationData memory data) external initializer {
-    require(data.maxLevel > 0, "Galaxy Member: Max level must be greater than 0");
-    require(bytes(data.baseTokenURI).length > 0, "Galaxy Member: Base URI must be set");
-    require(data.b3tr != address(0), "Galaxy Member: B3TR token address cannot be the zero address");
-    require(data.treasury != address(0), "Galaxy Member: Treasury address cannot be the zero address");
-    require(
-      data.b3trToUpgradeToLevel.length >= data.maxLevel - 1,
-      "Galaxy Member: B3TR to upgrade must be set for all unlocked levels"
-    );
-
-    __ERC721_init(data.name, data.symbol);
-    __ERC721Enumerable_init();
-    __ERC721Pausable_init();
-    __ERC721Burnable_init();
-    __AccessControl_init();
-    __ReentrancyGuard_init();
-    __UUPSUpgradeable_init();
-
-    GalaxyMemberStorage storage $ = _getGalaxyMemberStorage();
-
-    $._baseTokenURI = data.baseTokenURI;
-
-    for (uint256 i = 0; i < data.b3trToUpgradeToLevel.length; i++) {
-      require(data.b3trToUpgradeToLevel[i] > 0, "Galaxy Member: B3TR to upgrade must be greater than 0");
-      $._b3trToUpgradeToLevel[i + 2] = data.b3trToUpgradeToLevel[i]; // First Level that requires B3TR is level 2
-    }
-
-    $.MAX_LEVEL = data.maxLevel;
-
-    $.b3tr = IB3TR(data.b3tr);
-    $.treasury = data.treasury;
-
-    require(data.admin != address(0), "Galaxy Member: Admin address cannot be the zero address");
-    _grantRole(DEFAULT_ADMIN_ROLE, data.admin);
-    _grantRole(UPGRADER_ROLE, data.upgrader);
-    _grantRole(PAUSER_ROLE, data.pauser);
-    _grantRole(MINTER_ROLE, data.minter);
-    _grantRole(CONTRACTS_ADDRESS_MANAGER_ROLE, data.contractsAddressManager);
-  }
-
-  /// @notice Initializes a new GalaxyMember contract
-  /// @dev Sets initial values for all relevant contract properties and state variables.
-  /// @custom:oz-upgrades-unsafe-allow constructor
-  function initializeV2(
-    address _vechainNodes,
-    address _nodesMangaement,
-    address _nodesAdmin,
-    uint256[] memory _nodeFreeLevels
-  ) external reinitializer(2) {
-    require(_nodeFreeLevels.length == 8, "GalaxyMember: invalid node free levels. Must be 7 levels");
-    require(_vechainNodes != address(0), "GalaxyMember: _vechainNodes cannot be the zero address");
-    require(_nodesMangaement != address(0), "GalaxyMember: _nodesMangaement cannot be the zero address");
-
-    GalaxyMemberStorage storage $ = _getGalaxyMemberStorage();
-
-    $.vechainNodes = ITokenAuction(_vechainNodes);
-    $.nodeManagement = INodeManagementV3(_nodesMangaement);
-
-    $._nextTokenId = $._nextTokenId == 0 ? 1 : $._nextTokenId;
-
-    for (uint8 i; i < _nodeFreeLevels.length; i++) {
-      require(_nodeFreeLevels[i] >= 1, "GalaxyMember: invalid node free level");
-      $._nodeToFreeUpgradeLevel[i] = _nodeFreeLevels[i];
-    }
-
-    _grantRole(NODES_MANAGER_ROLE, _nodesAdmin);
+  /// @notice Initializes the contract V6
+  /// @dev Only callable by the UPGRADER_ROLE
+  /// @param _stargateNFT StargateNFT contract address
+  function initializeV6(address _stargateNFT) public virtual reinitializer(6) {
+    require(_stargateNFT != address(0), "Galaxy Member: _stargateNFT cannot be the zero address");
+    _getGalaxyMemberStorage().stargateNFT = IStargateNFT(_stargateNFT);
   }
 
   /// @notice Internal function to authorize contract upgrades
@@ -369,13 +293,14 @@ contract GalaxyMember is
   function attachNode(uint256 nodeTokenId, uint256 tokenId) public virtual whenNotPaused {
     GalaxyMemberStorage storage $ = _getGalaxyMemberStorage();
 
+    require(tokenId == 0 || _ownerOf(tokenId) != address(0), "GalaxyMember: token does not exist");
     require(ownerOf(tokenId) == msg.sender, "GalaxyMember: token not owned by caller");
     require(
-      $.nodeManagement.getNodeManager(nodeTokenId) == msg.sender,
-      "GalaxyMember: vechain node not owned or managed by caller"
+      $.stargateNFT.getTokenManager(nodeTokenId) == msg.sender,
+      "GalaxyMember: node not owned or managed by caller"
     );
-    require(getIdAttachedToNode(nodeTokenId) == 0, "GalaxyMember: node already attached to a token");
-    require(getNodeIdAttached(tokenId) == 0, "GalaxyMember: token already attached to a node");
+    require(_getIdAttachedToNode(nodeTokenId, $) == 0, "GalaxyMember: node already attached to a token");
+    require(_getNodeIdAttached(tokenId, $) == 0, "GalaxyMember: token already attached to a node");
 
     $._nodeToTokenId[nodeTokenId] = tokenId;
     $._tokenIdToNode[tokenId] = nodeTokenId;
@@ -390,14 +315,15 @@ contract GalaxyMember is
   function detachNode(uint256 nodeTokenId, uint256 tokenId) public virtual whenNotPaused {
     GalaxyMemberStorage storage $ = _getGalaxyMemberStorage();
 
+    require(tokenId == 0 || _ownerOf(tokenId) != address(0), "GalaxyMember: token does not exist");
     require(
       ownerOf(tokenId) == msg.sender ||
-        $.nodeManagement.getNodeManager(nodeTokenId) == msg.sender ||
-        $.nodeManagement.getNodeOwner(nodeTokenId) == msg.sender,
-      "GalaxyMember: vechain node not owned or managed by caller or token not owned by caller"
+        $.stargateNFT.isTokenManager(msg.sender, nodeTokenId) ||
+        $.stargateNFT.ownerOf(nodeTokenId) == msg.sender,
+      "GalaxyMember: node not owned or managed by caller or token not owned by caller"
     );
-    require(getIdAttachedToNode(nodeTokenId) == tokenId, "GalaxyMember: node not attached to the token");
-    require(getNodeIdAttached(tokenId) == nodeTokenId, "GalaxyMember: token not attached to the node");
+    require(_getIdAttachedToNode(nodeTokenId, $) == tokenId, "GalaxyMember: node not attached to the token");
+    require(_getNodeIdAttached(tokenId, $) == nodeTokenId, "GalaxyMember: token not attached to the node");
 
     delete $._nodeToTokenId[nodeTokenId];
     delete $._tokenIdToNode[tokenId];
@@ -511,6 +437,17 @@ contract GalaxyMember is
     $._nodeToFreeUpgradeLevel[nodeLevel] = level;
   }
 
+  /// @notice Sets the StargateNFT contract address
+  /// @dev Only callable by the contractsAddressManager role
+  /// @param _stargateNFT StargateNFT contract address
+  function setStargateNFTAddress(address _stargateNFT) public virtual onlyRole(CONTRACTS_ADDRESS_MANAGER_ROLE) {
+    require(_stargateNFT != address(0), "Galaxy Member: _stargateNFT cannot be the zero address");
+    GalaxyMemberStorage storage $ = _getGalaxyMemberStorage();
+
+    emit StargateNFTAddressUpdated(_stargateNFT, address($.stargateNFT));
+    $.stargateNFT = IStargateNFT(_stargateNFT);
+  }
+
   // ---------- Getters ---------- //
 
   /// @notice Gets the level of the GM token
@@ -553,7 +490,7 @@ contract GalaxyMember is
     uint256 level = 1;
 
     // if the token is attached to a node and the node is managed by the caller
-    if (nodeId != 0 && $.nodeManagement.getNodeManager(nodeId) == ownerOf(tokenId)) {
+    if (nodeId != 0 && $.stargateNFT.getTokenManager(nodeId) == ownerOf(tokenId)) {
       // Get the level of the node (i.e., Strength, Thunder, Mjolnir, VeThorX, StrengthX, ThunderX, MjolnirX)
       uint8 nodeLevel = getNodeLevelOf(nodeId);
 
@@ -590,7 +527,7 @@ contract GalaxyMember is
   function getNodeLevelOf(uint256 nodeId) public view virtual returns (uint8) {
     GalaxyMemberStorage storage $ = _getGalaxyMemberStorage();
 
-    return $.nodeManagement.getNodeLevel(nodeId);
+    return $.stargateNFT.getTokenLevel(nodeId);
   }
 
   /// @notice Gets the selected token ID for the user
@@ -688,6 +625,11 @@ contract GalaxyMember is
     return $.treasury;
   }
 
+  /// @notice Gets the StargateNFT contract address
+  function stargateNFT() external view returns (IStargateNFT) {
+    return _getGalaxyMemberStorage().stargateNFT;
+  }
+
   /// @notice Gets the maximum level that tokens can be minted or upgraded to
   function MAX_LEVEL() public view virtual returns (uint256) {
     GalaxyMemberStorage storage $ = _getGalaxyMemberStorage();
@@ -697,13 +639,13 @@ contract GalaxyMember is
   /// @notice Get the GM Token ID attached to the Vechain Node Token ID
   /// @param nodeId Vechain node Token ID
   function getIdAttachedToNode(uint256 nodeId) public view virtual returns (uint256) {
-    return _getGalaxyMemberStorage()._nodeToTokenId[nodeId];
+    return _getIdAttachedToNode(nodeId, _getGalaxyMemberStorage());
   }
 
   /// @notice Get the Vechain Node Token ID attached to the GM Token ID
   /// @param tokenId GM Token ID
   function getNodeIdAttached(uint256 tokenId) public view virtual returns (uint256) {
-    return _getGalaxyMemberStorage()._tokenIdToNode[tokenId];
+    return _getNodeIdAttached(tokenId, _getGalaxyMemberStorage());
   }
 
   /// @notice Get the GM level that can be upgraded for free for a given Vechain node level
@@ -722,7 +664,7 @@ contract GalaxyMember is
   /// @dev This function is used to identify the version of the contract and should be updated in each new version
   /// @return string The version of the contract
   function version() external pure virtual returns (string memory) {
-    return "5";
+    return "6";
   }
 
   struct TokenInfo {
@@ -820,6 +762,32 @@ contract GalaxyMember is
     return "mode=blocknumber&from=default";
   }
 
+  // ---------- Internal Functions ---------- //
+
+  /// @notice Internal function to get the level of the token
+  /// @param tokenId Token ID to get the node ID for
+  /// @param $ GalaxyMemberStorage storage pointer
+  /// @return nodeId The node ID attached to the token
+  function _getNodeIdAttached(uint256 tokenId, GalaxyMemberStorage storage $) internal view virtual returns (uint256) {
+    uint256 nodeId = $._tokenIdToNode[tokenId];
+    // 1 - If the node does is burnt we return 0, so users can attach it to a new node
+    // 2 - If the node is not managed by the owner of the token, we return 0, so users can attach it to a new node
+    if (!$.stargateNFT.tokenExists(nodeId) || ownerOf(tokenId) != $.stargateNFT.getTokenManager(nodeId)) {
+      return 0;
+    }
+
+    return nodeId;
+  }
+
+  function _getIdAttachedToNode(uint256 nodeId, GalaxyMemberStorage storage $) internal view virtual returns (uint256) {
+    uint256 tokenId = $._nodeToTokenId[nodeId];
+    if (tokenId == 0 || !$.stargateNFT.tokenExists(nodeId) || ownerOf(tokenId) != $.stargateNFT.getTokenManager(nodeId)) {
+      return 0;
+    }
+
+    return tokenId;
+  }
+
   // ---------- Overrides ---------- //
 
   /// @notice Performs automatic level updating upon token updates
@@ -837,13 +805,14 @@ contract GalaxyMember is
     whenNotPaused
     returns (address)
   {
-    require(getNodeIdAttached(tokenId) == 0, "GalaxyMember: token attached to a node, detach before transfer");
+    GalaxyMemberStorage storage $ = _getGalaxyMemberStorage();
+    require(_getNodeIdAttached(tokenId, $) == 0, "GalaxyMember: token attached to a node, detach before transfer");
 
     address _previousOwner = super._update(to, tokenId, auth);
 
     // If the owner has no tokens, don't select any token
     if (_previousOwner != address(0) && balanceOf(_previousOwner) == 0) {
-      _getGalaxyMemberStorage()._selectedTokenIDCheckpoints[_previousOwner].push(clock(), 0);
+      $._selectedTokenIDCheckpoints[_previousOwner].push(clock(), 0);
     }
 
     // If the owner transfers out the selected token, select the first token he owns
