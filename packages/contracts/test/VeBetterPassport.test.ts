@@ -190,7 +190,7 @@ describe("VeBetterPassport - @shard8", function () {
         passportPoPScoreLogic,
         passportSignalingLogic,
         passportEntityLogic,
-        passportWhitelistBlacklistLogic,
+        passportWhitelistAndBlacklistLogic,
       } = await getOrDeployContractInstances({
         forceDeploy: true,
       })
@@ -205,7 +205,7 @@ describe("VeBetterPassport - @shard8", function () {
           PassportPoPScoreLogic: await passportPoPScoreLogic.getAddress(),
           PassportDelegationLogic: await passportDelegationLogic.getAddress(),
           PassportSignalingLogic: await passportSignalingLogic.getAddress(),
-          PassportWhitelistAndBlacklistLogic: await passportWhitelistBlacklistLogic.getAddress(),
+          PassportWhitelistAndBlacklistLogic: await passportWhitelistAndBlacklistLogic.getAddress(),
         },
       })
 
@@ -230,7 +230,7 @@ describe("VeBetterPassport - @shard8", function () {
         passportPoPScoreLogic,
         passportEntityLogic,
         passportSignalingLogic,
-        passportWhitelistBlacklistLogic,
+        passportWhitelistAndBlacklistLogic,
       } = await getOrDeployContractInstances({
         forceDeploy: true,
       })
@@ -246,7 +246,7 @@ describe("VeBetterPassport - @shard8", function () {
           PassportPoPScoreLogic: await passportPoPScoreLogic.getAddress(),
           PassportDelegationLogic: await passportDelegationLogic.getAddress(),
           PassportSignalingLogic: await passportSignalingLogic.getAddress(),
-          PassportWhitelistAndBlacklistLogic: await passportWhitelistBlacklistLogic.getAddress(),
+          PassportWhitelistAndBlacklistLogic: await passportWhitelistAndBlacklistLogic.getAddress(),
         },
       })
       const implementation = await Contract.deploy()
@@ -277,7 +277,7 @@ describe("VeBetterPassport - @shard8", function () {
         passportPersonhoodLogic,
         passportPoPScoreLogic,
         passportSignalingLogic,
-        passportWhitelistBlacklistLogic,
+        passportWhitelistAndBlacklistLogic,
       } = await getOrDeployContractInstances({
         forceDeploy: true,
       })
@@ -293,7 +293,7 @@ describe("VeBetterPassport - @shard8", function () {
           PassportPersonhoodLogic: await passportPersonhoodLogic.getAddress(),
           PassportPoPScoreLogic: await passportPoPScoreLogic.getAddress(),
           PassportSignalingLogic: await passportSignalingLogic.getAddress(),
-          PassportWhitelistAndBlacklistLogic: await passportWhitelistBlacklistLogic.getAddress(),
+          PassportWhitelistAndBlacklistLogic: await passportWhitelistAndBlacklistLogic.getAddress(),
         },
       })
       const implementation = await Contract.deploy()
@@ -343,7 +343,7 @@ describe("VeBetterPassport - @shard8", function () {
         passportPoPScoreLogicV1,
         passportSignalingLogicV1,
         passportEntityLogicV1,
-        passportWhitelistBlacklistLogicV1,
+        passportWhitelistAndBlacklistLogicV1,
         passportChecksLogicV2,
         passportConfiguratorV2,
         passportDelegationLogicV2,
@@ -351,14 +351,14 @@ describe("VeBetterPassport - @shard8", function () {
         passportPoPScoreLogicV2,
         passportSignalingLogicV2,
         passportEntityLogicV2,
-        passportWhitelistBlacklistLogicV2,
+        passportWhitelistAndBlacklistLogicV2,
         passportChecksLogicV3,
         passportConfiguratorV3,
         passportDelegationLogicV3,
         passportPersonhoodLogicV3,
         passportPoPScoreLogicV3,
         passportSignalingLogicV3,
-        passportWhitelistBlacklistLogicV3,
+        passportWhitelistAndBlacklistLogicV3,
         passportEntityLogicV3,
         governorClockLogicLibV1,
         governorConfiguratorLibV1,
@@ -399,7 +399,7 @@ describe("VeBetterPassport - @shard8", function () {
         PassportPersonhoodLogicV1: await passportPersonhoodLogicV1.getAddress(),
         PassportPoPScoreLogicV1: await passportPoPScoreLogicV1.getAddress(),
         PassportSignalingLogicV1: await passportSignalingLogicV1.getAddress(),
-        PassportWhitelistAndBlacklistLogicV1: await passportWhitelistBlacklistLogicV1.getAddress(),
+        PassportWhitelistAndBlacklistLogicV1: await passportWhitelistAndBlacklistLogicV1.getAddress(),
       })
 
       const x2EarnRewardsPool = (await deployAndUpgrade(
@@ -562,7 +562,7 @@ describe("VeBetterPassport - @shard8", function () {
           PassportPersonhoodLogicV1: await passportPersonhoodLogicV1.getAddress(),
           PassportPoPScoreLogicV1: await passportPoPScoreLogicV1.getAddress(),
           PassportSignalingLogicV1: await passportSignalingLogicV1.getAddress(),
-          PassportWhitelistAndBlacklistLogicV1: await passportWhitelistBlacklistLogicV1.getAddress(),
+          PassportWhitelistAndBlacklistLogicV1: await passportWhitelistAndBlacklistLogicV1.getAddress(),
         },
       )) as VeBetterPassportV1
 
@@ -836,7 +836,7 @@ describe("VeBetterPassport - @shard8", function () {
             PassportPersonhoodLogicV2: await passportPersonhoodLogicV2.getAddress(),
             PassportPoPScoreLogicV2: await passportPoPScoreLogicV2.getAddress(),
             PassportSignalingLogicV2: await passportSignalingLogicV2.getAddress(),
-            PassportWhitelistAndBlacklistLogicV2: await passportWhitelistBlacklistLogicV2.getAddress(),
+            PassportWhitelistAndBlacklistLogicV2: await passportWhitelistAndBlacklistLogicV2.getAddress(),
           },
         },
       )) as VeBetterPassportV2
@@ -990,7 +990,7 @@ describe("VeBetterPassport - @shard8", function () {
             PassportPersonhoodLogicV3: await passportPersonhoodLogicV3.getAddress(),
             PassportPoPScoreLogicV3: await passportPoPScoreLogicV3.getAddress(),
             PassportSignalingLogicV3: await passportSignalingLogicV3.getAddress(),
-            PassportWhitelistAndBlacklistLogicV3: await passportWhitelistBlacklistLogicV3.getAddress(),
+            PassportWhitelistAndBlacklistLogicV3: await passportWhitelistAndBlacklistLogicV3.getAddress(),
           },
         },
       )) as VeBetterPassportV3
@@ -2331,7 +2331,7 @@ describe("VeBetterPassport - @shard8", function () {
         round 1 = 100 + (0 * 0.8) = 100
         round 2 = 100 + (100 * 0.8) = 180
         round 3 = 200 + (180 * 0.8) = 344
-        round 4 = 200 + (344 * 0.8) = 475,2 => 475 
+        round 4 = 200 + (344 * 0.8) = 475,2 => 475
         round 5 = 400 + (475 * 0.8) = 780
       */
       expect(await veBetterPassport.getCumulativeScoreWithDecay(otherAccount, 5)).to.equal(780)
@@ -2623,7 +2623,7 @@ describe("VeBetterPassport - @shard8", function () {
         round 1 = 100 + (0 * 0.8) = 100
         round 2 = 100 + (100 * 0.8) = 180
         round 3 = 200 + (180 * 0.8) = 344
-        round 4 = 200 + (344 * 0.8) = 475,2 => 475 
+        round 4 = 200 + (344 * 0.8) = 475,2 => 475
         round 5 = 400 + (475 * 0.8) = 780
       */
       expect(await veBetterPassport.getCumulativeScoreWithDecay(otherAccount, 5)).to.equal(780)
@@ -2695,7 +2695,7 @@ describe("VeBetterPassport - @shard8", function () {
       /*
 
         The passports score should remain the same for the period the entity was linked to the passport
-        
+
         round 6 = 400
       */
       expect(await veBetterPassport.getCumulativeScoreWithDecay(passport, 6)).to.equal(400)
@@ -5092,7 +5092,7 @@ describe("VeBetterPassport - @shard16", function () {
         round 1 = 100 + (0 * 0.8) = 100
         round 2 = 100 + (100 * 0.8) = 180
         round 3 = 100 + (180 * 0.8) = 244
-        round 4 = 100 + (244 * 0.8) = 295,2 => 295 
+        round 4 = 100 + (244 * 0.8) = 295,2 => 295
         round 5 = 100 + (295 * 0.8) = 336
       */
       expect(await veBetterPassport.getCumulativeScoreWithDecay(otherAccount, 5)).to.equal(336)
@@ -5143,7 +5143,7 @@ describe("VeBetterPassport - @shard16", function () {
         round 1 = 100 + (0 * 0.8) = 100
         round 2 = 100 + (100 * 0.8) = 180
         round 3 = 100 + (180 * 0.8) = 244
-        round 4 = 100 + (244 * 0.8) = 295,2 => 295 
+        round 4 = 100 + (244 * 0.8) = 295,2 => 295
         round 5 = 100 + (295 * 0.8) = 336
       */
       expect(await veBetterPassport.getCumulativeScoreWithDecay(otherAccount, 5)).to.equal(336)
@@ -5285,7 +5285,7 @@ describe("VeBetterPassport - @shard16", function () {
         round 1 = 100 + (0 * 0.8) = 100
         round 2 = 100 + (100 * 0.8) = 180
         round 3 = 200 + (180 * 0.8) = 344
-        round 4 = 200 + (344 * 0.8) = 475,2 => 475 
+        round 4 = 200 + (344 * 0.8) = 475,2 => 475
         round 5 = 400 + (475 * 0.8) = 780
       */
       expect(await veBetterPassport.getCumulativeScoreWithDecay(otherAccount, 5)).to.equal(780)
@@ -5443,7 +5443,7 @@ describe("VeBetterPassport - @shard16", function () {
         round 1 = 100 + (0 * 0.8) = 100
         round 2 = 100 + (100 * 0.8) = 180
         round 3 = 200 + (180 * 0.8) = 344
-        round 4 = 200 + (344 * 0.8) = 475,2 => 475 
+        round 4 = 200 + (344 * 0.8) = 475,2 => 475
         round 5 = 400 + (475 * 0.8) = 780
       */
       expect(await veBetterPassport.getCumulativeScoreWithDecay(otherAccount, 5)).to.equal(780)
@@ -5522,7 +5522,7 @@ describe("VeBetterPassport - @shard16", function () {
         round 1 = 100 + (0 * 0.8) = 100
         round 2 = 100 + (100 * 0.8) = 180
         round 3 = 200 + (180 * 0.8) = 344
-        round 4 = 200 + (344 * 0.8) = 475,2 => 475 
+        round 4 = 200 + (344 * 0.8) = 475,2 => 475
         round 5 = 400 + (475 * 0.8) = 780
       */
       expect(await veBetterPassport.getCumulativeScoreWithDecay(otherAccount, 5)).to.equal(780)
@@ -5645,7 +5645,7 @@ describe("VeBetterPassport - @shard16", function () {
       await veBetterPassport.connect(owner).registerActionForRound(otherAccount, app1Id, 4)
       await veBetterPassport.connect(owner).registerActionForRound(otherAccount, app1Id, 5)
 
-      /*  
+      /*
         round 1 = 100
         round 2 = 100 + (100 * 0.1) = 110
         round 3 = 100 + (110 * 0.1) = 111

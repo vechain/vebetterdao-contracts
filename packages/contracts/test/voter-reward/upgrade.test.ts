@@ -250,10 +250,12 @@ describe("VoterRewards Upgrade Test - @shard10a", function () {
 
     //Set the emissions address and the admin as the ROUND_STARTER_ROLE in XAllocationVoting
     const roundStarterRole = await xAllocationVotingV2.ROUND_STARTER_ROLE()
+
     await xAllocationVotingV2
       .connect(owner)
       .grantRole(roundStarterRole, await emissions.getAddress())
       .then(async tx => await tx.wait())
+
     await xAllocationVotingV2
       .connect(owner)
       .grantRole(roundStarterRole, owner.address)
@@ -262,13 +264,19 @@ describe("VoterRewards Upgrade Test - @shard10a", function () {
     await x2EarnApps
       .connect(owner)
       .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
+
     const app1 = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[0].address))
+
     await endorseApp(app1, otherAccounts[0])
+
     await x2EarnApps
       .connect(creator1)
       .submitApp(otherAccounts[1].address, otherAccounts[1].address, otherAccounts[1].address, "metadataURI")
+
     const app2 = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[1].address))
+
     await endorseApp(app2, otherAccounts[1])
+
     const voter2 = otherAccounts[3]
     const voter3 = otherAccounts[4]
 
@@ -548,8 +556,8 @@ describe("VoterRewards Upgrade Test - @shard10a", function () {
       expect(storageSlots[i]).to.equal(storageSlotsAfter[i])
     }
 
-    // Upgrade to V4
-    await upgradeProxy("GalaxyMemberV2", "GalaxyMember", await galaxyMemberV1.getAddress(), [], {
+    // Upgrade to V3
+    await upgradeProxy("GalaxyMemberV2", "GalaxyMemberV3", await galaxyMemberV1.getAddress(), [], {
       version: 3,
     })
 
@@ -672,7 +680,7 @@ describe("VoterRewards Upgrade Test - @shard10a", function () {
     } = contractConfig
 
     const galaxyMember = (await deployAndUpgrade(
-      ["GalaxyMemberV1", "GalaxyMember"],
+      ["GalaxyMemberV1", "GalaxyMemberV2"],
       [
         [
           {
@@ -693,7 +701,7 @@ describe("VoterRewards Upgrade Test - @shard10a", function () {
         [owner.address, await nodeManagement.getAddress(), owner.address, config.GM_NFT_NODE_TO_FREE_LEVEL],
       ],
       { versions: [undefined, 2] },
-    )) as unknown as GalaxyMember
+    )) as GalaxyMemberV2
 
     // Deploy Emissions contract
     const emissions = (await deployAndUpgrade(
