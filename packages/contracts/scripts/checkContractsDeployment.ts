@@ -13,7 +13,6 @@ if (!env) throw new Error("NEXT_PUBLIC_APP_ENV env variable must be set")
 
 const isSoloNetwork = network.name === "vechain_solo"
 const isStagingEnv = process.env.NEXT_PUBLIC_APP_ENV === AppEnv.TESTNET_STAGING
-const isGalacticaTestNetwork = process.env.NEXT_PUBLIC_APP_ENV === AppEnv.GALACTICA_TEST
 
 async function main() {
   console.log(`Checking contracts deployment on ${network.name} (${config.network.urls[0]})...`)
@@ -28,7 +27,7 @@ export async function checkContractsDeployment() {
     const code = config.b3trContractAddress === "" ? "0x" : await ethers.provider.getCode(config.b3trContractAddress)
     if (code === "0x") {
       console.log(`B3tr contract not deployed at address ${config.b3trContractAddress}`)
-      if (isSoloNetwork || isStagingEnv || isGalacticaTestNetwork) {
+      if (isSoloNetwork || isStagingEnv) {
         // deploy the contracts and override the config file
         const newAddresses = await deployAll(getContractsConfig(env))
 
@@ -60,6 +59,8 @@ async function overrideLocalConfigWithNewContracts(contracts: Awaited<ReturnType
     veBetterPassportContractAddress: await contracts.veBetterPassport.getAddress(),
     grantsManagerContractAddress: await contracts.grantsManager.getAddress(),
     dbaPoolContractAddress: await contracts.dynamicBaseAllocationPool.getAddress(),
+    stargateContractAddress: await contracts.stargate.getAddress(),
+    stargateNFTContractAddress: await contracts.stargateNFT.getAddress(),
     b3trGovernorLibraries: {
       governorClockLogicAddress: await contracts.libraries.governorClockLogic.getAddress(),
       governorConfiguratorAddress: await contracts.libraries.governorConfigurator.getAddress(),
@@ -101,9 +102,6 @@ async function overrideLocalConfigWithNewContracts(contracts: Awaited<ReturnType
       break
     case AppEnv.MAINNET:
       fileToWrite = "mainnet.ts"
-      break
-    case AppEnv.GALACTICA_TEST:
-      fileToWrite = "galactica-test.ts"
       break
     default:
       throw new Error(`Unsupported NEXT_PUBLIC_APP_ENV ${env}`)

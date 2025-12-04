@@ -1,11 +1,11 @@
+import { ethers } from "hardhat"
 import {
   VOT3,
   X2EarnApps__factory,
   XAllocationVoting,
   XAllocationVoting__factory,
   X2EarnApps,
-  TokenAuction,
-  StargateNFT,
+  Stargate,
 } from "../../typechain-types"
 import { type TransactionClause, Clause, Address, ABIContract } from "@vechain/sdk-core"
 import { TransactionUtils } from "@repo/utils"
@@ -15,6 +15,7 @@ import { getContractsConfig } from "@repo/config"
 import { EnvConfig } from "@repo/config/contracts"
 import { getConfig } from "@repo/config"
 import { ThorClient } from "@vechain/sdk-network"
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers"
 
 const thorClient = ThorClient.at(getConfig().nodeUrl)
 
@@ -48,29 +49,42 @@ export const registerXDapps = async (contractAddress: string, accounts: TestPk[]
 }
 
 export const endorseXApps = async (
-  endorsers: SeedAccount[],
+  endorsers: HardhatEthersSigner[],
   x2EarnApps: X2EarnApps,
   apps: string[],
-  vechainNodesMock: TokenAuction,
+  stargateMock: Stargate,
 ): Promise<void> => {
   const contractsConfig = getContractsConfig(process.env.NEXT_PUBLIC_APP_ENV as EnvConfig)
 
   if (contractsConfig.X2EARN_NODE_COOLDOWN_PERIOD > 1) {
     return console.warn("Endorsement cooldown period is greater than 1. Skipping endorsement.")
   }
-  console.log("Endorsing x-apps...")
+  console.log(`Endorsing ${apps?.length ?? 0} x-apps...`)
+  console.log("\n")
+
+  const stargateNFTAddress = await stargateMock.stargateNFT()
+  const stargateNFT = await ethers.getContractAt("StargateNFT", stargateNFTAddress)
 
   // 8 apps
   for (let i = 0; i < apps.length; i++) {
-    const owner = endorsers[i].key.address
-    const nodeId = await vechainNodesMock.ownerToId(owner.toString())
-    const clause = Clause.callFunction(
-      Address.of(await x2EarnApps.getAddress()),
-      ABIContract.ofAbi(X2EarnApps__factory.abi).getFunction("endorseApp"),
-      [apps[i], nodeId],
-    )
+    const owner = endorsers?.[i]?.address
+    if (!owner) {
+      console.error(`Endorser ${i + 1} not found, skipping endorsement...`)
+      console.log("\n")
+      continue
+    }
+    const nodeIds = await stargateNFT.idsOwnedBy(owner.toString())
+    console.log(`Endorser ${owner.toString()} has ${nodeIds?.length ?? 0} Stargate NFTs`)
+    if (nodeIds?.length === 0 || !nodeIds?.[0]) {
+      console.error(`Endorser ${owner.toString()} does not own any Stargate NFTs, skipping endorsement...`)
+      console.log("\n")
+      continue
+    }
+    const nodeId = nodeIds[0]
 
-    await TransactionUtils.sendTx(thorClient, [clause], endorsers[i].key.pk)
+    console.log(`Endorsing app ${apps[i]} with nodeId ${nodeId} for endorser ${owner.toString()}`)
+    console.log("\n")
+    await x2EarnApps.connect(endorsers[i]).endorseApp(apps[i], nodeId)
   }
 
   console.log("x-apps endorsed.")

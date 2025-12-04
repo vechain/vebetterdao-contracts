@@ -20,6 +20,10 @@ import {
   GrantsManagerV1,
   DBAPool,
   DBAPoolV1,
+  StargateNFT,
+  Stargate,
+  NodeManagementV3,
+  TokenAuction,
 } from "../../typechain-types"
 import { ContractsConfig } from "@repo/config/contracts/type"
 import { HttpNetworkConfig } from "hardhat/types"
@@ -47,6 +51,11 @@ import {
 } from "../helpers/roles"
 import { x2EarnLibraries } from "../libraries/x2EarnLibraries"
 import { ZERO_ADDRESS } from "@vechain/sdk-core"
+import { deployStargateMock } from "./mocks/deployStargate"
+import { deployNodeManagementMock } from "./mocks/deployNodeManagement"
+import { getConfig } from "@repo/config"
+import { EnvConfig } from "@repo/config/contracts"
+import { deployLegacyNodesMock } from "./mocks/deployLegacyNodes"
 
 // GalaxyMember NFT Values
 const name = "VeBetterDAO Galaxy Member"
@@ -55,6 +64,7 @@ const symbol = "GM"
 export async function deployAll(config: ContractsConfig) {
   const start = performance.now()
   const networkConfig = network.config as HttpNetworkConfig
+  const envConfig = getConfig(config.NEXT_PUBLIC_APP_ENV as EnvConfig)
 
   console.log(
     `================  Deploying contracts on ${network.name} (${networkConfig.url}) with ${config.NEXT_PUBLIC_APP_ENV} configurations `,
@@ -133,32 +143,7 @@ export async function deployAll(config: ContractsConfig) {
     GovernorStateLogicLibV7,
     GovernorVotesLogicLibV7,
     GovernorGovernanceLogicLibV7,
-  } = await governanceLibraries()
-
-  if (
-    !GovernorClockLogicLibV1 ||
-    !GovernorConfiguratorLibV1 ||
-    !GovernorDepositLogicLibV1 ||
-    !GovernorFunctionRestrictionsLogicLibV1 ||
-    !GovernorProposalLogicLibV1 ||
-    !GovernorQuorumLogicLibV1 ||
-    !GovernorVotesLogicLibV1 ||
-    !GovernorStateLogicLibV1
-  ) {
-    throw new Error("Failed to deploy Governance V1 libraries")
-  }
-  if (
-    !GovernorClockLogicLib ||
-    !GovernorConfiguratorLib ||
-    !GovernorDepositLogicLib ||
-    !GovernorFunctionRestrictionsLogicLib ||
-    !GovernorProposalLogicLib ||
-    !GovernorQuorumLogicLib ||
-    !GovernorVotesLogicLib ||
-    !GovernorStateLogicLib
-  ) {
-    throw new Error("Failed to deploy Governance latest libraries")
-  }
+  } = await governanceLibraries({ logOutput: true, latestVersionOnly: false })
 
   console.log("Deploying VeBetter Passport Libraries")
   // Deploy Passport Libraries
@@ -199,7 +184,7 @@ export async function deployAll(config: ContractsConfig) {
     PassportPoPScoreLogic,
     PassportSignalingLogic,
     PassportWhitelistAndBlacklistLogic,
-  } = await passportLibraries()
+  } = await passportLibraries({ logOutput: true, latestVersionOnly: false })
 
   if (
     !PassportChecksLogicV1 ||
@@ -255,19 +240,27 @@ export async function deployAll(config: ContractsConfig) {
     AdministrationUtils,
     EndorsementUtils,
     VoteEligibilityUtils,
+    // V2
     AdministrationUtilsV2,
     EndorsementUtilsV2,
     VoteEligibilityUtilsV2,
+    // V3
     AdministrationUtilsV3,
     EndorsementUtilsV3,
     VoteEligibilityUtilsV3,
+    // V4
     AdministrationUtilsV4,
     EndorsementUtilsV4,
     VoteEligibilityUtilsV4,
+    // V5
     AdministrationUtilsV5,
     EndorsementUtilsV5,
     VoteEligibilityUtilsV5,
-  } = await x2EarnLibraries()
+    // V6
+    AdministrationUtilsV6,
+    EndorsementUtilsV6,
+    VoteEligibilityUtilsV6,
+  } = await x2EarnLibraries({ logOutput: true, latestVersionOnly: false })
 
   console.log("Deploying AutoVoting Libraries")
   const { AutoVotingLogic } = await autoVotingLibraries()
@@ -285,39 +278,47 @@ export async function deployAll(config: ContractsConfig) {
   if (!AdministrationUtilsV5 || !EndorsementUtilsV5 || !VoteEligibilityUtilsV5) {
     throw new Error("Failed to deploy X2Earn V5 libraries")
   }
+  if (!AdministrationUtilsV6 || !EndorsementUtilsV6 || !VoteEligibilityUtilsV6) {
+    throw new Error("Failed to deploy X2Earn V6 libraries")
+  }
   if (!AdministrationUtils || !EndorsementUtils || !VoteEligibilityUtils) {
     throw new Error("Failed to deploy X2Earn latest libraries")
   }
 
-  // Stargate and NFTs related contracts: They needed to deploy in Stargate repo first
-  // See from more details: { https://github.com/vechain/stargate-contracts/blob/main/README.md }
-  if (config.VECHAIN_NODES_CONTRACT_ADDRESS === ZERO_ADDRESS) {
-    throw new Error("VECHAIN_NODES_CONTRACT_ADDRESS is not set")
-  }
-  if (config.STARGATE_NFT_CONTRACT_ADDRESS === ZERO_ADDRESS) {
-    throw new Error("STARGATE_NFT_CONTRACT_ADDRESS is not set")
-  }
-  if (config.STARGATE_DELEGATE_CONTRACT_ADDRESS === ZERO_ADDRESS) {
-    throw new Error("STARGATE_DELEGATE_CONTRACT_ADDRESS is not set")
-  }
-  if (config.NODE_MANAGEMENT_CONTRACT_ADDRESS === ZERO_ADDRESS) {
-    throw new Error("NODE_MANAGEMENT_CONTRACT_ADDRESS is not set")
-  }
-  let vechainNodesMock = await ethers.getContractAt("TokenAuction", config.VECHAIN_NODES_CONTRACT_ADDRESS)
-  const vechainNodesAddress = await vechainNodesMock.getAddress()
-  console.log("Using Vechain Nodes Mock deployed at: ", vechainNodesAddress)
+  // In testnet and mainnet we want to point at the real external contracts,
+  // to do so we need to first add the address in the appropriate config file
+  // for local deployments instead we deploy the mocks
+  let stargateNftMock: StargateNFT
+  let stargateMock: Stargate
+  let nodeManagementMock: NodeManagementV3
+  let vechainNodesMock: TokenAuction
+  if (network.name !== "vechain_mainnet" && network.name !== "vechain_testnet") {
+    // Deploy Stargate Mock
+    console.log("Deploying Stargate Mock")
+    const { stargateNFT, stargate } = await deployStargateMock({ logOutput: true })
+    stargateMock = stargate
+    stargateNftMock = stargateNFT
 
-  let stargateNftMock = await ethers.getContractAt("StargateNFT", config.STARGATE_NFT_CONTRACT_ADDRESS)
-  const stargateNftAddress = await stargateNftMock.getAddress()
-  console.log("Using Stargate NFT Mock deployed at: ", stargateNftAddress)
-
-  let stargateDelegateMock = await ethers.getContractAt("StargateDelegation", config.STARGATE_DELEGATE_CONTRACT_ADDRESS)
-  const stargateDelegateAddress = await stargateDelegateMock.getAddress()
-  console.log("Using Stargate Delegate Mock deployed at: ", stargateDelegateAddress)
-
-  let nodeManagementMock = await ethers.getContractAt("NodeManagementV3", config.NODE_MANAGEMENT_CONTRACT_ADDRESS)
-  const nodeManagementAddress = await nodeManagementMock.getAddress()
-  console.log("Using Node Management Mock deployed at: ", nodeManagementAddress)
+    // Deploy NodeManagement Mock
+    console.log("Deploying NodeManagement Mock")
+    nodeManagementMock = await deployNodeManagementMock({
+      stargateNFTProxyAddress: await stargateNftMock.getAddress(),
+      logOutput: true,
+    })
+    const { vechainNodesMock: vechainNodesMockDeployed } = await deployLegacyNodesMock({ logOutput: true })
+    vechainNodesMock = vechainNodesMockDeployed
+  } else {
+    stargateMock = (await ethers.getContractAt("Stargate", envConfig.stargateContractAddress)) as Stargate
+    stargateNftMock = (await ethers.getContractAt("StargateNFT", envConfig.stargateNFTContractAddress)) as StargateNFT
+    nodeManagementMock = (await ethers.getContractAt(
+      "NodeManagementV3",
+      envConfig.nodeManagementContractAddress,
+    )) as NodeManagementV3
+    vechainNodesMock = (await ethers.getContractAt(
+      "TokenAuction",
+      envConfig.tokenAuctionContractAddress,
+    )) as TokenAuction
+  }
 
   // ---------------------- Deploy Contracts ----------------------
   console.log("Deploying VeBetter DAO contracts")
@@ -375,16 +376,6 @@ export async function deployAll(config: ContractsConfig) {
     true,
   )) as Treasury
 
-  // Deploy NodeManagement - deprecating...
-  // const nodeManagement = (await deployAndUpgrade(
-  //   ["NodeManagementV1", "NodeManagement"],
-  //   [[vechainNodesAddress, TEMP_ADMIN, deployer.address], []],
-  //   {
-  //     versions: [undefined, 2],
-  //     logOutput: true,
-  //   },
-  // )) as NodeManagement
-
   // Initialization requires the address of the x2EarnRewardsPool, for this reason we will initialize it after
   const veBetterPassportContractAddress = await deployProxyOnly("VeBetterPassportV1", {
     PassportChecksLogicV1: await PassportChecksLogicV1.getAddress(),
@@ -401,7 +392,7 @@ export async function deployAll(config: ContractsConfig) {
   const X_ALLOCATION_ADRESS_TEMP = TEMP_ADMIN
   const X2EARNREWARDSPOOL_ADDRESS_TEMP = TEMP_ADMIN
   const x2EarnApps = (await deployAndUpgrade(
-    ["X2EarnAppsV1", "X2EarnAppsV2", "X2EarnAppsV3", "X2EarnAppsV4", "X2EarnAppsV5", "X2EarnApps"],
+    ["X2EarnAppsV1", "X2EarnAppsV2", "X2EarnAppsV3", "X2EarnAppsV4", "X2EarnAppsV5", "X2EarnAppsV6", "X2EarnApps"],
     [
       [
         config.XAPP_BASE_URI,
@@ -411,7 +402,7 @@ export async function deployAll(config: ContractsConfig) {
       ],
       [
         config.XAPP_GRACE_PERIOD,
-        nodeManagementAddress,
+        await nodeManagementMock.getAddress(),
         veBetterPassportContractAddress,
         await x2EarnCreator.getAddress(),
       ],
@@ -419,9 +410,10 @@ export async function deployAll(config: ContractsConfig) {
       [X2EARNREWARDSPOOL_ADDRESS_TEMP],
       [],
       [],
+      [await stargateNftMock.getAddress()],
     ],
     {
-      versions: [undefined, 2, 3, 4, 5, 6],
+      versions: [undefined, 2, 3, 4, 5, 6, 7],
       libraries: [
         undefined,
         {
@@ -443,6 +435,11 @@ export async function deployAll(config: ContractsConfig) {
           AdministrationUtilsV5: await AdministrationUtilsV5.getAddress(),
           EndorsementUtilsV5: await EndorsementUtilsV5.getAddress(),
           VoteEligibilityUtilsV5: await VoteEligibilityUtilsV5.getAddress(),
+        },
+        {
+          AdministrationUtilsV6: await AdministrationUtilsV6.getAddress(),
+          EndorsementUtilsV6: await EndorsementUtilsV6.getAddress(),
+          VoteEligibilityUtilsV6: await VoteEligibilityUtilsV6.getAddress(),
         },
         {
           AdministrationUtils: await AdministrationUtils.getAddress(),
@@ -520,7 +517,7 @@ export async function deployAll(config: ContractsConfig) {
   )) as XAllocationPool
 
   const galaxyMember = (await deployAndUpgrade(
-    ["GalaxyMemberV1", "GalaxyMemberV2", "GalaxyMemberV3", "GalaxyMemberV4", "GalaxyMember"],
+    ["GalaxyMemberV1", "GalaxyMemberV2", "GalaxyMemberV3", "GalaxyMemberV4", "GalaxyMemberV5", "GalaxyMember"],
     [
       [
         {
@@ -538,13 +535,19 @@ export async function deployAll(config: ContractsConfig) {
           treasury: await treasury.getAddress(),
         },
       ],
-      [vechainNodesAddress, nodeManagementAddress, TEMP_ADMIN, config.GM_NFT_NODE_TO_FREE_LEVEL],
+      [
+        deployer.address, // deprecated, we do not care about the legacy vechain nodes contract anymore
+        await nodeManagementMock.getAddress(),
+        TEMP_ADMIN,
+        config.GM_NFT_NODE_TO_FREE_LEVEL,
+      ],
       [],
       [],
       [],
+      [await stargateNftMock.getAddress()],
     ],
     {
-      versions: [undefined, 2, 3, 4, 5],
+      versions: [undefined, 2, 3, 4, 5, 6],
       logOutput: true,
     },
   )) as GalaxyMember
@@ -1015,7 +1018,7 @@ export async function deployAll(config: ContractsConfig) {
     X2EarnRewardsPool: await x2EarnRewardsPool.getAddress(),
     XAllocationPool: await xAllocationPool.getAddress(),
     XAllocationVoting: await xAllocationVoting.getAddress(),
-    vechainNodesManagement: nodeManagementAddress,
+    vechainNodesManagement: await nodeManagementMock.getAddress(),
     VeBetterPassport: await veBetterPassport.getAddress(),
     X2EarnCreator: await x2EarnCreator.getAddress(),
     GrantsManager: await grantsManager.getAddress(),
@@ -1103,7 +1106,9 @@ export async function deployAll(config: ContractsConfig) {
   console.log("Governance role granted to treasury contract admin")
 
   // Grant GrantsManager admin role to GrantsManager contract
+  await governor.connect(deployer).grantRole(await governor.CONTRACTS_ADDRESS_MANAGER_ROLE(), deployer.address)
   await governor.connect(deployer).setGrantsManager(await grantsManager.getAddress())
+  await governor.connect(deployer).revokeRole(await governor.CONTRACTS_ADDRESS_MANAGER_ROLE(), deployer.address)
   console.log("GrantsManager address set in B3TRGovernor contract")
 
   // Grant PROPOSAL_STATE_MANAGER_ROLE to deployer in B3TRGovernor contract
@@ -1270,7 +1275,7 @@ export async function deployAll(config: ContractsConfig) {
     xAllocationVoting,
     b3tr,
     vot3,
-    vechainNodesMock,
+    stargateMock,
   )
 
   // ---------- Role updates ---------- //
@@ -1660,6 +1665,8 @@ export async function deployAll(config: ContractsConfig) {
     x2EarnCreator: x2EarnCreator,
     grantsManager: grantsManager,
     relayerRewardsPool: relayerRewardsPool,
+    stargate: stargateMock,
+    stargateNFT: stargateNftMock,
     dynamicBaseAllocationPool: dynamicBaseAllocationPool,
     libraries: {
       governorClockLogic: GovernorClockLogicLib,

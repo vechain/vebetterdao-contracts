@@ -21,9 +21,6 @@ export async function updateConfig(config: AppConfig, contractAddressName: strin
     case AppEnv.MAINNET:
       fileToWrite = "mainnet.ts"
       break
-    case AppEnv.GALACTICA_TEST:
-      fileToWrite = "galactica-test.ts"
-      break
     default:
       throw new Error(`Invalid or unsupported environment for config file generation: ${config.environment}`)
   }
