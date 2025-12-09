@@ -31,6 +31,8 @@ interface IStargateDelegation {
     error RewardsAccumulationPeriodEnded();
     /// @notice Error thrown when the user requests to exit delegation repeatedly
     error DelegationExitAlreadyRequested();
+    /// @notice Error thrown when there are no lost rewards to claim
+    error NoLostRewardsToClaim(address owner, uint256 tokenId);
 
     /*------- Events -------*/
     /// @notice Event emitted when a delegation simulation is started
@@ -52,6 +54,17 @@ interface IStargateDelegation {
     );
     /// @notice Event emitted when the rewards accumulation end block is set
     event RewardsAccumulationEndBlockSet(uint256 rewardsAccumulationEndBlock);
+    /// @notice Event emitted when lost rewards are added
+    event LostRewardsAdded(address indexed owner, uint256 indexed tokenId, uint256 amount);
+    /// @notice Event emitted when lost rewards are removed
+    event LostRewardsRemoved(address indexed owner, uint256 indexed tokenId, uint256 amount);
+    /// @notice Event emitted when lost rewards are claimed
+    event LostRewardsClaimed(
+        address indexed owner,
+        uint256 indexed tokenId,
+        address indexed claimer,
+        uint256 amount
+    );
 
     /*------- Functions -------*/
 

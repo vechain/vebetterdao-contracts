@@ -8,7 +8,6 @@
 pragma solidity 0.8.20;
 
 library Strings {
-
     function strConcat(string memory _a, string memory _b) internal pure returns (string memory) {
         bytes memory _ba = bytes(_a);
         bytes memory _bb = bytes(_b);
@@ -25,18 +24,17 @@ library Strings {
         if (i == 0) return "0";
         uint j = i;
         uint len;
-        while (j != 0){
+        while (j != 0) {
             len++;
             j /= 10;
         }
         j = i;
         bytes memory bstr = new bytes(len);
         uint k = len - 1;
-        while (j != 0){
-            bstr[k--] = bytes1(uint8(48 + j % 10));
+        while (j != 0) {
+            bstr[k--] = bytes1(uint8(48 + (j % 10)));
             j /= 10;
         }
         return string(bstr);
     }
-
 }

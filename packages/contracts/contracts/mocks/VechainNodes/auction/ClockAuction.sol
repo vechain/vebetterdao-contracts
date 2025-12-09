@@ -11,9 +11,7 @@ import "./ClockAuctionBase.sol";
 
 import "../utility/interfaces/IVIP181.sol";
 
-
 contract ClockAuction is ClockAuctionBase {
-
     /// @dev Constructor creates a reference to the token ownership contract
     ///      and verifies the owner cut is in the valid range.
     /// @param _nftAddress - address of a deployed contract implementing
@@ -43,10 +41,7 @@ contract ClockAuction is ClockAuctionBase {
         uint64 _duration,
         uint64 _startedAt,
         address _seller
-    )
-        external
-        whenNotPaused
-    {
+    ) external whenNotPaused {
         require(msg.sender == address(VIP181), "permission denied");
         require(!isOnAuction(_tokenId), "token is on auction");
         // the duration of any auction should between 2 hours and 7 days.
@@ -56,41 +51,44 @@ contract ClockAuction is ClockAuctionBase {
         // remove expired auction first if exist
         _cancelAuction(_tokenId);
         // add new auction
-        _addAuction(_auctionId, _tokenId, _startingPrice, _endingPrice, _duration, _startedAt, payable(_seller));
+        _addAuction(
+            _auctionId,
+            _tokenId,
+            _startingPrice,
+            _endingPrice,
+            _duration,
+            _startedAt,
+            payable(_seller)
+        );
     }
 
     /// @dev Bids on an open auction, completing the auction and transferring
     ///      ownership of the token if enough Ether is supplied.
     /// @param _buyer   - address of token buyer.
     /// @param _tokenId - ID of token to bid on.
-    function bid(address _buyer, uint256 _tokenId)
-        external
-        payable
-        whenNotPaused
-        returns(uint256)
-    {
+    function bid(
+        address _buyer,
+        uint256 _tokenId
+    ) external payable whenNotPaused returns (uint256) {
         require(msg.sender == address(VIP181), "permission denied");
         require(isOnAuction(_tokenId), "auction not found");
         // if the candidates not empty check the _buyer in
-        if(hasWhiteList(_tokenId)) {
+        if (hasWhiteList(_tokenId)) {
             require(inWhiteList(_tokenId, _buyer), "blocked");
         }
-    
+
         Auction storage auction = tokenIdToAuction[_tokenId];
         address payable _seller = payable(auction.seller);
         // _bid will throw if the bid or funds transfer fails
         uint256 _price = _bid(payable(_buyer), _tokenId, msg.value);
-        
+
         VIP181.transferFrom(_seller, _buyer, _tokenId);
         return _price;
     }
 
     /// @dev Cancels an auction that hasn't been won yet.
     /// @param _tokenId - ID of token on auction
-    function cancelAuction(uint256 _tokenId)
-        external
-        whenNotPaused
-    {
+    function cancelAuction(uint256 _tokenId) external whenNotPaused {
         require(msg.sender == address(VIP181), "permission denied");
         require(exist(_tokenId), "auction not found");
         _cancelAuction(_tokenId);
@@ -98,17 +96,20 @@ contract ClockAuction is ClockAuctionBase {
 
     /// @dev Returns auction info for an token on auction.
     /// @param _tokenId - ID of token on auction.
-    function getAuction(uint256 _tokenId)
+    function getAuction(
+        uint256 _tokenId
+    )
         public
         view
         returns (
-        uint256 autionId,
-        address seller,
-        uint256 startingPrice,
-        uint256 endingPrice,
-        uint64 duration,
-        uint64 startedAt
-    ) {
+            uint256 autionId,
+            address seller,
+            uint256 startingPrice,
+            uint256 endingPrice,
+            uint64 duration,
+            uint64 startedAt
+        )
+    {
         Auction storage auction = tokenIdToAuction[_tokenId];
 
         return (
@@ -122,31 +123,22 @@ contract ClockAuction is ClockAuctionBase {
     }
 
     /// @dev Returns true if the auction exists
-    function exist(uint256 _tokenId)
-        public
-        view
-        returns(bool)
-    {
+    function exist(uint256 _tokenId) public view returns (bool) {
         return tokenIdToAuction[_tokenId].auctionId > 0;
     }
 
     /// @dev Returns true if the token is on auction.
-    function isOnAuction(uint256 _tokenId)
-        public
-        view
-        returns (bool)
-    {
+    function isOnAuction(uint256 _tokenId) public view returns (bool) {
         Auction storage _auction = tokenIdToAuction[_tokenId];
-        return _auction.startedAt > 0 && _auction.startedAt <= block.timestamp && block.timestamp < (_auction.startedAt + _auction.duration);
+        return
+            _auction.startedAt > 0 &&
+            _auction.startedAt <= block.timestamp &&
+            block.timestamp < (_auction.startedAt + _auction.duration);
     }
 
     /// @dev Returns the current price of an auction.
     /// @param _tokenId - ID of the token price we are checking.
-    function getCurrentPrice(uint256 _tokenId)
-        public
-        view
-        returns (uint256)
-    {
+    function getCurrentPrice(uint256 _tokenId) public view returns (uint256) {
         if (!isOnAuction(_tokenId)) {
             return 0;
         }
@@ -154,31 +146,20 @@ contract ClockAuction is ClockAuctionBase {
         return _currentPrice(auction);
     }
 
-    function hasWhiteList(uint256 _tokenId)
-        public
-        view
-        returns (bool)
-    {
+    function hasWhiteList(uint256 _tokenId) public view returns (bool) {
         uint256 _auctionId = tokenIdToAuction[_tokenId].auctionId;
         // always return false when tokenId is not on auction.
         return auctionWhiteList[_auctionId].count > 0;
     }
 
-    function inWhiteList(uint256 _tokenId, address _address)
-        public
-        view
-        returns (bool)
-    {
+    function inWhiteList(uint256 _tokenId, address _address) public view returns (bool) {
         uint256 _auctionId = tokenIdToAuction[_tokenId].auctionId;
         // always return false when tokenId is not on auction.
         return auctionWhiteList[_auctionId].whiteList[_address];
     }
 
     /// @dev Add condidate for the auction of the passed token.
-    function addAuctionWhiteList(uint256 _tokenId, address _address) 
-        external
-        whenNotPaused
-    {
+    function addAuctionWhiteList(uint256 _tokenId, address _address) external whenNotPaused {
         require(msg.sender == address(VIP181), "permission denied");
         require(isOnAuction(_tokenId), "auction not found");
         require(!inWhiteList(_tokenId, _address), "in the list");
@@ -194,10 +175,7 @@ contract ClockAuction is ClockAuctionBase {
     }
 
     /// @dev Remove address from whitelist.
-    function removeAuctionWhiteList(uint256 _tokenId, address _address) 
-        external
-        whenNotPaused
-    {
+    function removeAuctionWhiteList(uint256 _tokenId, address _address) external whenNotPaused {
         require(msg.sender == address(VIP181), "permission denied");
         require(isOnAuction(_tokenId), "auction not found");
         require(inWhiteList(_tokenId, _address), "not in the list");
@@ -206,5 +184,4 @@ contract ClockAuction is ClockAuctionBase {
         auctionWhiteList[_auctionId].count--;
         auctionWhiteList[_auctionId].whiteList[_address] = false;
     }
-
 }

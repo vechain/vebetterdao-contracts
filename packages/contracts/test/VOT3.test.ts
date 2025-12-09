@@ -1,5 +1,5 @@
-import { assert, ethers } from "hardhat"
-import { expect } from "chai"
+import { ethers } from "hardhat"
+import { expect, assert } from "chai"
 import { ZERO_ADDRESS, catchRevert, getOrDeployContractInstances, getVot3Tokens } from "./helpers"
 import { describe, it } from "mocha"
 import { getImplementationAddress } from "@openzeppelin/upgrades-core"

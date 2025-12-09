@@ -11,7 +11,7 @@
 
 pragma solidity 0.8.20;
 
-import {Time} from "@openzeppelin/contracts/utils/types/Time.sol";
+import { Time } from "@openzeppelin/contracts/utils/types/Time.sol";
 
 /// @title Clock
 /// @notice Library for the StargateNFT contract to get the current block number and clock mode

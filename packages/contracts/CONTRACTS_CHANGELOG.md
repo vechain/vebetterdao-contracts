@@ -6,6 +6,7 @@ This document provides a detailed log of upgrades to the smart contract suite, e
 
 | Date                | Contract(s)                                                                                                                   | Summary                                                                                                                                      |
 | ------------------- | ----------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| 3 December 2025     | `GalaxyMember` version `6` and `X2EarnApps` version `7`                                                                       | Replace Node Management Contract with Stargate NFT
 | 27 October 2025     | `B3TRGovernor` version `8` and `GrantsManager` version `2`                                                                    | Give ability to mark proposals as in development/completed                                                                                   |
 | 27 October 2025     | `DBAPool` version `2`                                                                                                         | Add tracking of DBA rewards per app per round and seed function for historical data                                                          |
 | 21 October 2025     | `XAllocationVoting` version `8`, `VoterRewards` version `6`, `RelayerRewardsPool` version `1`                                 | Added auto-voting functionality with relayer rewards system and early access period                                                          |
@@ -32,6 +33,188 @@ This document provides a detailed log of upgrades to the smart contract suite, e
 | 4th September 2024  | `X2EarnRewardsPool` version `2`                                                                                               | - Added impact key management and proof building                                                                                             |
 | 31st August 2024    | `VoterRewards` version `2`                                                                                                    | - Added quadratic rewarding features                                                                                                         |
 | 29th August 2024    | `B3TRGovernor` version `2`                                                                                                    | Updated access control modifiers                                                                                                             |
+
+---
+
+## Upgrade `GalaxyMember` to Version `6`
+
+Migrates GalaxyMember from legacy VeChain nodes infrastructure to Stargate NFT ecosystem, replacing NodeManagement and TokenAuction contract dependencies with the unified StargateNFT contract for node management and level tracking.
+
+---
+
+### Changes 🚀
+
+* **Upgraded Contract(s):**
+  * `GalaxyMember.sol` to version `6`
+
+---
+
+### Storage Changes 📦
+
+* **`GalaxyMember`**:
+
+  **➕ Added (V6)**
+
+  * `stargateNFT` (IStargateNFT) → Reference to the Stargate NFT contract for node management
+
+  **⚠️ Deprecated (Retained for Backward Compatibility)**
+
+  * `vechainNodes` (ITokenAuction) → Legacy VeChain nodes contract (no longer actively used but kept in storage)
+  * `nodeManagement` (INodeManagementV3) → Legacy node management contract (no longer actively used but kept in storage)
+
+---
+
+### Migration Requirements ⚠️
+
+* **Node Holders**: Users with nodes attached to Galaxy Member NFTs must migrate their nodes from the legacy TokenAuction contract to Stargate before upgrading to V6
+* **Impact if Not Migrated**:
+  - Node attachments will be automatically reset/cleared
+  - Galaxy Member NFTs will revert to base level (level determined by B3TR donated only)
+  - Users can re-attach their nodes after migration
+
+---
+
+### New Features 🚀
+
+* **`GalaxyMember`**:
+
+  #### Stargate NFT Integration:
+
+  **Updated Core Functions:**
+  - `attachNode()` - Now validates node ownership using `stargateNFT.getTokenManager()` instead of `nodeManagement.getNodeManager()`
+  - `detachNode()` - Now checks permissions using `stargateNFT.isTokenManager()` and `stargateNFT.ownerOf()` instead of NodeManagement contract
+  - `getNodeLevelOf()` - Now retrieves node levels via `stargateNFT.getTokenLevel()` instead of `nodeManagement.getNodeLevel()`
+
+  **Internal Logic Updates:**
+  - `_getNodeIdAttached()` - Now uses `stargateNFT.tokenExists()` and `stargateNFT.getTokenManager()` to validate node attachments
+  - `_getIdAttachedToNode()` - Now uses `stargateNFT.tokenExists()` for node existence validation
+  - `_getLevelOfAndB3TRleft()` - Now uses `stargateNFT.getTokenManager()` to verify node management rights for level calculation
+
+  #### New Management Functions:
+  - `setStargateNFTAddress(address _stargateNFT)` - Allows the `CONTRACTS_ADDRESS_MANAGER_ROLE` to update the StargateNFT contract address
+    - Emits `StargateNFTAddressUpdated` event
+  - `stargateNFT()` - View function to retrieve the current StargateNFT contract address
+
+  #### API Mapping Changes:
+  ```
+  Legacy (V5)                           → Stargate (V6)
+  ────────────────────────────────────────────────────────────────
+  nodeManagement.getNodeManager()       → stargateNFT.getTokenManager()
+  nodeManagement.getNodeOwner()         → stargateNFT.ownerOf()
+  nodeManagement.getNodeLevel()         → stargateNFT.getTokenLevel()
+  nodeManagement.isNodeDelegator()      → stargateNFT.isTokenManager()
+  ```
+
+---
+
+### Events 📣
+
+* **New Events:**
+  - `StargateNFTAddressUpdated(address indexed newAddress, address indexed oldAddress)` - Emitted when the StargateNFT contract address is updated
+
+---
+
+### Backward Compatibility ♻️
+
+* All existing Galaxy Member NFTs and their properties (token IDs, levels, B3TR donated) are preserved
+* Existing storage mappings (`_nodeToTokenId`, `_tokenIdToNode`, `_nodeToFreeUpgradeLevel`) remain intact
+* Token selection checkpoints maintained across upgrade
+* Node attachment storage preserved (for migrated nodes)
+
+---
+
+## Upgrade `X2EarnApps` to Version `7`
+
+Migrates X2EarnApps endorsement system from legacy NodeManagement infrastructure to Stargate NFT ecosystem, replacing NodeManagement contract dependencies with the unified StargateNFT contract for node verification and endorsement scoring.
+
+---
+
+### Changes 🚀
+
+* **Upgraded Contract(s):**
+  * `X2EarnApps.sol` to version `7`
+
+* **Updated Modules:**
+  * `EndorsementUpgradeable.sol` - Stargate NFT integration
+  * `EndorsementUtils.sol` - Replaced NodeManagement calls with StargateNFT calls
+
+---
+
+### Storage Changes 📦
+
+* **`EndorsementUpgradeable` (X2EarnApps Module)**:
+
+  **➕ Added (V7)**
+
+  * `_stargateNFT` (IStargateNFT) → Reference to the Stargate NFT contract for node management and endorsement validation
+
+  **⚠️ Deprecated (Retained for Backward Compatibility)**
+
+  * `_nodeManagementContract` (INodeManagementV3) → Legacy node management contract (no longer actively used but kept in storage)
+
+---
+
+### Library Changes 📚
+
+* **`EndorsementUtils`**:
+
+  **➕ Added Data Types (V7)**
+
+  * `NodeStrengthLevel` enum → Local definition of node strength levels (replaces `VechainNodesDataTypes.NodeStrengthLevel`)
+  * `NodeStrengthScores` struct → Local definition of node strength scores (replaces `VechainNodesDataTypes.NodeStrengthScores`)
+  * `NodeSource` enum → Source identifier for nodes (None, VeChainNodes, StargateNFT)
+
+  **🔄 Removed Dependencies**
+
+  * Removed import of `VechainNodesDataTypes` from NodeManagement
+  * Now self-contained with its own data type definitions
+
+---
+
+### New Features 🚀
+
+* **`X2EarnApps`**:
+
+  #### Stargate NFT Integration:
+
+  **New Initializer:**
+  - `initializeV7(address _stargateNft)` - Initializes V7 upgrade with Stargate NFT contract address
+
+  **New Management Functions:**
+  - `setStargateNFT(address _stargateNft)` - Allows the `DEFAULT_ADMIN_ROLE` to update the Stargate NFT contract address
+  - `getStargateNFT()` - View function to retrieve the current Stargate NFT contract address
+
+  **🗑️ Removed Functions:**
+  - `setNodeManagementContract(address)`
+  - `getNodeManagementContract()`
+
+---
+
+* **`EndorsementUpgradeable` Module**:
+
+  #### Updated Core Functions:
+
+  - `endorseApp()` - Now validates node management using `stargateNFT.isTokenManager()`
+  - `unendorseApp()` - Now validates node management using `stargateNFT.isTokenManager()`
+  - `getNodeEndorsementScore()` - Now retrieves node levels via `stargateNFT.getTokenLevel()`
+  - `getUsersEndorsementScore()` - Now uses `stargateNFT` for score calculation
+  - `getEndorsers()` - Now uses `stargateNFT` to retrieve endorser information
+
+---
+
+* **`EndorsementUtils` Library**:
+
+  #### API Mapping Changes:
+  ```
+  Legacy (V6)                                  → Stargate (V7)
+  ────────────────────────────────────────────────────────────────────────────
+  nodeManagement.isNodeManager()              → stargateNFT.isTokenManager()
+  nodeManagement.getNodeManager()             → stargateNFT.getTokenManager()
+  nodeManagement.getNodeLevel()               → stargateNFT.getTokenLevel()
+  nodeManagement.getUsersNodeLevels()         → stargateNFT.tokensManagedBy()
+  VechainNodesDataTypes.NodeStrengthLevel     → EndorsementUtils.NodeStrengthLevel
+  VechainNodesDataTypes.NodeStrengthScores    → EndorsementUtils.NodeStrengthScores
+  ```
 
 ---
 

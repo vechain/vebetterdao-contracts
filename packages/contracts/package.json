@@ -1,51 +1,64 @@
 {
   "name": "@vechain/vebetterdao-contracts",
-  "version": "8.1.2",
-  "main": "dist/cjs/index.js",
-  "module": "dist/esm/index.js",
-  "types": "dist/esm/index.d.ts",
+  "version": "8.1.3",
+  "main": "dist/cjs/contracts/index.js",
+  "module": "dist/esm/contracts/index.js",
+  "types": "dist/esm/contracts/index.d.ts",
   "files": [
-    "dist"
+    "dist",
+    "typechain-types",
+    "artifacts"
   ],
   "license": "MIT",
   "sideEffects": false,
   "exports": {
     ".": {
-      "import": "./dist/esm/index.js",
-      "require": "./dist/cjs/index.js",
-      "types": "./dist/esm/index.d.ts"
+      "import": "./dist/esm/contracts/index.js",
+      "require": "./dist/cjs/contracts/index.js",
+      "types": "./dist/esm/contracts/index.d.ts",
+      "default": "./index.ts"
     },
     "./typechain-types": {
-      "import": "./dist/esm/typechain-types/index.js",
-      "require": "./dist/cjs/typechain-types/index.js",
-      "types": "./dist/esm/typechain-types/index.d.ts"
+      "import": "./dist/esm/contracts/typechain-types/index.js",
+      "require": "./dist/cjs/contracts/typechain-types/index.js",
+      "types": "./dist/esm/contracts/typechain-types/index.d.ts",
+      "default": "./typechain-types/index.ts"
     },
     "./factories/*": {
-      "import": "./dist/esm/typechain-types/factories/contracts/*.js",
-      "require": "./dist/cjs/typechain-types/factories/contracts/*.js",
-      "types": "./dist/esm/typechain-types/factories/contracts/*.d.ts"
+      "import": "./dist/esm/contracts/typechain-types/factories/contracts/*.js",
+      "require": "./dist/cjs/contracts/typechain-types/factories/contracts/*.js",
+      "types": "./dist/esm/contracts/typechain-types/factories/contracts/*.d.ts",
+      "default": "./typechain-types/factories/*"
     },
     "./@openzeppelin/*": {
-      "import": "./dist/esm/typechain-types/factories/@openzeppelin/contracts/*.js",
-      "require": "./dist/cjs/typechain-types/factories/@openzeppelin/contracts/*.js",
-      "types": "./dist/esm/typechain-types/factories/@openzeppelin/contracts/*.d.ts"
+      "import": "./dist/esm/contracts/typechain-types/factories/@openzeppelin/contracts/*.js",
+      "require": "./dist/cjs/contracts/typechain-types/factories/@openzeppelin/contracts/*.js",
+      "types": "./dist/esm/contracts/typechain-types/factories/@openzeppelin/contracts/*.d.ts",
+      "default": "./typechain-types/factories/@openzeppelin/*"
+    },
+    "./contracts/*": {
+      "import": "./dist/esm/contracts/typechain-types/contracts/*.js",
+      "require": "./dist/cjs/contracts/typechain-types/contracts/*.js",
+      "types": "./dist/esm/contracts/typechain-types/contracts/*.d.ts",
+      "default": "./typechain-types/contracts/*"
     }
   },
   "prepublishOnly": "yarn compile",
   "scripts": {
     "clean": "rm -rf dist artifacts typechain-types cache node_modules",
+    "build": "npx hardhat compile && tsc -b ./tsconfig.esm.json ./tsconfig.cjs.json",
     "test:thor-solo": "npx hardhat test",
     "test:hardhat": "npx hardhat test --network hardhat",
     "test:hardhat:shard": "npx hardhat test --network hardhat --grep \"$SHARD\"",
     "test:coverage:solidity": "hardhat coverage",
     "coverage:report": "nyc report --reporter=lcov --reporter=text --reporter=html --temp-dir=./coverage",
     "compile": "npx hardhat compile && tsc -b ./tsconfig.esm.json ./tsconfig.cjs.json",
-    "deploy": "npx hardhat run scripts/deploy",
+    "deploy": "npx hardhat run scripts/deploy --network hardhat",
+    "compile:slither": "npx --node-options=\"--max-old-space-size=8192\" hardhat compile && npx --node-options=\"--max-old-space-size=8192\" tsc -b ./tsconfig.esm.json ./tsconfig.cjs.json",
     "deploy:local": "npx hardhat run scripts/deploy --network vechain_solo",
     "deploy:testnet-staging": "npx hardhat run scripts/deploy --network vechain_testnet",
     "deploy:testnet": "npx hardhat run scripts/deploy --network vechain_testnet",
     "deploy:mainnet": "npx hardhat run scripts/deploy --network vechain_mainnet",
-    "deploy:galactica-test": "npx hardhat run scripts/deploy --network vechain_solo",
     "simulation": "npx hardhat run scripts/runSimulation.ts",
     "deploy:hardhat": "npx hardhat run scripts/deploy --network hardhat",
     "check-contracts-deployment": "npx hardhat run scripts/checkContractsDeployment.ts",
@@ -83,7 +96,11 @@
     "verify:testnet": "npx hardhat verify --network vechain_testnet",
     "verify:mainnet": "npx hardhat verify --network vechain_mainnet",
     "estimate-voting-gas:mainnet": "npx hardhat run scripts/helpers/estimateVotingGas.ts --network vechain_mainnet",
-    "setup-environment:local": "npx hardhat run scripts/standalone/setupLocalEnvironment.ts"
+    "setup-environment:local": "npx hardhat run scripts/standalone/setupLocalEnvironment.ts",
+    "verify:all:contracts:mainnet": "npx hardhat run scripts/verify/verify-all-contracts.ts --network vechain_mainnet",
+    "verify:all:contracts:testnet-staging": "npx hardhat run scripts/verify/verify-all-contracts.ts --network vechain_testnet",
+    "check-verification-status:mainnet": "npx hardhat run scripts/verify/check-verification-status.ts --network vechain_mainnet",
+    "check-verification-status:testnet-staging": "npx hardhat run scripts/verify/check-verification-status.ts --network vechain_testnet"
   },
   "dependencies": {
     "@nomicfoundation/hardhat-chai-matchers": "^2.0.2",

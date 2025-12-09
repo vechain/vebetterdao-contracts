@@ -26,8 +26,14 @@ library Errors {
     /// @notice Thrown upon initialization of contract when a value is zero, eg legacy last token ID
     error ValueCannotBeZero();
 
+    /// @notice Thrown when a value is invalid, eg token id
+    error InvalidValue(uint256 value);
+
     /// @notice Thrown upon initialization of contract when a list is empty, eg token levels
     error ArrayCannotHaveZeroLength();
+
+    /// @notice Thrown upon initialization of when two arrays have different lengths
+    error ArraysLengthMismatch();
 
     // ------------------ Token Errors ------------------ //
 
@@ -94,4 +100,49 @@ library Errors {
 
     /// @notice Thrown when the block number is in the future
     error BlockInFuture();
+
+    // ------------------ Whitelist Errors ------------------ //
+
+    /// @notice Thrown upon removal of a whitelist entry, when the entry is not found
+    error WhitelistEntryNotFound(address owner);
+
+    // ------------------ Stargate Errors ------------------ //
+
+    /// @notice Thrown when the VET is already held in the protocol
+    error VetAlreadyHeldInProtocol();
+
+    // ------------------ Boost Errors ------------------ //
+
+    /// @notice Thrown when the token is not eligible for boosting
+    error MaturityPeriodEnded(uint256 tokenId);
+
+    /// @notice Thrown when the balance is insufficient for the operation
+    error InsufficientBalance(
+        address tokenAddress,
+        address owner,
+        uint256 required,
+        uint256 provided
+    );
+
+    /// @notice Thrown when the allowance is insufficient for the operation
+    error InsufficientAllowance(
+        address owner,
+        address spender,
+        uint256 currentAllowance,
+        uint256 requiredAmount
+    );
+
+    // ------------------ Node Management Errors ------------------ //
+
+    /// @notice Thrown when the node manager address is the zero address
+    error ManagerZeroAddress();
+
+    /// @notice Thrown when the node manager is the same as the caller
+    error SelfManager();
+
+    /// @notice Thrown when the token manager is not the token manager or the token owner
+    error NotTokenManagerOrOwner(uint256 tokenId);
+
+    /// @notice Thrown when the token is not delegated
+    error NoTokenManager(uint256 tokenId);
 }

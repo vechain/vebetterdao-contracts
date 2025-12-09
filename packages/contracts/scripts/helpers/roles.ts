@@ -14,8 +14,9 @@ import {
   X2EarnRewardsPool,
   XAllocationPool,
   XAllocationVoting,
-  NodeManagement,
+  NodeManagementV3,
 } from "../../typechain-types"
+import { ContractTransactionResponse } from "ethers"
 
 export const transferAdminRole = async (
   contract:
@@ -40,11 +41,11 @@ export const transferAdminRole = async (
   await contract
     .connect(oldAdmin)
     .grantRole(adminRole, newAdminAddress)
-    .then(async tx => await tx.wait())
+    .then(async (tx: ContractTransactionResponse) => await tx.wait())
   await contract
     .connect(oldAdmin)
     .renounceRole(adminRole, oldAdmin.address)
-    .then(async tx => await tx.wait())
+    .then(async (tx: ContractTransactionResponse) => await tx.wait())
 
   const newAdminSet = await contract.hasRole(adminRole, newAdminAddress)
   const oldAdminRemoved = !(await contract.hasRole(adminRole, oldAdmin.address))
@@ -71,11 +72,11 @@ export const transferMinterRole = async (
     await contract
       .connect(admin)
       .grantRole(minterRole, newMinterAddress)
-      .then(async tx => await tx.wait())
+      .then(async (tx: ContractTransactionResponse) => await tx.wait())
     await contract
       .connect(admin)
       .revokeRole(minterRole, oldMinterAddress)
-      .then(async tx => await tx.wait())
+      .then(async (tx: ContractTransactionResponse) => await tx.wait())
 
     const newMinterSet = await contract.hasRole(minterRole, newMinterAddress)
     const oldMinterRemoved = !(await contract.hasRole(minterRole, oldMinterAddress))
@@ -87,7 +88,7 @@ export const transferMinterRole = async (
     await contract
       .connect(admin)
       .revokeRole(minterRole, oldMinterAddress)
-      .then(async tx => await tx.wait())
+      .then(async (tx: ContractTransactionResponse) => await tx.wait())
 
     const oldMinterRemoved = !(await contract.hasRole(minterRole, oldMinterAddress))
     if (!oldMinterRemoved) throw new Error("Minter role not removed correctly on " + (await contract.getAddress()))
@@ -114,11 +115,11 @@ export const transferGovernanceRole = async (
     await contract
       .connect(admin)
       .grantRole(governanceRole, newAddress)
-      .then(async tx => await tx.wait())
+      .then(async (tx: ContractTransactionResponse) => await tx.wait())
     await contract
       .connect(admin)
       .revokeRole(governanceRole, oldAddress)
-      .then(async tx => await tx.wait())
+      .then(async (tx: ContractTransactionResponse) => await tx.wait())
 
     const newGovernanceSet = await contract.hasRole(governanceRole, newAddress)
     const oldGovernanceRemoved = !(await contract.hasRole(governanceRole, oldAddress))
@@ -130,7 +131,7 @@ export const transferGovernanceRole = async (
     await contract
       .connect(admin)
       .revokeRole(governanceRole, oldAddress)
-      .then(async tx => await tx.wait())
+      .then(async (tx: ContractTransactionResponse) => await tx.wait())
 
     const oldGovernanceRemoved = !(await contract.hasRole(governanceRole, oldAddress))
     if (!oldGovernanceRemoved)
@@ -152,11 +153,11 @@ export const transferContractsAddressManagerRole = async (
   await contract
     .connect(admin)
     .grantRole(contractsAddressManagerRole, newAddress)
-    .then(async tx => await tx.wait())
+    .then(async (tx: ContractTransactionResponse) => await tx.wait())
   await contract
     .connect(admin)
     .renounceRole(contractsAddressManagerRole, admin.address)
-    .then(async tx => await tx.wait())
+    .then(async (tx: ContractTransactionResponse) => await tx.wait())
 
   const newRoleSet = await contract.hasRole(contractsAddressManagerRole, newAddress)
   const oldRoleRemoved = !(await contract.hasRole(contractsAddressManagerRole, admin.address))
@@ -178,11 +179,11 @@ export const transferDecaySettingsManagerRole = async (
   await contract
     .connect(admin)
     .grantRole(decaySettingsManagerRole, newAddress)
-    .then(async tx => await tx.wait())
+    .then(async (tx: ContractTransactionResponse) => await tx.wait())
   await contract
     .connect(admin)
     .renounceRole(decaySettingsManagerRole, admin.address)
-    .then(async tx => await tx.wait())
+    .then(async (tx: ContractTransactionResponse) => await tx.wait())
 
   const newRoleSet = await contract.hasRole(decaySettingsManagerRole, newAddress)
   const oldRoleRemoved = !(await contract.hasRole(decaySettingsManagerRole, admin.address))
@@ -202,11 +203,11 @@ export const transferGovernorFunctionSettingsRole = async (
   await contract
     .connect(admin)
     .grantRole(governorFunctionSettingsRole, newAddress)
-    .then(async tx => await tx.wait())
+    .then(async (tx: ContractTransactionResponse) => await tx.wait())
   await contract
     .connect(admin)
     .renounceRole(governorFunctionSettingsRole, admin.address)
-    .then(async tx => await tx.wait())
+    .then(async (tx: ContractTransactionResponse) => await tx.wait())
 
   const newRoleSet = await contract.hasRole(governorFunctionSettingsRole, newAddress)
   const oldRoleRemoved = !(await contract.hasRole(governorFunctionSettingsRole, admin.address))
@@ -233,7 +234,7 @@ export const validateContractRole = async (
     | X2EarnApps
     | VeBetterPassport
     | X2EarnCreator
-    | NodeManagement,
+    | NodeManagementV3,
   expectedAddress: string,
   tempAdmin: string,
   role: string,
@@ -275,7 +276,7 @@ export const transferSettingsManagerRole = async (
 }
 
 export const transferUpgraderRole = async (
-  contract: Emissions | XAllocationPool | NodeManagement | X2EarnApps | GalaxyMember,
+  contract: Emissions | XAllocationPool | NodeManagementV3 | X2EarnApps | GalaxyMember,
   admin: HardhatEthersSigner,
   newAddress: string,
 ) => {

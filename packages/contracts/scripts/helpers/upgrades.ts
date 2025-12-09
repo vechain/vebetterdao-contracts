@@ -1,4 +1,4 @@
-import { BaseContract, Interface } from "ethers"
+import { BaseContract, Contract, Interface } from "ethers"
 import { ethers } from "hardhat"
 import { getImplementationAddress } from "@openzeppelin/upgrades-core"
 import { AddressUtils } from "@repo/utils"
@@ -256,4 +256,77 @@ export function getInitializerData(contractInterface: Interface, args: any[], ve
     throw new Error(`Contract initializer not found`)
   }
   return contractInterface.encodeFunctionData(fragment, args)
+}
+
+export const deployUpgradeableWithoutInitialization = async (
+  contractName: string,
+  libraries: { [libraryName: string]: string } = {},
+  logOutput: boolean = false,
+): Promise<string> => {
+  // Deploy the implementation contract
+  const Contract = await ethers.getContractFactory(contractName, {
+    libraries: libraries,
+  })
+  const implementation = await Contract.deploy()
+  await implementation.waitForDeployment()
+  logOutput && console.log(`${contractName} impl.: ${await implementation.getAddress()}`)
+
+  // Deploy the proxy contract without initialization
+  const proxyFactory = await ethers.getContractFactory("B3TRProxy")
+  const proxy = await proxyFactory.deploy(await implementation.getAddress(), "0x")
+  await proxy.waitForDeployment()
+  logOutput && console.log(`${contractName} proxy: ${await proxy.getAddress()}`)
+
+  const newImplementationAddress = await getImplementationAddress(ethers.provider, await proxy.getAddress())
+  if (!AddressUtils.compareAddresses(newImplementationAddress, await implementation.getAddress())) {
+    throw new Error(
+      `The implementation address is not the one expected: ${newImplementationAddress} !== ${await implementation.getAddress()}`,
+    )
+  }
+
+  // Return the proxy address
+  return await proxy.getAddress()
+}
+
+export const initializeProxyAllVersions = async (
+  contractName: string,
+  proxyAddress: string,
+  initializerCalls: { version?: number; args: any[] }[],
+  logOutput: boolean = false,
+): Promise<BaseContract> => {
+  // Get contract instance
+  const Contract = await ethers.getContractAt(contractName, proxyAddress)
+
+  // Get the signer
+  const signer = (await ethers.getSigners())[0]
+
+  // Call all initializers
+  let upgraderCheck = false
+  for (const { version, args } of initializerCalls) {
+    logOutput && console.log(`Initializing ${contractName} V${version ?? "1"}...`)
+
+    if (version !== undefined && upgraderCheck === false) {
+      await revertIfSignerIsNotUpgrader(Contract, await signer.getAddress())
+      upgraderCheck = true
+    }
+
+    const data = getInitializerData(Contract.interface, args, version)
+    const tx = await signer.sendTransaction({
+      to: proxyAddress,
+      data,
+      gasLimit: 10_000_000,
+    })
+    await tx.wait()
+  }
+
+  // Return the contract instance
+  return Contract
+}
+
+async function revertIfSignerIsNotUpgrader(contract: Contract, signerAddress: string) {
+  const upgraderRole = ethers.keccak256(ethers.toUtf8Bytes("UPGRADER_ROLE"))
+  const hasUpgraderRole = await contract.hasRole(upgraderRole, signerAddress)
+  if (!hasUpgraderRole) {
+    throw new Error(`Signer ${signerAddress} is missing UPGRADER_ROLE. Cancelling upgrade.`)
+  }
 }

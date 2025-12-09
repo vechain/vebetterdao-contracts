@@ -68,12 +68,17 @@ async function saveMetadataToFile(metadata: Metadata, fileName: string): Promise
 
 /**
  * Asynchronously gets the NFT images from the IMAGE_PATH.
- * @returns An array of NFT image file names.
+ * @returns An array of NFT image file names, sorted numerically.
  */
 async function getNFTImages(): Promise<string[]> {
   //Get only the png files in the IMAGE_PATH
   const images = (await fs.readdir(IMAGE_PATH)).filter(file => file.toLowerCase().endsWith(".png"))
-  return images
+  // Sort numerically by extracting the number from the filename
+  return images.sort((a, b) => {
+    const numA = parseInt(a.match(/\d+/)?.[0] || "0")
+    const numB = parseInt(b.match(/\d+/)?.[0] || "0")
+    return numA - numB
+  })
 }
 
 /**

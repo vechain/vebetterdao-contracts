@@ -857,7 +857,7 @@ describe("X2EarnRewardsPool - @shard12", function () {
 
       // @ts-ignore
       await expect(myErc721.connect(owner).safeTransferFrom(owner.address, await x2EarnRewardsPool.getAddress(), 1)).to
-        .be.rejected
+        .be.reverted
     })
 
     it("Cannot send ERC1155 to the contract", async function () {
@@ -873,7 +873,7 @@ describe("X2EarnRewardsPool - @shard12", function () {
       // @ts-ignore
       await expect(
         myErc1155.connect(owner).safeTransferFrom(owner.address, await x2EarnRewardsPool.getAddress(), 1, 1, "0x"),
-      ).to.be.rejected
+      ).to.be.reverted
     })
 
     it("Cannot batch send ERC1155 to the contract", async function () {
@@ -886,7 +886,7 @@ describe("X2EarnRewardsPool - @shard12", function () {
 
       await expect(
         myErc1155.connect(owner).mintBatch(await x2EarnRewardsPool.getAddress(), [2, 3], [2, 3], new Uint8Array(0)),
-      ).to.be.rejected
+      ).to.be.reverted
     })
 
     it("should revert when calling fallback function with call data", async function () {

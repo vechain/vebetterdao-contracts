@@ -25,7 +25,7 @@ async function main() {
     PassportPoPScoreLogic,
     PassportSignalingLogic,
     PassportWhitelistAndBlacklistLogic,
-  } = await passportLibraries()
+  } = await passportLibraries({ logOutput: true, latestVersionOnly: true })
 
   const libraries: {
     VeBetterPassport: Record<string, string>

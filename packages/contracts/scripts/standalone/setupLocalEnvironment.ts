@@ -8,6 +8,7 @@ import {
   Treasury,
   X2EarnApps,
   TokenAuction,
+  Stargate,
 } from "../../typechain-types"
 import { setupEnvironment } from "../deploy/setup"
 import localConfig from "@repo/config/local"
@@ -54,10 +55,10 @@ async function main() {
     const vot3 = (await ethers.getContractAt("VOT3", localConfig.vot3ContractAddress)) as unknown as VOT3
 
     // For nodeManagement, we use the address from the config
-    const vechainNodesMock = (await ethers.getContractAt(
-      "TokenAuction",
-      localConfig.tokenAuctionContractAddress,
-    )) as unknown as TokenAuction
+    const stargateMock = (await ethers.getContractAt(
+      "Stargate",
+      localConfig.stargateContractAddress,
+    )) as unknown as Stargate
 
     console.log("All contracts connected successfully!")
 
@@ -79,7 +80,7 @@ async function main() {
       xAllocationVoting,
       b3tr,
       vot3,
-      vechainNodesMock,
+      stargateMock,
     )
 
     console.log("================ Setup completed successfully!")

@@ -20,6 +20,7 @@ import {
   VOT3,
   RelayerRewardsPool,
   X2EarnCreator,
+  StargateNFT,
 } from "../../../typechain-types"
 
 describe("AutoVoting - @shard14b", function () {
@@ -43,7 +44,7 @@ describe("AutoVoting - @shard14b", function () {
   let appOwner2: HardhatEthersSigner
   let appOwner3: HardhatEthersSigner
   let x2EarnCreatorContract: X2EarnCreator
-
+  let stargateNftMock: StargateNFT
   // Main setup - used by most tests
   const setupContracts = async () => {
     const config = await getOrDeployContractInstances({
@@ -71,7 +72,7 @@ describe("AutoVoting - @shard14b", function () {
     appOwner2 = otherAccounts[13]
     appOwner3 = otherAccounts[14]
     x2EarnCreatorContract = config.x2EarnCreator
-
+    stargateNftMock = config.stargateNftMock
     await b3tr.connect(owner).grantRole(await b3tr.MINTER_ROLE(), await emissions.getAddress())
 
     await emissions.connect(minterAccount).bootstrap()
@@ -504,7 +505,7 @@ describe("AutoVoting - @shard14b", function () {
       expect(await xAllocationVoting.isEligibleForVote(app1Id, roundId)).to.be.true
 
       // App gets unendorsed - will become ineligible after grace period
-      const nodeId = 1
+      const nodeId = await stargateNftMock.tokenOfOwnerByIndex(appOwner.address, 0)
       await x2EarnApps.connect(appOwner).unendorseApp(app1Id, nodeId)
       expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.be.true
 
@@ -1025,7 +1026,7 @@ describe("AutoVoting - @shard14b", function () {
       expect(await xAllocationVoting.isEligibleForVote(app1Id, roundId)).to.be.true
 
       // App gets unendorsed during round 1, but autovoting should still work
-      const nodeId = 1
+      const nodeId = await stargateNftMock.tokenOfOwnerByIndex(appOwner.address, 0)
       await x2EarnApps.connect(appOwner).unendorseApp(app1Id, nodeId)
       expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(true)
 
@@ -1111,7 +1112,7 @@ describe("AutoVoting - @shard14b", function () {
       expect(await xAllocationVoting.isEligibleForVote(app1Id, roundId2)).to.be.true
 
       // App gets unendorsed during round 2, but autovoting should still work
-      const nodeId = 1
+      const nodeId = await stargateNftMock.tokenOfOwnerByIndex(appOwner.address, 0)
       await x2EarnApps.connect(appOwner).unendorseApp(app1Id, nodeId)
       expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(true)
 

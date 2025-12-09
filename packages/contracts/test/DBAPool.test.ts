@@ -15,6 +15,7 @@ import { createLocalConfig } from "@repo/config/contracts/envs/local"
 import { deployProxy } from "../scripts/helpers"
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers"
 import { endorseApp } from "./helpers/xnodes"
+import { DBAPoolV1 } from "../typechain-types"
 
 describe("DBA Pool - @shard7b", async function () {
   // Environment params
@@ -1581,7 +1582,7 @@ describe("DBA Pool - @shard7b", async function () {
       })
 
       // Deploy V1
-      const dbaPoolV1 = await deployProxy("DBAPoolV1", [
+      const dbaPoolV1 = (await deployProxy("DBAPoolV1", [
         {
           admin: owner.address,
           x2EarnApps: await x2EarnApps.getAddress(),
@@ -1590,7 +1591,7 @@ describe("DBA Pool - @shard7b", async function () {
           b3tr: await b3tr.getAddress(),
           distributionStartRound: 5,
         },
-      ])
+      ])) as DBAPoolV1
 
       // Store V1 state
       const v1X2EarnApps = await dbaPoolV1.x2EarnApps()
@@ -1644,7 +1645,7 @@ describe("DBA Pool - @shard7b", async function () {
         })
 
       // Deploy V1
-      const dbaPoolV1 = await deployProxy("DBAPoolV1", [
+      const dbaPoolV1 = (await deployProxy("DBAPoolV1", [
         {
           admin: owner.address,
           x2EarnApps: await x2EarnApps.getAddress(),
@@ -1653,7 +1654,7 @@ describe("DBA Pool - @shard7b", async function () {
           b3tr: await b3tr.getAddress(),
           distributionStartRound: 1,
         },
-      ])
+      ])) as DBAPoolV1
 
       // Grant roles in V1
       const UPGRADER_ROLE = await dbaPoolV1.UPGRADER_ROLE()
@@ -1690,7 +1691,7 @@ describe("DBA Pool - @shard7b", async function () {
         })
 
       // Deploy V1
-      const dbaPoolV1 = await deployProxy("DBAPoolV1", [
+      const dbaPoolV1 = (await deployProxy("DBAPoolV1", [
         {
           admin: owner.address,
           x2EarnApps: await x2EarnApps.getAddress(),
@@ -1699,7 +1700,7 @@ describe("DBA Pool - @shard7b", async function () {
           b3tr: await b3tr.getAddress(),
           distributionStartRound: 1,
         },
-      ])
+      ])) as DBAPoolV1
 
       // Upgrade to V2
       const DBAPoolV2 = await ethers.getContractFactory("DBAPool")

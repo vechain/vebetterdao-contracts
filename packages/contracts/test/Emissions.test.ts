@@ -10,7 +10,7 @@ import {
   waitForNextCycle,
 } from "./helpers"
 import { assert, expect } from "chai"
-import { contract, ethers, network } from "hardhat"
+import { ethers, network } from "hardhat"
 import { calculateTreasuryAllocation } from "./helpers/allocations"
 import { createLocalConfig } from "@repo/config/contracts/envs/local"
 import { createTestConfig } from "./helpers/config"

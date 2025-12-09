@@ -19,7 +19,7 @@ describe("VeBetterPassport Upgrade - @shard8a", function () {
       passportPoPScoreLogicV1,
       passportSignalingLogicV1,
       passportEntityLogicV1,
-      passportWhitelistBlacklistLogicV1,
+      passportWhitelistAndBlacklistLogicV1,
       passportChecksLogicV2,
       passportConfiguratorV2,
       passportDelegationLogicV2,
@@ -27,14 +27,14 @@ describe("VeBetterPassport Upgrade - @shard8a", function () {
       passportPoPScoreLogicV2,
       passportSignalingLogicV2,
       passportEntityLogicV2,
-      passportWhitelistBlacklistLogicV2,
+      passportWhitelistAndBlacklistLogicV2,
       passportChecksLogicV3,
       passportConfiguratorV3,
       passportDelegationLogicV3,
       passportPersonhoodLogicV3,
       passportPoPScoreLogicV3,
       passportSignalingLogicV3,
-      passportWhitelistBlacklistLogicV3,
+      passportWhitelistAndBlacklistLogicV3,
       passportEntityLogicV3,
       passportChecksLogic,
       passportConfigurator,
@@ -42,7 +42,7 @@ describe("VeBetterPassport Upgrade - @shard8a", function () {
       passportPersonhoodLogic,
       passportPoPScoreLogic,
       passportSignalingLogic,
-      passportWhitelistBlacklistLogic,
+      passportWhitelistAndBlacklistLogic,
       passportEntityLogic,
       xAllocationVoting: deployedXAllocationVoting, // Use deployed instance if available
     } = await getOrDeployContractInstances({
@@ -64,7 +64,7 @@ describe("VeBetterPassport Upgrade - @shard8a", function () {
       PassportPersonhoodLogicV1: await passportPersonhoodLogicV1.getAddress(),
       PassportPoPScoreLogicV1: await passportPoPScoreLogicV1.getAddress(),
       PassportSignalingLogicV1: await passportSignalingLogicV1.getAddress(),
-      PassportWhitelistAndBlacklistLogicV1: await passportWhitelistBlacklistLogicV1.getAddress(),
+      PassportWhitelistAndBlacklistLogicV1: await passportWhitelistAndBlacklistLogicV1.getAddress(),
     })
 
     // Initialize V1
@@ -104,7 +104,7 @@ describe("VeBetterPassport Upgrade - @shard8a", function () {
         PassportPersonhoodLogicV1: await passportPersonhoodLogicV1.getAddress(),
         PassportPoPScoreLogicV1: await passportPoPScoreLogicV1.getAddress(),
         PassportSignalingLogicV1: await passportSignalingLogicV1.getAddress(),
-        PassportWhitelistAndBlacklistLogicV1: await passportWhitelistBlacklistLogicV1.getAddress(),
+        PassportWhitelistAndBlacklistLogicV1: await passportWhitelistAndBlacklistLogicV1.getAddress(),
       },
     )) as VeBetterPassportV1
 
@@ -126,7 +126,7 @@ describe("VeBetterPassport Upgrade - @shard8a", function () {
           PassportPersonhoodLogicV2: await passportPersonhoodLogicV2.getAddress(),
           PassportPoPScoreLogicV2: await passportPoPScoreLogicV2.getAddress(),
           PassportSignalingLogicV2: await passportSignalingLogicV2.getAddress(),
-          PassportWhitelistAndBlacklistLogicV2: await passportWhitelistBlacklistLogicV2.getAddress(),
+          PassportWhitelistAndBlacklistLogicV2: await passportWhitelistAndBlacklistLogicV2.getAddress(),
         },
       },
     )) as VeBetterPassportV2
@@ -149,7 +149,7 @@ describe("VeBetterPassport Upgrade - @shard8a", function () {
           PassportPersonhoodLogicV3: await passportPersonhoodLogicV3.getAddress(),
           PassportPoPScoreLogicV3: await passportPoPScoreLogicV3.getAddress(),
           PassportSignalingLogicV3: await passportSignalingLogicV3.getAddress(),
-          PassportWhitelistAndBlacklistLogicV3: await passportWhitelistBlacklistLogicV3.getAddress(),
+          PassportWhitelistAndBlacklistLogicV3: await passportWhitelistAndBlacklistLogicV3.getAddress(),
         },
       },
     )) as VeBetterPassportV3
@@ -170,7 +170,7 @@ describe("VeBetterPassport Upgrade - @shard8a", function () {
           PassportPersonhoodLogic: await passportPersonhoodLogic.getAddress(),
           PassportPoPScoreLogic: await passportPoPScoreLogic.getAddress(),
           PassportSignalingLogic: await passportSignalingLogic.getAddress(),
-          PassportWhitelistAndBlacklistLogic: await passportWhitelistBlacklistLogic.getAddress(),
+          PassportWhitelistAndBlacklistLogic: await passportWhitelistAndBlacklistLogic.getAddress(),
         },
       },
     )) as VeBetterPassport

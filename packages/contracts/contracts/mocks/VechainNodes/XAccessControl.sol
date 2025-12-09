@@ -17,55 +17,38 @@ contract XAccessControl is Pausable {
     mapping(address => bool) public operators;
     mapping(address => bool) public blackList;
 
-    modifier onlyOperator {
+    modifier onlyOperator() {
         require(operators[msg.sender], "permission denied");
         _;
     }
 
-    modifier inBlackList {
+    modifier inBlackList() {
         require(blackList[msg.sender], "operation blocked");
         _;
     }
 
-    modifier notInBlackList {
+    modifier notInBlackList() {
         require(!blackList[msg.sender], "operation blocked");
         _;
     }
 
-    function addOperator(address _operator) 
-        external
-        onlyOwner
-        whenNotPaused
-    {
+    function addOperator(address _operator) external onlyOwner whenNotPaused {
         operators[_operator] = true;
         emit OperatorUpdated(_operator, true);
     }
 
-    function removeOperator(address _operator)
-        external
-        onlyOwner
-        whenNotPaused
-    {
+    function removeOperator(address _operator) external onlyOwner whenNotPaused {
         operators[_operator] = false;
         emit OperatorUpdated(_operator, false);
     }
 
-    function addToBlackList(address _badGuy)
-        external
-        onlyOwner
-        whenNotPaused
-    {
+    function addToBlackList(address _badGuy) external onlyOwner whenNotPaused {
         blackList[_badGuy] = true;
         emit BlackListUpdated(_badGuy, true);
     }
 
-    function removeFromBlackList(address _innocent)
-        external
-        onlyOwner
-        whenNotPaused
-    {
+    function removeFromBlackList(address _innocent) external onlyOwner whenNotPaused {
         blackList[_innocent] = false;
         emit BlackListUpdated(_innocent, false);
     }
 }
-

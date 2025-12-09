@@ -1,21 +1,24 @@
+import { EnvConfig, shouldEndorseXApps } from "@repo/config/contracts"
+
 import {
   B3TR,
+  B3TRGovernor,
   Emissions,
-  TokenAuction,
+  Stargate,
   Treasury,
   VOT3,
   VoterRewards,
   X2EarnApps,
-  B3TRGovernor,
   XAllocationVoting,
 } from "../../typechain-types"
-import { SeedStrategy, getSeedAccounts, getTestKeys } from "../helpers/seedAccounts"
-import { bootstrapEmissions, startEmissions } from "../helpers/emissions"
-import { App, endorseXApps, registerXDapps } from "../helpers/xApp"
+import { mintStargateNFTs, proposeUpgradeGovernance } from "../helpers"
 import { airdropB3trFromTreasury, airdropVTHO } from "../helpers/airdrop"
-import { mintVechainNodes, proposeUpgradeGovernance } from "../helpers"
+import { bootstrapEmissions, startEmissions } from "../helpers/emissions"
+import { getSeedAccounts, getTestKeys, SeedStrategy } from "../helpers/seedAccounts"
 import { convertB3trForVot3 } from "../helpers/swap"
-import { EnvConfig, shouldEndorseXApps } from "@repo/config/contracts"
+import { ethers } from "hardhat"
+import { Address } from "@vechain/sdk-core"
+import { App, endorseXApps, registerXDapps } from "../helpers/xApp"
 
 const accounts = getTestKeys(17)
 const xDappCreatorAccounts = accounts.slice(0, 8)
@@ -90,12 +93,11 @@ export const setupEnvironment = async (
   xAllocationVoting: XAllocationVoting,
   b3tr: B3TR,
   vot3: VOT3,
-  vechainNodesMock: TokenAuction,
+  stargateMock: Stargate,
 ) => {
   switch (config) {
     case "local":
     case "testnet-staging":
-    case "galactica-test":
       await setupLocalEnvironment(
         emissions,
         treasury,
@@ -104,12 +106,12 @@ export const setupEnvironment = async (
         xAllocationVoting,
         b3tr,
         vot3,
-        vechainNodesMock,
+        stargateMock,
         shouldEndorseXApps(),
       )
       break
     case "testnet":
-      await setupTestEnvironment(emissions, x2EarnApps, vechainNodesMock)
+      await setupTestEnvironment(emissions, x2EarnApps, stargateMock)
       break
     case "mainnet":
       await setupMainnetEnvironment(emissions, x2EarnApps)
@@ -137,7 +139,7 @@ export const setupLocalEnvironment = async (
   xAllocationVoting: XAllocationVoting,
   b3tr: B3TR,
   vot3: VOT3,
-  vechainNodesMock: TokenAuction,
+  stargateMock: Stargate,
   endorseApps: boolean,
 ) => {
   const start = performance.now()
@@ -166,7 +168,7 @@ export const setupLocalEnvironment = async (
   // 5+ 8 accounts: 13 accounts
   const allAccounts = getSeedAccounts(SeedStrategy.FIXED, 5 + APPS.length, 0)
   const seedAccounts = allAccounts.slice(0, 5)
-  const endorserAccounts = allAccounts
+  const endorserAccounts = (await ethers.getSigners()).slice(0, 6) //get the first 6 as endorsers
 
   await airdropVTHO(
     seedAccounts.map(acct => acct.key.address),
@@ -178,26 +180,31 @@ export const setupLocalEnvironment = async (
 
   await convertB3trForVot3(b3tr, vot3, seedAccounts)
 
-  // Deprecated with stargateNFTAddress
-  /**
-   * First seed account will have a Mjolnir X Node
-   * Second seed account will have a Thunder X Node
-   * Third seed account will have a Strength X Node
-   * Forth seed account will have a Mjölnir Economic Node
-   * Fifth seed account will have a Strength Economic Node
-   * Remaining accounts with have a Mjolnir X Node -> These will have an endorsement score of 100
-   * BEWARE : The first 8 accounts have to hold those nodes : Check if it is the case before running the script
-   */
-
   // If the first 8 accounts does not have the correct nodes, run the following line
-  await mintVechainNodes(vechainNodesMock, endorserAccounts, padNodeTypes([7, 6, 5, 3, 1], endorserAccounts.length))
   await startEmissions(emissionsContract, admin)
 
   if (endorseApps) {
+    /**
+     * First seed account will have a Mjolnir X Node
+     * Second seed account will have a Thunder X Node
+     * Third seed account will have a Strength X Node
+     * Forth seed account will have a Mjölnir Economic Node
+     * Fifth seed account will have a Strength Economic Node
+     * Remaining accounts with have a Mjolnir X Node -> These will have an endorsement score of 100
+     * BEWARE : The first 8 accounts have to hold those nodes : Check if it is the case before running the script
+     */
+    // Airdrop VTHO to endorser accounts so they can pay for transaction gas fees
+    await airdropVTHO(
+      endorserAccounts.map(acct => Address.of(acct.address)),
+      500n,
+      admin,
+    )
+
+    await mintStargateNFTs(stargateMock, endorserAccounts, padNodeTypes([7, 6, 5, 3, 2, 7], endorserAccounts.length))
     // Get unendorsed XAPPs
     const unedorsedApps = await x2EarnApps.unendorsedAppIds()
-    await endorseXApps(endorserAccounts, x2EarnApps, unedorsedApps, vechainNodesMock)
-    // If this fails, check if the first 8 accounts have the correct nodes [7, 6, 5, 3, 1, 7, 7, 7]
+    await endorseXApps(endorserAccounts, x2EarnApps, unedorsedApps, stargateMock)
+    // If this fails, check if the first 8 accounts have the correct nodes [7, 6, 5, 3, 2, 7, 7, 7]
   }
   await proposeUpgradeGovernance(governor, xAllocationVoting)
 
@@ -206,11 +213,7 @@ export const setupLocalEnvironment = async (
   console.log(`Setup complete in ${end.getMinutes()}m ${end.getSeconds()}s`)
 }
 
-export const setupTestEnvironment = async (
-  emissions: Emissions,
-  x2EarnApps: X2EarnApps,
-  vechainNodesMock: TokenAuction,
-) => {
+export const setupTestEnvironment = async (emissions: Emissions, x2EarnApps: X2EarnApps, stargateMock: Stargate) => {
   console.log("================ Setup Testnet environment")
   const start = performance.now()
 
@@ -227,11 +230,6 @@ export const setupTestEnvironment = async (
   const x2EarnAppsAddress = await x2EarnApps.getAddress()
   await registerXDapps(x2EarnAppsAddress, xDappCreatorAccounts, APPS)
   console.log("x-apps added")
-
-  // Creating NODE holders
-  const allAccounts = getSeedAccounts(SeedStrategy.FIXED, 5 + APPS.length, 0)
-  await mintVechainNodes(vechainNodesMock, allAccounts, padNodeTypes([7, 6, 5, 3, 2], allAccounts.length))
-  console.log("NODE holders created")
 
   const end = performance.now()
   console.log(`Setup complete in ${end - start}ms`)

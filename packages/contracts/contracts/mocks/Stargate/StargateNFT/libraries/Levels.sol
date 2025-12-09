@@ -11,10 +11,10 @@
 
 pragma solidity 0.8.20;
 
-import {Checkpoints} from "@openzeppelin/contracts/utils/structs/Checkpoints.sol";
-import {Clock} from "./Clock.sol";
-import {DataTypes} from "./DataTypes.sol";
-import {Errors} from "./Errors.sol";
+import { Checkpoints } from "@openzeppelin/contracts/utils/structs/Checkpoints.sol";
+import { Clock } from "./Clock.sol";
+import { DataTypes } from "./DataTypes.sol";
+import { Errors } from "./Errors.sol";
 
 /// @title Levels
 /// @notice Library for the StargateNFT contract to manage token levels
@@ -60,6 +60,18 @@ library Levels {
      * @param newCap The new cap
      */
     event LevelCapUpdated(uint8 indexed levelId, uint32 oldCap, uint32 newCap);
+
+    /**
+     * @notice Emitted when the boost price per block of a token level is updated
+     * @param levelId The ID of the level boost price per block that was updated
+     * @param oldBoostPricePerBlock The old boost price per block
+     * @param newBoostPricePerBlock The new boost price per block
+     */
+    event LevelBoostPricePerBlockUpdated(
+        uint8 indexed levelId,
+        uint256 oldBoostPricePerBlock,
+        uint256 newBoostPricePerBlock
+    );
 
     // ------------------ Setters ------------------ //
 
@@ -158,6 +170,19 @@ library Levels {
         uint32 _cap
     ) external {
         _updateLevelCap($, _levelId, _cap);
+    }
+
+    /// @notice Updates the boost price per block for a token level
+    /// @param _levelId - The ID of the level to update
+    /// @param _boostPricePerBlock - The new boost price per block for the level
+    /// @dev Only the LEVEL_OPERATOR_ROLE can call this function
+    /// Emits a {IStargateNFT.LevelBoostPricePerBlockUpdated} event
+    function updateLevelBoostPricePerBlock(
+        DataTypes.StargateNFTStorage storage $,
+        uint8 _levelId,
+        uint256 _boostPricePerBlock
+    ) external {
+        _updateLevelBoostPricePerBlock($, _levelId, _boostPricePerBlock);
     }
 
     // ------------------ Getters ------------------ //
@@ -295,6 +320,25 @@ library Levels {
         );
     }
 
+    /// @dev See {updateLevelBoostPricePerBlock}
+    function _updateLevelBoostPricePerBlock(
+        DataTypes.StargateNFTStorage storage $,
+        uint8 _levelId,
+        uint256 _boostPricePerBlock
+    ) internal {
+        // Validate level exists
+        if (!_levelExists($, $.levels[_levelId].id)) {
+            revert Errors.LevelNotFound(_levelId);
+        }
+
+        emit LevelBoostPricePerBlockUpdated(
+            _levelId,
+            $.boostPricePerBlock[_levelId],
+            _boostPricePerBlock
+        );
+        $.boostPricePerBlock[_levelId] = _boostPricePerBlock;
+    }
+
     /// @dev See {updateLevelCap}
     function _updateLevelCap(
         DataTypes.StargateNFTStorage storage $,
@@ -377,7 +421,6 @@ library Levels {
         DataTypes.StargateNFTStorage storage $,
         uint8 _levelId
     ) internal view returns (bool) {
-        // Level exists if it has a non-empty name
         return _levelId > 0 && _levelId <= $.MAX_LEVEL_ID;
     }
 

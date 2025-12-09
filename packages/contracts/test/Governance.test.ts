@@ -27,7 +27,13 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers"
 import { describe, it } from "mocha"
 import { createLocalConfig } from "@repo/config/contracts/envs/local"
 import { getImplementationAddress } from "@openzeppelin/upgrades-core"
-import { B3TRGovernor, B3TRGovernorV1, B3TRGovernorV3, B3TRGovernor__factory } from "../typechain-types"
+import {
+  B3TRGovernor,
+  B3TRGovernorV1,
+  B3TRGovernorV1__factory,
+  B3TRGovernorV3,
+  B3TRGovernor__factory,
+} from "../typechain-types"
 import { deployAndUpgrade, deployProxy } from "../scripts/helpers"
 import { GRANT_PROPOSAL_TYPE, STANDARD_PROPOSAL_TYPE } from "./governance/fixture.test"
 
@@ -2003,7 +2009,7 @@ describe("Governor and TimeLock - @shard4a", function () {
 
         // @ts-ignore
         await expect(myErc721.connect(owner).safeTransferFrom(owner.address, await governor.getAddress(), 1)).to.be
-          .rejected
+          .reverted
       })
 
       it("Cannot send ERC1155 to the contract", async function () {
@@ -6029,7 +6035,7 @@ describe("Governor and TimeLock - @shard4a", function () {
   })
 
   describe("Libraries", function () {
-    let governor: B3TRGovernor
+    let governor: B3TRGovernor | B3TRGovernorV1
 
     describe("GovernorClockLogic", function () {
       this.beforeAll(async function () {
@@ -6102,7 +6108,7 @@ describe("Governor and TimeLock - @shard4a", function () {
 
     describe("GovernorQuorumLogic", function () {
       it("Should be able to lookup historic quorom numerators", async () => {
-        let b3trGovernorFactory: B3TRGovernor__factory
+        let b3trGovernorFactory: B3TRGovernorV1__factory
 
         const {
           governorClockLogicLib,

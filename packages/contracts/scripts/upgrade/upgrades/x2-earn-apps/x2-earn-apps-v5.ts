@@ -24,7 +24,10 @@ async function main() {
   console.log(
     `Deploying X2EarnApps libraries on network: ${config.network.name} (env: ${config.environment}) with account: ${deployer.address}`,
   )
-  const { AdministrationUtils, EndorsementUtils, VoteEligibilityUtils } = await x2EarnLibraries()
+  const { AdministrationUtils, EndorsementUtils, VoteEligibilityUtils } = await x2EarnLibraries({
+    logOutput: true,
+    latestVersionOnly: true,
+  })
 
   const libraries: {
     X2EarnApps: Record<string, string>
