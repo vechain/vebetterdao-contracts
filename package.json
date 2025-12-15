@@ -86,6 +86,8 @@
     "@datadog/browser-rum": "^5.23.0",
     "@repo/eslint-config": "*",
     "@repo/typescript-config": "*",
+    "@types/lodash": "^4.17.21",
+    "@vechain/picasso": "^2.1.1",
     "cross-env": "^7.0.3",
     "dotenv": "^16.4.5",
     "dotenv-cli": "latest",
@@ -93,8 +95,7 @@
     "husky": "^8.0.0",
     "lint-staged": "^15.2.7",
     "prettier": "^3.3.0",
-    "turbo": "^2.5.0",
-    "@vechain/picasso": "^2.1.1"
+    "turbo": "^2.5.0"
   },
   "engines": {
     "node": "20.x.x"

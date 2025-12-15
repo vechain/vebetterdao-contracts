@@ -5,7 +5,6 @@ import { createTestnetStagingConfig } from "./envs/testnetStaging"
 import { createE2EConfig } from "./envs/e2e"
 import { createTestnetConfig } from "./envs/testnet"
 import { createMainnetConfig } from "./envs/mainnet"
-import { createGalacticaTestConfig } from "./envs/galactica-test"
 
 export const AppEnv = {
   LOCAL: "local",
@@ -13,7 +12,6 @@ export const AppEnv = {
   TESTNET_STAGING: "testnet-staging",
   TESTNET: "testnet",
   MAINNET: "mainnet",
-  GALACTICA_TEST: "galactica-test",
 } as const
 
 export const EnvConfigValues = Object.values(AppEnv)
@@ -31,9 +29,6 @@ export function getContractsConfig(env: EnvConfig) {
       return createTestnetConfig()
     case AppEnv.MAINNET:
       return createMainnetConfig()
-    case AppEnv.GALACTICA_TEST:
-      return createGalacticaTestConfig()
-
     default:
       throw new Error(`Invalid ENV "${env}"`)
   }

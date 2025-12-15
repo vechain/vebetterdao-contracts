@@ -122,7 +122,7 @@ export function createLocalConfig() {
 
     /*
       Level => Percentage Multiplier
-  
+
       2 (Moon) => 10% (1.1x)
       3 (Mercury) => 20% (1.2x)
       4 (Venus) => 50% (1.5x)
@@ -216,9 +216,13 @@ export function createLocalConfig() {
 
     // Stargate contracts - This needs to be deployed first before starting b3tr repo
     VECHAIN_NODES_CONTRACT_ADDRESS: process.env.LOCAL_VECHAIN_NODES_CONTRACT_ADDRESS || ZERO_ADDRESS,
-    STARGATE_NFT_CONTRACT_ADDRESS: process.env.LOCAL_STARGATE_NFT_CONTRACT_ADDRESS || ZERO_ADDRESS,
-    STARGATE_DELEGATE_CONTRACT_ADDRESS: process.env.LOCAL_STARGATE_DELEGATE_CONTRACT_ADDRESS || ZERO_ADDRESS,
-    NODE_MANAGEMENT_CONTRACT_ADDRESS: process.env.LOCAL_NODE_MANAGEMENT_CONTRACT_ADDRESS || ZERO_ADDRESS,
+    // Stargate and NFTs related contracts -> they are already deployed from stargate project
+    // See from more details: {https://github.com/vechain/stargate-contracts/blob/main/README.md }
+    //TODO: Fix this
+    STARGATE_CONTRACT_ADDRESS: ZERO_ADDRESS,
+    STARGATE_NFT_CONTRACT_ADDRESS: ZERO_ADDRESS,
+    STARGATE_DELEGATE_CONTRACT_ADDRESS: ZERO_ADDRESS,
+    NODE_MANAGEMENT_CONTRACT_ADDRESS: ZERO_ADDRESS,
 
     // Milestones
     MINIMUM_MILESTONE_COUNT: 2, // test-compatibility,
