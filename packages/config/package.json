@@ -16,8 +16,7 @@
     "./contracts/envs/local": "./contracts/envs/local.ts",
     "./local": "./local.ts",
     "./testnet-staging": "./testnet-staging.ts",
-    "./mainnet": "./mainnet.ts",
-    "./galactica-test": "./galactica-test.ts"
+    "./mainnet": "./mainnet.ts"
   },
   "dependencies": {
     "@repo/constants": "*"

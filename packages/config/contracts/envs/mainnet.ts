@@ -180,6 +180,7 @@ export function createMainnetConfig() {
     ],
 
     // Stargate contracts - TODO: Update these with the actual contract addresses
+    STARGATE_CONTRACT_ADDRESS: "0x03C557bE98123fdb6faD325328AC6eB77de7248C",
     STARGATE_NFT_CONTRACT_ADDRESS: "0x1856c533ac2d94340aaa8544d35a5c1d4a21dee7",
     STARGATE_DELEGATE_CONTRACT_ADDRESS: "0x4cb1c9ef05b529c093371264fab2c93cc6cddb0e",
     NODE_MANAGEMENT_CONTRACT_ADDRESS: "0xB0EF9D89C6b49CbA6BBF86Bf2FDf0Eee4968c6AB",

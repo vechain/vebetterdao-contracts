@@ -134,9 +134,10 @@ export function createTestnetConfig() {
 
     // Stargate and NFTs related contracts -> they are already deployed from stargate project
     // See from more details: {https://github.com/vechain/stargate-contracts/blob/main/README.md }
-    STARGATE_NFT_CONTRACT_ADDRESS: "0x1ec1d168574603ec35b9d229843b7c2b44bcb770",
-    STARGATE_DELEGATE_CONTRACT_ADDRESS: "0x7240e3bc0d26431512d5b67dbd26d199205bffe8",
-    NODE_MANAGEMENT_CONTRACT_ADDRESS: "0x8bcbfc20ee39c94f4e60afc5d78c402f70b4f3b2",
+    STARGATE_CONTRACT_ADDRESS: "0x1E02B2953AdEfEC225cF0Ec49805b1146a4429C1",
+    STARGATE_NFT_CONTRACT_ADDRESS: "0x887d9102f0003f1724d8fd5d4fe95a11572fcd77",
+    STARGATE_DELEGATE_CONTRACT_ADDRESS: "0x32cb945dc25f4fc4214df63e3825045d6088b096",
+    NODE_MANAGEMENT_CONTRACT_ADDRESS: "0xde17d0a516c38c168d37685bb71465f656aa256e",
 
     // Milestones
     MINIMUM_MILESTONE_COUNT: 2, // test-compatibility

@@ -2,7 +2,6 @@ import localConfig from "./local"
 import stagingConfig from "./testnet-staging"
 import testnetConfig from "./testnet"
 import mainnetConfig from "./mainnet"
-import galacticaTestConfig from "./galactica-test"
 import { AppEnv, EnvConfig, getContractsConfig } from "./contracts"
 import { Network } from "@repo/constants"
 import { getEnvDatadogApp, getEnvDatadogClient, getEnvDatadogEnv } from "./datadog"
@@ -66,6 +65,7 @@ export type AppConfig = {
   xAllocationVotingLibraries: XAllocationVotingLibraries
   b3trMultiSigAddress?: string
   stargateNFTContractAddress: string
+  stargateContractAddress: string
   grantsManagerContractAddress: string
   dbaPoolContractAddress: string
   nodeUrl: string
@@ -91,8 +91,6 @@ export const getConfig = (env?: EnvConfig): AppConfig => {
       return testnetConfig
     case AppEnv.MAINNET:
       return mainnetConfig
-    case AppEnv.GALACTICA_TEST:
-      return galacticaTestConfig
     default:
       throw new Error(`Unsupported NEXT_PUBLIC_APP_ENV ${appEnv}`)
   }
