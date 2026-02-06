@@ -26,6 +26,12 @@ interface IX2EarnCreator {
   /// @param to The address to receive the token
   function safeMint(address to) external;
 
+  /// @notice Allows a user to mint a Creator NFT to themselves when self-minting is enabled
+  function selfMint() external;
+
+  /// @notice Returns whether self-minting is enabled
+  function selfMintEnabled() external view returns (bool);
+
   /// @notice Burns a specified token, removing it from circulation
   /// @param tokenId The ID of the token to burn
   function burn(uint256 tokenId) external;
