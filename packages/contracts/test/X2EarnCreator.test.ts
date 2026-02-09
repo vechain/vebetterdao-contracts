@@ -114,7 +114,7 @@ describe("X2EarnCreator - @shard11", () => {
       })
 
       const version = await x2EarnCreator.version()
-      expect(version).to.equal("1")
+      expect(version).to.equal("2")
     })
 
     it("Should not be able to initialize the contract after it has already been initialized", async function () {
