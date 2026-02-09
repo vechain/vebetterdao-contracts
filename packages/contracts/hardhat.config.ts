@@ -60,7 +60,7 @@ const config: HardhatUserConfig = {
     vechain_solo: {
       url: getSoloUrl(),
       accounts: {
-        mnemonic: getMnemonic(),
+        mnemonic: getMnemonic(false), // Not required for compilation
         count: 20,
         path: HDKey.VET_DERIVATION_PATH,
         accountsBalance: "1000000000000000000000000",
@@ -71,7 +71,7 @@ const config: HardhatUserConfig = {
       url: "https://testnet.vechain.org",
       chainId: 100010,
       accounts: {
-        mnemonic: getMnemonic(),
+        mnemonic: getMnemonic(false), // Not required for compilation
         count: 20,
         path: HDKey.VET_DERIVATION_PATH,
       },
@@ -81,7 +81,7 @@ const config: HardhatUserConfig = {
       url: "https://mainnet.vechain.org",
       chainId: 100009,
       accounts: {
-        mnemonic: getMnemonic(),
+        mnemonic: getMnemonic(false), // Not required for compilation
         count: 20,
         path: HDKey.VET_DERIVATION_PATH,
       },

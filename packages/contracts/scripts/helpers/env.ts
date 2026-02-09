@@ -1,6 +1,6 @@
 import { AppEnv } from "@repo/config/contracts"
 
-export const getMnemonic = (): string => {
+export const getMnemonic = (required: boolean = true): string => {
   const appEnv = process.env.NEXT_PUBLIC_APP_ENV
   let mnemonic: string | undefined
 
@@ -13,11 +13,12 @@ export const getMnemonic = (): string => {
       break
   }
 
-  if (!mnemonic) {
+  if (!mnemonic && required) {
     throw new Error(
       `Mnemonic not found for NEXT_PUBLIC_APP_ENV: ${appEnv}. Please ensure the corresponding environment variable (e.g., MNEMONIC, TESTNET_STAGING_MNEMONIC) is set.`,
     )
   }
 
-  return mnemonic
+  // Return a dummy mnemonic for build/compile operations
+  return mnemonic || "dummy mnemonic dummy mnemonic dummy mnemonic dummy mnemonic dummy mnemonic dummy mnemonic"
 }

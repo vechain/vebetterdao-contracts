@@ -34,18 +34,8 @@ import {
   DBAPool,
   DBAPoolV1,
   Stargate,
-  AdministrationUtilsV6,
-  EndorsementUtilsV6,
-  VoteEligibilityUtilsV6,
 } from "../../typechain-types"
-import {
-  deployAndUpgrade,
-  deployProxy,
-  deployProxyOnly,
-  deployStargateProxyWithoutInitialization,
-  initializeProxy,
-  upgradeProxy,
-} from "../../scripts/helpers"
+import { deployAndUpgrade, deployProxy, deployProxyOnly, initializeProxy, upgradeProxy } from "../../scripts/helpers"
 import { governanceLibraries, passportLibraries } from "../../scripts/libraries"
 import type { GovernanceLibraries } from "../../scripts/libraries/governanceLibraries"
 import type { PassportLibraries } from "../../scripts/libraries/passportLibraries"
@@ -54,8 +44,6 @@ import { setWhitelistedFunctions } from "../../scripts/deploy/deployLatest"
 import { x2EarnLibraries } from "../../scripts/libraries/x2EarnLibraries"
 import type { X2EarnLibraries } from "../../scripts/libraries/x2EarnLibraries"
 import { APPS } from "../../scripts/deploy/setup"
-import { deployStargateNFTLibraries } from "../../scripts/deploy/deploys/deployStargateNftLibraries"
-import { initialTokenLevels, vthoRewardPerBlock } from "../../contracts/mocks/const"
 import { autoVotingLibraries } from "../../scripts/libraries"
 import { deployStargateMock } from "../../scripts/deploy/mocks/deployStargate"
 import { bootstrapAndStartEmissions as callBootstrapAndStartEmissions } from "./common"
@@ -66,9 +54,7 @@ type ToCamelCaseKeys<T> = {
 }
 
 export interface DeployInstance
-  extends ToCamelCaseKeys<GovernanceLibraries>,
-    ToCamelCaseKeys<PassportLibraries>,
-    ToCamelCaseKeys<X2EarnLibraries> {
+  extends ToCamelCaseKeys<GovernanceLibraries>, ToCamelCaseKeys<PassportLibraries>, ToCamelCaseKeys<X2EarnLibraries> {
   B3trContract: ContractFactory
   b3tr: B3TR & { deploymentTransaction(): ContractTransactionResponse }
   vot3: VOT3
@@ -378,7 +364,14 @@ export const getOrDeployContractInstances = async ({
     config.TREASURY_TRANSFER_LIMIT_VTHO,
   ])) as Treasury
 
-  const x2EarnCreator = (await deployProxy("X2EarnCreator", [config.CREATOR_NFT_URI, owner.address])) as X2EarnCreator
+  const x2EarnCreator = (await deployAndUpgrade(
+    ["X2EarnCreatorV1", "X2EarnCreator"],
+    [[config.CREATOR_NFT_URI, owner.address], [true]],
+    {
+      versions: [undefined, 2],
+      logOutput: true,
+    },
+  )) as X2EarnCreator
 
   // Deploy NodeManagement - deprecating...
   // const nodeManagementV1 = (await deployProxy("NodeManagementV1", [

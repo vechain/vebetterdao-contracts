@@ -30,12 +30,13 @@ export const transferAdminRole = async (
     | Treasury
     | B3TRGovernor
     | X2EarnApps
+    | X2EarnRewardsPool
+    | X2EarnCreator
     | TimeLock,
   oldAdmin: HardhatEthersSigner,
   newAdminAddress: string,
 ) => {
-  if (oldAdmin.address === newAdminAddress)
-    throw new Error("Admin role not transferred. New admin is the same as old admin")
+  if (oldAdmin.address === newAdminAddress) return
 
   const adminRole = await contract.DEFAULT_ADMIN_ROLE()
   await contract
@@ -61,8 +62,7 @@ export const transferMinterRole = async (
   oldMinterAddress: string,
   newMinterAddress?: string,
 ) => {
-  if (!newMinterAddress && oldMinterAddress === newMinterAddress)
-    throw new Error("Minter role not transferred. New minter is the same as old minter")
+  if (oldMinterAddress === newMinterAddress) return
 
   const minterRole = await contract.MINTER_ROLE()
 
@@ -104,8 +104,7 @@ export const transferGovernanceRole = async (
   oldAddress: string,
   newAddress?: string,
 ) => {
-  if (!newAddress && oldAddress === newAddress)
-    throw new Error("Governance role not transferred. New governance is the same as old governance")
+  if (oldAddress === newAddress) return
 
   const governanceRole = await contract.GOVERNANCE_ROLE()
 
@@ -142,11 +141,11 @@ export const transferGovernanceRole = async (
 }
 
 export const transferContractsAddressManagerRole = async (
-  contract: GalaxyMember | XAllocationPool | XAllocationVoting | Emissions,
+  contract: GalaxyMember | XAllocationPool | XAllocationVoting | Emissions | X2EarnRewardsPool | VoterRewards,
   admin: HardhatEthersSigner,
   newAddress: string,
 ) => {
-  if (admin.address === newAddress) throw new Error("Role not transferred. New address is the same as old address")
+  if (admin.address === newAddress) return
 
   const contractsAddressManagerRole = await contract.CONTRACTS_ADDRESS_MANAGER_ROLE()
 
@@ -172,7 +171,7 @@ export const transferDecaySettingsManagerRole = async (
   admin: HardhatEthersSigner,
   newAddress: string,
 ) => {
-  if (admin.address === newAddress) throw new Error("Role not transferred. New address is the same as old address")
+  if (admin.address === newAddress) return
 
   const decaySettingsManagerRole = await contract.DECAY_SETTINGS_MANAGER_ROLE()
 
@@ -198,6 +197,8 @@ export const transferGovernorFunctionSettingsRole = async (
   admin: HardhatEthersSigner,
   newAddress: string,
 ) => {
+  if (admin.address === newAddress) return
+
   const governorFunctionSettingsRole = await contract.GOVERNOR_FUNCTIONS_SETTINGS_ROLE()
 
   await contract
@@ -276,7 +277,16 @@ export const transferSettingsManagerRole = async (
 }
 
 export const transferUpgraderRole = async (
-  contract: Emissions | XAllocationPool | NodeManagementV3 | X2EarnApps | GalaxyMember,
+  contract:
+    | Emissions
+    | XAllocationPool
+    | XAllocationVoting
+    | NodeManagementV3
+    | X2EarnApps
+    | X2EarnCreator
+    | GalaxyMember
+    | VoterRewards
+    | X2EarnRewardsPool,
   admin: HardhatEthersSigner,
   newAddress: string,
 ) => {
