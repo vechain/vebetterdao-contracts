@@ -4,6 +4,8 @@ import { expect } from "chai"
 import { ethers } from "hardhat"
 import { createLocalConfig } from "@repo/config/contracts/envs/local"
 import { getImplementationAddress } from "@openzeppelin/upgrades-core"
+import { deployProxy, upgradeProxy } from "../scripts/helpers"
+import { X2EarnCreator, X2EarnCreatorV1 } from "../typechain-types"
 
 describe("X2EarnCreator - @shard11", () => {
   describe("Contract parameters", () => {
@@ -114,7 +116,7 @@ describe("X2EarnCreator - @shard11", () => {
       })
 
       const version = await x2EarnCreator.version()
-      expect(version).to.equal("1")
+      expect(version).to.equal("2")
     })
 
     it("Should not be able to initialize the contract after it has already been initialized", async function () {
@@ -124,6 +126,29 @@ describe("X2EarnCreator - @shard11", () => {
       })
 
       await expect(x2EarnCreator.initialize(config.CREATOR_NFT_URI, owner.address)).to.be.reverted // already initialized
+    })
+
+    it("V1 to V2 upgrade should preserve storage and enable selfMint", async function () {
+      const config = createLocalConfig()
+      const [owner, user] = await ethers.getSigners()
+
+      const v1 = (await deployProxy("X2EarnCreatorV1", [config.CREATOR_NFT_URI, owner.address])) as X2EarnCreatorV1
+      await v1.connect(owner).safeMint(user.address)
+      expect(await v1.balanceOf(user.address)).to.equal(1)
+      expect(await v1.version()).to.equal("1")
+
+      const v2 = (await upgradeProxy("X2EarnCreatorV1", "X2EarnCreator", await v1.getAddress(), [true], {
+        version: 2,
+      })) as X2EarnCreator
+
+      expect(await v2.version()).to.equal("2")
+      expect(await v2.balanceOf(user.address)).to.equal(1)
+      expect(await v2.baseURI()).to.equal(config.CREATOR_NFT_URI)
+      expect(await v2.selfMintEnabled()).to.equal(true)
+
+      const [, , newUser] = await ethers.getSigners()
+      await expect(v2.connect(newUser).selfMint()).to.emit(v2, "Transfer")
+      expect(await v2.balanceOf(newUser.address)).to.equal(1)
     })
   })
 
@@ -345,6 +370,42 @@ describe("X2EarnCreator - @shard11", () => {
       expect(await x2EarnCreator.tokenOfOwnerByIndex(owner.address, 0)).to.equal(1)
       expect(await x2EarnCreator.tokenOfOwnerByIndex(otherAccounts[10].address, 0)).to.equal(10)
       expect(await x2EarnCreator.tokenOfOwnerByIndex(otherAccounts[11].address, 0)).to.equal(11)
+    })
+  })
+
+  describe("Self Minting", () => {
+    it("Should allow self-minting after initializeV2", async () => {
+      const { x2EarnCreator, otherAccounts } = await getOrDeployContractInstances({ forceDeploy: true })
+
+      const user = otherAccounts[15]
+
+      expect(await x2EarnCreator.selfMintEnabled()).to.equal(true)
+
+      await expect(x2EarnCreator.connect(user).selfMint()).to.emit(x2EarnCreator, "Transfer")
+      expect(await x2EarnCreator.balanceOf(user.address)).to.equal(1)
+    })
+
+    it("Should revert selfMint when user already owns NFT", async () => {
+      const { x2EarnCreator, otherAccounts } = await getOrDeployContractInstances({ forceDeploy: true })
+
+      const user = otherAccounts[15]
+
+      await x2EarnCreator.connect(user).selfMint()
+
+      await expect(x2EarnCreator.connect(user).selfMint()).to.be.revertedWithCustomError(
+        x2EarnCreator,
+        "AlreadyOwnsNFT",
+      )
+    })
+
+    it("Should revert selfMint when paused", async () => {
+      const { x2EarnCreator, owner, otherAccounts } = await getOrDeployContractInstances({ forceDeploy: true })
+
+      const user = otherAccounts[15]
+
+      await x2EarnCreator.connect(owner).pause()
+
+      await catchRevert(x2EarnCreator.connect(user).selfMint())
     })
   })
 })

@@ -140,4 +140,12 @@ export const upgradeConfig: Record<string, UpgradeContract> = {
       v2: "Align with B3TRGovernor v8 new proposal state management",
     },
   },
+  "X2Earn Creator": {
+    name: "x2-earn-creator",
+    configAddressField: "x2EarnCreatorContractAddress",
+    versions: ["v2"],
+    descriptions: {
+      v2: "Add self-minting functionality gated by admin-controlled flag",
+    },
+  },
 } as const

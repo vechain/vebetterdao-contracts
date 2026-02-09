@@ -33,6 +33,10 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 /// @title X2EarnCreator
 /// @notice Contract for minting and managing NFTs for X2Earn creators of VeBetterDAO.
 /// @dev This contract extends ERC721 Non-Fungible Token Standard basic implementation with upgradeable pattern, enumerable, pausable, and access control functionalities.
+///
+/// ------ Version 2 ------
+/// * - Added self-minting functionality for testing purposes
+/// 
 contract X2EarnCreator is
   Initializable,
   ERC721Upgradeable,
@@ -57,12 +61,16 @@ contract X2EarnCreator is
   /// @dev Error thrown when a user is not authorized to perform an action
   error X2EarnCreatorUnauthorizedUser(address user);
 
+  /// @dev Error thrown when selfMint is called but self-minting is not enabled
+  error SelfMintNotEnabled();
+
   // ---------------- Storage ----------------
   /// @notice Storage structure for X2EarnCreator
   /// @custom:storage-location erc7201:b3tr.storage.X2EarnCreator
   struct X2EarnCreatorStorage {
     uint256 nextTokenId;
     string baseURI;
+    bool selfMintEnabled;
   }
 
   /// @notice Storage slot for X2EarnCreator
@@ -151,6 +159,35 @@ contract X2EarnCreator is
     _safeMint(to, tokenId);
   }
 
+  /// @notice Initializes V2, configuring self-minting
+  /// @param _selfMintEnabled Whether self-minting should be enabled
+  function initializeV2(bool _selfMintEnabled) public reinitializer(2) {
+    X2EarnCreatorStorage storage $ = _getX2EarnCreatorStorage();
+    $.selfMintEnabled = _selfMintEnabled;
+  }
+
+  /// @notice Returns whether self-minting is enabled
+  function selfMintEnabled() public view returns (bool) {
+    X2EarnCreatorStorage storage $ = _getX2EarnCreatorStorage();
+    return $.selfMintEnabled;
+  }
+
+  /// @notice Allows a user to mint a Creator NFT to themselves when self-minting is enabled
+  function selfMint() public whenNotPaused {
+    X2EarnCreatorStorage storage $ = _getX2EarnCreatorStorage();
+
+    if (!$.selfMintEnabled) {
+      revert SelfMintNotEnabled();
+    }
+
+    if (balanceOf(msg.sender) > 0) {
+      revert AlreadyOwnsNFT(msg.sender);
+    }
+
+    uint256 tokenId = $.nextTokenId++;
+    _safeMint(msg.sender, tokenId);
+  }
+
   // @notice Retrieves the metadata URI for a given token ID
   /// @dev Ensures the token ID is owned, then returns the base URI as the token URI
   /// @param tokenId The ID of the token to retrieve the URI for
@@ -171,7 +208,7 @@ contract X2EarnCreator is
 
   /// @notice Retieves the version of the contract
   function version() public pure returns (string memory) {
-    return "1";
+    return "2";
   }
 
   // ---------------- Overrides for Non-Transferability ----------------

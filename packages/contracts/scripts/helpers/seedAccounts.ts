@@ -16,11 +16,18 @@ export enum SeedStrategy {
   LINEAR,
 }
 
-const mnemonic = getMnemonic()
-const hdnode = HDKey.fromMnemonic(mnemonic.split(" "))
+let hdnode: HDKey | null = null
+
+const getHDNode = (): HDKey => {
+  if (!hdnode) {
+    const mnemonic = getMnemonic(true) // Required for actual deployment/simulation
+    hdnode = HDKey.fromMnemonic(mnemonic.split(" "))
+  }
+  return hdnode
+}
 
 export const getTestKey = (index: number): TestPk => {
-  const pk = hdnode.deriveChild(index)
+  const pk = getHDNode().deriveChild(index)
   if (!pk.privateKey) {
     throw new Error("Private key not found")
   }

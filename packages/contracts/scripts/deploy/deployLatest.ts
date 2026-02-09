@@ -24,7 +24,7 @@ import { ContractsConfig } from "@repo/config/contracts/type"
 import { HttpNetworkConfig } from "hardhat/types"
 import { setupLocalEnvironment, setupMainnetEnvironment, setupTestEnvironment, APPS } from "./setup"
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers"
-import { shouldEndorseXApps } from "@repo/config/contracts"
+import { AppEnv, shouldEndorseXApps } from "@repo/config/contracts"
 import { deployAndInitializeLatest, deployAndUpgrade, deployProxy, saveContractsToFile, upgradeProxy } from "../helpers"
 import { governanceLibraries, passportLibraries } from "../libraries"
 import {
@@ -824,7 +824,7 @@ export async function deployLatest(config: ContractsConfig) {
       await setupMainnetEnvironment(emissions, x2EarnApps)
       break
     case "vechain_testnet":
-      if (appEnv === "testnet-staging") {
+      if (appEnv === "testnet-staging" || appEnv === "testnet") {
         await setupLocalEnvironment(
           emissions,
           treasury,
@@ -858,7 +858,7 @@ export async function deployLatest(config: ContractsConfig) {
 
   // ---------- Role updates ---------- //
   // Do not update roles on solo network or staging network since we are already using the predifined address and it would just increase dev time
-  if (appEnv === "testnet" || network.name === "mainnet") {
+  if (appEnv === AppEnv.TESTNET || appEnv === AppEnv.MAINNET) {
     console.log("================ Updating contract roles after setup ")
     console.log("New admin address: ", config.CONTRACTS_ADMIN_ADDRESS)
 

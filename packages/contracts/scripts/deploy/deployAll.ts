@@ -50,11 +50,10 @@ import {
   validateContractRole,
 } from "../helpers/roles"
 import { x2EarnLibraries } from "../libraries/x2EarnLibraries"
-import { ZERO_ADDRESS } from "@vechain/sdk-core"
 import { deployStargateMock } from "./mocks/deployStargate"
 import { deployNodeManagementMock } from "./mocks/deployNodeManagement"
 import { getConfig } from "@repo/config"
-import { EnvConfig } from "@repo/config/contracts"
+import { AppEnv, EnvConfig } from "@repo/config/contracts"
 import { deployLegacyNodesMock } from "./mocks/deployLegacyNodes"
 
 // GalaxyMember NFT Values
@@ -355,7 +354,14 @@ export async function deployAll(config: ContractsConfig) {
     true,
   )) as TimeLock
 
-  const x2EarnCreator = (await deployProxy("X2EarnCreator", [TEMP_ADMIN, TEMP_ADMIN])) as X2EarnCreator
+  const x2EarnCreator = (await deployAndUpgrade(
+    ["X2EarnCreatorV1", "X2EarnCreator"],
+    [[TEMP_ADMIN, TEMP_ADMIN], [config.NEXT_PUBLIC_APP_ENV === AppEnv.TESTNET_STAGING]],
+    {
+      versions: [undefined, 2],
+      logOutput: true,
+    },
+  )) as X2EarnCreator
 
   const treasury = (await deployProxy(
     "Treasury",
@@ -462,9 +468,9 @@ export async function deployAll(config: ContractsConfig) {
     ],
     [
       [
-        config.CONTRACTS_ADMIN_ADDRESS, // admin
-        config.CONTRACTS_ADMIN_ADDRESS, // contracts address manager
-        TEMP_ADMIN, // upgrader //TODO: transferRole
+        TEMP_ADMIN, // admin
+        TEMP_ADMIN, // contracts address manager
+        TEMP_ADMIN, // upgrader
         await b3tr.getAddress(),
         await x2EarnApps.getAddress(),
       ],
@@ -1280,7 +1286,7 @@ export async function deployAll(config: ContractsConfig) {
 
   // ---------- Role updates ---------- //
   // Do not update roles on solo network or staging network since we are already using the predifined address and it would just increase dev time
-  if (process.env.NEXT_PUBLIC_APP_ENV === "testnet" || network.name === "mainnet") {
+  if (config.NEXT_PUBLIC_APP_ENV === AppEnv.TESTNET || config.NEXT_PUBLIC_APP_ENV === AppEnv.MAINNET) {
     console.log("================ Updating contract roles after setup ")
     console.log("New admin address: ", config.CONTRACTS_ADMIN_ADDRESS)
 
@@ -1294,16 +1300,20 @@ export async function deployAll(config: ContractsConfig) {
     await transferAdminRole(b3tr, deployer, config.CONTRACTS_ADMIN_ADDRESS)
 
     await transferContractsAddressManagerRole(galaxyMember, deployer, config.CONTRACTS_ADMIN_ADDRESS)
+    await transferUpgraderRole(galaxyMember, deployer, config.CONTRACTS_ADMIN_ADDRESS)
     await transferAdminRole(galaxyMember, deployer, config.CONTRACTS_ADMIN_ADDRESS)
 
     await transferMinterRole(emissions, deployer, deployer.address, config.CONTRACTS_ADMIN_ADDRESS)
     await transferContractsAddressManagerRole(emissions, deployer, config.CONTRACTS_ADMIN_ADDRESS)
     await transferDecaySettingsManagerRole(emissions, deployer, config.CONTRACTS_ADMIN_ADDRESS)
+    await transferUpgraderRole(emissions, deployer, config.CONTRACTS_ADMIN_ADDRESS)
     await transferAdminRole(emissions, deployer, config.CONTRACTS_ADMIN_ADDRESS)
 
+    await transferUpgraderRole(voterRewards, deployer, config.CONTRACTS_ADMIN_ADDRESS)
     await transferAdminRole(voterRewards, deployer, config.CONTRACTS_ADMIN_ADDRESS)
 
     await transferContractsAddressManagerRole(xAllocationPool, deployer, config.CONTRACTS_ADMIN_ADDRESS)
+    await transferUpgraderRole(xAllocationPool, deployer, config.CONTRACTS_ADMIN_ADDRESS)
     await transferAdminRole(xAllocationPool, deployer, config.CONTRACTS_ADMIN_ADDRESS)
 
     // grant to the deployer the GOVERNANCE_ROLE in XAllocationVoting
@@ -1318,7 +1328,18 @@ export async function deployAll(config: ContractsConfig) {
       .grantRole(await xAllocationVoting.GOVERNANCE_ROLE(), config.CONTRACTS_ADMIN_ADDRESS)
       .then(async tx => await tx.wait())
     console.log("Governance role granted to admin in ", await xAllocationVoting.getAddress())
+    // Grant GOVERNANCE_ROLE to timelock and revoke from deployer
+    await xAllocationVoting
+      .connect(deployer)
+      .grantRole(await xAllocationVoting.GOVERNANCE_ROLE(), await timelock.getAddress())
+      .then(async tx => await tx.wait())
+    await xAllocationVoting
+      .connect(deployer)
+      .revokeRole(await xAllocationVoting.GOVERNANCE_ROLE(), deployer.address)
+      .then(async tx => await tx.wait())
+    console.log("Governance role transferred to timelock on ", await xAllocationVoting.getAddress())
     await transferContractsAddressManagerRole(xAllocationVoting, deployer, config.CONTRACTS_ADMIN_ADDRESS)
+    await transferUpgraderRole(xAllocationVoting, deployer, config.CONTRACTS_ADMIN_ADDRESS)
     await transferAdminRole(xAllocationVoting, deployer, config.CONTRACTS_ADMIN_ADDRESS)
 
     await transferGovernanceRole(treasury, deployer, deployer.address, config.CONTRACTS_ADMIN_ADDRESS)
@@ -1327,314 +1348,339 @@ export async function deployAll(config: ContractsConfig) {
     await transferGovernorFunctionSettingsRole(governor, deployer, config.CONTRACTS_ADMIN_ADDRESS)
     await transferAdminRole(governor, deployer, config.CONTRACTS_ADMIN_ADDRESS)
 
+    await transferContractsAddressManagerRole(x2EarnRewardsPool, deployer, config.CONTRACTS_ADMIN_ADDRESS)
+    await transferUpgraderRole(x2EarnRewardsPool, deployer, config.CONTRACTS_ADMIN_ADDRESS)
+    await transferAdminRole(x2EarnRewardsPool, deployer, config.CONTRACTS_ADMIN_ADDRESS)
+
     await transferGovernanceRole(x2EarnApps, deployer, deployer.address, config.CONTRACTS_ADMIN_ADDRESS)
+    await transferUpgraderRole(x2EarnApps, deployer, config.CONTRACTS_ADMIN_ADDRESS)
     await transferAdminRole(x2EarnApps, deployer, config.CONTRACTS_ADMIN_ADDRESS)
 
     await transferAdminRole(timelock, deployer, config.CONTRACTS_ADMIN_ADDRESS)
 
-    await transferUpgraderRole(xAllocationPool, deployer, config.CONTRACTS_ADMIN_ADDRESS)
-    await transferUpgraderRole(emissions, deployer, config.CONTRACTS_ADMIN_ADDRESS)
-    // await transferUpgraderRole(nodeManagement, deployer, config.CONTRACTS_ADMIN_ADDRESS) - deprecating...
-    await transferUpgraderRole(x2EarnApps, deployer, config.CONTRACTS_ADMIN_ADDRESS)
-    await transferUpgraderRole(galaxyMember, deployer, config.CONTRACTS_ADMIN_ADDRESS)
+    await x2EarnCreator
+      .connect(deployer)
+      .grantRole(await x2EarnCreator.MINTER_ROLE(), config.CONTRACTS_ADMIN_ADDRESS)
+      .then(async tx => await tx.wait())
+    await x2EarnCreator
+      .connect(deployer)
+      .grantRole(await x2EarnCreator.BURNER_ROLE(), config.CONTRACTS_ADMIN_ADDRESS)
+      .then(async tx => await tx.wait())
+    await transferUpgraderRole(x2EarnCreator, deployer, config.CONTRACTS_ADMIN_ADDRESS)
+    await transferAdminRole(x2EarnCreator, deployer, config.CONTRACTS_ADMIN_ADDRESS)
 
     await transferSettingsManagerRole(veBetterPassport, deployer, config.CONTRACTS_ADMIN_ADDRESS)
 
     console.log("Roles updated successfully!")
 
-    console.log("================ Validating roles")
+    // Skip validation when deployer is the final admin (no role transfers happened)
+    if (TEMP_ADMIN === config.CONTRACTS_ADMIN_ADDRESS) {
+      console.log("================ Skipping role validation (deployer is final admin)")
+    } else {
+      console.log("================ Validating roles")
 
-    // VeBetterPassport
-    await validateContractRole(
-      veBetterPassport,
-      config.CONTRACTS_ADMIN_ADDRESS,
-      TEMP_ADMIN,
-      await veBetterPassport.SETTINGS_MANAGER_ROLE(),
-    )
+      // VeBetterPassport
+      await validateContractRole(
+        veBetterPassport,
+        config.CONTRACTS_ADMIN_ADDRESS,
+        TEMP_ADMIN,
+        await veBetterPassport.SETTINGS_MANAGER_ROLE(),
+      )
 
-    // NodeManagement - deprecating...
-    // await validateContractRole(
-    //   nodeManagement,
-    //   config.CONTRACTS_ADMIN_ADDRESS,
-    //   TEMP_ADMIN,
-    //   await nodeManagement.UPGRADER_ROLE(),
-    // )
-    // await validateContractRole(
-    //   nodeManagement,
-    //   config.CONTRACTS_ADMIN_ADDRESS,
-    //   TEMP_ADMIN,
-    //   await nodeManagement.DEFAULT_ADMIN_ROLE(),
-    // )
+      // NodeManagement - deprecating...
+      // await validateContractRole(
+      //   nodeManagement,
+      //   config.CONTRACTS_ADMIN_ADDRESS,
+      //   TEMP_ADMIN,
+      //   await nodeManagement.UPGRADER_ROLE(),
+      // )
+      // await validateContractRole(
+      //   nodeManagement,
+      //   config.CONTRACTS_ADMIN_ADDRESS,
+      //   TEMP_ADMIN,
+      //   await nodeManagement.DEFAULT_ADMIN_ROLE(),
+      // )
 
-    // X2EarnApps
-    await validateContractRole(x2EarnApps, config.CONTRACTS_ADMIN_ADDRESS, TEMP_ADMIN, await x2EarnApps.UPGRADER_ROLE())
+      // X2EarnApps
+      await validateContractRole(
+        x2EarnApps,
+        config.CONTRACTS_ADMIN_ADDRESS,
+        TEMP_ADMIN,
+        await x2EarnApps.UPGRADER_ROLE(),
+      )
 
-    // GalaxyMember
-    await validateContractRole(
-      galaxyMember,
-      config.CONTRACTS_ADMIN_ADDRESS,
-      TEMP_ADMIN,
-      await galaxyMember.DEFAULT_ADMIN_ROLE(),
-    )
-    await validateContractRole(
-      galaxyMember,
-      config.CONTRACTS_ADMIN_ADDRESS,
-      TEMP_ADMIN,
-      await galaxyMember.UPGRADER_ROLE(),
-    )
-    await validateContractRole(
-      galaxyMember,
-      config.CONTRACTS_ADMIN_ADDRESS,
-      TEMP_ADMIN,
-      await galaxyMember.CONTRACTS_ADDRESS_MANAGER_ROLE(),
-    )
-    await validateContractRole(
-      galaxyMember,
-      config.CONTRACTS_ADMIN_ADDRESS,
-      TEMP_ADMIN,
-      await galaxyMember.PAUSER_ROLE(),
-    )
-    await validateContractRole(
-      galaxyMember,
-      config.CONTRACTS_ADMIN_ADDRESS,
-      TEMP_ADMIN,
-      await galaxyMember.MINTER_ROLE(),
-    )
+      // GalaxyMember
+      await validateContractRole(
+        galaxyMember,
+        config.CONTRACTS_ADMIN_ADDRESS,
+        TEMP_ADMIN,
+        await galaxyMember.DEFAULT_ADMIN_ROLE(),
+      )
+      await validateContractRole(
+        galaxyMember,
+        config.CONTRACTS_ADMIN_ADDRESS,
+        TEMP_ADMIN,
+        await galaxyMember.UPGRADER_ROLE(),
+      )
+      await validateContractRole(
+        galaxyMember,
+        config.CONTRACTS_ADMIN_ADDRESS,
+        TEMP_ADMIN,
+        await galaxyMember.CONTRACTS_ADDRESS_MANAGER_ROLE(),
+      )
+      await validateContractRole(
+        galaxyMember,
+        config.CONTRACTS_ADMIN_ADDRESS,
+        TEMP_ADMIN,
+        await galaxyMember.PAUSER_ROLE(),
+      )
+      await validateContractRole(
+        galaxyMember,
+        config.CONTRACTS_ADMIN_ADDRESS,
+        TEMP_ADMIN,
+        await galaxyMember.MINTER_ROLE(),
+      )
 
-    // B3TR
-    await validateContractRole(b3tr, await emissions.getAddress(), TEMP_ADMIN, await b3tr.MINTER_ROLE())
-    await validateContractRole(b3tr, config.CONTRACTS_ADMIN_ADDRESS, TEMP_ADMIN, await b3tr.MINTER_ROLE())
-    await validateContractRole(b3tr, config.CONTRACTS_ADMIN_ADDRESS, TEMP_ADMIN, await b3tr.DEFAULT_ADMIN_ROLE())
-    await validateContractRole(b3tr, config.CONTRACTS_ADMIN_ADDRESS, TEMP_ADMIN, await b3tr.PAUSER_ROLE())
+      // B3TR
+      await validateContractRole(b3tr, await emissions.getAddress(), TEMP_ADMIN, await b3tr.MINTER_ROLE())
+      await validateContractRole(b3tr, config.CONTRACTS_ADMIN_ADDRESS, TEMP_ADMIN, await b3tr.MINTER_ROLE())
+      await validateContractRole(b3tr, config.CONTRACTS_ADMIN_ADDRESS, TEMP_ADMIN, await b3tr.DEFAULT_ADMIN_ROLE())
+      await validateContractRole(b3tr, config.CONTRACTS_ADMIN_ADDRESS, TEMP_ADMIN, await b3tr.PAUSER_ROLE())
 
-    // VOT3
-    await validateContractRole(vot3, config.CONTRACTS_ADMIN_ADDRESS, TEMP_ADMIN, await vot3.DEFAULT_ADMIN_ROLE())
-    await validateContractRole(vot3, config.CONTRACTS_ADMIN_ADDRESS, TEMP_ADMIN, await vot3.UPGRADER_ROLE())
-    await validateContractRole(vot3, config.CONTRACTS_ADMIN_ADDRESS, TEMP_ADMIN, await vot3.PAUSER_ROLE())
+      // VOT3
+      await validateContractRole(vot3, config.CONTRACTS_ADMIN_ADDRESS, TEMP_ADMIN, await vot3.DEFAULT_ADMIN_ROLE())
+      await validateContractRole(vot3, config.CONTRACTS_ADMIN_ADDRESS, TEMP_ADMIN, await vot3.UPGRADER_ROLE())
+      await validateContractRole(vot3, config.CONTRACTS_ADMIN_ADDRESS, TEMP_ADMIN, await vot3.PAUSER_ROLE())
 
-    // Timelock
-    await validateContractRole(timelock, await governor.getAddress(), TEMP_ADMIN, await timelock.PROPOSER_ROLE())
-    await validateContractRole(timelock, await governor.getAddress(), TEMP_ADMIN, await timelock.EXECUTOR_ROLE())
-    await validateContractRole(timelock, await governor.getAddress(), TEMP_ADMIN, await timelock.CANCELLER_ROLE())
-    await validateContractRole(
-      timelock,
-      config.CONTRACTS_ADMIN_ADDRESS,
-      TEMP_ADMIN,
-      await timelock.DEFAULT_ADMIN_ROLE(),
-    )
-    await validateContractRole(timelock, await timelock.getAddress(), TEMP_ADMIN, await timelock.DEFAULT_ADMIN_ROLE())
-    await validateContractRole(timelock, config.CONTRACTS_ADMIN_ADDRESS, TEMP_ADMIN, await timelock.UPGRADER_ROLE())
+      // Timelock
+      await validateContractRole(timelock, await governor.getAddress(), TEMP_ADMIN, await timelock.PROPOSER_ROLE())
+      await validateContractRole(timelock, await governor.getAddress(), TEMP_ADMIN, await timelock.EXECUTOR_ROLE())
+      await validateContractRole(timelock, await governor.getAddress(), TEMP_ADMIN, await timelock.CANCELLER_ROLE())
+      await validateContractRole(
+        timelock,
+        config.CONTRACTS_ADMIN_ADDRESS,
+        TEMP_ADMIN,
+        await timelock.DEFAULT_ADMIN_ROLE(),
+      )
+      await validateContractRole(timelock, await timelock.getAddress(), TEMP_ADMIN, await timelock.DEFAULT_ADMIN_ROLE())
+      await validateContractRole(timelock, config.CONTRACTS_ADMIN_ADDRESS, TEMP_ADMIN, await timelock.UPGRADER_ROLE())
 
-    // B3TRGovernor
-    await validateContractRole(
-      governor,
-      config.CONTRACTS_ADMIN_ADDRESS,
-      TEMP_ADMIN,
-      await governor.DEFAULT_ADMIN_ROLE(),
-    )
-    await validateContractRole(
-      governor,
-      config.CONTRACTS_ADMIN_ADDRESS,
-      TEMP_ADMIN,
-      await governor.GOVERNOR_FUNCTIONS_SETTINGS_ROLE(),
-    )
-    await validateContractRole(governor, config.CONTRACTS_ADMIN_ADDRESS, TEMP_ADMIN, await governor.PAUSER_ROLE())
-    await validateContractRole(
-      governor,
-      config.CONTRACTS_ADMIN_ADDRESS,
-      TEMP_ADMIN,
-      await governor.CONTRACTS_ADDRESS_MANAGER_ROLE(),
-    )
-    await validateContractRole(
-      governor,
-      config.CONTRACTS_ADMIN_ADDRESS,
-      TEMP_ADMIN,
-      await governor.PROPOSAL_EXECUTOR_ROLE(),
-    )
+      // B3TRGovernor
+      await validateContractRole(
+        governor,
+        config.CONTRACTS_ADMIN_ADDRESS,
+        TEMP_ADMIN,
+        await governor.DEFAULT_ADMIN_ROLE(),
+      )
+      await validateContractRole(
+        governor,
+        config.CONTRACTS_ADMIN_ADDRESS,
+        TEMP_ADMIN,
+        await governor.GOVERNOR_FUNCTIONS_SETTINGS_ROLE(),
+      )
+      await validateContractRole(governor, config.CONTRACTS_ADMIN_ADDRESS, TEMP_ADMIN, await governor.PAUSER_ROLE())
+      await validateContractRole(
+        governor,
+        config.CONTRACTS_ADMIN_ADDRESS,
+        TEMP_ADMIN,
+        await governor.CONTRACTS_ADDRESS_MANAGER_ROLE(),
+      )
+      await validateContractRole(
+        governor,
+        config.CONTRACTS_ADMIN_ADDRESS,
+        TEMP_ADMIN,
+        await governor.PROPOSAL_EXECUTOR_ROLE(),
+      )
 
-    // Emissions
-    await validateContractRole(emissions, config.CONTRACTS_ADMIN_ADDRESS, TEMP_ADMIN, await emissions.MINTER_ROLE())
-    await validateContractRole(
-      emissions,
-      config.CONTRACTS_ADMIN_ADDRESS,
-      TEMP_ADMIN,
-      await emissions.DEFAULT_ADMIN_ROLE(),
-    )
-    await validateContractRole(
-      emissions,
-      config.CONTRACTS_ADMIN_ADDRESS,
-      TEMP_ADMIN,
-      await emissions.CONTRACTS_ADDRESS_MANAGER_ROLE(),
-    )
-    await validateContractRole(
-      emissions,
-      config.CONTRACTS_ADMIN_ADDRESS,
-      TEMP_ADMIN,
-      await emissions.DECAY_SETTINGS_MANAGER_ROLE(),
-    )
-    await validateContractRole(emissions, config.CONTRACTS_ADMIN_ADDRESS, TEMP_ADMIN, await emissions.UPGRADER_ROLE())
+      // Emissions
+      await validateContractRole(emissions, config.CONTRACTS_ADMIN_ADDRESS, TEMP_ADMIN, await emissions.MINTER_ROLE())
+      await validateContractRole(
+        emissions,
+        config.CONTRACTS_ADMIN_ADDRESS,
+        TEMP_ADMIN,
+        await emissions.DEFAULT_ADMIN_ROLE(),
+      )
+      await validateContractRole(
+        emissions,
+        config.CONTRACTS_ADMIN_ADDRESS,
+        TEMP_ADMIN,
+        await emissions.CONTRACTS_ADDRESS_MANAGER_ROLE(),
+      )
+      await validateContractRole(
+        emissions,
+        config.CONTRACTS_ADMIN_ADDRESS,
+        TEMP_ADMIN,
+        await emissions.DECAY_SETTINGS_MANAGER_ROLE(),
+      )
+      await validateContractRole(emissions, config.CONTRACTS_ADMIN_ADDRESS, TEMP_ADMIN, await emissions.UPGRADER_ROLE())
 
-    // VoterRewards
-    await validateContractRole(
-      voterRewards,
-      config.CONTRACTS_ADMIN_ADDRESS,
-      TEMP_ADMIN,
-      await voterRewards.DEFAULT_ADMIN_ROLE(),
-    )
-    await validateContractRole(
-      voterRewards,
-      config.CONTRACTS_ADMIN_ADDRESS,
-      TEMP_ADMIN,
-      await voterRewards.UPGRADER_ROLE(),
-    )
-    await validateContractRole(
-      voterRewards,
-      await xAllocationVoting.getAddress(),
-      TEMP_ADMIN,
-      await voterRewards.VOTE_REGISTRAR_ROLE(),
-    )
-    await validateContractRole(
-      voterRewards,
-      await governor.getAddress(),
-      TEMP_ADMIN,
-      await voterRewards.VOTE_REGISTRAR_ROLE(),
-    )
-    await validateContractRole(
-      voterRewards,
-      config.CONTRACTS_ADMIN_ADDRESS,
-      TEMP_ADMIN,
-      await voterRewards.CONTRACTS_ADDRESS_MANAGER_ROLE(),
-    )
+      // VoterRewards
+      await validateContractRole(
+        voterRewards,
+        config.CONTRACTS_ADMIN_ADDRESS,
+        TEMP_ADMIN,
+        await voterRewards.DEFAULT_ADMIN_ROLE(),
+      )
+      await validateContractRole(
+        voterRewards,
+        config.CONTRACTS_ADMIN_ADDRESS,
+        TEMP_ADMIN,
+        await voterRewards.UPGRADER_ROLE(),
+      )
+      await validateContractRole(
+        voterRewards,
+        await xAllocationVoting.getAddress(),
+        TEMP_ADMIN,
+        await voterRewards.VOTE_REGISTRAR_ROLE(),
+      )
+      await validateContractRole(
+        voterRewards,
+        await governor.getAddress(),
+        TEMP_ADMIN,
+        await voterRewards.VOTE_REGISTRAR_ROLE(),
+      )
+      await validateContractRole(
+        voterRewards,
+        config.CONTRACTS_ADMIN_ADDRESS,
+        TEMP_ADMIN,
+        await voterRewards.CONTRACTS_ADDRESS_MANAGER_ROLE(),
+      )
 
-    // X2EarnRewardsPool
-    await validateContractRole(
-      x2EarnRewardsPool,
-      config.CONTRACTS_ADMIN_ADDRESS,
-      TEMP_ADMIN,
-      await x2EarnRewardsPool.DEFAULT_ADMIN_ROLE(),
-    )
+      // X2EarnRewardsPool
+      await validateContractRole(
+        x2EarnRewardsPool,
+        config.CONTRACTS_ADMIN_ADDRESS,
+        TEMP_ADMIN,
+        await x2EarnRewardsPool.DEFAULT_ADMIN_ROLE(),
+      )
 
-    await validateContractRole(
-      x2EarnRewardsPool,
-      config.CONTRACTS_ADMIN_ADDRESS,
-      TEMP_ADMIN,
-      await x2EarnRewardsPool.CONTRACTS_ADDRESS_MANAGER_ROLE(),
-    )
+      await validateContractRole(
+        x2EarnRewardsPool,
+        config.CONTRACTS_ADMIN_ADDRESS,
+        TEMP_ADMIN,
+        await x2EarnRewardsPool.CONTRACTS_ADDRESS_MANAGER_ROLE(),
+      )
 
-    await validateContractRole(
-      x2EarnRewardsPool,
-      config.CONTRACTS_ADMIN_ADDRESS,
-      TEMP_ADMIN,
-      await x2EarnRewardsPool.UPGRADER_ROLE(),
-    )
+      await validateContractRole(
+        x2EarnRewardsPool,
+        config.CONTRACTS_ADMIN_ADDRESS,
+        TEMP_ADMIN,
+        await x2EarnRewardsPool.UPGRADER_ROLE(),
+      )
 
-    // XAllocationPool
-    await validateContractRole(
-      xAllocationPool,
-      config.CONTRACTS_ADMIN_ADDRESS,
-      TEMP_ADMIN,
-      await xAllocationPool.DEFAULT_ADMIN_ROLE(),
-    )
-    await validateContractRole(
-      xAllocationPool,
-      config.CONTRACTS_ADMIN_ADDRESS,
-      TEMP_ADMIN,
-      await xAllocationPool.UPGRADER_ROLE(),
-    )
-    await validateContractRole(
-      xAllocationPool,
-      config.CONTRACTS_ADMIN_ADDRESS,
-      TEMP_ADMIN,
-      await xAllocationPool.CONTRACTS_ADDRESS_MANAGER_ROLE(),
-    )
+      // XAllocationPool
+      await validateContractRole(
+        xAllocationPool,
+        config.CONTRACTS_ADMIN_ADDRESS,
+        TEMP_ADMIN,
+        await xAllocationPool.DEFAULT_ADMIN_ROLE(),
+      )
+      await validateContractRole(
+        xAllocationPool,
+        config.CONTRACTS_ADMIN_ADDRESS,
+        TEMP_ADMIN,
+        await xAllocationPool.UPGRADER_ROLE(),
+      )
+      await validateContractRole(
+        xAllocationPool,
+        config.CONTRACTS_ADMIN_ADDRESS,
+        TEMP_ADMIN,
+        await xAllocationPool.CONTRACTS_ADDRESS_MANAGER_ROLE(),
+      )
 
-    // XAllocationVoting
-    await validateContractRole(
-      xAllocationVoting,
-      config.CONTRACTS_ADMIN_ADDRESS,
-      TEMP_ADMIN,
-      await xAllocationVoting.DEFAULT_ADMIN_ROLE(),
-    )
-    await validateContractRole(
-      xAllocationVoting,
-      config.CONTRACTS_ADMIN_ADDRESS,
-      TEMP_ADMIN,
-      await xAllocationVoting.UPGRADER_ROLE(),
-    )
-    await validateContractRole(
-      xAllocationVoting,
-      await emissions.getAddress(),
-      TEMP_ADMIN,
-      await xAllocationVoting.ROUND_STARTER_ROLE(),
-    )
-    await validateContractRole(
-      xAllocationVoting,
-      await timelock.getAddress(),
-      TEMP_ADMIN,
-      await xAllocationVoting.GOVERNANCE_ROLE(),
-    )
-    await validateContractRole(
-      xAllocationVoting,
-      config.CONTRACTS_ADMIN_ADDRESS,
-      TEMP_ADMIN,
-      await xAllocationVoting.GOVERNANCE_ROLE(),
-    )
-    await validateContractRole(
-      xAllocationVoting,
-      config.CONTRACTS_ADMIN_ADDRESS,
-      TEMP_ADMIN,
-      await xAllocationVoting.CONTRACTS_ADDRESS_MANAGER_ROLE(),
-    )
+      // XAllocationVoting
+      await validateContractRole(
+        xAllocationVoting,
+        config.CONTRACTS_ADMIN_ADDRESS,
+        TEMP_ADMIN,
+        await xAllocationVoting.DEFAULT_ADMIN_ROLE(),
+      )
+      await validateContractRole(
+        xAllocationVoting,
+        config.CONTRACTS_ADMIN_ADDRESS,
+        TEMP_ADMIN,
+        await xAllocationVoting.UPGRADER_ROLE(),
+      )
+      await validateContractRole(
+        xAllocationVoting,
+        await emissions.getAddress(),
+        TEMP_ADMIN,
+        await xAllocationVoting.ROUND_STARTER_ROLE(),
+      )
+      await validateContractRole(
+        xAllocationVoting,
+        await timelock.getAddress(),
+        TEMP_ADMIN,
+        await xAllocationVoting.GOVERNANCE_ROLE(),
+      )
+      await validateContractRole(
+        xAllocationVoting,
+        config.CONTRACTS_ADMIN_ADDRESS,
+        TEMP_ADMIN,
+        await xAllocationVoting.GOVERNANCE_ROLE(),
+      )
+      await validateContractRole(
+        xAllocationVoting,
+        config.CONTRACTS_ADMIN_ADDRESS,
+        TEMP_ADMIN,
+        await xAllocationVoting.CONTRACTS_ADDRESS_MANAGER_ROLE(),
+      )
 
-    // Treasury
-    await validateContractRole(treasury, await timelock.getAddress(), TEMP_ADMIN, await treasury.GOVERNANCE_ROLE())
-    await validateContractRole(
-      treasury,
-      config.CONTRACTS_ADMIN_ADDRESS,
-      TEMP_ADMIN,
-      await treasury.DEFAULT_ADMIN_ROLE(),
-    )
-    await validateContractRole(treasury, config.CONTRACTS_ADMIN_ADDRESS, TEMP_ADMIN, await treasury.UPGRADER_ROLE())
-    await validateContractRole(treasury, config.CONTRACTS_ADMIN_ADDRESS, TEMP_ADMIN, await treasury.PAUSER_ROLE())
+      // Treasury
+      await validateContractRole(treasury, await timelock.getAddress(), TEMP_ADMIN, await treasury.GOVERNANCE_ROLE())
+      await validateContractRole(
+        treasury,
+        config.CONTRACTS_ADMIN_ADDRESS,
+        TEMP_ADMIN,
+        await treasury.DEFAULT_ADMIN_ROLE(),
+      )
+      await validateContractRole(treasury, config.CONTRACTS_ADMIN_ADDRESS, TEMP_ADMIN, await treasury.UPGRADER_ROLE())
+      await validateContractRole(treasury, config.CONTRACTS_ADMIN_ADDRESS, TEMP_ADMIN, await treasury.PAUSER_ROLE())
 
-    // X2EarnApps
-    await validateContractRole(
-      x2EarnApps,
-      config.CONTRACTS_ADMIN_ADDRESS,
-      TEMP_ADMIN,
-      await x2EarnApps.DEFAULT_ADMIN_ROLE(),
-    )
-    await validateContractRole(x2EarnApps, config.CONTRACTS_ADMIN_ADDRESS, TEMP_ADMIN, await x2EarnApps.UPGRADER_ROLE())
-    await validateContractRole(
-      x2EarnApps,
-      config.CONTRACTS_ADMIN_ADDRESS,
-      TEMP_ADMIN,
-      await x2EarnApps.GOVERNANCE_ROLE(),
-    )
+      // X2EarnApps
+      await validateContractRole(
+        x2EarnApps,
+        config.CONTRACTS_ADMIN_ADDRESS,
+        TEMP_ADMIN,
+        await x2EarnApps.DEFAULT_ADMIN_ROLE(),
+      )
+      await validateContractRole(
+        x2EarnApps,
+        config.CONTRACTS_ADMIN_ADDRESS,
+        TEMP_ADMIN,
+        await x2EarnApps.UPGRADER_ROLE(),
+      )
+      await validateContractRole(
+        x2EarnApps,
+        config.CONTRACTS_ADMIN_ADDRESS,
+        TEMP_ADMIN,
+        await x2EarnApps.GOVERNANCE_ROLE(),
+      )
 
-    // X2EarnCreator
-    await validateContractRole(
-      x2EarnCreator,
-      config.CONTRACTS_ADMIN_ADDRESS,
-      TEMP_ADMIN,
-      await x2EarnCreator.DEFAULT_ADMIN_ROLE(),
-    )
+      // X2EarnCreator
+      await validateContractRole(
+        x2EarnCreator,
+        config.CONTRACTS_ADMIN_ADDRESS,
+        TEMP_ADMIN,
+        await x2EarnCreator.DEFAULT_ADMIN_ROLE(),
+      )
 
-    await validateContractRole(
-      x2EarnCreator,
-      config.CONTRACTS_ADMIN_ADDRESS,
-      TEMP_ADMIN,
-      await x2EarnCreator.MINTER_ROLE(),
-    )
+      await validateContractRole(
+        x2EarnCreator,
+        config.CONTRACTS_ADMIN_ADDRESS,
+        TEMP_ADMIN,
+        await x2EarnCreator.MINTER_ROLE(),
+      )
 
-    await validateContractRole(
-      x2EarnCreator,
-      config.CONTRACTS_ADMIN_ADDRESS,
-      TEMP_ADMIN,
-      await x2EarnCreator.BURNER_ROLE(),
-    )
+      await validateContractRole(
+        x2EarnCreator,
+        config.CONTRACTS_ADMIN_ADDRESS,
+        TEMP_ADMIN,
+        await x2EarnCreator.BURNER_ROLE(),
+      )
 
-    console.log("Roles validated successfully!")
+      console.log("Roles validated successfully!")
+    } // end validation skip check
   }
   console.log("Deployment completed successfully!")
   console.log("================================================================================")
@@ -1698,7 +1744,7 @@ async function deployB3trToken(admin: string, minter: string, pauser: string): P
 
   console.log(`B3TR impl.: ${await contract.getAddress()}`)
 
-  return contract
+  return contract as unknown as B3TR
 }
 
 /**
