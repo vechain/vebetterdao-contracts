@@ -53,21 +53,18 @@ Our contracts are upgradeable and versioned. See the [contracts changelog](/pack
 ## Testnet contract addresses
 
 ```
-  "B3TR": "0xbf64cf86894Ee0877C4e7d03936e35Ee8D8b864F",
-  "B3TRGovernor": "0xDF5E114D391CAC840529802fe8D01f6bdeBE41eC",
-  "Emissions": "0x148d21032F4a7b4aeF236E2E9C0c5bF62d10f8EB",
-  "GalaxyMember": "0xCf73039913e05aa1838d5869E72290d2b454C1E8",
-  "TimeLock": "0x30ee94F303643902a68aD8A7A6456cA69d763192",
-  "Treasury": "0x039893EBe092A2D22B08E2b029735D211bfF7F50",
-  "VOT3": "0xa704c45971995467696EE9544Da77DD42Bc9706E",
-  "VoterRewards": "0x2E47fc4aabB3403037fB5E1f38995E7a91Ce8Ed2",
-  "X2EarnApps": "0xcB23Eb1bBD5c07553795b9538b1061D0f4ABA153",
-  "X2EarnRewardsPool": "0x5F8f86B8D0Fa93cdaE20936d150175dF0205fB38",
-  "XAllocationPool": "0x9B9CA9D0C41Add1d204f90BA0E9a6844f1843A84",
-  "XAllocationVoting": "0x5859ff910d8b0c127364c98E24233b0af7443c1c",
-  "RelayerRewardsPool": "0x92b5a7484970d9b2ad981e8135ff14e6f996dc04",
-  "DynamicBaseAllocationPool": "0xf710edf9c2f5e00563034a8954f8733d04fd9943",
-  "B3TRFaucet": "0x5e9c1F0f52aC6b5004122059053b00017EAfB561"
+"B3TR": "0x95761346d18244bb91664181bf91193376197088",
+"B3TRGovernor": "0xc30b4d0837f7e3706749655d8bde0c0f265dd81b",
+"Emissions": "0x66898f98409db20ed6a1bf0021334b7897eb0688",
+"GalaxyMember": "0x38a59fa7fd7039884465a0ff285b8c4b6fe394ca",
+"TimeLock": "0x835509222aa67c333a1cbf29bd341e014aba86c9",
+"Treasury": "0x3d531a80c05099c71b02585031f86a2988e0caca",
+"VOT3": "0x6e8b4a88d37897fc11f6ba12c805695f1c41f40e",
+"VoterRewards": "0x851ef91801899a4e7e4a3174a9300b3e20c957e8",
+"X2EarnApps": "0x0b54a094b877a25bdc95b4431eaa1e2206b1ddfe",
+"X2EarnRewardsPool": "0x2d2a2207c68a46fc79325d7718e639d1047b0d8b",
+"XAllocationPool": "0x6f7b4bc19b4dc99005b473b9c45ce2815bbe7533",
+"XAllocationVoting": "0x8800592c463f0b21ae08732559ee8e146db1d7b2"
 ```
 
 Notice: _VeBetter Passport contract deployed only on mainnet._
