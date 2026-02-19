@@ -24,16 +24,16 @@
 pragma solidity 0.8.20;
 
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import { X2EarnAppsUpgradeable } from "../X2EarnAppsUpgradeable.sol";
-import { X2EarnAppsDataTypes } from "../../libraries/X2EarnAppsDataTypes.sol";
-import { EndorsementUtils } from "../libraries/EndorsementUtils.sol";
-import { INodeManagementV3 } from "../../mocks/Stargate/interfaces/INodeManagement/INodeManagementV3.sol";
-import { IVeBetterPassport } from "../../interfaces/IVeBetterPassport.sol";
-import { PassportTypes } from "../../ve-better-passport/libraries/PassportTypes.sol";
-import { IXAllocationVotingGovernor } from "../../interfaces/IXAllocationVotingGovernor.sol";
-import { IStargateNFT } from "../../mocks/Stargate/interfaces/IStargateNFT.sol";
+import { X2EarnAppsUpgradeableV7 } from "../X2EarnAppsUpgradeableV7.sol";
+import { X2EarnAppsDataTypes } from "../../../../libraries/X2EarnAppsDataTypes.sol";
+import { EndorsementUtilsV7 } from "../libraries/EndorsementUtilsV7.sol";
+import { INodeManagementV3 } from "../../../../mocks/Stargate/interfaces/INodeManagement/INodeManagementV3.sol";
+import { IVeBetterPassport } from "../../../../interfaces/IVeBetterPassport.sol";
+import { PassportTypes } from "../../../../ve-better-passport/libraries/PassportTypes.sol";
+import { IXAllocationVotingGovernor } from "../../../../interfaces/IXAllocationVotingGovernor.sol";
+import { IStargateNFT } from "../../../../mocks/Stargate/interfaces/IStargateNFT.sol";
 
-abstract contract EndorsementUpgradeable is Initializable, X2EarnAppsUpgradeable {
+abstract contract EndorsementUpgradeableV7 is Initializable, X2EarnAppsUpgradeableV7 {
   /// @custom:storage-location erc7201:b3tr.storage.X2EarnApps.Endorsment
   struct EndorsementStorage {
     bytes32[] _unendorsedApps; // List of apps pending endorsement
@@ -237,7 +237,7 @@ abstract contract EndorsementUpgradeable is Initializable, X2EarnAppsUpgradeable
     // Retrieve the endorsement storage
     EndorsementStorage storage $ = _getEndorsementStorage();
     return
-      EndorsementUtils.getScoreAndRemoveEndorsement(
+      EndorsementUtilsV7.getScoreAndRemoveEndorsement(
         $._nodeEnodorsmentScore,
         $._nodeToEndorsedApp,
         $._appEndorsers,
@@ -252,9 +252,9 @@ abstract contract EndorsementUpgradeable is Initializable, X2EarnAppsUpgradeable
    * @dev Internal function to update the endorsement scores of each node level.
    * @param nodeStrengthScores The node level scores to update.
    */
-  function _updateNodeEndorsementScores(EndorsementUtils.NodeStrengthScores calldata nodeStrengthScores) internal {
+  function _updateNodeEndorsementScores(EndorsementUtilsV7.NodeStrengthScores calldata nodeStrengthScores) internal {
     EndorsementStorage storage $ = _getEndorsementStorage();
-    EndorsementUtils.updateNodeEndorsementScores($._nodeEnodorsmentScore, nodeStrengthScores);
+    EndorsementUtilsV7.updateNodeEndorsementScores($._nodeEnodorsmentScore, nodeStrengthScores);
   }
 
   /**
@@ -276,7 +276,7 @@ abstract contract EndorsementUpgradeable is Initializable, X2EarnAppsUpgradeable
    */
   function _updateAppsPendingEndorsement(bytes32 appId, bool remove) internal {
     EndorsementStorage storage $ = _getEndorsementStorage();
-    EndorsementUtils.updateAppsPendingEndorsement($._unendorsedApps, $._unendorsedAppsIndex, appId, remove);
+    EndorsementUtilsV7.updateAppsPendingEndorsement($._unendorsedApps, $._unendorsedAppsIndex, appId, remove);
   }
 
   /**
@@ -458,8 +458,8 @@ abstract contract EndorsementUpgradeable is Initializable, X2EarnAppsUpgradeable
     // Get the endorsement storage
     EndorsementStorage storage $ = _getEndorsementStorage();
 
-    // Use the EndorsementUtils library to update the status of the app
-    bool stillEligible = EndorsementUtils.updateStatusIfThresholdNotMet(
+    // Use the EndorsementUtilsV7 library to update the status of the app
+    bool stillEligible = EndorsementUtilsV7.updateStatusIfThresholdNotMet(
       $._appGracePeriodStart,
       $._appSecurity,
       $._unendorsedApps,
@@ -526,7 +526,7 @@ abstract contract EndorsementUpgradeable is Initializable, X2EarnAppsUpgradeable
    */
   function checkCooldown(uint256 nodeId) public view returns (bool) {
     EndorsementStorage storage $ = _getEndorsementStorage();
-    return EndorsementUtils.checkCooldown($._endorsementRound, $._cooldownPeriod, $._xAllocationVotingGovernor, nodeId);
+    return EndorsementUtilsV7.checkCooldown($._endorsementRound, $._cooldownPeriod, $._xAllocationVotingGovernor, nodeId);
   }
 
   /**
@@ -559,7 +559,7 @@ abstract contract EndorsementUpgradeable is Initializable, X2EarnAppsUpgradeable
    */
   function getEndorsers(bytes32 appId) external view returns (address[] memory) {
     EndorsementStorage storage $ = _getEndorsementStorage();
-    return EndorsementUtils.getEndorsers($._appEndorsers, $._stargateNFT, appId);
+    return EndorsementUtilsV7.getEndorsers($._appEndorsers, $._stargateNFT, appId);
   }
 
   /**
@@ -567,7 +567,7 @@ abstract contract EndorsementUpgradeable is Initializable, X2EarnAppsUpgradeable
    */
   function getUsersEndorsementScore(address user) external view returns (uint256) {
     EndorsementStorage storage $ = _getEndorsementStorage();
-    return EndorsementUtils.getUsersEndorsementScore($._nodeEnodorsmentScore, $._stargateNFT, user);
+    return EndorsementUtilsV7.getUsersEndorsementScore($._nodeEnodorsmentScore, $._stargateNFT, user);
   }
 
   /**

@@ -3,6 +3,7 @@ pragma solidity 0.8.20;
 
 import { X2EarnAppsDataTypes } from "../libraries/X2EarnAppsDataTypes.sol";
 import { EndorsementUtils } from "../x-2-earn-apps/libraries/EndorsementUtils.sol";
+import { X2EarnAppsStorageTypes } from "../x-2-earn-apps/libraries/X2EarnAppsStorageTypes.sol";
 import { IX2EarnCreator } from "./IX2EarnCreator.sol";
 import { IXAllocationVotingGovernor } from "./IXAllocationVotingGovernor.sol";
 import { IX2EarnRewardsPool } from "./IX2EarnRewardsPool.sol";
@@ -144,6 +145,37 @@ interface IX2EarnApps {
    */
   error NodeNotAllowedToEndorse();
 
+  // V8 errors
+  /**
+   * @dev Endorsements are currently paused (during migration).
+   */
+  error EndorsementsPaused();
+
+  /**
+   * @dev Cooldown period not expired for the specified node-app endorsement.
+   */
+  error CooldownNotExpired(uint256 nodeId, bytes32 appId);
+
+  /**
+   * @dev Exceeds maximum points allowed per app.
+   */
+  error ExceedsMaxPointsPerApp(bytes32 appId, uint256 current, uint256 max);
+
+  /**
+   * @dev Exceeds maximum points a single node can endorse to one app.
+   */
+  error ExceedsMaxPointsPerNode(uint256 nodeId, bytes32 appId, uint256 max);
+
+  /**
+   * @dev Node doesn't have enough available points.
+   */
+  error InsufficientAvailablePoints(uint256 nodeId, uint256 available, uint256 requested);
+
+  /**
+   * @dev Invalid points amount provided.
+   */
+  error InvalidPointsAmount();
+
   /**
    * @dev Event fired when a new app is added.
    */
@@ -240,9 +272,29 @@ interface IX2EarnApps {
   event TeamAllocationPercentageUpdated(bytes32 indexed appId, uint256 oldPercentage, uint256 newPercentage);
 
   /**
-   * @dev Event fired when an app is endorsed or unendorsed by a node.
+   * @dev V8: Event fired when an app is endorsed with points.
    */
-  event AppEndorsed(bytes32 indexed id, uint256 nodeId, bool endorsed);
+  event AppEndorsed(bytes32 indexed appId, uint256 indexed nodeId, address endorser, uint256 points);
+
+  /**
+   * @dev V8: Event fired when an app is unendorsed.
+   */
+  event AppUnendorsed(bytes32 indexed appId, uint256 indexed nodeId, uint256 points);
+
+  /**
+   * @dev V8: Event fired when endorsements paused state changes.
+   */
+  event EndorsementsPausedUpdated(bool paused);
+
+  /**
+   * @dev V8: Event fired when max points per node per app is updated.
+   */
+  event MaxPointsPerNodePerAppUpdated(uint256 oldMax, uint256 newMax);
+
+  /**
+   * @dev V8: Event fired when max points per app is updated.
+   */
+  event MaxPointsPerAppUpdated(uint256 oldMax, uint256 newMax);
 
   /**
    * @dev Event fired when the node strength scores are updated.
@@ -262,18 +314,6 @@ interface IX2EarnApps {
    * @param appId the id of the app
    */
   function app(bytes32 appId) external view returns (X2EarnAppsDataTypes.AppWithDetailsReturnType memory);
-
-  /**
-   * @dev Function to get the number of apps.
-   */
-  function appsCount() external view returns (uint256);
-
-  /**
-   * @dev Get a paginated list of apps
-   * @param startIndex The starting index of the pagination
-   * @param count The number of items to return
-   */
-  function getPaginatedApps(uint startIndex, uint count) external view returns (X2EarnAppsDataTypes.App[] memory);
 
   /**
    * @notice Get all the apps that exist in the VeBetter DAO ecosystem.
@@ -344,14 +384,6 @@ interface IX2EarnApps {
    * @param appId the id of the app
    */
   function appCreators(bytes32 appId) external view returns (address[] memory);
-
-  /**
-   * @dev Check if an account is the creator of the app
-   *
-   * @param appId the hashed name of the app
-   * @param account the address of the account
-   */
-  function isAppCreator(bytes32 appId, address account) external view returns (bool);
 
   /**
    * @dev Get the number of apps created by an account.
@@ -441,18 +473,6 @@ interface IX2EarnApps {
    * @param appId the id of the app
    */
   function enableRewardsPoolForNewApp(bytes32 appId) external;
-
-  /**
-   * @dev Update the X2EarnRewardsPool contract address.
-   *
-   * @param  _x2EarnRewardsPoolContract the address of the X2EarnRewardsPool contract
-   */
-  function setX2EarnRewardsPoolContract(address _x2EarnRewardsPoolContract) external;
-
-  /**
-   * @dev Get the X2EarnRewardsPool contract address.
-   */
-  function x2EarnRewardsPoolContract() external view returns (IX2EarnRewardsPool);
 
   /**
    * @notice Checks endorsements for a given app and updates its voting eligibility based on the endorsements' scores.
@@ -552,11 +572,24 @@ interface IX2EarnApps {
   function getScore(bytes32 appId) external returns (uint256);
 
   /**
+   * @notice Returns the endorsement score for an app at a specific block number.
+   * @param appId The unique identifier of the app.
+   * @param timepoint The block number to query.
+   * @return The endorsement score at the given timepoint.
+   */
+  function getScoreAtTimepoint(bytes32 appId, uint256 timepoint) external view returns (uint256);
+
+  /**
    * @dev Get the endorsers of an app.
    *
    * @param appId the id of the app
    */
   function getEndorsers(bytes32 appId) external view returns (address[] memory);
+
+  /**
+   * @notice Get all endorser node IDs for an app.
+   */
+  function getEndorserNodes(bytes32 appId) external view returns (uint256[] memory);
 
   /**
    * @dev Get the endorsersment score of an individual.
@@ -634,13 +667,6 @@ interface IX2EarnApps {
   function removeXAppSubmission(bytes32 _appId) external;
 
   /**
-   * @notice this function returns the app that a node ID is endorsing
-   * @param nodeId The unique identifier of the node ID.
-   * @return bytes32 The unique identifier of the app that the node ID is endorsing.
-   */
-  function nodeToEndorsedApp(uint256 nodeId) external view returns (bytes32);
-
-  /**
    * @notice this function returns the endorsement score of a node level
    * @param nodeLevel The strength level of the node.
    * @return uint256 The endorsement score of the node level.
@@ -648,40 +674,9 @@ interface IX2EarnApps {
   function nodeLevelEndorsementScore(uint8 nodeLevel) external view returns (uint256);
 
   /**
-   * @dev Update the X2EarnCreator contract address.
-   *
-   * @param x2EarnCreatorContract the address of the X2EarnCreator contract
-   */
-  function setX2EarnCreatorContract(address x2EarnCreatorContract) external;
-
-  /**
-   * @dev Get the X2EarnCreator contract address.
-   */
-  function x2EarnCreatorContract() external view returns (IX2EarnCreator);
-
-  /**
-   * @dev Update the XAllocationVotingGovernor contract address.
-   *
-   * @param _xAllocationVotingGovernor the address of the XAllocationVotingGovernor contract
-   */
-  function setXAllocationVotingGovernor(address _xAllocationVotingGovernor) external;
-
-  /**
    * @dev Get the cooldown period for a node in seconds.
    */
   function cooldownPeriod() external view returns (uint256);
-
-  /**
-   * @dev Get the XAllocationVotingGovernor contract address.
-   */
-  function getXAllocationVotingGovernor() external view returns (IXAllocationVotingGovernor);
-
-  /**
-   * @notice Check if a node is in a cooldown period. A node is in a cooldown period after it has endorsed an app.
-   * @param nodeId The unique identifier of the node.
-   * @return bool True if the node is in a cooldown period.
-   */
-  function checkCooldown(uint256 nodeId) external view returns (bool);
 
   /**
    * @notice Function to update the grace period.
@@ -697,14 +692,93 @@ interface IX2EarnApps {
    */
   function updateCooldownPeriod(uint256 _newCooldownPeriod) external;
 
-  /**
-   * @dev Set the Stargate NFT contract address.
-   * @param _stargateNft The address of the Stargate NFT contract.
-   */
-  function setStargateNFT(address _stargateNft) external;
+  // ---------- V8 Flexible Endorsement ---------- //
 
   /**
-   * @dev Get the Stargate NFT contract address.
+   * @notice Endorse an app with a specified number of points.
+   * @param appId The app to endorse.
+   * @param nodeId The node endorsing.
+   * @param points Number of points to endorse.
    */
-  function getStargateNFT() external view returns (IStargateNFT);
+  function endorseApp(bytes32 appId, uint256 nodeId, uint256 points) external;
+
+  /**
+   * @notice Unendorse an app by removing points.
+   * @param appId The app to unendorse.
+   * @param nodeId The node unendorsing.
+   * @param points Number of points to remove (0 = remove all).
+   */
+  function unendorseApp(bytes32 appId, uint256 nodeId, uint256 points) external;
+
+  /**
+   * @notice Pause endorsement operations.
+   */
+  function pauseEndorsements() external;
+
+  /**
+   * @notice Unpause endorsement operations.
+   */
+  function unpauseEndorsements() external;
+
+  /**
+   * @notice Seed endorsement during migration.
+   */
+  function seedEndorsement(bytes32 appId, uint256 nodeId, uint256 points) external;
+
+  /**
+   * @notice Mark migration as complete.
+   */
+  function markMigrationComplete() external;
+
+  /**
+   * @notice Set max points per node per app.
+   */
+  function setMaxPointsPerNodePerApp(uint256 maxPoints) external;
+
+  /**
+   * @notice Set max total points per app.
+   */
+  function setMaxPointsPerApp(uint256 maxPoints) external;
+
+  /**
+   * @notice Get available endorsement points for a node.
+   */
+  function getNodeAvailablePoints(uint256 nodeId) external view returns (uint256);
+
+  /**
+   * @notice Get comprehensive info about a node's endorsement points.
+   */
+  function getNodePointsInfo(uint256 nodeId) external view returns (X2EarnAppsStorageTypes.NodePointsInfo memory);
+
+  /**
+   * @notice Get all active endorsements for a node.
+   */
+  function getNodeActiveEndorsements(
+    uint256 nodeId
+  ) external view returns (X2EarnAppsStorageTypes.Endorsement[] memory);
+
+  /**
+   * @notice Check if node can unendorse an app (cooldown expired).
+   */
+  function canUnendorse(uint256 nodeId, bytes32 appId) external view returns (bool);
+
+  /**
+   * @notice Get max points per node per app.
+   */
+  function maxPointsPerNodePerApp() external view returns (uint256);
+
+  /**
+   * @notice Get max points per app.
+   */
+  function maxPointsPerApp() external view returns (uint256);
+
+  /**
+   * @notice Check if endorsements are paused.
+   */
+  function endorsementsPaused() external view returns (bool);
+
+  /**
+   * @notice V8 initializer for flexible endorsement config.
+   */
+  function initializeV8(uint256 _maxPointsPerNodePerApp, uint256 _maxPointsPerApp) external;
 }

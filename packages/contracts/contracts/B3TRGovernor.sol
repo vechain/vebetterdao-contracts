@@ -81,9 +81,14 @@ import { IGalaxyMember } from "./interfaces/IGalaxyMember.sol";
  * - Difference from V4: Updated all libraries to use new version of IVoterRewards that supports GM Upgrades.
  * ------------------ VERSION 6 ------------------
  * - Updated all libraries to use new version of IVoterRewards that supports GM Rewards Pool.
- ------------------ VERSION 7 ------------------
+ * ------------------ VERSION 7 ------------------
  * - Added proposal type concept, STANDARD (0n) for existing proposals and GRANT (1n) for new grants proposals.
  * - Added deposit threshold cap based on proposal type.
+ * ------------------ VERSION 8 ------------------
+ * - No changes from V7 (placeholder for future reference).
+ * ------------------ VERSION 9 ------------------
+ * - Added reason parameter to cancel function for providing cancellation rationale.
+ * - Added ProposalCanceledWithReason event.
  */
 contract B3TRGovernor is
   IB3TRGovernor,
@@ -537,7 +542,7 @@ contract B3TRGovernor is
    * @return string The version of the governor
    */
   function version() external pure returns (string memory) {
-    return "8";
+    return "9";
   }
 
   /**
@@ -814,13 +819,15 @@ contract B3TRGovernor is
    * @param values The list of values to send
    * @param calldatas The list of call data
    * @param descriptionHash The hash of the description
+   * @param reason The reason for canceling the proposal
    * @return uint256 The proposal id
    */
   function cancel(
     address[] memory targets,
     uint256[] memory values,
     bytes[] memory calldatas,
-    bytes32 descriptionHash
+    bytes32 descriptionHash,
+    string memory reason
   ) external returns (uint256) {
     GovernorStorageTypes.GovernorStorage storage $ = getGovernorStorage();
     return
@@ -831,7 +838,8 @@ contract B3TRGovernor is
         targets,
         values,
         calldatas,
-        descriptionHash
+        descriptionHash,
+        reason
       );
   }
 

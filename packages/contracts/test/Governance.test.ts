@@ -82,7 +82,7 @@ describe("Governor and TimeLock - @shard4a", function () {
 
       // check version
       const version = await governor.version()
-      expect(version).to.eql("8")
+      expect(version).to.eql("9")
 
       // STANDARD deposit threshold is set correctly
       const standardDepositThreshold = await governor.depositThresholdPercentageByProposalType(STANDARD_PROPOSAL_TYPE)
@@ -1095,7 +1095,7 @@ describe("Governor and TimeLock - @shard4a", function () {
         expect(storageSlots[i]).to.equal(storageSlotsAfter[i])
       }
 
-      expect(await governorV7.version()).to.equal("8")
+      expect(await governorV7.version()).to.equal("9")
     })
   })
 
@@ -5098,6 +5098,7 @@ describe("Governor and TimeLock - @shard4a", function () {
             [0],
             [encodedFunctionCall],
             ethers.keccak256(ethers.toUtf8Bytes(`${description} ${this.test?.title}`)),
+            "I want to cancel this",
           ),
       )
     })
@@ -5136,6 +5137,7 @@ describe("Governor and TimeLock - @shard4a", function () {
           [0],
           [encodedFunctionCall],
           ethers.keccak256(ethers.toUtf8Bytes(`${description} ${this.test?.title}`)),
+          "Proposal needs revision",
         )
       const proposalState2 = await governor.state(proposalId)
       expect(proposalState2.toString()).to.eql("2") // cancelled
@@ -5173,6 +5175,7 @@ describe("Governor and TimeLock - @shard4a", function () {
           [0],
           [encodedFunctionCall],
           ethers.keccak256(ethers.toUtf8Bytes(`${description} ${this.test?.title}`)),
+          "Changed my mind",
         )
       const proposalState2 = await governor.state(proposalId)
       expect(proposalState2.toString()).to.eql("2") // cancelled
@@ -5445,9 +5448,16 @@ describe("Governor and TimeLock - @shard4a", function () {
 
       await governor
         .connect(proposer)
-        .cancel([address], [0], [encodedFunctionCall], ethers.keccak256(ethers.toUtf8Bytes("")), {
-          gasLimit: 10_000_000,
-        })
+        .cancel(
+          [address],
+          [0],
+          [encodedFunctionCall],
+          ethers.keccak256(ethers.toUtf8Bytes("")),
+          "Need to recover my deposit",
+          {
+            gasLimit: 10_000_000,
+          },
+        )
 
       expect(await governor.state(proposalId)).to.eql(2n) // cancelled
 
@@ -5631,9 +5641,16 @@ describe("Governor and TimeLock - @shard4a", function () {
       // cancel the proposal to allow withdrawal
       await governor
         .connect(proposer)
-        .cancel([address], [0], [encodedFunctionCall], ethers.keccak256(ethers.toUtf8Bytes("")), {
-          gasLimit: 10_000_000,
-        })
+        .cancel(
+          [address],
+          [0],
+          [encodedFunctionCall],
+          ethers.keccak256(ethers.toUtf8Bytes("")),
+          "No longer pursuing this proposal",
+          {
+            gasLimit: 10_000_000,
+          },
+        )
       expect(await governor.state(proposalId)).to.eql(2n) // cancelled
 
       // user cannot withdraw non existent deposit
@@ -5687,9 +5704,16 @@ describe("Governor and TimeLock - @shard4a", function () {
       // cancel the proposal
       await governor
         .connect(proposer)
-        .cancel([address], [0], [encodedFunctionCall], ethers.keccak256(ethers.toUtf8Bytes("")), {
-          gasLimit: 10_000_000,
-        })
+        .cancel(
+          [address],
+          [0],
+          [encodedFunctionCall],
+          ethers.keccak256(ethers.toUtf8Bytes("")),
+          "No longer pursuing this proposal",
+          {
+            gasLimit: 10_000_000,
+          },
+        )
       expect(await governor.state(proposalId)).to.eql(2n) // cancelled
 
       // pause the VOT3 contract
@@ -5734,9 +5758,16 @@ describe("Governor and TimeLock - @shard4a", function () {
       // cancel the proposal to allow withdrawal
       await governor
         .connect(proposer)
-        .cancel([address], [0], [encodedFunctionCall], ethers.keccak256(ethers.toUtf8Bytes("")), {
-          gasLimit: 10_000_000,
-        })
+        .cancel(
+          [address],
+          [0],
+          [encodedFunctionCall],
+          ethers.keccak256(ethers.toUtf8Bytes("")),
+          "No longer pursuing this proposal",
+          {
+            gasLimit: 10_000_000,
+          },
+        )
       expect(await governor.state(proposalId)).to.eql(2n) // cancelled
 
       // user cannot withdraw non existent deposit
@@ -5790,9 +5821,16 @@ describe("Governor and TimeLock - @shard4a", function () {
       // cancel the proposal
       await governor
         .connect(proposer)
-        .cancel([address], [0], [encodedFunctionCall], ethers.keccak256(ethers.toUtf8Bytes("")), {
-          gasLimit: 10_000_000,
-        })
+        .cancel(
+          [address],
+          [0],
+          [encodedFunctionCall],
+          ethers.keccak256(ethers.toUtf8Bytes("")),
+          "No longer pursuing this proposal",
+          {
+            gasLimit: 10_000_000,
+          },
+        )
       expect(await governor.state(proposalId)).to.eql(2n) // cancelled
 
       // pause the VOT3 contract
@@ -5870,94 +5908,6 @@ describe("Governor and TimeLock - @shard4a", function () {
       // user cannot deposit when proposal is not pending
       await expect(governor.connect(sponser).deposit(ethers.parseEther("1000"), proposalId, { gasLimit: 10_000_000 }))
         .to.be.reverted
-    })
-
-    //@dev This is being skipped since now deposit threshold depends on the proposal type AND the deposit amount now is capped, so not always the same amount
-    it.skip("Deposit should be 2% of the total B3TR supply when proposal was created", async () => {
-      const { b3tr, otherAccounts, governor, B3trContract, xAllocationVoting, vot3 } =
-        await getOrDeployContractInstances({
-          forceDeploy: true,
-        })
-
-      const proposer = otherAccounts[0]
-      await getVot3Tokens(proposer, "1000")
-      // grant approval to the governor contract
-      await vot3.connect(proposer).approve(await governor.getAddress(), ethers.parseEther("1000"))
-
-      // Start emissions
-      await bootstrapAndStartEmissions()
-
-      const b3trSupply = await b3tr.totalSupply()
-      const depositAmount = await governor.depositThresholdByProposalType(STANDARD_PROPOSAL_TYPE)
-      expect(depositAmount).to.eql(b3trSupply / 50n)
-
-      // Now we can create a new proposal
-      const address = await b3tr.getAddress()
-      const encodedFunctionCall = B3trContract.interface.encodeFunctionData("tokenDetails", [])
-      const voteStartsInRoundId = (await xAllocationVoting.currentRoundId()) + 1n // starts in next round
-
-      // Create a proposal with a no deposit
-      const tx = await governor
-        .connect(proposer)
-        .propose([address], [0], [encodedFunctionCall], "", voteStartsInRoundId.toString(), 0, {
-          gasLimit: 10_000_000,
-        })
-
-      const proposalId = await getProposalIdFromTx(tx, false)
-
-      expect(await governor.proposalDepositReached(proposalId)).to.eql(false)
-
-      const proposalDeposit = await governor.proposalDepositThreshold(proposalId)
-      expect(proposalDeposit).to.eql(depositAmount)
-
-      // get enough to pay the deposit
-      const sponser = otherAccounts[1]
-      await getVot3Tokens(sponser, ethers.formatEther(depositAmount))
-      // grant approval to the governor contract
-      await vot3.connect(sponser).approve(await governor.getAddress(), proposalDeposit)
-
-      // sponser contributes to the deposit
-      await governor.connect(sponser).deposit(proposalDeposit, proposalId, { gasLimit: 10_000_000 })
-
-      expect(await governor.proposalDepositReached(proposalId)).to.eql(true)
-      expect(await governor.getProposalDeposits(proposalId)).to.eql(proposalDeposit)
-
-      const b3trSupply2 = await b3tr.totalSupply()
-      const depositAmount2 = await governor.depositThresholdByProposalType(STANDARD_PROPOSAL_TYPE)
-      expect(depositAmount2).to.eql(b3trSupply2 / 50n)
-
-      const tx2 = await governor
-        .connect(proposer)
-        .propose(
-          [await b3tr.getAddress()],
-          [0],
-          [B3trContract.interface.encodeFunctionData("tokenDetails", [])],
-          "Creating some random proposal",
-          (await xAllocationVoting.currentRoundId()) + 1n,
-          ethers.parseEther("1000"),
-          {
-            gasLimit: 10_000_000,
-          },
-        )
-
-      const proposeReceipt = await tx2.wait()
-      // Check that the ProposalDeposit event was emitted with the correct parameters
-      const event = proposeReceipt?.logs[2]
-      expect(event).not.to.be.undefined
-
-      const decodedLogs = governor.interface.parseLog({
-        topics: [...(event?.topics as string[])],
-        data: event ? event.data : "",
-      })
-
-      // deposit amount
-      expect(decodedLogs?.args[2]).to.eql(ethers.parseEther("1000"))
-
-      const proposalId2 = await getProposalIdFromTx(tx2, true)
-
-      const proposalDeposit2 = await governor.proposalDepositThreshold(proposalId2)
-
-      expect(proposalDeposit).to.not.eql(proposalDeposit2)
     })
 
     it("Should not be able to deposit 0 B3TR", async () => {
@@ -6216,7 +6166,13 @@ describe("Governor and TimeLock - @shard4a", function () {
         expect(await governor.state(proposalId)).to.eql(5n)
 
         // cancel the proposal
-        await governor.cancel([await b3tr.getAddress()], [0], [encodedFunctionCall], descriptionHash)
+        await governor.cancel(
+          [await b3tr.getAddress()],
+          [0],
+          [encodedFunctionCall],
+          descriptionHash,
+          "Stopping execution due to new information",
+        )
         expect(await governor.state(proposalId)).to.eql(2n) // cancelled
       })
       it("Proposal needs queuing should return true", async function () {

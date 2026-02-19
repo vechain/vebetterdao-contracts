@@ -202,6 +202,11 @@ interface IB3TRGovernor is IERC165, IERC6372 {
   event ProposalCanceled(uint256 proposalId);
 
   /**
+   * @dev Emitted when a proposal is canceled with a reason.
+   */
+  event ProposalCanceledWithReason(uint256 indexed proposalId, address indexed canceler, string reason);
+
+  /**
    * @dev Emitted when the quorum numerator is updated.
    */
   event QuorumNumeratorUpdated(uint256 oldNumerator, uint256 newNumerator);
@@ -547,13 +552,14 @@ interface IB3TRGovernor is IERC165, IERC6372 {
    * @dev Cancel a proposal. A proposal is cancellable by the proposer, but only while it is Pending state, i.e.
    * before the vote starts.
    *
-   * Emits a {ProposalCanceled} event.
+   * Emits a {ProposalCanceled} and {ProposalCanceledWithReason} event.
    */
   function cancel(
     address[] memory targets,
     uint256[] memory values,
     bytes[] memory calldatas,
-    bytes32 descriptionHash
+    bytes32 descriptionHash,
+    string memory reason
   ) external returns (uint256 proposalId);
 
   /**

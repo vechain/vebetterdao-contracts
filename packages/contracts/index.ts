@@ -9,7 +9,7 @@ import XAllocationPoolJson from "./artifacts/contracts/XAllocationPool.sol/XAllo
 import XAllocationVotingJson from "./artifacts/contracts/XAllocationVoting.sol/XAllocationVoting.json"
 import XAllocationVotingGovernorJson from "./artifacts/contracts/x-allocation-voting-governance/XAllocationVotingGovernor.sol/XAllocationVotingGovernor.json"
 import TreasuryContractJson from "./artifacts/contracts/Treasury.sol/Treasury.json"
-import X2EarnAppsJson from "./artifacts/contracts/X2EarnApps.sol/X2EarnApps.json"
+import X2EarnAppsJson from "./artifacts/contracts/x-2-earn-apps/X2EarnApps.sol/X2EarnApps.json"
 import TreasuryJson from "./artifacts/contracts/Treasury.sol/Treasury.json"
 import X2EarnRewardsPoolJson from "./artifacts/contracts/X2EarnRewardsPool.sol/X2EarnRewardsPool.json"
 import VeBetterPassportJson from "./artifacts/contracts/ve-better-passport/VeBetterPassport.sol/VeBetterPassport.json"

@@ -18,7 +18,7 @@ import { getSeedAccounts, getTestKeys, SeedStrategy } from "../helpers/seedAccou
 import { convertB3trForVot3 } from "../helpers/swap"
 import { ethers } from "hardhat"
 import { Address } from "@vechain/sdk-core"
-import { App, endorseXApps, registerXDapps } from "../helpers/xApp"
+import { App, assignAppCategories, endorseXApps, registerXDapps } from "../helpers/xApp"
 
 const accounts = getTestKeys(17)
 const xDappCreatorAccounts = accounts.slice(0, 8)
@@ -29,60 +29,58 @@ export const APPS: App[] = [
     teamWalletAddress: accounts[6].address.toString(),
     name: "Mugshot",
     metadataURI: "bafkreidqiirz4ekvzyme5ll3obhh6fmcbt67uipqljeh6cvbb5mvkks2f4",
+    categories: ["nutrition", "plastic-waste-recycling"],
   },
   {
     admin: accounts[6].address.toString(),
     teamWalletAddress: accounts[6].address.toString(),
     name: "Cleanify",
     metadataURI: "bafkreifmgtvgcvgibtrvcmbao4zc2cn2z4ga6xxp3wro5a7z5cdtfxnvrq",
+    categories: ["plastic-waste-recycling"],
   },
   {
     admin: accounts[6].address.toString(),
     teamWalletAddress: accounts[6].address.toString(),
     name: "GreenCart",
     metadataURI: "bafkreif3wf422t4z6zyiztirmpplcdmemldk24dc3a4kow6ug5nznzmvhm",
+    categories: ["sustainable-shopping"],
   },
   {
     admin: accounts[6].address.toString(),
     teamWalletAddress: accounts[6].address.toString(),
     name: "Green Ambassador Challenge",
     metadataURI: "bafkreigui2fiwnir3r3k32w7c3irbbdbfkpqanbisxarz7f6gqxk4gzeay",
+    categories: ["education-learning", "green-mobility-travel"],
   },
   {
     admin: accounts[6].address.toString(),
     teamWalletAddress: accounts[6].address.toString(),
     name: "Oily",
     metadataURI: "bafkreiegiuaukybbauhae3vdy2ktdqrehf4wzfg6rnfn5ebd36c2k6pmxa",
+    categories: ["renewable-energy-efficiency"],
   },
   {
     admin: accounts[6].address.toString(),
     teamWalletAddress: accounts[6].address.toString(),
     name: "EVearn",
     metadataURI: "bafkreicz2cslyuzbmj2msmgyzpz2tqwmbyifb7yvb5jbnydp4yx4jnkfny",
+    categories: ["green-finance-defi", "renewable-energy-efficiency"],
   },
   {
     admin: accounts[6].address.toString(),
     teamWalletAddress: accounts[6].address.toString(),
     name: "Vyvo",
     metadataURI: "bafkreid3dbmrxe3orutmptc43me5gnvskz7hu53bjnlfgafwu6xb53w3mi",
+    categories: ["fitness-wellness"],
   },
   {
     admin: accounts[6].address.toString(),
     teamWalletAddress: accounts[6].address.toString(),
     name: "Non Fungible Book Club (NFBC)",
     metadataURI: "bafkreift6bsmzrjnxvdwkrpmxntbwpsrrxjvsvliycnfxoqznb63poeyka",
+    categories: ["education-learning"],
   },
 ]
-
-const padNodeTypes = (nodeTypes: number[], requiredLength: number) => {
-  const paddingValue = 7
-
-  while (nodeTypes.length < requiredLength) {
-    nodeTypes.push(paddingValue)
-  }
-
-  return nodeTypes
-}
 
 export const setupEnvironment = async (
   config: EnvConfig,
@@ -151,7 +149,7 @@ export const setupLocalEnvironment = async (
   // Make sure the first 10 accounts have a VTHO balance
   await airdropVTHO(
     accounts.slice(1, 10).map(acct => acct.address),
-    500n,
+    5000n,
     admin,
   )
 
@@ -163,12 +161,15 @@ export const setupLocalEnvironment = async (
   const x2EarnAppsAddress = await x2EarnApps.getAddress()
   await registerXDapps(x2EarnAppsAddress, xDappCreatorAccounts, APPS)
 
+  // Assign categories to apps (deployer has DEFAULT_ADMIN_ROLE)
+  const deployer = (await ethers.getSigners())[0]
+  await assignAppCategories(x2EarnApps, deployer, APPS)
+
   // Seed the first 5 accounts with some tokens
   const treasuryAddress = await treasury.getAddress()
   // 5+ 8 accounts: 13 accounts
   const allAccounts = getSeedAccounts(SeedStrategy.FIXED, 5 + APPS.length, 0)
   const seedAccounts = allAccounts.slice(0, 5)
-  const endorserAccounts = (await ethers.getSigners()).slice(0, 6) //get the first 6 as endorsers
 
   await airdropVTHO(
     seedAccounts.map(acct => acct.key.address),
@@ -184,29 +185,35 @@ export const setupLocalEnvironment = async (
   await startEmissions(emissionsContract, admin)
 
   if (endorseApps) {
-    /**
-     * First seed account will have a Mjolnir X Node
-     * Second seed account will have a Thunder X Node
-     * Third seed account will have a Strength X Node
-     * Forth seed account will have a Mjölnir Economic Node
-     * Fifth seed account will have a Strength Economic Node
-     * Remaining accounts with have a Mjolnir X Node -> These will have an endorsement score of 100
-     * BEWARE : The first 8 accounts have to hold those nodes : Check if it is the case before running the script
-     */
-    // Airdrop VTHO to endorser accounts so they can pay for transaction gas fees
+    // In V8, one node can endorse multiple apps (max 49 pts/node/app)
+    const allSigners = await ethers.getSigners()
+    const endorserSigners = allSigners.slice(0, 10)
+
     await airdropVTHO(
-      endorserAccounts.map(acct => Address.of(acct.address)),
-      500n,
+      endorserSigners.map(acct => Address.of(acct.address)),
+      5000n,
       admin,
     )
 
-    await mintStargateNFTs(stargateMock, endorserAccounts, padNodeTypes([7, 6, 5, 3, 2, 7], endorserAccounts.length))
-    // Get unendorsed XAPPs
-    const unedorsedApps = await x2EarnApps.unendorsedAppIds()
-    await endorseXApps(endorserAccounts, x2EarnApps, unedorsedApps, stargateMock)
-    // If this fails, check if the first 8 accounts have the correct nodes [7, 6, 5, 3, 2, 7, 7, 7]
+    // First 2 endorsers get 2 MjolnirX each (for multi-node testing), rest get 1
+    // Total: 4 + 10 = 14 nodes x 100 pts = 1400 pts > 8 apps x 100 threshold
+    const mintAccounts: typeof endorserSigners = []
+    const mintLevels: number[] = []
+    for (const acct of endorserSigners.slice(0, 2)) {
+      mintAccounts.push(acct, acct)
+      mintLevels.push(7, 7)
+    }
+    for (const acct of endorserSigners.slice(2)) {
+      mintAccounts.push(acct)
+      mintLevels.push(7)
+    }
+    await mintStargateNFTs(stargateMock, mintAccounts, mintLevels)
+
+    const unendorsedApps = await x2EarnApps.unendorsedAppIds()
+    await endorseXApps(endorserSigners, x2EarnApps, unendorsedApps, stargateMock)
   }
-  await proposeUpgradeGovernance(governor, xAllocationVoting)
+
+  // await proposeUpgradeGovernance(governor, xAllocationVoting)
 
   const end = new Date(performance.now() - start)
 

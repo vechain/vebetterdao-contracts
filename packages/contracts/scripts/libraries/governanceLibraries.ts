@@ -70,6 +70,16 @@ import {
   GovernorQuorumLogicV7,
   GovernorStateLogicV7,
   GovernorVotesLogicV7,
+  // ------------------- V8 ------------------- //
+  GovernorClockLogicV8,
+  GovernorConfiguratorV8,
+  GovernorDepositLogicV8,
+  GovernorFunctionRestrictionsLogicV8,
+  GovernorProposalLogicV8,
+  GovernorQuorumLogicV8,
+  GovernorStateLogicV8,
+  GovernorVotesLogicV8,
+  GovernorGovernanceLogicV8,
 } from "../../typechain-types"
 
 interface DeployGovernanceLibrariesArgs {
@@ -144,6 +154,15 @@ export type GovernanceLibraries = GovernanceLatestLibraries & {
   GovernorStateLogicLibV7: GovernorStateLogicV7
   GovernorVotesLogicLibV7: GovernorVotesLogicV7
   GovernorGovernanceLogicLibV7: GovernorGovernanceLogicV7
+  GovernorClockLogicLibV8: GovernorClockLogicV8
+  GovernorConfiguratorLibV8: GovernorConfiguratorV8
+  GovernorDepositLogicLibV8: GovernorDepositLogicV8
+  GovernorFunctionRestrictionsLogicLibV8: GovernorFunctionRestrictionsLogicV8
+  GovernorProposalLogicLibV8: GovernorProposalLogicV8
+  GovernorQuorumLogicLibV8: GovernorQuorumLogicV8
+  GovernorStateLogicLibV8: GovernorStateLogicV8
+  GovernorVotesLogicLibV8: GovernorVotesLogicV8
+  GovernorGovernanceLogicLibV8: GovernorGovernanceLogicV8
 }
 
 export async function governanceLibraries<T extends DeployGovernanceLibrariesArgs>({
@@ -689,6 +708,75 @@ export async function governanceLibraries<T extends DeployGovernanceLibrariesArg
   await GovernorGovernanceLogicLibV7.waitForDeployment()
   logOutput && console.log("GovernorGovernanceLogicV7 Library deployed")
 
+  // ------------------- V8 ------------------- //
+
+  const GovernorClockLogicV8 = await ethers.getContractFactory("GovernorClockLogicV8")
+  const GovernorClockLogicLibV8 = (await GovernorClockLogicV8.deploy()) as GovernorClockLogicV8
+  await GovernorClockLogicLibV8.waitForDeployment()
+  logOutput && console.log("GovernorClockLogicV8 Library deployed")
+
+  const GovernorConfiguratorV8 = await ethers.getContractFactory("GovernorConfiguratorV8")
+  const GovernorConfiguratorLibV8 = (await GovernorConfiguratorV8.deploy()) as GovernorConfiguratorV8
+  await GovernorConfiguratorLibV8.waitForDeployment()
+  logOutput && console.log("GovernorConfiguratorV8 Library deployed")
+
+  const GovernorDepositLogicV8 = await ethers.getContractFactory("GovernorDepositLogicV8", {
+    libraries: {
+      GovernorClockLogicV8: await GovernorClockLogicLibV8.getAddress(),
+    },
+  })
+  const GovernorDepositLogicLibV8 = (await GovernorDepositLogicV8.deploy()) as GovernorDepositLogicV8
+  await GovernorDepositLogicLibV8.waitForDeployment()
+  logOutput && console.log("GovernorDepositLogicV8 Library deployed")
+
+  const GovernorFunctionRestrictionsLogicV8 = await ethers.getContractFactory("GovernorFunctionRestrictionsLogicV8")
+  const GovernorFunctionRestrictionsLogicLibV8 =
+    (await GovernorFunctionRestrictionsLogicV8.deploy()) as GovernorFunctionRestrictionsLogicV8
+  await GovernorFunctionRestrictionsLogicLibV8.waitForDeployment()
+  logOutput && console.log("GovernorFunctionRestrictionsLogicV8 Library deployed")
+
+  const GovernorProposalLogicV8 = await ethers.getContractFactory("GovernorProposalLogicV8", {
+    libraries: {
+      GovernorClockLogicV8: await GovernorClockLogicLibV8.getAddress(),
+    },
+  })
+  const GovernorProposalLogicLibV8 = (await GovernorProposalLogicV8.deploy()) as GovernorProposalLogicV8
+  await GovernorProposalLogicLibV8.waitForDeployment()
+  logOutput && console.log("GovernorProposalLogicV8 Library deployed")
+
+  const GovernorQuorumLogicV8 = await ethers.getContractFactory("GovernorQuorumLogicV8", {
+    libraries: {
+      GovernorClockLogicV8: await GovernorClockLogicLibV8.getAddress(),
+    },
+  })
+  const GovernorQuorumLogicLibV8 = (await GovernorQuorumLogicV8.deploy()) as GovernorQuorumLogicV8
+  await GovernorQuorumLogicLibV8.waitForDeployment()
+  logOutput && console.log("GovernorQuorumLogicV8 Library deployed")
+
+  const GovernorStateLogicV8 = await ethers.getContractFactory("GovernorStateLogicV8", {
+    libraries: {
+      GovernorClockLogicV8: await GovernorClockLogicLibV8.getAddress(),
+    },
+  })
+  const GovernorStateLogicLibV8 = (await GovernorStateLogicV8.deploy()) as GovernorStateLogicV8
+  await GovernorStateLogicLibV8.waitForDeployment()
+  logOutput && console.log("GovernorStateLogicV8 Library deployed")
+
+  const GovernorVotesLogicV8 = await ethers.getContractFactory("GovernorVotesLogicV8", {
+    libraries: {
+      GovernorClockLogicV8: await GovernorClockLogicLibV8.getAddress(),
+      GovernorProposalLogicV8: await GovernorProposalLogicLibV8.getAddress(),
+    },
+  })
+  const GovernorVotesLogicLibV8 = (await GovernorVotesLogicV8.deploy()) as GovernorVotesLogicV8
+  await GovernorVotesLogicLibV8.waitForDeployment()
+  logOutput && console.log("GovernorVotesLogicV8 Library deployed")
+
+  const GovernorGovernanceLogicV8 = await ethers.getContractFactory("GovernorGovernanceLogicV8")
+  const GovernorGovernanceLogicLibV8 = (await GovernorGovernanceLogicV8.deploy()) as GovernorGovernanceLogicV8
+  await GovernorGovernanceLogicLibV8.waitForDeployment()
+  logOutput && console.log("GovernorGovernanceLogicV8 Library deployed")
+
   return {
     GovernorClockLogicLibV1,
     GovernorConfiguratorLibV1,
@@ -753,5 +841,14 @@ export async function governanceLibraries<T extends DeployGovernanceLibrariesArg
     GovernorStateLogicLibV7,
     GovernorVotesLogicLibV7,
     GovernorGovernanceLogicLibV7,
+    GovernorClockLogicLibV8,
+    GovernorConfiguratorLibV8,
+    GovernorDepositLogicLibV8,
+    GovernorFunctionRestrictionsLogicLibV8,
+    GovernorProposalLogicLibV8,
+    GovernorQuorumLogicLibV8,
+    GovernorStateLogicLibV8,
+    GovernorVotesLogicLibV8,
+    GovernorGovernanceLogicLibV8,
   } as T["latestVersionOnly"] extends true ? GovernanceLatestLibraries : GovernanceLibraries
 }

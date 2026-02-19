@@ -24,12 +24,12 @@
 pragma solidity 0.8.20;
 
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import { X2EarnAppsUpgradeable } from "../X2EarnAppsUpgradeable.sol";
-import { AdministrationUtils } from "../libraries/AdministrationUtils.sol";
-import { IX2EarnCreator } from "../../interfaces/IX2EarnCreator.sol";
-import { IX2EarnRewardsPool } from "../../interfaces/IX2EarnRewardsPool.sol";
+import { X2EarnAppsUpgradeableV7 } from "../X2EarnAppsUpgradeableV7.sol";
+import { AdministrationUtilsV7 } from "../libraries/AdministrationUtilsV7.sol";
+import { IX2EarnCreator } from "../../../../interfaces/IX2EarnCreator.sol";
+import { IX2EarnRewardsPool } from "../../../../interfaces/IX2EarnRewardsPool.sol";
 /**
- * @title AdministrationUpgradeable
+ * @title AdministrationUpgradeableV7
  * @dev Contract module that provides the administration functionalities of the x2earn apps.
  * Each app has one admin and can have many moderators, the use of those should be definied by the contract inheriting this module.
  * Each app has a metadataURI that returns the information of the app.
@@ -37,7 +37,7 @@ import { IX2EarnRewardsPool } from "../../interfaces/IX2EarnRewardsPool.sol";
  * The team allocation percentage is the percentage funds sent to the team at each distribution of allocation rewards.
  * The reward distributors are the addresses that can distribute rewards from the X2EarnRewardsPool.
  */
-abstract contract AdministrationUpgradeable is Initializable, X2EarnAppsUpgradeable {
+abstract contract AdministrationUpgradeableV7 is Initializable, X2EarnAppsUpgradeableV7 {
   uint256 public constant MAX_MODERATORS = 100;
   uint256 public constant MAX_REWARD_DISTRIBUTORS = 100;
   uint256 public constant MAX_CREATORS = 3;
@@ -89,7 +89,7 @@ abstract contract AdministrationUpgradeable is Initializable, X2EarnAppsUpgradea
    */
   function _setAppAdmin(bytes32 appId, address newAdmin) internal override {
     AdministrationStorage storage $ = _getAdministrationStorage();
-    AdministrationUtils.setAppAdmin($._admin, appId, newAdmin, _appSubmitted(appId));
+    AdministrationUtilsV7.setAppAdmin($._admin, appId, newAdmin, _appSubmitted(appId));
   }
 
   /**
@@ -100,7 +100,7 @@ abstract contract AdministrationUpgradeable is Initializable, X2EarnAppsUpgradea
    */
   function _addAppModerator(bytes32 appId, address moderator) internal {
     AdministrationStorage storage $ = _getAdministrationStorage();
-    AdministrationUtils.addAppModerator($._moderators, appId, moderator, _appSubmitted(appId), MAX_MODERATORS);
+    AdministrationUtilsV7.addAppModerator($._moderators, appId, moderator, _appSubmitted(appId), MAX_MODERATORS);
   }
 
   /**
@@ -111,7 +111,7 @@ abstract contract AdministrationUpgradeable is Initializable, X2EarnAppsUpgradea
    */
   function _removeAppModerator(bytes32 appId, address moderator) internal {
     AdministrationStorage storage $ = _getAdministrationStorage();
-    AdministrationUtils.removeAppModerator($._moderators, appId, moderator, _appSubmitted(appId));
+    AdministrationUtilsV7.removeAppModerator($._moderators, appId, moderator, _appSubmitted(appId));
   }
 
   /**
@@ -122,7 +122,7 @@ abstract contract AdministrationUpgradeable is Initializable, X2EarnAppsUpgradea
    */
   function _removeAppCreator(bytes32 appId, address creator) internal {
     AdministrationStorage storage $ = _getAdministrationStorage();
-    AdministrationUtils.removeAppCreator(
+    AdministrationUtilsV7.removeAppCreator(
       $._creators,
       $._creatorApps,
       $._x2EarnCreatorContract,
@@ -140,7 +140,7 @@ abstract contract AdministrationUpgradeable is Initializable, X2EarnAppsUpgradea
    */
   function _addCreator(bytes32 appId, address creator) internal override {
     AdministrationStorage storage $ = _getAdministrationStorage();
-    AdministrationUtils.addCreator(
+    AdministrationUtilsV7.addCreator(
       $._creators,
       $._creatorApps,
       $._x2EarnCreatorContract,
@@ -159,7 +159,7 @@ abstract contract AdministrationUpgradeable is Initializable, X2EarnAppsUpgradea
    */
   function _addRewardDistributor(bytes32 appId, address distributor) internal {
     AdministrationStorage storage $ = _getAdministrationStorage();
-    AdministrationUtils.addRewardDistributor(
+    AdministrationUtilsV7.addRewardDistributor(
       $._rewardDistributors,
       appId,
       distributor,
@@ -176,7 +176,7 @@ abstract contract AdministrationUpgradeable is Initializable, X2EarnAppsUpgradea
    */
   function _removeRewardDistributor(bytes32 appId, address distributor) internal {
     AdministrationStorage storage $ = _getAdministrationStorage();
-    AdministrationUtils.removeRewardDistributor($._rewardDistributors, appId, distributor, _appSubmitted(appId));
+    AdministrationUtilsV7.removeRewardDistributor($._rewardDistributors, appId, distributor, _appSubmitted(appId));
   }
 
   /**
@@ -186,7 +186,7 @@ abstract contract AdministrationUpgradeable is Initializable, X2EarnAppsUpgradea
    */
   function _enableRewardsPoolForNewApp(bytes32 appId) internal override {
     AdministrationStorage storage $ = _getAdministrationStorage();
-    AdministrationUtils.enableRewardsPoolForNewApp($._x2EarnRewardsPoolContract, appId);
+    AdministrationUtilsV7.enableRewardsPoolForNewApp($._x2EarnRewardsPoolContract, appId);
   }
 
   /**
@@ -210,7 +210,7 @@ abstract contract AdministrationUpgradeable is Initializable, X2EarnAppsUpgradea
    */
   function _updateTeamWalletAddress(bytes32 appId, address newTeamWalletAddress) internal override {
     AdministrationStorage storage $ = _getAdministrationStorage();
-    AdministrationUtils.updateTeamWalletAddress(
+    AdministrationUtilsV7.updateTeamWalletAddress(
       $._teamWalletAddress,
       appId,
       newTeamWalletAddress,
@@ -228,7 +228,7 @@ abstract contract AdministrationUpgradeable is Initializable, X2EarnAppsUpgradea
    */
   function _updateAppMetadata(bytes32 appId, string memory newMetadataURI) internal override {
     AdministrationStorage storage $ = _getAdministrationStorage();
-    AdministrationUtils.updateAppMetadata($._metadataURI, appId, newMetadataURI, _appSubmitted(appId));
+    AdministrationUtilsV7.updateAppMetadata($._metadataURI, appId, newMetadataURI, _appSubmitted(appId));
   }
 
   /**
@@ -239,7 +239,7 @@ abstract contract AdministrationUpgradeable is Initializable, X2EarnAppsUpgradea
    */
   function _setTeamAllocationPercentage(bytes32 appId, uint256 newAllocationPercentage) internal virtual override {
     AdministrationStorage storage $ = _getAdministrationStorage();
-    AdministrationUtils.setTeamAllocationPercentage(
+    AdministrationUtilsV7.setTeamAllocationPercentage(
       $._teamAllocationPercentage,
       appId,
       newAllocationPercentage,
@@ -255,7 +255,7 @@ abstract contract AdministrationUpgradeable is Initializable, X2EarnAppsUpgradea
   function _revokeAppCreators(bytes32 appId) internal {
     AdministrationStorage storage $ = _getAdministrationStorage();
     if (!isBlacklisted(appId))
-      AdministrationUtils.revokeAppCreators($._creators, $._creatorApps, $._x2EarnCreatorContract, appId);
+      AdministrationUtilsV7.revokeAppCreators($._creators, $._creatorApps, $._x2EarnCreatorContract, appId);
   }
 
   /**
@@ -266,7 +266,7 @@ abstract contract AdministrationUpgradeable is Initializable, X2EarnAppsUpgradea
   function _validateAppCreators(bytes32 appId) internal {
     AdministrationStorage storage $ = _getAdministrationStorage();
     if (isBlacklisted(appId))
-      AdministrationUtils.validateAppCreators($._creators, $._creatorApps, $._x2EarnCreatorContract, appId);
+      AdministrationUtilsV7.validateAppCreators($._creators, $._creatorApps, $._x2EarnCreatorContract, appId);
   }
 
   /**
@@ -334,7 +334,7 @@ abstract contract AdministrationUpgradeable is Initializable, X2EarnAppsUpgradea
   function isAppCreator(bytes32 appId, address account) external view returns (bool) {
     AdministrationStorage storage $ = _getAdministrationStorage();
 
-    return AdministrationUtils.isAppCreator($._creators, appId, account);
+    return AdministrationUtilsV7.isAppCreator($._creators, appId, account);
   }
 
   /**
@@ -355,7 +355,7 @@ abstract contract AdministrationUpgradeable is Initializable, X2EarnAppsUpgradea
    */
   function isAppModerator(bytes32 appId, address account) public view returns (bool) {
     AdministrationStorage storage $ = _getAdministrationStorage();
-    return AdministrationUtils.isAppModerator($._moderators, appId, account);
+    return AdministrationUtilsV7.isAppModerator($._moderators, appId, account);
   }
 
   /**
@@ -400,7 +400,7 @@ abstract contract AdministrationUpgradeable is Initializable, X2EarnAppsUpgradea
   function isRewardDistributor(bytes32 appId, address account) public view returns (bool) {
     AdministrationStorage storage $ = _getAdministrationStorage();
 
-    return AdministrationUtils.isRewardDistributor($._rewardDistributors, appId, account);
+    return AdministrationUtilsV7.isRewardDistributor($._rewardDistributors, appId, account);
   }
 
   /**

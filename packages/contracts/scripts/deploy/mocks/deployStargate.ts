@@ -86,7 +86,7 @@ export const deployStargateMock = async ({
           {
             tokenCollectionName: "StarGate Delegator Token",
             tokenCollectionSymbol: "SDT",
-            baseTokenURI: "ipfs://mock/",
+            baseTokenURI: "ipfs://bafybeibmpgruasnoqgyemcprpkygtelvxl3b5d2bf5aqqciw6dds33yw7y/metadata/",
             admin: deployer.address,
             upgrader: deployer.address,
             pauser: deployer.address,

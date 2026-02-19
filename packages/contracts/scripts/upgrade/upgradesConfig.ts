@@ -20,7 +20,7 @@ export const upgradeConfig: Record<string, UpgradeContract> = {
   },
   B3TRGovernor: {
     name: "b3tr-governor",
-    versions: ["v2", "v3", "v4", "v5", "v6", "v7", "v8"],
+    versions: ["v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9"],
     configAddressField: "b3trGovernorAddress",
     descriptions: {
       v2: "Give ability to contract admins to call governance only functions",
@@ -30,6 +30,7 @@ export const upgradeConfig: Record<string, UpgradeContract> = {
       v6: "Proposal Execution: Add GM Pool for GM Holder Rewards (Align IVoterRwards)",
       v7: "Proposal Execution + Grants Feature: Add extra voting power based on support tokens + deposit threshold cap + proposal type concept",
       v8: "Give ability to mark proposals as in development/completed",
+      v9: "Give ability to provide a reason for proposal cancellation",
     },
   },
   XAllocationVoting: {
@@ -62,7 +63,7 @@ export const upgradeConfig: Record<string, UpgradeContract> = {
   X2EarnApps: {
     name: "x2-earn-apps",
     configAddressField: "x2EarnAppsContractAddress",
-    versions: ["v2", "v3", "v4", "v5", "v6", "v7"],
+    versions: ["v2", "v3", "v4", "v5", "v6", "v7", "v8"],
     descriptions: {
       v2: "Add xapp endorsement module",
       v3: "Add node cooldown feature",
@@ -70,6 +71,7 @@ export const upgradeConfig: Record<string, UpgradeContract> = {
       v5: "Restricting one app per creator holding a creator NFT",
       v6: "Use NodeManagementV3",
       v7: "Replace NodeManagement with StargateNFT",
+      v8: "Refactor for new endorsement system",
     },
   },
   "X2Earn Rewards Pool": {

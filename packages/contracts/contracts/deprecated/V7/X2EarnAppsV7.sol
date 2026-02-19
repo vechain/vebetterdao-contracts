@@ -23,19 +23,19 @@
 
 pragma solidity 0.8.20;
 
-import { X2EarnAppsUpgradeable } from "./x-2-earn-apps/X2EarnAppsUpgradeable.sol";
-import { AdministrationUpgradeable } from "./x-2-earn-apps/modules/AdministrationUpgradeable.sol";
-import { AppsStorageUpgradeable } from "./x-2-earn-apps/modules/AppsStorageUpgradeable.sol";
-import { ContractSettingsUpgradeable } from "./x-2-earn-apps/modules/ContractSettingsUpgradeable.sol";
-import { VoteEligibilityUpgradeable } from "./x-2-earn-apps/modules//VoteEligibilityUpgradeable.sol";
-import { EndorsementUpgradeable } from "./x-2-earn-apps/modules/EndorsementUpgradeable.sol";
-import { EndorsementUtils } from "./x-2-earn-apps/libraries/EndorsementUtils.sol";
+import { X2EarnAppsUpgradeableV7 } from "./x-2-earn-apps/X2EarnAppsUpgradeableV7.sol";
+import { AdministrationUpgradeableV7 } from "./x-2-earn-apps/modules/AdministrationUpgradeableV7.sol";
+import { AppsStorageUpgradeableV7 } from "./x-2-earn-apps/modules/AppsStorageUpgradeableV7.sol";
+import { ContractSettingsUpgradeableV7 } from "./x-2-earn-apps/modules/ContractSettingsUpgradeableV7.sol";
+import { VoteEligibilityUpgradeableV7 } from "./x-2-earn-apps/modules/VoteEligibilityUpgradeableV7.sol";
+import { EndorsementUpgradeableV7 } from "./x-2-earn-apps/modules/EndorsementUpgradeableV7.sol";
+import { EndorsementUtilsV7 } from "./x-2-earn-apps/libraries/EndorsementUtilsV7.sol";
 import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import { IXAllocationVotingGovernor } from "./interfaces/IXAllocationVotingGovernor.sol";
+import { IXAllocationVotingGovernor } from "../../interfaces/IXAllocationVotingGovernor.sol";
 
 /**
- * @title X2EarnApps
+ * @title X2EarnAppsV7
  * @notice This contract handles the x-2-earn applications of the VeBetterDAO ecosystem. The contract allows the insert, management and
  * eligibility of apps for the B3TR allocation rounds.
  * @dev The contract is using AccessControl to handle the admin and upgrader roles.
@@ -60,20 +60,20 @@ import { IXAllocationVotingGovernor } from "./interfaces/IXAllocationVotingGover
  *
  * -------------------- Version 6 --------------------
  * - Upon StarGate launch, we updated the NodeManagement contract to V3. This impacted mostly
- *   EndorsementUtils library.
- *   EndorsementUpgradeable module.
+ *   EndorsementUtilsV7 library.
+ *   EndorsementUpgradeableV7 module.
  *
  * -------------------- Version 7 --------------------
  * - Integrated Stargate NFT contract for node management and endorsement verification.
  * - Updated endorsement system to use Stargate NFT for node ownership and token management.
  */
-contract X2EarnApps is
-  X2EarnAppsUpgradeable,
-  AdministrationUpgradeable,
-  ContractSettingsUpgradeable,
-  VoteEligibilityUpgradeable,
-  AppsStorageUpgradeable,
-  EndorsementUpgradeable,
+contract X2EarnAppsV7 is
+  X2EarnAppsUpgradeableV7,
+  AdministrationUpgradeableV7,
+  ContractSettingsUpgradeableV7,
+  VoteEligibilityUpgradeableV7,
+  AppsStorageUpgradeableV7,
+  EndorsementUpgradeableV7,
   AccessControlUpgradeable,
   UUPSUpgradeable
 {
@@ -94,7 +94,7 @@ contract X2EarnApps is
    * @dev This function is called only once during the contract deployment
    */
   function initializeV7(address _stargateNft) external onlyRole(UPGRADER_ROLE) reinitializer(7) {
-    require(_stargateNft != address(0), "X2EarnApps: Invalid Stargate NFT contract address");
+    require(_stargateNft != address(0), "X2EarnAppsV7: Invalid Stargate NFT contract address");
     __Endorsement_init_v7(_stargateNft);
   }
 
@@ -302,7 +302,7 @@ contract X2EarnApps is
    * @dev See {IX2EarnApps-updateNodeEndorsementScores}.
    */
   function updateNodeEndorsementScores(
-    EndorsementUtils.NodeStrengthScores calldata _nodeStrengthScores
+    EndorsementUtilsV7.NodeStrengthScores calldata _nodeStrengthScores
   ) external onlyRole(GOVERNANCE_ROLE) {
     _updateNodeEndorsementScores(_nodeStrengthScores);
   }

@@ -35,7 +35,7 @@ import { time } from "@nomicfoundation/hardhat-network-helpers"
 import { createNodeHolder, endorseApp } from "./helpers/xnodes"
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers"
 
-describe("VoterRewards - @shard10", () => {
+describe("VoterRewards - @shard10-core", () => {
   // Environment params
   let creator1: HardhatEthersSigner
   let creator2: HardhatEthersSigner

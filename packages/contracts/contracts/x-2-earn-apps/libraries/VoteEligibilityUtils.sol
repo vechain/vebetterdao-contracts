@@ -27,6 +27,7 @@ import { PassportTypes } from "../../ve-better-passport/libraries/PassportTypes.
 import { IVeBetterPassport } from "../../interfaces/IVeBetterPassport.sol";
 import { Checkpoints } from "@openzeppelin/contracts/utils/structs/Checkpoints.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import { X2EarnAppsStorageTypes } from "./X2EarnAppsStorageTypes.sol";
 
 /**
  * @title VoteEligibilityUtils
@@ -54,9 +55,6 @@ library VoteEligibilityUtils {
   // ------------------------------- Setter Functions -------------------------------
   /**
    * @notice Updates an app's voting eligibility checkpoint.
-   * @param eligibleApps The list of apps currently eligible for voting.
-   * @param isAppEligibleCheckpoints Mapping of app IDs to their eligibility checkpoints.
-   * @param eligibleAppIndex Mapping of app IDs to their index in the `eligibleApps` array.
    * @param appId The ID of the app to update eligibility for.
    * @param canBeVoted Boolean indicating whether the app is now eligible for voting.
    * @param isEligibleNow The current eligibility status of the app.
@@ -64,38 +62,36 @@ library VoteEligibilityUtils {
    *
    * Emits a {VotingEligibilityUpdated} event.
    */
-  function updateVotingEligibility(
-    bytes32[] storage eligibleApps,
-    mapping(bytes32 appId => Checkpoints.Trace208) storage isAppEligibleCheckpoints,
-    mapping(bytes32 appId => uint256 index) storage eligibleAppIndex,
-    bytes32 appId,
-    bool canBeVoted,
-    bool isEligibleNow,
-    uint48 clock
-  ) external {
+  function updateVotingEligibility(bytes32 appId, bool canBeVoted, bool isEligibleNow, uint48 clock) external {
+    X2EarnAppsStorageTypes.VoteEligibilityStorage storage $ = X2EarnAppsStorageTypes._getVoteEligibilityStorage();
+
     // Exit if no state change is required
     if (isEligibleNow == canBeVoted) {
       return;
     }
 
     // Update eligibility checkpoint with the new status
-    _pushCheckpoint(isAppEligibleCheckpoints[appId], clock, canBeVoted ? SafeCast.toUint208(1) : SafeCast.toUint208(0));
+    _pushCheckpoint(
+      $._isAppEligibleCheckpoints[appId],
+      clock,
+      canBeVoted ? SafeCast.toUint208(1) : SafeCast.toUint208(0)
+    );
 
     if (!canBeVoted) {
       // Remove app from eligibility if it is no longer eligible
-      uint256 index = eligibleAppIndex[appId];
-      uint256 lastIndex = eligibleApps.length - 1;
-      bytes32 lastAppId = eligibleApps[lastIndex];
+      uint256 index = $._eligibleAppIndex[appId];
+      uint256 lastIndex = $._eligibleApps.length - 1;
+      bytes32 lastAppId = $._eligibleApps[lastIndex];
 
-      eligibleApps[index] = lastAppId;
-      eligibleAppIndex[lastAppId] = index;
+      $._eligibleApps[index] = lastAppId;
+      $._eligibleAppIndex[lastAppId] = index;
 
-      eligibleApps.pop();
-      delete eligibleAppIndex[appId];
+      $._eligibleApps.pop();
+      delete $._eligibleAppIndex[appId];
     } else {
       // Add app to eligibility if it is now eligible
-      eligibleApps.push(appId);
-      eligibleAppIndex[appId] = eligibleApps.length - 1;
+      $._eligibleApps.push(appId);
+      $._eligibleAppIndex[appId] = $._eligibleApps.length - 1;
     }
 
     emit VotingEligibilityUpdated(appId, canBeVoted);
@@ -104,7 +100,6 @@ library VoteEligibilityUtils {
   // ------------------------------- Getter Functions -------------------------------
   /**
    * @notice Checks if an app is eligible for voting at a specific timepoint.
-   * @param isAppEligibleCheckpoints Mapping of app IDs to their eligibility checkpoints.
    * @param appId The ID of the app being queried.
    * @param timepoint The timepoint to check for eligibility.
    * @param appExists Boolean indicating if the app exists.
@@ -114,12 +109,13 @@ library VoteEligibilityUtils {
    * Reverts with {ERC5805FutureLookup} if `timepoint` is in the future.
    */
   function isEligible(
-    mapping(bytes32 => Checkpoints.Trace208) storage isAppEligibleCheckpoints,
     bytes32 appId,
     uint256 timepoint,
     bool appExists,
     uint48 currentTimepoint
   ) external view returns (bool) {
+    X2EarnAppsStorageTypes.VoteEligibilityStorage storage $ = X2EarnAppsStorageTypes._getVoteEligibilityStorage();
+
     if (!appExists) {
       return false;
     }
@@ -128,7 +124,7 @@ library VoteEligibilityUtils {
       revert ERC5805FutureLookup(timepoint, currentTimepoint);
     }
 
-    return isAppEligibleCheckpoints[appId].upperLookupRecent(SafeCast.toUint48(timepoint)) == 1;
+    return $._isAppEligibleCheckpoints[appId].upperLookupRecent(SafeCast.toUint48(timepoint)) == 1;
   }
 
   // ------------------------------- Private Functions -------------------------------
