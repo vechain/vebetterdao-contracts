@@ -506,7 +506,7 @@ describe("AutoVoting - @shard14b", function () {
 
       // App gets unendorsed - will become ineligible after grace period
       const nodeId = await stargateNftMock.tokenOfOwnerByIndex(appOwner.address, 0)
-      await x2EarnApps.connect(appOwner).unendorseApp(app1Id, nodeId)
+      await x2EarnApps.connect(appOwner).unendorseApp(app1Id, nodeId, 0)
       expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.be.true
 
       // Autovoting still works during current round
@@ -1027,7 +1027,7 @@ describe("AutoVoting - @shard14b", function () {
 
       // App gets unendorsed during round 1, but autovoting should still work
       const nodeId = await stargateNftMock.tokenOfOwnerByIndex(appOwner.address, 0)
-      await x2EarnApps.connect(appOwner).unendorseApp(app1Id, nodeId)
+      await x2EarnApps.connect(appOwner).unendorseApp(app1Id, nodeId, 0)
       expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(true)
 
       // Autovoting should still work since app is still eligible for current round
@@ -1113,7 +1113,7 @@ describe("AutoVoting - @shard14b", function () {
 
       // App gets unendorsed during round 2, but autovoting should still work
       const nodeId = await stargateNftMock.tokenOfOwnerByIndex(appOwner.address, 0)
-      await x2EarnApps.connect(appOwner).unendorseApp(app1Id, nodeId)
+      await x2EarnApps.connect(appOwner).unendorseApp(app1Id, nodeId, 0)
       expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.eql(true)
 
       // Autovoting should still work since app is still eligible for current round

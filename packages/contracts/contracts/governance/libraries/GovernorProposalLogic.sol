@@ -47,6 +47,11 @@ library GovernorProposalLogic {
   event ProposalCanceled(uint256 proposalId);
 
   /**
+   * @dev Emitted when a proposal is canceled with a reason.
+   */
+  event ProposalCanceledWithReason(uint256 indexed proposalId, address indexed canceler, string reason);
+
+  /**
    * @dev Emitted when a proposal is created.
    */
   event ProposalCreated(
@@ -520,10 +525,13 @@ library GovernorProposalLogic {
    * @notice Cancels a proposal.
    * @dev Cancels a proposal in any state other than Canceled or Executed.
    * @param self The storage reference for the GovernorStorage.
+   * @param account The account canceling the proposal.
+   * @param admin Whether the account has admin role.
    * @param targets The addresses of the contracts to call.
    * @param values The values to send to the contracts.
    * @param calldatas The function signatures and arguments.
    * @param descriptionHash The hash of the proposal description.
+   * @param reason The reason for canceling the proposal.
    * @return The proposal id.
    */
   function cancel(
@@ -533,7 +541,8 @@ library GovernorProposalLogic {
     address[] memory targets,
     uint256[] memory values,
     bytes[] memory calldatas,
-    bytes32 descriptionHash
+    bytes32 descriptionHash,
+    string memory reason
   ) external returns (uint256) {
     uint256 proposalId = hashProposal(targets, values, calldatas, descriptionHash);
 
@@ -568,7 +577,7 @@ library GovernorProposalLogic {
       delete self.timelockIds[proposalId];
     }
 
-    return _cancel(self, proposalId);
+    return _cancel(self, proposalId, account, reason);
   }
 
   /**
@@ -931,11 +940,19 @@ library GovernorProposalLogic {
    * @dev Internal function to cancel a proposal.
    * @param self The storage reference for the GovernorStorage.
    * @param proposalId The id of the proposal.
+   * @param canceler The address of the account canceling the proposal.
+   * @param reason The reason for canceling the proposal.
    * @return The proposal id.
    */
-  function _cancel(GovernorStorageTypes.GovernorStorage storage self, uint256 proposalId) private returns (uint256) {
+  function _cancel(
+    GovernorStorageTypes.GovernorStorage storage self,
+    uint256 proposalId,
+    address canceler,
+    string memory reason
+  ) private returns (uint256) {
     self.proposals[proposalId].canceled = true;
     emit ProposalCanceled(proposalId);
+    emit ProposalCanceledWithReason(proposalId, canceler, reason);
 
     return proposalId;
   }

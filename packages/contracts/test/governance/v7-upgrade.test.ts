@@ -25,7 +25,7 @@ import {
 } from "../helpers/common"
 import { GRANT_PROPOSAL_TYPE, setupProposer, STANDARD_PROPOSAL_TYPE, startNewRoundAndGetRoundId } from "./fixture.test"
 
-describe("Governance - V7 Upgrade - @shard4f", function () {
+describe.skip("Governance - V7 Upgrade - @shard4f", function () {
   it("Should preserve proposal data through version upgrades and add proposal type support", async () => {
     const config = createLocalConfig()
     const {

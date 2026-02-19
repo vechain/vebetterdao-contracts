@@ -25,6 +25,7 @@ pragma solidity 0.8.20;
 
 import { IX2EarnCreator } from "../../interfaces/IX2EarnCreator.sol";
 import { IX2EarnRewardsPool } from "../../interfaces/IX2EarnRewardsPool.sol";
+import { X2EarnAppsStorageTypes } from "./X2EarnAppsStorageTypes.sol";
 
 /**
  * @title AdministrationUtils
@@ -198,7 +199,22 @@ library AdministrationUtils {
     mapping(bytes32 appId => address[]) storage rewardDistributors,
     bytes32 appId,
     address account
-  ) public view returns (bool) {
+  ) external view returns (bool) {
+    return _isRewardDistributor(rewardDistributors, appId, account);
+  }
+
+  /**
+   * @dev Internal function to check if an account is a reward distributor for an app.
+   * @param rewardDistributors Mapping of app IDs to arrays of reward distributor addresses.
+   * @param appId The ID of the app.
+   * @param account The account address to check.
+   * @return True if the account is a reward distributor, false otherwise.
+   */
+  function _isRewardDistributor(
+    mapping(bytes32 appId => address[]) storage rewardDistributors,
+    bytes32 appId,
+    address account
+  ) internal view returns (bool) {
     return contains(rewardDistributors[appId], account);
   }
 
@@ -213,39 +229,34 @@ library AdministrationUtils {
     mapping(bytes32 appId => address[]) storage moderators,
     bytes32 appId,
     address account
-  ) public view returns (bool) {
-    return contains(moderators[appId], account);
+  ) external view returns (bool) {
+    return _isAppModerator(moderators, appId, account);
   }
 
   /**
-   * @dev Checks if an account is a creator for an app.
-   * @param creators Mapping of app IDs to arrays of creator addresses.
+   * @dev Internal function to check if an account is a moderator for an app.
+   * @param moderators Mapping of app IDs to arrays of moderator addresses.
    * @param appId The ID of the app.
    * @param account The account address to check.
-   * @return True if the account is a creator, false otherwise.
+   * @return True if the account is a moderator, false otherwise.
    */
-  function isAppCreator(
-    mapping(bytes32 appId => address[]) storage creators,
+  function _isAppModerator(
+    mapping(bytes32 appId => address[]) storage moderators,
     bytes32 appId,
     address account
-  ) public view returns (bool) {
-    return contains(creators[appId], account);
+  ) internal view returns (bool) {
+    return contains(moderators[appId], account);
   }
 
   // ------------------------------- Setter Functions -------------------------------
   /**
    * @dev Sets the team allocation percentage for an app.
-   * @param teamAllocationPercentage Mapping of app IDs to their respective allocation percentages.
    * @param appId The ID of the app.
    * @param newAllocationPercentage The new allocation percentage.
    * @param appSubmitted Flag indicating if the app has been submitted.
    */
-  function setTeamAllocationPercentage(
-    mapping(bytes32 appId => uint256) storage teamAllocationPercentage,
-    bytes32 appId,
-    uint256 newAllocationPercentage,
-    bool appSubmitted
-  ) external {
+  function setTeamAllocationPercentage(bytes32 appId, uint256 newAllocationPercentage, bool appSubmitted) external {
+    X2EarnAppsStorageTypes.AdministrationStorage storage $ = X2EarnAppsStorageTypes._getAdministrationStorage();
     if (!appSubmitted) {
       revert X2EarnNonexistentApp(appId);
     }
@@ -254,48 +265,38 @@ library AdministrationUtils {
       revert X2EarnInvalidAllocationPercentage(newAllocationPercentage);
     }
 
-    uint256 oldAllocationPercentage = teamAllocationPercentage[appId];
-    teamAllocationPercentage[appId] = newAllocationPercentage;
+    uint256 oldAllocationPercentage = $._teamAllocationPercentage[appId];
+    $._teamAllocationPercentage[appId] = newAllocationPercentage;
 
     emit TeamAllocationPercentageUpdated(appId, oldAllocationPercentage, newAllocationPercentage);
   }
 
   /**
    * @dev Updates the metadata URI of an app.
-   * @param metadataURI Mapping of app IDs to metadata URIs.
    * @param appId The ID of the app.
    * @param newMetadataURI The new metadata URI.
    * @param appSubmitted Flag indicating if the app has been submitted.
    */
-  function updateAppMetadata(
-    mapping(bytes32 appId => string) storage metadataURI,
-    bytes32 appId,
-    string memory newMetadataURI,
-    bool appSubmitted
-  ) external {
+  function updateAppMetadata(bytes32 appId, string memory newMetadataURI, bool appSubmitted) external {
+    X2EarnAppsStorageTypes.AdministrationStorage storage $ = X2EarnAppsStorageTypes._getAdministrationStorage();
     if (!appSubmitted) {
       revert X2EarnNonexistentApp(appId);
     }
 
-    string memory oldMetadataURI = metadataURI[appId];
-    metadataURI[appId] = newMetadataURI;
+    string memory oldMetadataURI = $._metadataURI[appId];
+    $._metadataURI[appId] = newMetadataURI;
 
     emit AppMetadataURIUpdated(appId, oldMetadataURI, newMetadataURI);
   }
 
   /**
    * @dev Updates the team wallet address for an app.
-   * @param teamWalletAddress Mapping of app IDs to team wallet addresses.
    * @param appId The ID of the app.
    * @param newTeamWalletAddress The new team wallet address.
    * @param appSubmitted Flag indicating if the app has been submitted.
    */
-  function updateTeamWalletAddress(
-    mapping(bytes32 appId => address) storage teamWalletAddress,
-    bytes32 appId,
-    address newTeamWalletAddress,
-    bool appSubmitted
-  ) external {
+  function updateTeamWalletAddress(bytes32 appId, address newTeamWalletAddress, bool appSubmitted) external {
+    X2EarnAppsStorageTypes.AdministrationStorage storage $ = X2EarnAppsStorageTypes._getAdministrationStorage();
     if (newTeamWalletAddress == address(0)) {
       revert X2EarnInvalidAddress(newTeamWalletAddress);
     }
@@ -304,25 +305,20 @@ library AdministrationUtils {
       revert X2EarnNonexistentApp(appId);
     }
 
-    address oldTeamWalletAddress = teamWalletAddress[appId];
-    teamWalletAddress[appId] = newTeamWalletAddress;
+    address oldTeamWalletAddress = $._teamWalletAddress[appId];
+    $._teamWalletAddress[appId] = newTeamWalletAddress;
 
     emit TeamWalletAddressUpdated(appId, oldTeamWalletAddress, newTeamWalletAddress);
   }
 
   /**
    * @dev Removes a reward distributor from an app.
-   * @param rewardDistributors Mapping of app IDs to arrays of reward distributor addresses.
    * @param appId The ID of the app.
    * @param distributor The address of the reward distributor to remove.
    * @param appSubmitted Flag indicating if the app has been submitted.
    */
-  function removeRewardDistributor(
-    mapping(bytes32 => address[]) storage rewardDistributors,
-    bytes32 appId,
-    address distributor,
-    bool appSubmitted
-  ) external {
+  function removeRewardDistributor(bytes32 appId, address distributor, bool appSubmitted) external {
+    X2EarnAppsStorageTypes.AdministrationStorage storage $ = X2EarnAppsStorageTypes._getAdministrationStorage();
     if (distributor == address(0)) {
       revert X2EarnInvalidAddress(distributor);
     }
@@ -331,11 +327,11 @@ library AdministrationUtils {
       revert X2EarnNonexistentApp(appId);
     }
 
-    if (!isRewardDistributor(rewardDistributors, appId, distributor)) {
+    if (!_isRewardDistributor($._rewardDistributors, appId, distributor)) {
       revert X2EarnNonexistentRewardDistributor(appId, distributor);
     }
 
-    bool removed = remove(rewardDistributors[appId], distributor);
+    bool removed = remove($._rewardDistributors[appId], distributor);
     if (removed) {
       emit RewardDistributorRemovedFromApp(appId, distributor);
     }
@@ -343,19 +339,18 @@ library AdministrationUtils {
 
   /**
    * @dev Adds a reward distributor to an app.
-   * @param rewardDistributors Mapping of app IDs to arrays of reward distributor addresses.
    * @param appId The ID of the app.
    * @param distributor The address of the reward distributor.
    * @param appSubmitted Flag indicating if the app has been submitted.
    * @param maxRewardDistributors The maximum number of reward distributors allowed.
    */
   function addRewardDistributor(
-    mapping(bytes32 appId => address[]) storage rewardDistributors,
     bytes32 appId,
     address distributor,
     bool appSubmitted,
     uint256 maxRewardDistributors
   ) external {
+    X2EarnAppsStorageTypes.AdministrationStorage storage $ = X2EarnAppsStorageTypes._getAdministrationStorage();
     if (distributor == address(0)) {
       revert X2EarnInvalidAddress(distributor);
     }
@@ -364,11 +359,11 @@ library AdministrationUtils {
       revert X2EarnNonexistentApp(appId);
     }
 
-    if (rewardDistributors[appId].length >= maxRewardDistributors) {
+    if ($._rewardDistributors[appId].length >= maxRewardDistributors) {
       revert X2EarnMaxRewardDistributorsReached(appId);
     }
 
-    rewardDistributors[appId].push(distributor);
+    $._rewardDistributors[appId].push(distributor);
 
     emit RewardDistributorAddedToApp(appId, distributor);
   }
@@ -390,17 +385,13 @@ library AdministrationUtils {
 
   /**
    * @dev Removes a moderator from an app.
-   * @param moderators Mapping of app IDs to arrays of moderator addresses.
    * @param appId The ID of the app.
    * @param moderator The address of the moderator to remove.
    * @param appSubmitted Flag indicating if the app has been submitted.
    */
-  function removeAppModerator(
-    mapping(bytes32 appId => address[]) storage moderators,
-    bytes32 appId,
-    address moderator,
-    bool appSubmitted
-  ) external {
+  function removeAppModerator(bytes32 appId, address moderator, bool appSubmitted) external {
+    X2EarnAppsStorageTypes.AdministrationStorage storage $ = X2EarnAppsStorageTypes._getAdministrationStorage();
+
     if (moderator == address(0)) {
       revert X2EarnInvalidAddress(moderator);
     }
@@ -409,11 +400,11 @@ library AdministrationUtils {
       revert X2EarnNonexistentApp(appId);
     }
 
-    if (!isAppModerator(moderators, appId, moderator)) {
+    if (!_isAppModerator($._moderators, appId, moderator)) {
       revert X2EarnNonexistentModerator(appId, moderator);
     }
 
-    bool removed = remove(moderators[appId], moderator);
+    bool removed = remove($._moderators[appId], moderator);
     if (removed) {
       emit ModeratorRemovedFromApp(appId, moderator);
     }
@@ -421,21 +412,12 @@ library AdministrationUtils {
 
   /**
    * @dev Removes a creator from an app.
-   * @param creators Mapping of app IDs to arrays of creator addresses.
-   * @param creatorApps Mapping of creator addresses to the number of apps they have created.
-   * @param x2EarnCreatorContract The X2EarnCreator contract instance.
    * @param appId The ID of the app.
    * @param creator The address of the creator to remove.
    * @param appSubmitted Flag indicating if the app has been submitted.
    */
-  function removeAppCreator(
-    mapping(bytes32 appId => address[]) storage creators,
-    mapping(address creator => uint256 apps) storage creatorApps,
-    IX2EarnCreator x2EarnCreatorContract,
-    bytes32 appId,
-    address creator,
-    bool appSubmitted
-  ) external {
+  function removeAppCreator(bytes32 appId, address creator, bool appSubmitted) external {
+    X2EarnAppsStorageTypes.AdministrationStorage storage $ = X2EarnAppsStorageTypes._getAdministrationStorage();
     if (creator == address(0)) {
       revert X2EarnInvalidAddress(creator);
     }
@@ -444,39 +426,34 @@ library AdministrationUtils {
       revert X2EarnNonexistentApp(appId);
     }
 
-    if (!isAppCreator(creators, appId, creator)) {
+    // Check if the address is a creator of the app
+    if (!contains($._creators[appId], creator)) {
       revert X2EarnNonexistentCreator(appId, creator);
     }
 
     // Remove the creator from the app
-    remove(creators[appId], creator);
+    remove($._creators[appId], creator);
 
     // Burn the creator NFT if the creator doesn't have any apps
-    if (creatorApps[creator] == 1) {
-      x2EarnCreatorContract.burn(x2EarnCreatorContract.tokenOfOwnerByIndex(creator, 0));
+    if ($._creatorApps[creator] == 1) {
+      $._x2EarnCreatorContract.burn($._x2EarnCreatorContract.tokenOfOwnerByIndex(creator, 0));
     }
 
     // Decrease the number of apps created by the creator
-    creatorApps[creator]--;
+    $._creatorApps[creator]--;
 
     emit CreatorRemovedFromApp(appId, creator);
   }
 
   /**
    * @dev Adds a moderator to an app.
-   * @param moderators Mapping of app IDs to arrays of moderator addresses.
    * @param appId The ID of the app.
    * @param moderator The address of the moderator.
    * @param appSubmitted Flag indicating if the app has been submitted.
    * @param maxModerators The maximum number of moderators allowed.
    */
-  function addAppModerator(
-    mapping(bytes32 => address[]) storage moderators,
-    bytes32 appId,
-    address moderator,
-    bool appSubmitted,
-    uint256 maxModerators
-  ) external {
+  function addAppModerator(bytes32 appId, address moderator, bool appSubmitted, uint256 maxModerators) external {
+    X2EarnAppsStorageTypes.AdministrationStorage storage $ = X2EarnAppsStorageTypes._getAdministrationStorage();
     if (moderator == address(0)) {
       revert X2EarnInvalidAddress(moderator);
     }
@@ -485,28 +462,24 @@ library AdministrationUtils {
       revert X2EarnNonexistentApp(appId);
     }
 
-    if (moderators[appId].length >= maxModerators) {
+    if ($._moderators[appId].length >= maxModerators) {
       revert X2EarnMaxModeratorsReached(appId);
     }
 
-    moderators[appId].push(moderator);
+    $._moderators[appId].push(moderator);
 
     emit ModeratorAddedToApp(appId, moderator);
   }
 
   /**
    * @dev Sets the admin address for an app.
-   * @param admin Mapping of app IDs to admin addresses.
    * @param appId The ID of the app.
    * @param newAdmin The new admin address.
    * @param appSubmitted Flag indicating if the app has been submitted.
    */
-  function setAppAdmin(
-    mapping(bytes32 appId => address) storage admin,
-    bytes32 appId,
-    address newAdmin,
-    bool appSubmitted
-  ) external {
+  function setAppAdmin(bytes32 appId, address newAdmin, bool appSubmitted) external {
+    X2EarnAppsStorageTypes.AdministrationStorage storage $ = X2EarnAppsStorageTypes._getAdministrationStorage();
+
     if (!appSubmitted) {
       revert X2EarnNonexistentApp(appId);
     }
@@ -515,9 +488,9 @@ library AdministrationUtils {
       revert X2EarnInvalidAddress(newAdmin);
     }
 
-    emit AppAdminUpdated(appId, admin[appId], newAdmin);
+    emit AppAdminUpdated(appId, $._admin[appId], newAdmin);
 
-    admin[appId] = newAdmin;
+    $._admin[appId] = newAdmin;
   }
 
   /**
@@ -526,15 +499,8 @@ library AdministrationUtils {
    * @param appId the hashed name of the app
    * @param creator the address of the creator
    */
-  function addCreator(
-    mapping(bytes32 appId => address[]) storage creators,
-    mapping(address creator => uint256 apps) storage creatorApps,
-    IX2EarnCreator x2EarnCreatorContract,
-    bytes32 appId,
-    address creator,
-    bool appSubmitted,
-    uint256 MAX_CREATORS
-  ) external {
+  function addCreator(bytes32 appId, address creator, bool appSubmitted, uint256 MAX_CREATORS) external {
+    X2EarnAppsStorageTypes.AdministrationStorage storage $ = X2EarnAppsStorageTypes._getAdministrationStorage();
     if (creator == address(0)) {
       revert X2EarnInvalidAddress(creator);
     }
@@ -544,23 +510,23 @@ library AdministrationUtils {
     }
 
     // Check if max number of managers has been reached
-    if (creators[appId].length >= MAX_CREATORS) {
+    if ($._creators[appId].length >= MAX_CREATORS) {
       revert X2EarnMaxCreatorsReached(appId);
     }
 
-    if (contains(creators[appId], creator)) {
+    if (contains($._creators[appId], creator)) {
       revert X2EarnAlreadyCreator(creator);
     }
 
     // Increase the number of apps created by the creator
-    creatorApps[creator]++;
+    $._creatorApps[creator]++;
 
     // Add the creator to the app
-    creators[appId].push(creator);
+    $._creators[appId].push(creator);
 
     // Mint a creator NFT if the creator doesn't have one
-    if (x2EarnCreatorContract.balanceOf(creator) == 0) {
-      x2EarnCreatorContract.safeMint(creator);
+    if ($._x2EarnCreatorContract.balanceOf(creator) == 0) {
+      $._x2EarnCreatorContract.safeMint(creator);
     }
 
     emit CreatorAddedToApp(appId, creator);
@@ -571,22 +537,18 @@ library AdministrationUtils {
    *
    * @param appId the hashed name of the app
    */
-  function revokeAppCreators(
-    mapping(bytes32 => address[]) storage creators,
-    mapping(address => uint256) storage creatorApps,
-    IX2EarnCreator x2EarnCreatorContract,
-    bytes32 appId
-  ) external {
-    for (uint256 i = 0; i < creators[appId].length; i++) {
-      address creator = creators[appId][i];
+  function revokeAppCreators(bytes32 appId) external {
+    X2EarnAppsStorageTypes.AdministrationStorage storage $ = X2EarnAppsStorageTypes._getAdministrationStorage();
+    for (uint256 i = 0; i < $._creators[appId].length; i++) {
+      address creator = $._creators[appId][i];
 
       // Burn the creator NFT if the creator doesn't have any other apps
-      if (creatorApps[creator] == 1) {
-        x2EarnCreatorContract.burn(x2EarnCreatorContract.tokenOfOwnerByIndex(creator, 0));
+      if ($._creatorApps[creator] == 1) {
+        $._x2EarnCreatorContract.burn($._x2EarnCreatorContract.tokenOfOwnerByIndex(creator, 0));
       }
 
       // Decrease the number of apps created by the creator
-      creatorApps[creator]--;
+      $._creatorApps[creator]--;
     }
   }
 
@@ -595,22 +557,18 @@ library AdministrationUtils {
    *
    * @param appId the hashed name of the app
    */
-  function validateAppCreators(
-    mapping(bytes32 => address[]) storage creators,
-    mapping(address => uint256) storage creatorApps,
-    IX2EarnCreator x2EarnCreatorContract,
-    bytes32 appId
-  ) external {
-    for (uint256 i = 0; i < creators[appId].length; i++) {
-      address creator = creators[appId][i];
+  function validateAppCreators(bytes32 appId) external {
+    X2EarnAppsStorageTypes.AdministrationStorage storage $ = X2EarnAppsStorageTypes._getAdministrationStorage();
+    for (uint256 i = 0; i < $._creators[appId].length; i++) {
+      address creator = $._creators[appId][i];
 
       // Mint a creator NFT if the creator doesn't have one
-      if (creatorApps[creator] == 0) {
-        x2EarnCreatorContract.safeMint(creator);
+      if ($._creatorApps[creator] == 0) {
+        $._x2EarnCreatorContract.safeMint(creator);
       }
 
       // Increase the number of apps created by the creator
-      creatorApps[creator]++;
+      $._creatorApps[creator]++;
     }
   }
 

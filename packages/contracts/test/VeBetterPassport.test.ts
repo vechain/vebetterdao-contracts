@@ -44,7 +44,7 @@ import {
 import { endorseApp } from "./helpers/xnodes"
 import { createLocalConfig } from "@repo/config/contracts/envs/local"
 
-describe("VeBetterPassport - @shard8", function () {
+describe("VeBetterPassport - @shard8-core", function () {
   describe("Contract parameters", function () {
     it("Should have contract addresses set correctly", async function () {
       const { veBetterPassport, xAllocationVoting, x2EarnApps, galaxyMember } = await getOrDeployContractInstances({
@@ -133,7 +133,10 @@ describe("VeBetterPassport - @shard8", function () {
       ])
     })
   })
-  // deployment
+})
+
+// Upgrades section split to separate shard
+describe("VeBetterPassport Upgrades - @shard8d", function () {
   describe("Upgrades", function () {
     it("should return the correct version", async function () {
       const { veBetterPassport } = await getOrDeployContractInstances({
@@ -1053,7 +1056,10 @@ describe("VeBetterPassport - @shard8", function () {
         )
     })
   })
+})
 
+// Continue shard8 with smaller sections
+describe("VeBetterPassport Checks & Config - @shard8-core", function () {
   describe("Passport Checks", function () {
     it("Should initialize correctly", async function () {
       const {
@@ -1272,7 +1278,10 @@ describe("VeBetterPassport - @shard8", function () {
       expect(await veBetterPassport.thresholdPoPScore()).to.equal(0n)
     })
   })
+})
 
+// Passport Entities split to separate shard
+describe("VeBetterPassport Entities - @shard8e", function () {
   describe("Passport Entities", function () {
     it("Should revert if an entity is trying to become a passport", async function () {
       const { veBetterPassport, otherAccounts } = await getOrDeployContractInstances({
@@ -2385,12 +2394,7 @@ describe("VeBetterPassport - @shard8", function () {
       const creator1 = creators[0]
       const creator2 = creators[1]
 
-      // Bootstrap emissions
-      await bootstrapAndStartEmissions()
-      // simulate 5 rounds of actions
-      await moveToCycle(6)
-
-      // Add 3 apps
+      // Add 3 apps FIRST (before bootstrap) so they're eligible for all rounds
       const app1Id = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[2].address))
       await x2EarnApps
         .connect(owner)
@@ -2404,9 +2408,15 @@ describe("VeBetterPassport - @shard8", function () {
         .connect(creator2)
         .submitApp(otherAccounts[4].address, otherAccounts[4].address, otherAccounts[4].address, "metadataURI")
 
+      // Endorse apps before bootstrapping so they're eligible from round 1
       await endorseApp(app1Id, otherAccounts[2])
       await endorseApp(app2Id, otherAccounts[3])
       await endorseApp(app3Id, otherAccounts[4])
+
+      // Bootstrap emissions after apps are endorsed
+      await bootstrapAndStartEmissions()
+      // simulate 5 rounds of actions - apps are now eligible for these rounds
+      await moveToCycle(6)
 
       // Set apps security to LOW
       await veBetterPassport.connect(owner).setAppSecurity(app1Id, 1)
@@ -3069,7 +3079,10 @@ describe("VeBetterPassport - @shard8", function () {
       ).to.be.revertedWithCustomError(veBetterPassport, "DelegatedEntity")
     })
   })
+})
 
+// Passport Delegation split to separate shard
+describe("VeBetterPassport Delegation - @shard8f", function () {
   describe("Passport Delegation", function () {
     it("Should be able to delegate personhood with signature", async function () {
       const {
@@ -4994,7 +5007,10 @@ describe("VeBetterPassport - @shard8", function () {
       )
     })
   })
+})
 
+// Continue shard8 with Passport Clock
+describe("VeBetterPassport Clock - @shard8-core", function () {
   describe("Passport Clock", function () {
     it("Should return current block number when calling clock", async function () {
       const { veBetterPassport } = await getOrDeployContractInstances({
@@ -5015,7 +5031,7 @@ describe("VeBetterPassport - @shard8", function () {
 })
 
 // Isolated tests for shard16 because of the size of the tests
-describe("VeBetterPassport - @shard16", function () {
+describe("VeBetterPassport - @shard16-pop", function () {
   describe("Passport PoP Score", function () {
     it("Should be able to register participation of user with ACTION_REGISTRAR_ROLE", async function () {
       const { x2EarnApps, otherAccounts, owner, veBetterPassport, otherAccount, xAllocationVoting } =
@@ -5873,7 +5889,10 @@ describe("VeBetterPassport - @shard16", function () {
       )
     })
   })
+})
 
+// Passport Whitelisting & Blacklisting split to separate shard
+describe("VeBetterPassport Whitelisting - @shard16a", function () {
   describe("Passport Whitelisting & Blacklisting", function () {
     it("WHITELISTER_ROLE should be able to whitelist and blacklist users", async function () {
       const { veBetterPassport, owner, otherAccount } = await getOrDeployContractInstances({
@@ -6257,7 +6276,10 @@ describe("VeBetterPassport - @shard16", function () {
       ])
     })
   })
+})
 
+// Passport GM check and Governance split to separate shard
+describe("VeBetterPassport GM & Governance - @shard16b", function () {
   describe("Passport GM check", function () {
     it("isPerson should return true if user has GM token above threshold level", async function () {
       const config = createLocalConfig()

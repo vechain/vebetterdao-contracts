@@ -60,6 +60,7 @@ import { IX2EarnRewardsPool } from "./interfaces/IX2EarnRewardsPool.sol";
  * - Track the unallocated funds for each round
  * - Added admin function to manually set the unallocated funds for a given round
  * - Added a getter to see if all apps have claimed their rewards for a given round
+ * - Fix allocations with zero votes
  */
 contract XAllocationPool is IXAllocationPool, AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPSUpgradeable {
   using Checkpoints for Checkpoints.Trace208; // Checkpoints library for managing the voting mechanism used in the XAllocationVoting contract
@@ -268,10 +269,8 @@ contract XAllocationPool is IXAllocationPool, AccessControlUpgradeable, Reentran
       uint256 x2EarnRewardsPoolAmount
     ) = claimableAmount(roundId, appId);
 
-    require(amountToClaim > 0, "XAllocationPool: no rewards available for this app");
-
     $.claimedRewards[appId][roundId] = true;
-
+    
     //check that contract has enough funds to pay the reward
     require(
       $.b3tr.balanceOf(address(this)) >= (teamAllocationsAmount + x2EarnRewardsPoolAmount + unallocatedAmount),

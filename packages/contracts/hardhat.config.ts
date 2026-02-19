@@ -38,7 +38,7 @@ const config: HardhatUserConfig = {
     disambiguatePaths: false,
     runOnCompile: true,
     strict: true,
-    except: ["mocks", "deprecated", "interfaces", "test", "templates", "openzeppelin"],
+    except: ["mocks", "deprecated", "interfaces", "test", "templates", "openzeppelin", "libraries"],
   },
   mocha: {
     timeout: 1800000,

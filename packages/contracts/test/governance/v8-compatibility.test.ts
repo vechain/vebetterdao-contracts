@@ -69,9 +69,49 @@ describe("Governance - V8 Compatibility - @shard4h", function () {
           [0],
           [encodedFunctionCall],
           ethers.keccak256(ethers.toUtf8Bytes(`description ${this.title}`)),
+          "Changed my mind about this proposal",
         )
       const stateAfterCancel = await governor.state(proposalId)
       expect(stateAfterCancel).to.equal(2) // cancelled
+    })
+
+    it("Cancel should emit ProposalCanceledWithReason event", async () => {
+      const functionToCall = "tokenDetails"
+      const encodedFunctionCall = b3trContract.interface.encodeFunctionData(functionToCall, [])
+      const description = `description cancel reason test ${Date.now()}`
+      const cancelReason = "Testing cancel reason feature"
+
+      const tx = await createProposal(b3tr, b3trContract, proposer, description, functionToCall, [])
+      const proposalId = await getProposalIdFromTx(tx)
+
+      const cancelTx = await governor
+        .connect(proposer)
+        .cancel(
+          [await b3tr.getAddress()],
+          [0],
+          [encodedFunctionCall],
+          ethers.keccak256(ethers.toUtf8Bytes(description)),
+          cancelReason,
+        )
+
+      const receipt = await cancelTx.wait()
+      const cancelEvent = receipt?.logs.find(log => {
+        try {
+          const parsed = governor.interface.parseLog({ topics: [...log.topics], data: log.data })
+          return parsed?.name === "ProposalCanceledWithReason"
+        } catch {
+          return false
+        }
+      })
+
+      expect(cancelEvent).to.not.be.undefined
+      const parsedEvent = governor.interface.parseLog({
+        topics: [...cancelEvent!.topics],
+        data: cancelEvent!.data,
+      })
+      expect(parsedEvent?.args.proposalId).to.equal(proposalId)
+      expect(parsedEvent?.args.canceler).to.equal(proposer.address)
+      expect(parsedEvent?.args.reason).to.equal(cancelReason)
     })
 
     it("Proposals in ACTIVE state should be cancellable only by admin in V8", async () => {
@@ -108,6 +148,7 @@ describe("Governance - V8 Compatibility - @shard4h", function () {
             [0],
             [encodedFunctionCall],
             ethers.keccak256(ethers.toUtf8Bytes(`description ${this.title}`)),
+            "No longer needed",
           ),
       ).to.be.reverted
 
@@ -122,6 +163,7 @@ describe("Governance - V8 Compatibility - @shard4h", function () {
           [0],
           [encodedFunctionCall],
           ethers.keccak256(ethers.toUtf8Bytes(`description ${this.title}`)),
+          "Proposal contains errors that need fixing",
         )
       const stateAfterCancelAdmin = await governor.state(proposalId)
       expect(stateAfterCancelAdmin).to.equal(2) // cancelled
@@ -169,6 +211,7 @@ describe("Governance - V8 Compatibility - @shard4h", function () {
             [0],
             [encodedFunctionCall],
             ethers.keccak256(ethers.toUtf8Bytes(`description ${this.title}`)),
+            "No longer needed",
           ),
       ).to.be.reverted
 
@@ -183,6 +226,7 @@ describe("Governance - V8 Compatibility - @shard4h", function () {
           [0],
           [encodedFunctionCall],
           ethers.keccak256(ethers.toUtf8Bytes(`description ${this.title}`)),
+          "Community raised security concerns",
         )
       const stateAfterCancelAdmin = await governor.state(proposalId)
       expect(stateAfterCancelAdmin).to.equal(2) // cancelled
@@ -234,6 +278,7 @@ describe("Governance - V8 Compatibility - @shard4h", function () {
             [0],
             [encodedFunctionCall],
             ethers.keccak256(ethers.toUtf8Bytes(`description ${this.title}`)),
+            "Found issue before execution",
           ),
       ).to.be.reverted
 
@@ -245,6 +290,7 @@ describe("Governance - V8 Compatibility - @shard4h", function () {
           [0],
           [encodedFunctionCall],
           ethers.keccak256(ethers.toUtf8Bytes(`description ${this.title}`)),
+          "Critical bug discovered in implementation",
         )
       const stateAfterCancelAdmin = await governor.state(proposalId)
       expect(stateAfterCancelAdmin).to.equal(2) // cancelled
@@ -304,6 +350,7 @@ describe("Governance - V8 Compatibility - @shard4h", function () {
             [0],
             [encodedFunctionCall],
             ethers.keccak256(ethers.toUtf8Bytes(`description ${this.title}`)),
+            "Want to undo this",
           ),
       ).to.be.reverted
 
@@ -316,6 +363,7 @@ describe("Governance - V8 Compatibility - @shard4h", function () {
             [0],
             [encodedFunctionCall],
             ethers.keccak256(ethers.toUtf8Bytes(`description ${this.title}`)),
+            "Need to reverse this decision",
           ),
       ).to.be.reverted
 
@@ -381,6 +429,7 @@ describe("Governance - V8 Compatibility - @shard4h", function () {
             [0],
             [encodedFunctionCall],
             ethers.keccak256(ethers.toUtf8Bytes(`description ${this.title}`)),
+            "Project direction changed",
           ),
       ).to.be.reverted
 
@@ -393,6 +442,7 @@ describe("Governance - V8 Compatibility - @shard4h", function () {
             [0],
             [encodedFunctionCall],
             ethers.keccak256(ethers.toUtf8Bytes(`description ${this.title}`)),
+            "Development blocked by external factors",
           ),
       ).to.be.reverted
 
@@ -461,6 +511,7 @@ describe("Governance - V8 Compatibility - @shard4h", function () {
             [0],
             [encodedFunctionCall],
             ethers.keccak256(ethers.toUtf8Bytes(`description ${this.title}`)),
+            "Want to revert completed work",
           ),
       ).to.be.reverted
 
@@ -473,6 +524,7 @@ describe("Governance - V8 Compatibility - @shard4h", function () {
             [0],
             [encodedFunctionCall],
             ethers.keccak256(ethers.toUtf8Bytes(`description ${this.title}`)),
+            "Completed proposal needs to be undone",
           ),
       ).to.be.reverted
 
@@ -499,6 +551,7 @@ describe("Governance - V8 Compatibility - @shard4h", function () {
           [0],
           [encodedFunctionCall],
           ethers.keccak256(ethers.toUtf8Bytes(`description ${this.title}`)),
+          "Duplicate proposal submitted by mistake",
         )
       const stateAfterFirstCancel = await governor.state(proposalId)
       expect(stateAfterFirstCancel).to.equal(2) // cancelled
@@ -512,6 +565,7 @@ describe("Governance - V8 Compatibility - @shard4h", function () {
             [0],
             [encodedFunctionCall],
             ethers.keccak256(ethers.toUtf8Bytes(`description ${this.title}`)),
+            "Trying to cancel again",
           ),
       ).to.be.reverted
 
@@ -559,6 +613,7 @@ describe("Governance - V8 Compatibility - @shard4h", function () {
             [0],
             [encodedFunctionCall],
             ethers.keccak256(ethers.toUtf8Bytes(`description ${this.title}`)),
+            "Want to withdraw defeated proposal",
           ),
       ).to.be.reverted
 
@@ -571,6 +626,7 @@ describe("Governance - V8 Compatibility - @shard4h", function () {
             [0],
             [encodedFunctionCall],
             ethers.keccak256(ethers.toUtf8Bytes(`description ${this.title}`)),
+            "Cleanup of defeated proposal",
           ),
       ).to.be.reverted
 
@@ -602,6 +658,7 @@ describe("Governance - V8 Compatibility - @shard4h", function () {
             [0],
             [encodedFunctionCall],
             ethers.keccak256(ethers.toUtf8Bytes(`description ${this.title}`)),
+            "Proposal failed to get enough support",
           ),
       ).to.be.reverted
 
@@ -614,6 +671,7 @@ describe("Governance - V8 Compatibility - @shard4h", function () {
             [0],
             [encodedFunctionCall],
             ethers.keccak256(ethers.toUtf8Bytes(`description ${this.title}`)),
+            "Cleaning up unsupported proposal",
           ),
       ).to.be.reverted
 

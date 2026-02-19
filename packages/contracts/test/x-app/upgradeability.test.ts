@@ -21,6 +21,7 @@ import {
   X2EarnAppsV4,
   X2EarnAppsV5,
   X2EarnAppsV6,
+  X2EarnAppsV7,
   X2EarnRewardsPool,
   X2EarnRewardsPoolV4,
   XAllocationPool,
@@ -56,7 +57,7 @@ describe("Contract upgradeablity @shard15e", () => {
   })
 
   it("User with UPGRADER_ROLE should be able to upgrade the contract", async function () {
-    const { x2EarnApps, owner, administrationUtils, endorsementUtils, voteEligibilityUtils } =
+    const { x2EarnApps, owner, administrationUtils, endorsementUtils, voteEligibilityUtils, appStorageUtils } =
       await getOrDeployContractInstances({
         forceDeploy: true,
       })
@@ -67,6 +68,7 @@ describe("Contract upgradeablity @shard15e", () => {
         AdministrationUtils: await administrationUtils.getAddress(),
         EndorsementUtils: await endorsementUtils.getAddress(),
         VoteEligibilityUtils: await voteEligibilityUtils.getAddress(),
+        AppStorageUtils: await appStorageUtils.getAddress(),
       },
     })
 
@@ -87,7 +89,7 @@ describe("Contract upgradeablity @shard15e", () => {
   })
 
   it("Only user with UPGRADER_ROLE should be able to upgrade the contract", async function () {
-    const { x2EarnApps, otherAccount, administrationUtils, endorsementUtils, voteEligibilityUtils } =
+    const { x2EarnApps, otherAccount, administrationUtils, endorsementUtils, voteEligibilityUtils, appStorageUtils } =
       await getOrDeployContractInstances({
         forceDeploy: true,
       })
@@ -98,6 +100,7 @@ describe("Contract upgradeablity @shard15e", () => {
         AdministrationUtils: await administrationUtils.getAddress(),
         EndorsementUtils: await endorsementUtils.getAddress(),
         VoteEligibilityUtils: await voteEligibilityUtils.getAddress(),
+        AppStorageUtils: await appStorageUtils.getAddress(),
       },
     })
     const implementation = await Contract.deploy()
@@ -117,14 +120,6 @@ describe("Contract upgradeablity @shard15e", () => {
     expect(newImplAddress.toUpperCase()).to.not.eql((await implementation.getAddress()).toUpperCase())
   })
 
-  it("Should return correct version of the contract", async () => {
-    const { x2EarnApps } = await getOrDeployContractInstances({
-      forceDeploy: true,
-    })
-
-    expect(await x2EarnApps.version()).to.equal("7")
-  })
-
   it("X2Earn Apps Info added pre contract upgrade should should be same after upgrade", async () => {
     const config = createLocalConfig()
     config.EMISSIONS_CYCLE_DURATION = 24
@@ -138,8 +133,10 @@ describe("Contract upgradeablity @shard15e", () => {
       administrationUtils,
       endorsementUtils,
       voteEligibilityUtils,
+      appStorageUtils,
       x2EarnRewardsPool,
       x2EarnCreator,
+      stargateNftMock,
       administrationUtilsV2,
       endorsementUtilsV2,
       voteEligibilityUtilsV2,
@@ -150,6 +147,15 @@ describe("Contract upgradeablity @shard15e", () => {
       administrationUtilsV4,
       endorsementUtilsV4,
       voteEligibilityUtilsV4,
+      administrationUtilsV5,
+      endorsementUtilsV5,
+      voteEligibilityUtilsV5,
+      administrationUtilsV6,
+      endorsementUtilsV6,
+      voteEligibilityUtilsV6,
+      administrationUtilsV7,
+      endorsementUtilsV7,
+      voteEligibilityUtilsV7,
     } = await getOrDeployContractInstances({
       forceDeploy: true,
     })
@@ -259,19 +265,71 @@ describe("Contract upgradeablity @shard15e", () => {
     expect(appsV3).to.eql(appsV4)
 
     // Upgrade X2EarnAppsV4 to X2EarnAppsV5
-    const x2EarnAppsV5 = (await upgradeProxy("X2EarnAppsV4", "X2EarnApps", await x2EarnAppsV4.getAddress(), [], {
+    const x2EarnAppsV5 = (await upgradeProxy("X2EarnAppsV4", "X2EarnAppsV5", await x2EarnAppsV4.getAddress(), [], {
       version: 5,
       libraries: {
-        AdministrationUtils: await administrationUtils.getAddress(),
-        EndorsementUtils: await endorsementUtils.getAddress(),
-        VoteEligibilityUtils: await voteEligibilityUtils.getAddress(),
+        AdministrationUtilsV5: await administrationUtilsV5.getAddress(),
+        EndorsementUtilsV5: await endorsementUtilsV5.getAddress(),
+        VoteEligibilityUtilsV5: await voteEligibilityUtilsV5.getAddress(),
       },
-    })) as X2EarnApps
+    })) as X2EarnAppsV5
     // start new round
     await startNewAllocationRound()
 
     const appsV5 = await x2EarnAppsV5.apps()
     expect(appsV4).to.eql(appsV5)
+
+    // Upgrade X2EarnAppsV5 to X2EarnAppsV6
+    const x2EarnAppsV6 = (await upgradeProxy("X2EarnAppsV5", "X2EarnAppsV6", await x2EarnAppsV5.getAddress(), [], {
+      version: 6,
+      libraries: {
+        AdministrationUtilsV6: await administrationUtilsV6.getAddress(),
+        EndorsementUtilsV6: await endorsementUtilsV6.getAddress(),
+        VoteEligibilityUtilsV6: await voteEligibilityUtilsV6.getAddress(),
+      },
+    })) as X2EarnAppsV6
+    // start new round
+    await startNewAllocationRound()
+
+    const appsV6 = await x2EarnAppsV6.apps()
+    expect(appsV5).to.eql(appsV6)
+
+    // Upgrade X2EarnAppsV6 to X2EarnAppsV7
+    const x2EarnAppsV7 = (await upgradeProxy(
+      "X2EarnAppsV6",
+      "X2EarnAppsV7",
+      await x2EarnAppsV6.getAddress(),
+      [await stargateNftMock.getAddress()],
+      {
+        version: 7,
+        libraries: {
+          AdministrationUtilsV7: await administrationUtilsV7.getAddress(),
+          EndorsementUtilsV7: await endorsementUtilsV7.getAddress(),
+          VoteEligibilityUtilsV7: await voteEligibilityUtilsV7.getAddress(),
+        },
+      },
+    )) as X2EarnAppsV7
+    // start new round
+    await startNewAllocationRound()
+
+    const appsV7 = await x2EarnAppsV7.apps()
+    expect(appsV6).to.eql(appsV7)
+
+    // Upgrade X2EarnAppsV7 to X2EarnApps (V8 - latest)
+    const x2EarnAppsV8 = (await upgradeProxy("X2EarnAppsV7", "X2EarnApps", await x2EarnAppsV7.getAddress(), [], {
+      version: 8,
+      libraries: {
+        AdministrationUtils: await administrationUtils.getAddress(),
+        EndorsementUtils: await endorsementUtils.getAddress(),
+        VoteEligibilityUtils: await voteEligibilityUtils.getAddress(),
+        AppStorageUtils: await appStorageUtils.getAddress(),
+      },
+    })) as X2EarnApps
+    // start new round
+    await startNewAllocationRound()
+
+    const appsV8 = await x2EarnAppsV8.apps()
+    expect(appsV7).to.eql(appsV8)
   })
 
   it("X2Earn Apps added pre contract upgrade should need endorsement after upgrade and should be in grace period", async () => {
@@ -465,6 +523,7 @@ describe("Contract upgradeablity @shard15e", () => {
       administrationUtils,
       endorsementUtils,
       voteEligibilityUtils,
+      appStorageUtils,
     } = await getOrDeployContractInstances({
       forceDeploy: true,
     })
@@ -791,6 +850,7 @@ describe("Contract upgradeablity @shard15e", () => {
       endorsementUtils,
       administrationUtils,
       voteEligibilityUtils,
+      appStorageUtils,
       nodeManagement,
       x2EarnCreator,
       administrationUtilsV2,
@@ -976,8 +1036,6 @@ describe("Contract upgradeablity @shard15e", () => {
       },
     )) as X2EarnAppsV4
 
-    expect(await x2EarnAppsV4.x2EarnRewardsPoolContract()).to.eql(await x2EarnRewardsPool.getAddress())
-
     const storageSlotsAdministrationAfterV4 = await getStorageSlots(
       await x2EarnAppsV2.getAddress(),
       initialSlotAdministration,
@@ -1047,8 +1105,6 @@ describe("Contract upgradeablity @shard15e", () => {
       },
     })) as X2EarnAppsV5
 
-    expect(await x2EarnAppsV5.x2EarnRewardsPoolContract()).to.eql(await x2EarnRewardsPool.getAddress())
-    expect(await x2EarnAppsV5.x2EarnCreatorContract()).to.eql(await x2EarnCreator.getAddress())
     const storageSlotsAdministrationAfterV5 = await getStorageSlots(
       await x2EarnAppsV2.getAddress(),
       initialSlotAdministration,
@@ -1118,8 +1174,6 @@ describe("Contract upgradeablity @shard15e", () => {
       },
     })) as X2EarnAppsV6
 
-    expect(await x2EarnAppsV6.x2EarnRewardsPoolContract()).to.eql(await x2EarnRewardsPool.getAddress())
-
     // check the storage slots for each module
     // Administion utils
     const storageSlotsAdministrationAfterV6 = await getStorageSlots(
@@ -1177,762 +1231,5 @@ describe("Contract upgradeablity @shard15e", () => {
     const addressFromSlot2UpgradeV6 = ethers.getAddress("0x" + storageSlotsAdministrationAfterV6[1].slice(26))
     const expectedAddress2UpgradeV6 = ethers.getAddress(await x2EarnRewardsPool.getAddress())
     expect(addressFromSlot2UpgradeV6).to.equal(expectedAddress2UpgradeV6)
-  })
-
-  it.skip("Check no issues upgrading to V5 with update of libraries", async function () {
-    const config = createLocalConfig()
-    config.EMISSIONS_CYCLE_DURATION = 50
-    config.X2EARN_NODE_COOLDOWN_PERIOD = 1
-    const {
-      otherAccounts,
-      otherAccount,
-      owner,
-      vechainNodesMock,
-      timeLock,
-      b3tr,
-      vot3,
-      treasury,
-      x2EarnCreator,
-      nodeManagement,
-      passportChecksLogicV1,
-      passportConfiguratorV1,
-      passportDelegationLogicV1,
-      passportPersonhoodLogicV1,
-      passportPoPScoreLogicV1,
-      passportSignalingLogicV1,
-      passportEntityLogicV1,
-      passportWhitelistAndBlacklistLogicV1,
-      passportChecksLogic,
-      passportConfigurator,
-      passportDelegationLogic,
-      passportPersonhoodLogic,
-      passportPoPScoreLogic,
-      passportSignalingLogic,
-      passportWhitelistAndBlacklistLogic,
-      passportEntityLogic,
-      governorClockLogicLibV1,
-      governorConfiguratorLibV1,
-      governorDepositLogicLibV1,
-      governorFunctionRestrictionsLogicLibV1,
-      governorProposalLogicLibV1,
-      governorQuorumLogicLibV1,
-      governorStateLogicLibV1,
-      governorVotesLogicLibV1,
-      governorClockLogicLibV3,
-      governorConfiguratorLibV3,
-      governorDepositLogicLibV3,
-      governorFunctionRestrictionsLogicLibV3,
-      governorProposalLogicLibV3,
-      governorQuorumLogicLibV3,
-      governorStateLogicLibV3,
-      governorVotesLogicLibV3,
-      governorClockLogicLibV4,
-      governorConfiguratorLibV4,
-      governorDepositLogicLibV4,
-      governorFunctionRestrictionsLogicLibV4,
-      governorProposalLogicLibV4,
-      governorQuorumLogicLibV4,
-      governorStateLogicLibV4,
-      governorVotesLogicLibV4,
-      governorClockLogicLib,
-      governorConfiguratorLib,
-      governorDepositLogicLib,
-      governorFunctionRestrictionsLogicLib,
-      governorProposalLogicLib,
-      governorQuorumLogicLib,
-      governorStateLogicLib,
-      governorVotesLogicLib,
-      administrationUtils,
-      endorsementUtils,
-      voteEligibilityUtils,
-      administrationUtilsV2,
-      endorsementUtilsV2,
-      voteEligibilityUtilsV2,
-      administrationUtilsV3,
-      endorsementUtilsV3,
-      voteEligibilityUtilsV3,
-    } = await getOrDeployContractInstances({
-      forceDeploy: true,
-    })
-
-    // Deploy X2EarnApps V1 and all the other contracts
-    const x2EarnAppsV1 = (await deployProxy("X2EarnAppsV1", [
-      "ipfs://",
-      [await timeLock.getAddress(), owner.address],
-      owner.address,
-      owner.address,
-    ])) as X2EarnAppsV1
-
-    const veBetterPassportContractAddress = await deployProxyOnly("VeBetterPassportV1", {
-      PassportChecksLogicV1: await passportChecksLogicV1.getAddress(),
-      PassportConfiguratorV1: await passportConfiguratorV1.getAddress(),
-      PassportEntityLogicV1: await passportEntityLogicV1.getAddress(),
-      PassportDelegationLogicV1: await passportDelegationLogicV1.getAddress(),
-      PassportPersonhoodLogicV1: await passportPersonhoodLogicV1.getAddress(),
-      PassportPoPScoreLogicV1: await passportPoPScoreLogicV1.getAddress(),
-      PassportSignalingLogicV1: await passportSignalingLogicV1.getAddress(),
-      PassportWhitelistAndBlacklistLogicV1: await passportWhitelistAndBlacklistLogicV1.getAddress(),
-    })
-
-    const x2EarnRewardsPool = (await deployAndUpgrade(
-      ["X2EarnRewardsPoolV1", "X2EarnRewardsPoolV2", "X2EarnRewardsPoolV3", "X2EarnRewardsPoolV4"],
-      [
-        [
-          owner.address, // admin
-          owner.address, // contracts address manager
-          owner.address, // upgrader //TODO: transferRole
-          await b3tr.getAddress(),
-          await x2EarnAppsV1.getAddress(),
-        ],
-        [
-          owner.address, // impact admin address
-          config.X_2_EARN_INITIAL_IMPACT_KEYS, // impact keys
-        ],
-        [veBetterPassportContractAddress],
-        [],
-      ],
-      {
-        versions: [undefined, 2, 3, 4],
-      },
-    )) as X2EarnRewardsPoolV4
-
-    const xAllocationPool = (await deployAndUpgrade(
-      ["XAllocationPoolV1", "XAllocationPoolV2", "XAllocationPoolV3"],
-      [
-        [
-          owner.address, // admin
-          owner.address, // upgrader
-          owner.address, // contractsAddressManager
-          await b3tr.getAddress(),
-          await treasury.getAddress(),
-          await x2EarnAppsV1.getAddress(),
-          await x2EarnRewardsPool.getAddress(),
-        ],
-        [],
-        [],
-      ],
-      {
-        versions: [undefined, 2, 3],
-      },
-    )) as XAllocationPoolV3
-
-    const galaxyMemberV3 = (await deployAndUpgrade(
-      ["GalaxyMemberV1", "GalaxyMemberV2", "GalaxyMemberV3"],
-      [
-        [
-          {
-            name: "VeBetterDAO Galaxy Member",
-            symbol: "GM",
-            admin: owner.address,
-            upgrader: owner.address,
-            pauser: owner.address,
-            minter: owner.address,
-            contractsAddressManager: owner.address,
-            maxLevel: 5,
-            baseTokenURI: config.GM_NFT_BASE_URI,
-            b3trToUpgradeToLevel: config.GM_NFT_B3TR_REQUIRED_TO_UPGRADE_TO_LEVEL,
-            b3tr: await b3tr.getAddress(),
-            treasury: await treasury.getAddress(),
-          },
-        ],
-        [
-          await vechainNodesMock.getAddress(),
-          await nodeManagement.getAddress(),
-          owner.address,
-          config.GM_NFT_NODE_TO_FREE_LEVEL,
-        ],
-        [],
-      ],
-      {
-        versions: [undefined, 2, 3],
-      },
-    )) as GalaxyMemberV3
-
-    const emissions = (await deployAndUpgrade(
-      ["EmissionsV1", "Emissions"],
-      [
-        [
-          {
-            minter: owner.address,
-            admin: owner.address,
-            upgrader: owner.address,
-            contractsAddressManager: owner.address,
-            decaySettingsManager: owner.address,
-            b3trAddress: await b3tr.getAddress(),
-            destinations: [
-              await xAllocationPool.getAddress(),
-              config.VOTE_2_EARN_POOL_ADDRESS,
-              await treasury.getAddress(),
-              config.MIGRATION_ADDRESS,
-            ],
-            initialXAppAllocation: config.INITIAL_X_ALLOCATION,
-            cycleDuration: config.EMISSIONS_CYCLE_DURATION,
-            decaySettings: [
-              config.EMISSIONS_X_ALLOCATION_DECAY_PERCENTAGE,
-              config.EMISSIONS_VOTE_2_EARN_DECAY_PERCENTAGE,
-              config.EMISSIONS_X_ALLOCATION_DECAY_PERIOD,
-              config.EMISSIONS_VOTE_2_EARN_ALLOCATION_DECAY_PERIOD,
-            ],
-            treasuryPercentage: config.EMISSIONS_TREASURY_PERCENTAGE,
-            maxVote2EarnDecay: config.EMISSIONS_MAX_VOTE_2_EARN_DECAY_PERCENTAGE,
-            migrationAmount: config.MIGRATION_AMOUNT,
-          },
-        ],
-        [config.EMISSIONS_IS_NOT_ALIGNED],
-      ],
-      {
-        versions: [undefined, 2],
-      },
-    )) as Emissions
-
-    const voterRewards = (await deployAndUpgrade(
-      ["VoterRewardsV1", "VoterRewardsV2", "VoterRewards"],
-      [
-        [
-          owner.address, // admin
-          owner.address, // upgrader // TODO: transferRole
-          owner.address, // contractsAddressManager
-          await emissions.getAddress(),
-          await galaxyMemberV3.getAddress(),
-          await b3tr.getAddress(),
-          config.VOTER_REWARDS_LEVELS,
-          config.VOTER_REWARDS_MULTIPLIER,
-        ],
-        [],
-        [],
-      ],
-      {
-        versions: [undefined, 2, 3],
-      },
-    )) as VoterRewards
-
-    const xAllocationVoting = (await deployAndUpgrade(
-      ["XAllocationVotingV1", "XAllocationVotingV2", "XAllocationVotingV3"],
-      [
-        [
-          {
-            vot3Token: await vot3.getAddress(),
-            quorumPercentage: config.X_ALLOCATION_VOTING_QUORUM_PERCENTAGE,
-            initialVotingPeriod: config.EMISSIONS_CYCLE_DURATION - 1,
-            timeLock: await timeLock.getAddress(),
-            voterRewards: await voterRewards.getAddress(),
-            emissions: await emissions.getAddress(),
-            admins: [await timeLock.getAddress(), owner.address],
-            upgrader: owner.address,
-            contractsAddressManager: owner.address,
-            x2EarnAppsAddress: await x2EarnAppsV1.getAddress(),
-            baseAllocationPercentage: config.X_ALLOCATION_POOL_BASE_ALLOCATION_PERCENTAGE,
-            appSharesCap: config.X_ALLOCATION_POOL_APP_SHARES_MAX_CAP,
-            votingThreshold: config.X_ALLOCATION_VOTING_VOTING_THRESHOLD,
-          },
-        ],
-        [veBetterPassportContractAddress],
-        [],
-      ],
-      {
-        versions: [undefined, 2, 3],
-      },
-    )) as XAllocationVotingV3
-
-    const veBetterPassportV1 = (await initializeProxy(
-      veBetterPassportContractAddress,
-      "VeBetterPassportV1",
-      [
-        {
-          x2EarnApps: await x2EarnAppsV1.getAddress(),
-          xAllocationVoting: await xAllocationVoting.getAddress(),
-          galaxyMember: await galaxyMemberV3.getAddress(),
-          signalingThreshold: config.VEPASSPORT_BOT_SIGNALING_THRESHOLD, //signalingThreshold
-          roundsForCumulativeScore: config.VEPASSPORT_ROUNDS_FOR_CUMULATIVE_PARTICIPATION_SCORE, //roundsForCumulativeScore
-          minimumGalaxyMemberLevel: config.VEPASSPORT_GALAXY_MEMBER_MINIMUM_LEVEL, //galaxyMemberMinimumLevel
-          blacklistThreshold: config.VEPASSPORT_BLACKLIST_THRESHOLD_PERCENTAGE, //blacklistThreshold
-          whitelistThreshold: config.VEPASSPORT_WHITELIST_THRESHOLD_PERCENTAGE, //whitelistThreshold
-          maxEntitiesPerPassport: config.VEPASSPORT_PASSPORT_MAX_ENTITIES, //maxEntitiesPerPassport
-          decayRate: config.VEPASSPORT_DECAY_RATE, //decayRate
-        },
-        {
-          admin: owner.address, // admins
-          botSignaler: owner.address, // botSignaler
-          upgrader: owner.address, // upgrader
-          settingsManager: owner.address, // settingsManager
-          roleGranter: owner.address, // roleGranter
-          blacklister: owner.address, // blacklister
-          whitelister: owner.address, // whitelistManager
-          actionRegistrar: owner.address, // actionRegistrar
-          actionScoreManager: owner.address, // actionScoreManager
-        },
-      ],
-      {
-        PassportChecksLogicV1: await passportChecksLogicV1.getAddress(),
-        PassportConfiguratorV1: await passportConfiguratorV1.getAddress(),
-        PassportEntityLogicV1: await passportEntityLogicV1.getAddress(),
-        PassportDelegationLogicV1: await passportDelegationLogicV1.getAddress(),
-        PassportPersonhoodLogicV1: await passportPersonhoodLogicV1.getAddress(),
-        PassportPoPScoreLogicV1: await passportPoPScoreLogicV1.getAddress(),
-        PassportSignalingLogicV1: await passportSignalingLogicV1.getAddress(),
-        PassportWhitelistAndBlacklistLogicV1: await passportWhitelistAndBlacklistLogicV1.getAddress(),
-      },
-    )) as VeBetterPassportV1
-
-    const veBetterPassport = (await upgradeProxy(
-      "VeBetterPassportV1",
-      "VeBetterPassport",
-      await veBetterPassportV1.getAddress(),
-      [],
-      {
-        version: 2,
-        libraries: {
-          PassportChecksLogic: await passportChecksLogic.getAddress(),
-          PassportConfigurator: await passportConfigurator.getAddress(),
-          PassportEntityLogic: await passportEntityLogic.getAddress(),
-          PassportDelegationLogic: await passportDelegationLogic.getAddress(),
-          PassportPersonhoodLogic: await passportPersonhoodLogic.getAddress(),
-          PassportPoPScoreLogic: await passportPoPScoreLogic.getAddress(),
-          PassportSignalingLogic: await passportSignalingLogic.getAddress(),
-          PassportWhitelistAndBlacklistLogic: await passportWhitelistAndBlacklistLogic.getAddress(),
-        },
-      },
-    )) as VeBetterPassport
-
-    const governor = (await deployAndUpgrade(
-      ["B3TRGovernorV1", "B3TRGovernorV2", "B3TRGovernorV3", "B3TRGovernorV4", "B3TRGovernor"],
-      [
-        [
-          {
-            vot3Token: await vot3.getAddress(),
-            timelock: await timeLock.getAddress(),
-            xAllocationVoting: await xAllocationVoting.getAddress(),
-            b3tr: await b3tr.getAddress(),
-            quorumPercentage: config.B3TR_GOVERNOR_QUORUM_PERCENTAGE,
-            initialDepositThreshold: config.B3TR_GOVERNOR_DEPOSIT_THRESHOLD,
-            initialMinVotingDelay: config.B3TR_GOVERNOR_MIN_VOTING_DELAY,
-            initialVotingThreshold: config.B3TR_GOVERNOR_VOTING_THRESHOLD,
-            voterRewards: await voterRewards.getAddress(),
-            isFunctionRestrictionEnabled: true,
-          },
-          {
-            governorAdmin: owner.address,
-            pauser: owner.address,
-            contractsAddressManager: owner.address,
-            proposalExecutor: owner.address,
-            governorFunctionSettingsRoleAddress: owner.address,
-          },
-        ],
-        [],
-        [],
-        [veBetterPassportContractAddress],
-        [],
-      ],
-      {
-        versions: [undefined, 2, 3, 4, 5],
-        libraries: [
-          {
-            GovernorClockLogicV1: await governorClockLogicLibV1.getAddress(),
-            GovernorConfiguratorV1: await governorConfiguratorLibV1.getAddress(),
-            GovernorDepositLogicV1: await governorDepositLogicLibV1.getAddress(),
-            GovernorFunctionRestrictionsLogicV1: await governorFunctionRestrictionsLogicLibV1.getAddress(),
-            GovernorProposalLogicV1: await governorProposalLogicLibV1.getAddress(),
-            GovernorQuorumLogicV1: await governorQuorumLogicLibV1.getAddress(),
-            GovernorStateLogicV1: await governorStateLogicLibV1.getAddress(),
-            GovernorVotesLogicV1: await governorVotesLogicLibV1.getAddress(),
-          },
-          {
-            GovernorClockLogicV1: await governorClockLogicLibV1.getAddress(),
-            GovernorConfiguratorV1: await governorConfiguratorLibV1.getAddress(),
-            GovernorDepositLogicV1: await governorDepositLogicLibV1.getAddress(),
-            GovernorFunctionRestrictionsLogicV1: await governorFunctionRestrictionsLogicLibV1.getAddress(),
-            GovernorProposalLogicV1: await governorProposalLogicLibV1.getAddress(),
-            GovernorQuorumLogicV1: await governorQuorumLogicLibV1.getAddress(),
-            GovernorStateLogicV1: await governorStateLogicLibV1.getAddress(),
-            GovernorVotesLogicV1: await governorVotesLogicLibV1.getAddress(),
-          },
-          {
-            GovernorClockLogicV3: await governorClockLogicLibV3.getAddress(),
-            GovernorConfiguratorV3: await governorConfiguratorLibV3.getAddress(),
-            GovernorDepositLogicV3: await governorDepositLogicLibV3.getAddress(),
-            GovernorFunctionRestrictionsLogicV3: await governorFunctionRestrictionsLogicLibV3.getAddress(),
-            GovernorProposalLogicV3: await governorProposalLogicLibV3.getAddress(),
-            GovernorQuorumLogicV3: await governorQuorumLogicLibV3.getAddress(),
-            GovernorStateLogicV3: await governorStateLogicLibV3.getAddress(),
-            GovernorVotesLogicV3: await governorVotesLogicLibV3.getAddress(),
-          },
-          {
-            GovernorClockLogicV4: await governorClockLogicLibV4.getAddress(),
-            GovernorConfiguratorV4: await governorConfiguratorLibV4.getAddress(),
-            GovernorDepositLogicV4: await governorDepositLogicLibV4.getAddress(),
-            GovernorFunctionRestrictionsLogicV4: await governorFunctionRestrictionsLogicLibV4.getAddress(),
-            GovernorProposalLogicV4: await governorProposalLogicLibV4.getAddress(),
-            GovernorQuorumLogicV4: await governorQuorumLogicLibV4.getAddress(),
-            GovernorStateLogicV4: await governorStateLogicLibV4.getAddress(),
-            GovernorVotesLogicV4: await governorVotesLogicLibV4.getAddress(),
-          },
-          {
-            GovernorClockLogic: await governorClockLogicLib.getAddress(),
-            GovernorConfigurator: await governorConfiguratorLib.getAddress(),
-            GovernorDepositLogic: await governorDepositLogicLib.getAddress(),
-            GovernorFunctionRestrictionsLogic: await governorFunctionRestrictionsLogicLib.getAddress(),
-            GovernorProposalLogic: await governorProposalLogicLib.getAddress(),
-            GovernorQuorumLogic: await governorQuorumLogicLib.getAddress(),
-            GovernorStateLogic: await governorStateLogicLib.getAddress(),
-            GovernorVotesLogic: await governorVotesLogicLib.getAddress(),
-          },
-        ],
-      },
-    )) as B3TRGovernor
-
-    // ------------------ Set up contracts ------------------
-    await veBetterPassportV1
-      .connect(owner)
-      .grantRole(await veBetterPassportV1.ACTION_REGISTRAR_ROLE(), await x2EarnRewardsPool.getAddress())
-
-    // Grant admin role to voter rewards for registering x allocation voting
-    await xAllocationVoting
-      .connect(owner)
-      .grantRole(await xAllocationVoting.DEFAULT_ADMIN_ROLE(), emissions.getAddress())
-
-    await voterRewards
-      .connect(owner)
-      .grantRole(await voterRewards.VOTE_REGISTRAR_ROLE(), await xAllocationVoting.getAddress())
-
-    await voterRewards.connect(owner).grantRole(await voterRewards.VOTE_REGISTRAR_ROLE(), await governor.getAddress())
-
-    await xAllocationPool.connect(owner).setXAllocationVotingAddress(await xAllocationVoting.getAddress())
-    await xAllocationPool.connect(owner).setEmissionsAddress(await emissions.getAddress())
-
-    // Set xAllocationGovernor and VoterRewards in emissions
-    await emissions.connect(owner).setXAllocationsGovernorAddress(await xAllocationVoting.getAddress())
-    await emissions.connect(owner).setVote2EarnAddress(await voterRewards.getAddress())
-    await b3tr.connect(owner).grantRole(await b3tr.MINTER_ROLE(), await emissions.getAddress())
-
-    await veBetterPassport.toggleCheck(4)
-
-    const roundStarterRole = await xAllocationVoting.ROUND_STARTER_ROLE()
-    await xAllocationVoting
-      .connect(owner)
-      .grantRole(roundStarterRole, await emissions.getAddress())
-      .then(async tx => await tx.wait())
-    await xAllocationVoting
-      .connect(owner)
-      .grantRole(roundStarterRole, owner.address)
-      .then(async tx => await tx.wait())
-
-    const testKeys = getTestKeys(50)
-
-    let eligibleAppIds: string[] = []
-    APPS.forEach(async (app, index) => {
-      const tx = await x2EarnAppsV1.addApp(app.teamWalletAddress, app.admin, app.name, app.metadataURI)
-      await tx.wait()
-
-      const appId = ethers.keccak256(ethers.toUtf8Bytes(app.name))
-      eligibleAppIds.push(appId)
-
-      // Add moderators
-      for (let i = 0; i < 3; i++) {
-        await x2EarnAppsV1.connect(owner).addAppModerator(appId, testKeys[index + i].address.toString())
-      }
-    })
-
-    // Get VTHO tokens
-    for (let i = 0; i < otherAccounts.length; i++) {
-      // Create two node holders with an endorsement score
-      await getVot3Tokens(otherAccounts[i], "1000")
-      expect(await vot3.balanceOf(otherAccounts[i].address)).to.eql(ethers.parseEther("1000"))
-    }
-
-    expect(await x2EarnAppsV1.appsCount()).to.eql(8n)
-    expect((await x2EarnAppsV1.allEligibleApps()).length).to.eql(8)
-    await emissions.connect(owner).bootstrap()
-    await emissions.connect(owner).start()
-
-    // Expect round 1 to start
-    expect(await emissions.getCurrentCycle()).to.eql(1n)
-
-    // Start voting rounds
-    for (let i = 1; i < 18; i++) {
-      // Get each of the users to vote
-      otherAccounts.map(async account => {
-        const [firstAppIndex, secondAppIndex] = getTwoUniqueRandomIndices(eligibleAppIds.length)
-        const appIdsToVoteOn = [eligibleAppIds[firstAppIndex], eligibleAppIds[secondAppIndex]]
-
-        const voteAmounts = [
-          ethers.parseEther((Math.random() * 100).toFixed(2)), // Random amount for the first app
-          ethers.parseEther((Math.random() * 100).toFixed(2)), // Random amount for the second app
-        ]
-
-        const tx = await xAllocationVoting.connect(account).castVote(i, appIdsToVoteOn, voteAmounts)
-        await tx.wait()
-      })
-
-      // Wait for the round to end
-      const blockNextCycle = await emissions.getNextCycleBlock()
-      await waitForBlock(Number(blockNextCycle))
-
-      // Claim rewards as voter
-      otherAccounts.map(async account => {
-        const amount = await voterRewards.cycleToVoterToTotal(i, account.address)
-        expect(amount).to.not.eql(0n)
-        const tx = await voterRewards.connect(account).claimReward(i, account.address)
-        await tx.wait()
-
-        // Covert to vot3
-        await b3tr.connect(account).approve(await vot3.getAddress(), amount)
-        await vot3.connect(account).convertToVOT3(amount)
-
-        expect(await voterRewards.cycleToVoterToTotal(i, account.address)).to.eql(0n)
-      })
-
-      // Claim X2Earn rewards
-      eligibleAppIds.map(async appId => {
-        expect(await xAllocationPool.claimableAmount(i, appId)).to.not.eql(0n)
-        const tx = await xAllocationPool.connect(owner).claim(i, appId)
-        await tx.wait()
-      })
-
-      await emissions.distribute()
-    }
-
-    // Upgrade to V2 of X2EarnApps
-    const x2EarnAppsV2 = (await upgradeProxy(
-      "X2EarnAppsV1",
-      "X2EarnAppsV2",
-      await x2EarnAppsV1.getAddress(),
-      [
-        config.XAPP_GRACE_PERIOD,
-        await nodeManagement.getAddress(),
-        await veBetterPassport.getAddress(),
-        await x2EarnCreator.getAddress(),
-      ],
-      {
-        version: 2,
-        libraries: {
-          AdministrationUtilsV2: await administrationUtilsV2.getAddress(),
-          EndorsementUtilsV2: await endorsementUtilsV2.getAddress(),
-          VoteEligibilityUtilsV2: await voteEligibilityUtilsV2.getAddress(),
-        },
-      },
-    )) as X2EarnAppsV2
-
-    // Grant minter and burner role to X2Earn contract
-    await x2EarnCreator.connect(owner).grantRole(await x2EarnCreator.MINTER_ROLE(), await x2EarnAppsV2.getAddress())
-    await x2EarnCreator.connect(owner).grantRole(await x2EarnCreator.BURNER_ROLE(), await x2EarnAppsV2.getAddress())
-
-    // Check if all apps are still registered
-    expect(await x2EarnAppsV2.appsCount()).to.eql(8n)
-    expect((await x2EarnAppsV2.allEligibleApps()).length).to.eql(8)
-
-    // Grant the ACTION_SCORE_MANAGER_ROLE to X2Earn contract
-    await veBetterPassport
-      .grantRole(await veBetterPassport.ACTION_SCORE_MANAGER_ROLE(), await x2EarnAppsV2.getAddress())
-      .then(async tx => await tx.wait())
-
-    // Check if all moderators are still registered and endorse each app
-    for (let i = 0; i < eligibleAppIds.length; i++) {
-      const moderators = await x2EarnAppsV2.appModerators(eligibleAppIds[i])
-      expect(moderators[0]).to.eql(testKeys[i].address)
-      expect(moderators[1]).to.eql(testKeys[i + 1].address)
-      expect(moderators[2]).to.eql(testKeys[i + 2].address)
-
-      // Check endorsement status -> all apps should be unendorsed -> Grace period should start
-      await expect(x2EarnAppsV2.checkEndorsement(eligibleAppIds[i])).to.emit(
-        x2EarnAppsV2,
-        "AppUnendorsedGracePeriodStarted",
-      )
-      expect(await x2EarnAppsV2.isAppUnendorsed(eligibleAppIds[i])).to.eql(true)
-
-      const secuirtyScore = await veBetterPassport.appSecurity(eligibleAppIds[i])
-
-      // Endorse the app
-      await vechainNodesMock.addToken(otherAccounts[i], 7, false, 0, 0)
-      await expect(x2EarnAppsV2.connect(otherAccounts[i]).endorseApp(eligibleAppIds[i], BigInt(i + 1))).to.emit(
-        x2EarnAppsV2,
-        "AppEndorsed",
-      )
-      // Check endorsement status -> all apps should be endorsed
-      await x2EarnAppsV2.checkEndorsement(eligibleAppIds[i])
-      expect(await x2EarnAppsV2.isAppUnendorsed(eligibleAppIds[i])).to.eql(false)
-
-      // Secuirty score should remain same
-      expect(await veBetterPassport.appSecurity(eligibleAppIds[i])).to.eql(secuirtyScore)
-    }
-
-    // Upgrade to V3 of X2EarnApps
-    const x2EarnAppsV3 = (await upgradeProxy(
-      "X2EarnAppsV2",
-      "X2EarnAppsV3",
-      await x2EarnAppsV2.getAddress(),
-      [config.X2EARN_NODE_COOLDOWN_PERIOD, await xAllocationVoting.getAddress()],
-      {
-        version: 3,
-        libraries: {
-          AdministrationUtilsV3: await administrationUtilsV3.getAddress(),
-          EndorsementUtilsV3: await endorsementUtilsV3.getAddress(),
-          VoteEligibilityUtilsV3: await voteEligibilityUtilsV3.getAddress(),
-        },
-      },
-    )) as X2EarnAppsV3
-
-    // Upgrade contracts that need new interfaces
-    ;(await upgradeProxy("X2EarnRewardsPoolV4", "X2EarnRewardsPool", await x2EarnRewardsPool.getAddress(), [], {
-      version: 4,
-    })) as X2EarnRewardsPool
-    ;(await upgradeProxy("XAllocationPoolV3", "XAllocationPool", await xAllocationPool.getAddress(), [], {
-      version: 3,
-    })) as XAllocationPool
-    ;(await upgradeProxy(
-      "X2EarnRewardsPoolV4",
-      "X2EarnRewardsPool",
-      await x2EarnRewardsPool.getAddress(),
-      [],
-      {},
-    )) as X2EarnRewardsPool
-
-    // Continue voting rounds
-    for (let i = 1; i < 5; i++) {
-      // Get each of the users to vote
-      otherAccounts.map(async account => {
-        const [firstAppIndex, secondAppIndex] = getTwoUniqueRandomIndices(eligibleAppIds.length)
-        const appIdsToVoteOn = [eligibleAppIds[firstAppIndex], eligibleAppIds[secondAppIndex]]
-
-        const voteAmounts = [
-          ethers.parseEther((Math.random() * 100).toFixed(2)), // Random amount for the first app
-          ethers.parseEther((Math.random() * 100).toFixed(2)), // Random amount for the second app
-        ]
-
-        const tx = await xAllocationVoting.connect(account).castVote(i, appIdsToVoteOn, voteAmounts)
-        await tx.wait()
-      })
-
-      // Wait for the round to end
-      const blockNextCycle = await emissions.getNextCycleBlock()
-      await waitForBlock(Number(blockNextCycle))
-
-      // Claim rewards as voter
-      otherAccounts.map(async account => {
-        const amount = await voterRewards.cycleToVoterToTotal(i, account.address)
-        expect(amount).to.not.eql(0n)
-        const tx = await voterRewards.connect(account).claimReward(i, account.address)
-        await tx.wait()
-
-        // Covert to vot3
-        await b3tr.connect(account).approve(await vot3.getAddress(), amount)
-        await vot3.connect(account).convertToVOT3(amount)
-
-        expect(await voterRewards.cycleToVoterToTotal(i, account.address)).to.eql(0n)
-      })
-
-      // Claim X2Earn rewards
-      eligibleAppIds.map(async appId => {
-        expect(await xAllocationPool.claimableAmount(i, appId)).to.not.eql(0n)
-        const tx = await xAllocationPool.connect(owner).claim(i, appId)
-        await tx.wait()
-      })
-
-      // Check endorsement status -> all apps should be unendorsed -> Grace period should start
-      for (let i = 0; i < eligibleAppIds.length; i++) {
-        await x2EarnAppsV3.checkEndorsement(eligibleAppIds[i])
-        expect(await x2EarnAppsV3.isEligibleNow(eligibleAppIds[i])).to.eql(true)
-      }
-
-      await emissions.distribute()
-    }
-
-    // Submit a new app
-    await x2EarnAppsV3
-      .connect(owner)
-      .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-    const newAppId = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[0].address))
-
-    // Should be 1 app pending endorsement
-    expect(await x2EarnAppsV3.unendorsedAppIds()).to.deep.equal([newAppId])
-    // Should not be recognised as part of ecosystem yet
-    expect(await x2EarnAppsV3.apps()).to.not.include(newAppId)
-
-    // App security score should be 0
-    expect(await veBetterPassport.appSecurity(newAppId)).to.eql(0n)
-
-    // Endorse the app
-    await vechainNodesMock.addToken(otherAccount, 7, false, 0, 0)
-    const tokenId = await vechainNodesMock.ownerToId(otherAccount.address)
-
-    // Wait for the cooldown period to end (1 round)
-    await waitForBlock(Number(await emissions.getNextCycleBlock()))
-    await emissions.distribute()
-    await x2EarnAppsV3.connect(otherAccount).endorseApp(newAppId, tokenId)
-
-    // Should not be able to unendorse the app
-    await expect(x2EarnAppsV3.connect(otherAccount).unendorseApp(newAppId, tokenId)).to.be.revertedWithCustomError(
-      x2EarnAppsV3,
-      "X2EarnNodeCooldownActive",
-    )
-
-    // Should be eligible
-    expect(await x2EarnAppsV3.isEligibleNow(newAppId)).to.eql(true)
-
-    // Should not be eligible for voting yet
-    const currentRound = await emissions.getCurrentCycle()
-    expect(await xAllocationVoting.isEligibleForVote(newAppId, currentRound)).to.eql(false)
-
-    // Should no longer be looking for endorsement
-    expect(await x2EarnAppsV3.unendorsedAppIds()).to.deep.equal([])
-
-    // Security score should be LOW
-    expect(await veBetterPassport.appSecurity(newAppId)).to.eql(1n)
-
-    // Cannot Vote on the app
-    await catchRevert(
-      xAllocationVoting
-        .connect(otherAccounts[1])
-        .castVote(1, [newAppId, eligibleAppIds[0]], [ethers.parseEther("10"), 0]),
-    )
-
-    // Wait for the round to end
-    const blockNextCycle = await emissions.getNextCycleBlock()
-    await waitForBlock(Number(blockNextCycle))
-
-    // Start new round of voting
-    await emissions.distribute()
-
-    // Should be eligible for voting now
-    expect(await xAllocationVoting.isEligibleForVote(newAppId, currentRound + 1n)).to.eql(true)
-
-    // Get each of the users to vote
-    otherAccounts.map(async account => {
-      const [firstAppIndex] = getTwoUniqueRandomIndices(eligibleAppIds.length)
-      const appIdsToVoteOn = [newAppId, eligibleAppIds[firstAppIndex]]
-
-      const voteAmounts = [
-        ethers.parseEther((Math.random() * 100).toFixed(2)), // Random amount for the first app
-        ethers.parseEther((Math.random() * 100).toFixed(2)), // Random amount for the second app
-      ]
-
-      const tx = await xAllocationVoting.connect(account).castVote(currentRound + 1n, appIdsToVoteOn, voteAmounts)
-      await tx.wait()
-    })
-
-    // Wait for the round to end
-    const blockNextCycle2 = await emissions.getNextCycleBlock()
-    await waitForBlock(Number(blockNextCycle2))
-
-    // New App can claim rewards
-    expect(await xAllocationPool.claimableAmount(currentRound + 1n, newAppId)).to.not.eql(0n)
-    const tx = await xAllocationPool.connect(owner).claim(currentRound + 1n, newAppId)
-    await tx.wait()
-
-    // Upgrade to V4
-    const x2EarnAppsV4 = (await upgradeProxy(
-      "X2EarnAppsV3",
-      "X2EarnApps",
-      await x2EarnAppsV3.getAddress(),
-      [await x2EarnRewardsPool.getAddress()],
-      {
-        version: 4,
-        libraries: {
-          AdministrationUtils: await administrationUtils.getAddress(),
-          EndorsementUtils: await endorsementUtils.getAddress(),
-          VoteEligibilityUtils: await voteEligibilityUtils.getAddress(),
-        },
-      },
-    )) as X2EarnAppsV4
-    expect(await x2EarnAppsV4.version()).to.eql("4")
   })
 })

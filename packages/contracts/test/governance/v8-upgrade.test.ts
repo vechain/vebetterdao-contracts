@@ -309,7 +309,7 @@ describe("Governance - V8 Upgrade - @shard4g", function () {
       },
     })) as B3TRGovernor
 
-    expect(await governorV8.version()).to.equal("8")
+    expect(await governorV8.version()).to.equal("9")
 
     // Verify proposal persisted through all upgrades
     expect(await governorV8.proposalProposer(proposalId)).to.equal(proposer.address)
@@ -642,7 +642,7 @@ describe("Governance - V8 Upgrade - @shard4g", function () {
       },
     })) as B3TRGovernor
 
-    expect(await governorV8.version()).to.equal("8")
+    expect(await governorV8.version()).to.equal("9")
 
     // Verify proposal persisted through all upgrades
     expect(await governorV8.proposalProposer(proposalId)).to.equal(proposer.address)
@@ -968,7 +968,7 @@ describe("Governance - V8 Upgrade - @shard4g", function () {
       },
     })) as B3TRGovernor
 
-    expect(await governorV8.version()).to.equal("8")
+    expect(await governorV8.version()).to.equal("9")
 
     // Verify proposal persisted through all upgrades
     expect(await governorV8.proposalProposer(proposalId)).to.equal(proposer.address)
@@ -2004,7 +2004,7 @@ describe("Governance - V8 Upgrade - @shard4g", function () {
       },
     })) as B3TRGovernor
 
-    expect(await governorV8.version()).to.equal("8")
+    expect(await governorV8.version()).to.equal("9")
 
     // Verify that all checkpoints are preserved after v8 upgrade
     for (let i = 0; i < newQuorumNumeratorArr.length; i++) {

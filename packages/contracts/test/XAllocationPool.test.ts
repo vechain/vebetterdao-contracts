@@ -2210,15 +2210,17 @@ describe("X-Allocation Pool - @shard13", async function () {
         expect(claimableAmount[0]).to.eql(0n)
       })
 
-      it("Cannot claim 0 rewards", async function () {
+      it("Can claim with 0 rewards when app has zero votes and no base allocation", async function () {
         const {
           xAllocationVoting,
           otherAccounts,
           owner,
           xAllocationPool,
+          b3tr,
           emissions,
           minterAccount,
           x2EarnApps,
+          x2EarnRewardsPool,
           veBetterPassport,
         } = await getOrDeployContractInstances({
           forceDeploy: true,
@@ -2238,12 +2240,12 @@ describe("X-Allocation Pool - @shard13", async function () {
         //Add apps
         const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
         const app2Id = ethers.keccak256(ethers.toUtf8Bytes("My app #2"))
-        await x2EarnApps
-          .connect(owner)
-          .submitApp(otherAccounts[6].address, otherAccounts[6].address, "My app", "metadataURI")
+        const app1ReceiverAddress = otherAccounts[6].address
+        const app2ReceiverAddress = otherAccounts[7].address
+        await x2EarnApps.connect(owner).submitApp(app1ReceiverAddress, app1ReceiverAddress, "My app", "metadataURI")
         await x2EarnApps
           .connect(creator1)
-          .submitApp(otherAccounts[7].address, otherAccounts[7].address, "My app #2", "metadataURI")
+          .submitApp(app2ReceiverAddress, app2ReceiverAddress, "My app #2", "metadataURI")
         await endorseApp(app1Id, otherAccounts[3])
         await endorseApp(app2Id, otherAccounts[4])
 
@@ -2254,17 +2256,40 @@ describe("X-Allocation Pool - @shard13", async function () {
 
         const round1 = await xAllocationVoting.currentRoundId()
 
-        // Vote
+        // Only vote for app2, app1 gets zero votes
         await xAllocationVoting.connect(voter1).castVote(round1, [app2Id], [ethers.parseEther("1000")])
 
         await waitForRoundToEnd(Number(round1))
         let state = await xAllocationVoting.state(round1)
         expect(state).to.eql(2n)
 
+        // app1 has 0 claimable amount (no base allocation + no votes)
         const claimableAmount = await xAllocationPool.claimableAmount(round1, app1Id)
         expect(claimableAmount[0]).to.eql(0n)
 
+        // Record balances before claim
+        const app1BalanceBefore = await b3tr.balanceOf(app1ReceiverAddress)
+        const poolBalanceBefore = await b3tr.balanceOf(await xAllocationPool.getAddress())
+
+        // Claim should succeed even with 0 rewards
+        expect(await xAllocationPool.claimed(round1, app1Id)).to.eql(false)
+        await xAllocationPool.connect(otherAccounts[6]).claim(round1, app1Id)
+        expect(await xAllocationPool.claimed(round1, app1Id)).to.eql(true)
+
+        // Balances should remain unchanged
+        const app1BalanceAfter = await b3tr.balanceOf(app1ReceiverAddress)
+        const poolBalanceAfter = await b3tr.balanceOf(await xAllocationPool.getAddress())
+        expect(app1BalanceAfter).to.eql(app1BalanceBefore)
+        expect(poolBalanceAfter).to.eql(poolBalanceBefore)
+
+        // Cannot claim again
         await catchRevert(xAllocationPool.connect(otherAccounts[6]).claim(round1, app1Id))
+
+        // app2 can still claim normally
+        await xAllocationPool.connect(otherAccounts[7]).claim(round1, app2Id)
+        const app2BalanceAfter = await b3tr.balanceOf(app2ReceiverAddress)
+        const app2RewardsPoolBalance = await b3tr.balanceOf(await x2EarnRewardsPool.getAddress())
+        expect(app2BalanceAfter + app2RewardsPoolBalance).to.be.greaterThan(0n)
       })
 
       it("Cannot claim if b3tr token is paused", async function () {

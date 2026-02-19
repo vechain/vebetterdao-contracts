@@ -54,6 +54,31 @@ describe("X-Apps - Core Features - @shard15a", function () {
       expect(await x2EarnApps.nodeLevelEndorsementScore(6)).to.eql(35n)
       expect(await x2EarnApps.nodeLevelEndorsementScore(7)).to.eql(100n)
     })
+
+    it("Version returns a string", async function () {
+      const { x2EarnApps } = await getOrDeployContractInstances({ forceDeploy: true })
+      const version = await x2EarnApps.version()
+      expect(typeof version).to.eql("string")
+      expect(version.length).to.be.greaterThan(0)
+    })
+
+    it("Cooldown period is set correctly", async function () {
+      const { x2EarnApps } = await getOrDeployContractInstances({ forceDeploy: true })
+      const config = createLocalConfig()
+      expect(await x2EarnApps.cooldownPeriod()).to.eql(BigInt(config.X2EARN_NODE_COOLDOWN_PERIOD))
+    })
+
+    it("hashAppName returns a bytes32 hash", async function () {
+      const { x2EarnApps } = await getOrDeployContractInstances({ forceDeploy: true })
+      const hash = await x2EarnApps.hashAppName("TestApp")
+      expect(hash).to.match(/^0x[a-fA-F0-9]{64}$/)
+      // Verify deterministic hashing
+      const hash2 = await x2EarnApps.hashAppName("TestApp")
+      expect(hash).to.eql(hash2)
+      // Different input produces different hash
+      const hash3 = await x2EarnApps.hashAppName("DifferentApp")
+      expect(hash).to.not.eql(hash3)
+    })
   })
 
   describe("Settings", function () {
@@ -74,82 +99,6 @@ describe("X-Apps - Core Features - @shard15a", function () {
 
       expect(await x2EarnApps.MAX_MODERATORS()).to.eql(100n)
       expect(await x2EarnApps.MAX_REWARD_DISTRIBUTORS()).to.eql(100n)
-    })
-
-    it("Only admin can update stargate NFT contract address", async function () {
-      const { x2EarnApps, otherAccount, stargateNftMock, owner } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      expect(await x2EarnApps.getStargateNFT()).to.eql(await stargateNftMock.getAddress())
-      await catchRevert(x2EarnApps.connect(otherAccount).setStargateNFT(otherAccount.address))
-
-      await x2EarnApps.connect(owner).setStargateNFT(await otherAccount.getAddress())
-
-      expect(await x2EarnApps.getStargateNFT()).to.eql(await otherAccount.getAddress())
-    })
-
-    it("Only admin can update veBetter passport contract address", async function () {
-      const { x2EarnApps, otherAccount, veBetterPassport, owner } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      expect(await x2EarnApps.getVeBetterPassportContract()).to.eql(await veBetterPassport.getAddress())
-      await catchRevert(x2EarnApps.connect(otherAccount).setVeBetterPassportContract(otherAccount.address))
-
-      await x2EarnApps.connect(owner).setVeBetterPassportContract(await otherAccount.getAddress())
-
-      expect(await x2EarnApps.getVeBetterPassportContract()).to.eql(await otherAccount.getAddress())
-    })
-
-    it("Only admin can update x2Earn creator contract address", async function () {
-      const { x2EarnApps, otherAccount, owner } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      await catchRevert(x2EarnApps.connect(otherAccount).setX2EarnCreatorContract(otherAccount.address))
-
-      await x2EarnApps.connect(owner).setX2EarnCreatorContract(await otherAccount.getAddress())
-    })
-
-    it("Only admin can update xAllocation voting contract", async function () {
-      const { x2EarnApps, otherAccount, xAllocationVoting, owner } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      expect(await x2EarnApps.getXAllocationVotingGovernor()).to.eql(await xAllocationVoting.getAddress())
-      await catchRevert(x2EarnApps.connect(otherAccount).setXAllocationVotingGovernor(otherAccount.address))
-
-      await x2EarnApps.connect(owner).setXAllocationVotingGovernor(await otherAccount.getAddress())
-
-      expect(await x2EarnApps.getXAllocationVotingGovernor()).to.eql(await otherAccount.getAddress())
-    })
-
-    it("Cannot set XAllocation voting to zero address", async function () {
-      const { x2EarnApps, xAllocationVoting } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      expect(await x2EarnApps.getXAllocationVotingGovernor()).to.eql(await xAllocationVoting.getAddress())
-      await catchRevert(x2EarnApps.setXAllocationVotingGovernor(ZERO_ADDRESS))
-
-      expect(await x2EarnApps.getXAllocationVotingGovernor()).to.eql(await xAllocationVoting.getAddress())
-    })
-
-    it("Cannot set x2EarnRewardsPool to zero address", async function () {
-      const { x2EarnApps } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      await catchRevert(x2EarnApps.setX2EarnRewardsPoolContract(ZERO_ADDRESS))
-    })
-
-    it("Only admin can set x2EarnRewardsPool", async function () {
-      const { x2EarnApps, otherAccount } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      await catchRevert(x2EarnApps.connect(otherAccount).setX2EarnRewardsPoolContract(otherAccount.address))
     })
   })
 
@@ -334,29 +283,6 @@ describe("X-Apps - Core Features - @shard15a", function () {
   })
 
   describe("Fetch apps", function () {
-    it("Can get eligible apps count", async function () {
-      const { x2EarnApps, otherAccounts, owner, otherAccount } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      await x2EarnApps
-        .connect(creator1)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
-
-      const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
-      await endorseApp(app1Id, owner)
-
-      await x2EarnApps
-        .connect(creator2)
-        .submitApp(otherAccounts[1].address, otherAccounts[1].address, "My app #2", "metadataURI")
-
-      const app2Id = ethers.keccak256(ethers.toUtf8Bytes("My app #2"))
-      await endorseApp(app2Id, otherAccount)
-
-      const appsCount = await x2EarnApps.appsCount()
-      expect(appsCount).to.eql(2n)
-    })
-
     it("Can get unendorsed app ids", async function () {
       const { x2EarnApps, otherAccounts, owner } = await getOrDeployContractInstances({
         forceDeploy: true,
@@ -377,10 +303,6 @@ describe("X-Apps - Core Features - @shard15a", function () {
       // unendorsed apps
       const appIds = await x2EarnApps.unendorsedAppIds()
       expect(appIds).to.eql([app1Id, app2Id])
-
-      // endorsed apps
-      const appsCount = await x2EarnApps.appsCount()
-      expect(appsCount).to.eql(0n)
     })
 
     it("Can retrieve app by id", async function () {
@@ -434,45 +356,6 @@ describe("X-Apps - Core Features - @shard15a", function () {
       expect(apps.length).to.eql(2)
     })
 
-    it("Can paginate apps", async function () {
-      const { x2EarnApps, otherAccounts } = await getOrDeployContractInstances({ forceDeploy: true })
-
-      await x2EarnApps
-        .connect(creator1)
-        .submitApp(otherAccounts[0].address, otherAccounts[0].address, "My app", "metadataURI")
-      const app1Id = ethers.keccak256(ethers.toUtf8Bytes("My app"))
-      await endorseApp(app1Id, otherAccounts[0])
-
-      await x2EarnApps
-        .connect(creator2)
-        .submitApp(otherAccounts[1].address, otherAccounts[1].address, "My app #2", "metadataURI")
-      const app2Id = ethers.keccak256(ethers.toUtf8Bytes("My app #2"))
-      await endorseApp(app2Id, otherAccounts[1])
-
-      await x2EarnApps
-        .connect(creator3)
-        .submitApp(otherAccounts[2].address, otherAccounts[2].address, "My app #3", "metadataURI")
-      const app3Id = ethers.keccak256(ethers.toUtf8Bytes("My app #3"))
-      await endorseApp(app3Id, otherAccounts[2])
-
-      await x2EarnApps
-        .connect(creator4)
-        .submitApp(otherAccounts[3].address, otherAccounts[3].address, "My app #4", "metadataURI")
-      const app4Id = ethers.keccak256(ethers.toUtf8Bytes("My app #4"))
-      await endorseApp(app4Id, otherAccounts[3])
-
-      const apps1 = await x2EarnApps.getPaginatedApps(0, 2)
-      expect(apps1.length).to.eql(2)
-
-      const apps2 = await x2EarnApps.getPaginatedApps(2, 5)
-      expect(apps2.length).to.eql(2)
-
-      expect(apps1).to.not.eql(apps2)
-
-      const allApps = await x2EarnApps.getPaginatedApps(0, 4)
-      expect(allApps).to.eql([...apps1, ...apps2])
-    })
-
     it("Can get number of apps", async function () {
       const { x2EarnApps, otherAccounts, owner } = await getOrDeployContractInstances({ forceDeploy: true })
 
@@ -500,13 +383,8 @@ describe("X-Apps - Core Features - @shard15a", function () {
       const app4Id = ethers.keccak256(ethers.toUtf8Bytes("My app #4"))
       await endorseApp(app4Id, otherAccounts[3])
 
-      const count = await x2EarnApps.appsCount()
-      expect(count).to.eql(4n)
-
-      const apps = await x2EarnApps.getPaginatedApps(0, 4)
+      const apps = await x2EarnApps.apps()
       expect(apps.length).to.eql(4)
-
-      await expect(x2EarnApps.getPaginatedApps(4, 4)).to.revertedWithCustomError(x2EarnApps, "X2EarnInvalidStartIndex")
     })
 
     it("Can fetch up to 1000 apps without pagination", async function () {
@@ -555,8 +433,7 @@ describe("X-Apps - Core Features - @shard15a", function () {
         .connect(owner)
         .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
 
-      const appId = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[0].address))
-      await endorseApp(appId, otherAccounts[0])
+      await endorseApp(app1Id, otherAccounts[0])
 
       let roundId = await startNewAllocationRound()
 
@@ -614,8 +491,7 @@ describe("X-Apps - Core Features - @shard15a", function () {
       await x2EarnApps
         .connect(owner)
         .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
-      const appId = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[0].address))
-      await endorseApp(appId, otherAccounts[0])
+      await endorseApp(app1Id, otherAccounts[0])
 
       expect(await x2EarnApps.isEligibleNow(app1Id)).to.eql(true)
       await x2EarnApps.connect(owner).setVotingEligibility(app1Id, false)
@@ -677,8 +553,7 @@ describe("X-Apps - Core Features - @shard15a", function () {
         .connect(owner)
         .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
 
-      const appId = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[0].address))
-      await endorseApp(appId, otherAccounts[0])
+      await endorseApp(app1Id, otherAccounts[0])
 
       await expect(x2EarnApps.isEligible(app1Id, (await xAllocationVoting.clock()) + 1n)).to.be.reverted
     })
@@ -694,6 +569,7 @@ describe("X-Apps - Core Features - @shard15a", function () {
         endorsementUtils,
         administrationUtils,
         voteEligibilityUtils,
+        appStorageUtils,
       } = await getOrDeployContractInstances({
         forceDeploy: true,
       })
@@ -734,6 +610,7 @@ describe("X-Apps - Core Features - @shard15a", function () {
             AdministrationUtils: await administrationUtils.getAddress(),
             EndorsementUtils: await endorsementUtils.getAddress(),
             VoteEligibilityUtils: await voteEligibilityUtils.getAddress(),
+            AppStorageUtils: await appStorageUtils.getAddress(),
           },
         }),
         "Exclude app from the allocation voting rounds",
@@ -788,8 +665,7 @@ describe("X-Apps - Core Features - @shard15a", function () {
         .connect(owner)
         .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
 
-      const appId = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[0].address))
-      await endorseApp(appId, otherAccounts[0])
+      await endorseApp(app1Id, otherAccounts[0])
       let isEligibleForVote = await xAllocationVoting.isEligibleForVote(app1Id, round1)
       expect(isEligibleForVote).to.eql(false)
 

@@ -2,6 +2,10 @@
 
 Instructions specific to `packages/contracts` directory.
 
+## Important Notes
+
+If you figure new rules out, or important things to remember for next time you will work on smart contracts changes, told to you by the devs, please add them to the file.
+
 ## Domain Knowledge
 
 ### VeBetterDAO Overview
@@ -181,6 +185,28 @@ const v6 = await upgradeProxy("GalaxyMemberV5", "GalaxyMember", await v5.getAddr
 expect(await v6.existingData()).to.equal(expectedValue)
 ```
 
+### CRITICAL: Upgrade Test Version Mismatch Pattern
+
+When working with upgrade tests, watch for this common bug:
+
+```typescript
+// Comment says V4 → V5
+// Upgrade X2EarnAppsV4 to X2EarnAppsV5
+const x2EarnAppsV5 = (await upgradeProxy("X2EarnAppsV4", "X2EarnApps", ...)) as X2EarnApps
+//                                                        ^^^^^^^^^^^ WRONG!
+```
+
+**Problem**: The test was written when V5 was the latest version. `"X2EarnApps"` referred to V5 back then. Now that we're at V8, `"X2EarnApps"` refers to V8, so this test incorrectly upgrades from V4 → V8, skipping V5/V6/V7.
+
+**Fix**: Always use explicit version names for intermediate upgrades:
+
+```typescript
+// Correct: explicit version
+const x2EarnAppsV5 = (await upgradeProxy("X2EarnAppsV4", "X2EarnAppsV5", ...)) as X2EarnAppsV5
+```
+
+**Rule**: Only use `"ContractName"` (without version suffix) when upgrading TO the latest version. For intermediate versions, always use `"ContractNameVN"`.
+
 ### Library Redeployment
 
 **Always redeploy all libraries when upgrading.** Libraries are redeployed fresh with each contract upgrade - there's no library versioning or reuse.
@@ -257,6 +283,26 @@ NEXT_PUBLIC_APP_ENV=local npx hardhat test --network hardhat test/YourTest.test.
 - `{contract}/v{N}-upgrade.test.ts` - Upgrade tests
 - `{contract}/v{N}-compatibility.test.ts` - Backward compatibility tests
 - `{contract}/{feature}.test.ts` - Feature-specific tests
+
+### CI Unit Test Shards
+
+Unit tests run in parallel via shards in `.github/workflows/unit-tests.yml`. Each shard has a `label` and runs tests matched by `grep` on that label. Test describe blocks use `@shard15x` (or similar) in their name to match.
+
+**When adding a new test shard** (e.g. for a new feature or coverage-focused suite):
+
+1. Add `@shard15x` (or next available) to the describe block name in the test file
+2. **Add the shard to `.github/workflows/unit-tests.yml`** in the `strategy.matrix` - otherwise CI will not run it
+
+Example matrix entry:
+
+```yaml
+- shard: shard15f
+  label: X-Apps - V8 Upgrade
+- shard: shard15g
+  label: X-Apps - EndorsementUtils Coverage
+```
+
+Shard assignments are documented in `packages/contracts/test/README.md`.
 
 ### Helper Functions
 

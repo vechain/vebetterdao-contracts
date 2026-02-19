@@ -42,7 +42,7 @@ import { createTestConfig } from "./helpers/config"
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers"
 import { autoVotingLibraries } from "../scripts/libraries"
 
-describe("X-Allocation Voting - @shard14", function () {
+describe("X-Allocation Voting - @shard14-core", function () {
   // Environment params
   let creator1: HardhatEthersSigner
   let creator2: HardhatEthersSigner
