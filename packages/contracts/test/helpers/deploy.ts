@@ -33,6 +33,7 @@ import {
   AutoVotingLogic,
   DBAPool,
   DBAPoolV1,
+  DBAPoolV2,
   Stargate,
   AdministrationUtilsV6,
   EndorsementUtilsV6,
@@ -1011,13 +1012,19 @@ export const getOrDeployContractInstances = async ({
   await grantRoleTx.wait()
 
   // Upgrade to V2
+  const dbaPoolV2 = (await upgradeProxy("DBAPoolV1", "DBAPoolV2", await dbaPoolV1.getAddress(), [], {
+    version: 2,
+    logOutput: false,
+  })) as DBAPoolV2
+
+  // Upgrade to V3
   const dynamicBaseAllocationPool = (await upgradeProxy(
-    "DBAPoolV1",
+    "DBAPoolV2",
     "DBAPool",
-    await dbaPoolV1.getAddress(),
-    [], // No initialization args for V2
+    await dbaPoolV2.getAddress(),
+    [owner.address], // treasuryAddress
     {
-      version: 2,
+      version: 3,
       logOutput: false,
     },
   )) as DBAPool

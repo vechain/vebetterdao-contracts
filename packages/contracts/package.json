@@ -1,6 +1,6 @@
 {
   "name": "@vechain/vebetterdao-contracts",
-  "version": "8.3.0",
+  "version": "8.3.2",
   "main": "dist/cjs/contracts/index.js",
   "module": "dist/esm/contracts/index.js",
   "types": "dist/esm/contracts/index.d.ts",

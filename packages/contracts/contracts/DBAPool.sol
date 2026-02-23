@@ -14,14 +14,17 @@ import { IDynamicBaseAllocationPool } from "./interfaces/IDynamicBaseAllocationP
 
 /**
  * @title DynamicBaseAllocationPool (DBA)
- * @notice This contract receives surplus B3TR allocations from XAllocationPool.
- * Initially acts as a wallet/treasury where the VeBetter team can manually distribute
- * surplus allocations to eligible apps. Future upgrades will add on-chain calculation
- * and permissionless distribution capabilities.
+ * @notice This contract receives surplus B3TR allocations from XAllocationPool
+ * and distributes them to eligible apps using a flat distribution with a merit cap.
  *
  * --------- Version 2 ---------
  * - Add storage to track the reward amount for each app for each round
  * - Add seed function to seed historical rewards
+ *
+ * --------- Version 3 ---------
+ * - Merit-capped flat distribution: each app gets min(flatShare, meritCapMultiplier * voteAllocation)
+ * - Overflow from merit cap + integer remainder sent to VBD Treasury
+ * - Treasury address and meritCapMultiplier stored on-chain
  */
 contract DBAPool is
   AccessControlUpgradeable,
@@ -46,6 +49,9 @@ contract DBAPool is
     uint256 distributionStartRound; // The round from which DBA rewards distribution starts
     mapping(uint256 roundId => bool) dbaRewardsDistributed; // Tracks if DBA rewards have been distributed for a round
     mapping(uint256 roundId => mapping(bytes32 appId => uint256 amount)) dbaRoundRewardsForApp; // Tracks the reward amount an app has received from the DBA
+    // V3
+    address treasuryAddress; // The address to which overflow from the merit cap is routed
+    uint256 meritCapMultiplier; // Multiplier for the merit cap (e.g. 2 = 2x vote allocation)
   }
 
   // keccak256(abi.encode(uint256(keccak256("b3tr.storage.DBAPool")) - 1)) & ~bytes32(uint256(0xff))
@@ -96,6 +102,15 @@ contract DBAPool is
     $.distributionStartRound = params.distributionStartRound;
   }
 
+  /// @notice V3 reinitializer: sets the treasury address for overflow routing
+  /// @param _treasuryAddress The VBD Treasury address
+  function initializeV3(address _treasuryAddress) public reinitializer(3) {
+    require(_treasuryAddress != address(0), "DBAPool: treasury is the zero address");
+    DBAPoolStorage storage $ = _getDBAPoolStorage();
+    $.treasuryAddress = _treasuryAddress;
+    $.meritCapMultiplier = 2;
+  }
+
   // ---------- Authorizers ---------- //
 
   /**
@@ -108,9 +123,10 @@ contract DBAPool is
 
   /**
    * @notice Distributes DBA rewards to eligible apps for a specific round.
-   * @dev This function equally distributes the unallocated funds sent to the DBA contract among the list of provided apps.
-   * A lambda/off-chain service filters eligible apps based on the proposal criteria.
-   * Can only be called once per round and only for rounds >= startRound.
+   * @dev The DBA pool is split evenly across all eligible apps (flat share).
+   * Each app's reward is capped at 2x its vote allocation for the round.
+   * Any overflow from the merit cap plus the integer-division remainder
+   * is routed to the VBD Treasury.
    * @param _roundId The round ID for which to distribute DBA rewards.
    * @param _appIds Array of eligible app IDs (pre-filtered by off-chain service).
    */
@@ -137,35 +153,68 @@ contract DBAPool is
     // Validate that contract has enough funds
     require($.b3tr.balanceOf(address(this)) > 0, "DBAPool: no funds available");
 
-    // Calculate amount per app
-    uint256 totalUnallocatedFunds = $.xAllocationPool.unallocatedFunds(_roundId);
-    uint256 amountPerApp = totalUnallocatedFunds / _appIds.length;
+    // Calculate flat share per app and initialize overflow with integer-division remainder
+    uint256 dbaPoolAmount = $.xAllocationPool.unallocatedFunds(_roundId);
+    uint256 eligibleCount = _appIds.length;
+    uint256 flatSharePerApp = dbaPoolAmount / eligibleCount;
+    uint256 totalOverflow = dbaPoolAmount % eligibleCount;
 
     // Mark round as distributed
     $.dbaRewardsDistributed[_roundId] = true;
 
+    // Cache base allocation (same for all apps in the round)
+    uint256 baseAllocation = $.xAllocationPool.baseAllocationAmount(_roundId);
+
     // Distribute to each app
-    for (uint256 i = 0; i < _appIds.length; i++) {
+    for (uint256 i = 0; i < eligibleCount; i++) {
       bytes32 appId = _appIds[i];
 
       // Validate app exists
       require($.x2EarnApps.appExists(appId), "DBAPool: app does not exist");
 
-      // Deposit the rewards to the X2EarnRewardsPool contract
-      require(
-        $.b3tr.approve(address($.x2EarnRewardsPool), amountPerApp),
-        "DBAPool: Approval of B3TR token to x2EarnRewardsPool failed"
-      );
-      require(
-        $.x2EarnRewardsPool.deposit(amountPerApp, appId),
-        "DBAPool: Deposit of rewards allocation to x2EarnRewardsPool failed"
-      );
+      // Cap each app's DBA reward relative to a multiple of its vote-based XAllocation earnings 
+      // (excluding the base amount all apps receive equally)
+      //
+      // * Example 1: if the multiplier is 2, and the app vote earnings are 200, the merit cap is 400
+      //       if the DBA share for the app is 1000, the app will receive 400.
+      // * Example 2: if the multiplier is 2, and the app vote earnings are 1000, the merit cap is 2000
+      //       if the DBA share for the app is 1000, the app will receive 1000.
+      uint256 appReward;
+      {
+        (uint256 totalEarnings, , , ) = $.xAllocationPool.roundEarnings(_roundId, appId);
+        uint256 meritCap = $.meritCapMultiplier * (totalEarnings - baseAllocation);
+        appReward = flatSharePerApp < meritCap ? flatSharePerApp : meritCap;
+      }
 
-      // Track the reward amount for the app for later on-chain-retrieval
-      $.dbaRoundRewardsForApp[_roundId][appId] = amountPerApp;
+      // Accumulate overflow from merit cap capping
+      totalOverflow += (flatSharePerApp - appReward);
+
+      // Deposit to X2EarnRewardsPool
+      if (appReward > 0) {
+        require(
+          $.b3tr.approve(address($.x2EarnRewardsPool), appReward),
+          "DBAPool: Approval of B3TR token to x2EarnRewardsPool failed"
+        );
+        require(
+          $.x2EarnRewardsPool.deposit(appReward, appId),
+          "DBAPool: Deposit of rewards allocation to x2EarnRewardsPool failed"
+        );
+      }
+
+      // Track the reward amount for the app for later on-chain retrieval
+      $.dbaRoundRewardsForApp[_roundId][appId] = appReward;
 
       // Emit event for each app
-      emit FundsDistributedToApp(appId, amountPerApp, _roundId);
+      emit FundsDistributedToApp(appId, appReward, _roundId);
+    }
+
+    // Send accumulated overflow to treasury
+    if (totalOverflow > 0) {
+      require(
+        $.b3tr.transfer($.treasuryAddress, totalOverflow),
+        "DBAPool: Transfer of overflow to treasury failed"
+      );
+      emit FundsDistributedToTreasury(totalOverflow, _roundId);
     }
   }
 
@@ -249,6 +298,24 @@ contract DBAPool is
   }
 
   /**
+   * @notice Gets the treasury address for overflow routing
+   * @return The treasury address
+   */
+  function treasuryAddress() external view returns (address) {
+    DBAPoolStorage storage $ = _getDBAPoolStorage();
+    return $.treasuryAddress;
+  }
+
+  /**
+   * @notice Gets the merit cap multiplier
+   * @return The merit cap multiplier
+   */
+  function meritCapMultiplier() external view returns (uint256) {
+    DBAPoolStorage storage $ = _getDBAPoolStorage();
+    return $.meritCapMultiplier;
+  }
+
+  /**
    * @notice Gets the X2EarnApps contract
    * @return The contract interface
    */
@@ -289,7 +356,7 @@ contract DBAPool is
    * @return The version string
    */
   function version() external pure returns (string memory) {
-    return "2";
+    return "3";
   }
 
   // ---------- Admin functions ---------- //
@@ -346,6 +413,26 @@ contract DBAPool is
     require(_distributionStartRound != 0, "DBAPool: distribution start round is zero");
     DBAPoolStorage storage $ = _getDBAPoolStorage();
     $.distributionStartRound = _distributionStartRound;
+  }
+
+  /**
+   * @notice Updates the treasury address for overflow routing
+   * @param _treasuryAddress The new treasury address
+   */
+  function setTreasuryAddress(address _treasuryAddress) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    require(_treasuryAddress != address(0), "DBAPool: zero address");
+    DBAPoolStorage storage $ = _getDBAPoolStorage();
+    $.treasuryAddress = _treasuryAddress;
+  }
+
+  /**
+   * @notice Updates the merit cap multiplier
+   * @param _meritCapMultiplier The new multiplier (e.g. 2 = 2x vote allocation)
+   */
+  function setMeritCapMultiplier(uint256 _meritCapMultiplier) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    require(_meritCapMultiplier > 0, "DBAPool: merit cap multiplier is zero");
+    DBAPoolStorage storage $ = _getDBAPoolStorage();
+    $.meritCapMultiplier = _meritCapMultiplier;
   }
 
   /**

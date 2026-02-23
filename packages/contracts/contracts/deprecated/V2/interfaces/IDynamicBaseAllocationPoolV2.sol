@@ -2,16 +2,8 @@
 
 pragma solidity 0.8.20;
 
-interface IDynamicBaseAllocationPool {
-  /**
-   * @notice Emitted when funds are distributed to an app
-   * @param appId The ID of the app
-   * @param amount The amount of funds distributed
-   * @param roundId The round ID
-   */
+interface IDynamicBaseAllocationPoolV2 {
   event FundsDistributedToApp(bytes32 indexed appId, uint256 amount, uint256 indexed roundId);
-
-  event FundsDistributedToTreasury(uint256 amount, uint256 indexed roundId);
 
   function canDistributeDBARewards(uint256 _roundId) external view returns (bool);
 
