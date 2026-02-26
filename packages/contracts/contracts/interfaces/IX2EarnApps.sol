@@ -297,6 +297,11 @@ interface IX2EarnApps {
   event MaxPointsPerAppUpdated(uint256 oldMax, uint256 newMax);
 
   /**
+   * @dev V8: Event fired when an app admin voluntarily delists their app.
+   */
+  event AppSelfBlacklisted(bytes32 indexed appId, address indexed admin);
+
+  /**
    * @dev Event fired when the node strength scores are updated.
    */
   event NodeStrengthScoresUpdated(EndorsementUtils.NodeStrengthScores indexed nodeStrengthScores);
@@ -781,4 +786,11 @@ interface IX2EarnApps {
    * @notice V8 initializer for flexible endorsement config.
    */
   function initializeV8(uint256 _maxPointsPerNodePerApp, uint256 _maxPointsPerApp) external;
+
+  /**
+   * @notice Allows an app admin to voluntarily blacklist their app from allocation voting.
+   * @dev Blacklists the app and revokes creator NFTs. Only governance can restore.
+   * @param _appId The unique identifier of the app.
+   */
+  function selfBlacklistApp(bytes32 _appId) external;
 }

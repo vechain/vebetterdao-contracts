@@ -85,6 +85,7 @@ import { VoteEligibilityUtils } from "./libraries/VoteEligibilityUtils.sol";
  * - New storage: activeEndorsements array with O(1) index lookup.
  * - Per-app cooldown instead of per-node cooldown.
  * - Migration support: pause mechanism and seedEndorsement().
+ * - Added selfBlacklistApp() for app admin self-blacklisting.
  */
 contract X2EarnApps is Initializable, IX2EarnApps, AccessControlUpgradeable, UUPSUpgradeable {
   using Checkpoints for Checkpoints.Trace208;
@@ -264,6 +265,33 @@ contract X2EarnApps is Initializable, IX2EarnApps, AccessControlUpgradeable, UUP
 
     _isEligible ? _validateAppCreators(_appId) : _revokeAppCreators(_appId);
     _setBlacklist(_appId, !_isEligible);
+  }
+
+  /**
+   * @dev See {IX2EarnApps-selfBlacklistApp}.
+   */
+  function selfBlacklistApp(bytes32 _appId) external {
+    if (!isAppAdmin(_appId, msg.sender)) {
+      revert X2EarnUnauthorizedUser(msg.sender);
+    }
+
+    if (!AppStorageUtils.appSubmitted(_appId)) {
+      revert X2EarnNonexistentApp(_appId);
+    }
+
+    if (isBlacklisted(_appId)) {
+      revert X2EarnAppBlacklisted(_appId);
+    }
+
+    if (isAppUnendorsed(_appId)) {
+      EndorsementUtils.updateUnendorsedApps(_appId, true);
+    }
+
+    _setVotingEligibility(_appId, false);
+    _revokeAppCreators(_appId);
+    _setBlacklist(_appId, true);
+
+    emit AppSelfBlacklisted(_appId, msg.sender);
   }
 
   // ---------- Administration ---------- //
