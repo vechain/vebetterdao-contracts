@@ -609,4 +609,33 @@ describe("EndorsementUtils Coverage - @shard15g", function () {
       expect(await x2EarnApps.getNodePointsForApp(nodeId3, app1Id)).to.equal(49)
     })
   })
+
+  describe("selfBlacklistApp removes unendorsed app from pending list", function () {
+    it("Self-blacklisting an unendorsed app removes it from unendorsed list", async function () {
+      const { x2EarnApps, otherAccounts, owner } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      const app1Id = await x2EarnApps.hashAppName(otherAccounts[0].address)
+      await x2EarnApps
+        .connect(owner)
+        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
+
+      // App should be in unendorsed list after submission
+      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.equal(true)
+      const unendorsedBefore = await x2EarnApps.unendorsedAppIds()
+      expect(unendorsedBefore).to.include(app1Id)
+
+      // Self-blacklist without endorsing first
+      await x2EarnApps.connect(otherAccounts[0]).selfBlacklistApp(app1Id)
+
+      // App should no longer be in unendorsed list
+      expect(await x2EarnApps.isAppUnendorsed(app1Id)).to.equal(false)
+      const unendorsedAfter = await x2EarnApps.unendorsedAppIds()
+      expect(unendorsedAfter).to.not.include(app1Id)
+
+      // App should be blacklisted
+      expect(await x2EarnApps.isBlacklisted(app1Id)).to.equal(true)
+    })
+  })
 })

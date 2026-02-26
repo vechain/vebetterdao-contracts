@@ -1367,7 +1367,7 @@ export async function deployAll(config: ContractsConfig) {
 
   // ---------- Role updates ---------- //
   // Do not update roles on solo network or staging network since we are already using the predifined address and it would just increase dev time
-  if (config.NEXT_PUBLIC_APP_ENV === AppEnv.TESTNET || config.NEXT_PUBLIC_APP_ENV === AppEnv.MAINNET) {
+  if (config.NEXT_PUBLIC_APP_ENV === AppEnv.MAINNET) {
     console.log("================ Updating contract roles after setup ")
     console.log("New admin address: ", config.CONTRACTS_ADMIN_ADDRESS)
 

@@ -5,8 +5,15 @@ import { expect } from "chai"
 import { ethers } from "hardhat"
 
 import { deployAndUpgrade, upgradeProxy } from "../../scripts/helpers"
-import { EndorsementUtils, X2EarnApps, X2EarnAppsV7 } from "../../typechain-types"
-import { createNodeHolder, filterEventsByName, getOrDeployContractInstances, getStorageSlots } from "../helpers"
+import { X2EarnApps, X2EarnAppsV7 } from "../../typechain-types"
+import {
+  catchRevert,
+  createNodeHolder,
+  filterEventsByName,
+  getOrDeployContractInstances,
+  getStorageSlots,
+} from "../helpers"
+import { endorseApp } from "../helpers/xnodes"
 
 let config: ContractsConfig
 let otherAccounts: SignerWithAddress[]
@@ -603,5 +610,143 @@ describe("X-Apps - V8 Upgrade - @shard15f", function () {
 
     expect(await x2EarnAppsV8.appExists(app2Id)).to.eql(true)
     expect(await x2EarnAppsV8.isAppUnendorsed(app2Id)).to.eql(false)
+  })
+
+  describe("selfBlacklistApp", function () {
+    it("App admin can self-blacklist their app", async function () {
+      const { x2EarnApps, otherAccounts, owner } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      // Submit and endorse an app
+      await x2EarnApps
+        .connect(owner)
+        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
+      const appId = await x2EarnApps.hashAppName(otherAccounts[0].address)
+      await endorseApp(appId, otherAccounts[0])
+
+      // Verify app is eligible and not blacklisted
+      expect(await x2EarnApps.isEligibleNow(appId)).to.eql(true)
+      expect(await x2EarnApps.isBlacklisted(appId)).to.eql(false)
+
+      // App admin self-blacklists
+      await x2EarnApps.connect(otherAccounts[0]).selfBlacklistApp(appId)
+
+      // App should be blacklisted and not eligible
+      expect(await x2EarnApps.isBlacklisted(appId)).to.eql(true)
+      expect(await x2EarnApps.isEligibleNow(appId)).to.eql(false)
+    })
+
+    it("Should emit AppSelfBlacklisted event", async function () {
+      const { x2EarnApps, otherAccounts, owner } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      await x2EarnApps
+        .connect(owner)
+        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
+      const appId = await x2EarnApps.hashAppName(otherAccounts[0].address)
+      await endorseApp(appId, otherAccounts[0])
+
+      const tx = await x2EarnApps.connect(otherAccounts[0]).selfBlacklistApp(appId)
+      const receipt = await tx.wait()
+      if (!receipt) throw new Error("No receipt")
+
+      const events = filterEventsByName(receipt.logs, "AppSelfBlacklisted")
+      expect(events.length).to.equal(1)
+
+      const decoded = x2EarnApps.interface.parseLog({
+        topics: events[0].topics as string[],
+        data: events[0].data,
+      })
+      expect(decoded?.args[0]).to.equal(appId)
+      expect(decoded?.args[1]).to.equal(otherAccounts[0].address)
+    })
+
+    it("Should revoke creator NFTs on self-blacklist", async function () {
+      const { x2EarnApps, otherAccounts, owner, x2EarnCreator } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      await x2EarnApps
+        .connect(owner)
+        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
+      const appId = await x2EarnApps.hashAppName(otherAccounts[0].address)
+      await endorseApp(appId, otherAccounts[0])
+
+      // Creator should have NFT before delist
+      expect(await x2EarnCreator.balanceOf(owner.address)).to.be.greaterThan(0n)
+
+      await x2EarnApps.connect(otherAccounts[0]).selfBlacklistApp(appId)
+
+      // Creator apps count should be 0 after delist
+      expect(await x2EarnApps.creatorApps(owner.address)).to.eql(0n)
+    })
+
+    it("Non-admin cannot self-blacklist an app", async function () {
+      const { x2EarnApps, otherAccounts, owner } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      await x2EarnApps
+        .connect(owner)
+        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
+      const appId = await x2EarnApps.hashAppName(otherAccounts[0].address)
+      await endorseApp(appId, otherAccounts[0])
+
+      // otherAccounts[1] is not the app admin
+      await catchRevert(x2EarnApps.connect(otherAccounts[1]).selfBlacklistApp(appId))
+    })
+
+    it("Cannot self-blacklist a non-existent app", async function () {
+      const { x2EarnApps, otherAccounts } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      const fakeAppId = ethers.keccak256(ethers.toUtf8Bytes("NonExistentApp"))
+
+      await catchRevert(x2EarnApps.connect(otherAccounts[0]).selfBlacklistApp(fakeAppId))
+    })
+
+    it("Cannot self-blacklist an already blacklisted app", async function () {
+      const { x2EarnApps, otherAccounts, owner } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      await x2EarnApps
+        .connect(owner)
+        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
+      const appId = await x2EarnApps.hashAppName(otherAccounts[0].address)
+      await endorseApp(appId, otherAccounts[0])
+
+      // Blacklist via governance first
+      await x2EarnApps.connect(owner).setVotingEligibility(appId, false)
+      expect(await x2EarnApps.isBlacklisted(appId)).to.eql(true)
+
+      // Self-delist should revert since app is already blacklisted
+      await catchRevert(x2EarnApps.connect(otherAccounts[0]).selfBlacklistApp(appId))
+    })
+
+    it("Governance can restore a self-blacklisted app", async function () {
+      const { x2EarnApps, otherAccounts, owner } = await getOrDeployContractInstances({
+        forceDeploy: true,
+      })
+
+      await x2EarnApps
+        .connect(owner)
+        .submitApp(otherAccounts[0].address, otherAccounts[0].address, otherAccounts[0].address, "metadataURI")
+      const appId = await x2EarnApps.hashAppName(otherAccounts[0].address)
+      await endorseApp(appId, otherAccounts[0])
+
+      // Self-delist
+      await x2EarnApps.connect(otherAccounts[0]).selfBlacklistApp(appId)
+      expect(await x2EarnApps.isBlacklisted(appId)).to.eql(true)
+      expect(await x2EarnApps.isEligibleNow(appId)).to.eql(false)
+
+      // Governance restores the app
+      await x2EarnApps.connect(owner).setVotingEligibility(appId, true)
+      expect(await x2EarnApps.isBlacklisted(appId)).to.eql(false)
+      expect(await x2EarnApps.isEligibleNow(appId)).to.eql(true)
+    })
   })
 })
