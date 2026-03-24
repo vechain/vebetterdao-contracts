@@ -30,7 +30,7 @@ services:
     environment:
       - VUE_APP_SOLO_URL=http://localhost:8669
     ports:
-      - "8080:80"
+      - "8086:80"
     networks:
       - vechain-thor
 
@@ -41,7 +41,30 @@ services:
     environment:
       - VUE_APP_SOLO_URL=http://localhost:8669
     ports:
-      - "8081:80"
+      - "8087:80"
+    networks:
+      - vechain-thor
+
+  block-explorer:
+    image: ghcr.io/vechain/block-explorer:latest
+    container_name: block-explorer
+    hostname: block-explorer
+    environment:
+      - NEXT_PUBLIC_IS_SOLO=true
+      - NEXT_PUBLIC_SOLO_NODE_URL=http://localhost:8669
+      - NEXT_PUBLIC_VEWORLD_INDEXER_SOLO_URL=http://localhost:8089
+      - B32_URL=https://b32.vecha.in
+    ports:
+      - "8088:3000"
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/ || exit 1
+      interval: 10s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
+    depends_on:
+      thor-solo:
+        condition: service_healthy
     networks:
       - vechain-thor
 

@@ -95,8 +95,13 @@ export const setupEnvironment = async (
 ) => {
   switch (config) {
     case "local":
+      await setupLocalEnvironment(emissions, treasury, x2EarnApps, b3tr, vot3, stargateMock)
+      break
+    case "testnet":
+      await setupTestEnvironment(emissions, x2EarnApps, stargateMock)
+      break
     case "testnet-staging":
-      await setupLocalEnvironment(
+      await setupTestnetStagingEnvironment(
         emissions,
         treasury,
         x2EarnApps,
@@ -107,9 +112,6 @@ export const setupEnvironment = async (
         stargateMock,
         shouldEndorseXApps(),
       )
-      break
-    case "testnet":
-      await setupTestEnvironment(emissions, x2EarnApps, stargateMock)
       break
     case "mainnet":
       await setupMainnetEnvironment(emissions, x2EarnApps)
@@ -130,6 +132,101 @@ export const updateGMMultipliers = async (levels: number[], multipliers: number[
 }
 
 export const setupLocalEnvironment = async (
+  emissions: Emissions,
+  treasury: Treasury,
+  x2EarnApps: X2EarnApps,
+  b3tr: B3TR,
+  vot3: VOT3,
+  stargateMock: Stargate,
+) => {
+  const start = performance.now()
+
+  // Define specific accounts
+  const admin = accounts[0]
+
+  // Make sure the first 10 accounts have a VTHO balance
+  await airdropVTHO(
+    accounts.slice(1, 10).map(acct => acct.address),
+    5000n,
+    admin,
+  )
+
+  // Bootstrap emissions
+  const emissionsContract = await emissions.getAddress()
+  await bootstrapEmissions(emissionsContract, admin)
+
+  // Add x-apps to the XAllocationPool
+  const x2EarnAppsAddress = await x2EarnApps.getAddress()
+  await registerXDapps(x2EarnAppsAddress, xDappCreatorAccounts, APPS)
+
+  // Assign categories to apps (deployer has DEFAULT_ADMIN_ROLE)
+  const deployer = (await ethers.getSigners())[0]
+  await assignAppCategories(x2EarnApps, deployer, APPS)
+
+  // Seed the first 5 accounts with some tokens
+  const treasuryAddress = await treasury.getAddress()
+  // 5+ 8 accounts: 13 accounts
+  const allAccounts = getSeedAccounts(SeedStrategy.FIXED, 5 + APPS.length, 0)
+  const seedAccounts = allAccounts.slice(0, 5)
+
+  await airdropVTHO(
+    seedAccounts.map(acct => acct.key.address),
+    500n,
+    admin,
+  )
+
+  await airdropB3trFromTreasury(treasuryAddress, admin, seedAccounts)
+
+  await convertB3trForVot3(b3tr, vot3, seedAccounts)
+
+  // If the first 8 accounts does not have the correct nodes, run the following line
+  await startEmissions(emissionsContract, admin)
+
+  // Always endorse apps on local to ensure all apps reach 100 pts threshold
+  const allSigners = await ethers.getSigners()
+  const endorserSigners = allSigners.slice(0, 10)
+
+  await airdropVTHO(
+    endorserSigners.map(acct => Address.of(acct.address)),
+    5000n,
+    admin,
+  )
+
+  // Every endorser gets 3 MjolnirX nodes (need 3 per app since max 49 pts/node/app)
+  // Total: 30 nodes x 100 pts = 3000 pts >> 8 apps x 100 threshold
+  const mintAccounts: typeof endorserSigners = []
+  const mintLevels: number[] = []
+  for (const acct of endorserSigners) {
+    mintAccounts.push(acct, acct, acct)
+    mintLevels.push(7, 7, 7)
+  }
+  await mintStargateNFTs(stargateMock, mintAccounts, mintLevels)
+
+  const unendorsedApps = await x2EarnApps.unendorsedAppIds()
+  await endorseXApps(endorserSigners, x2EarnApps, unendorsedApps, stargateMock)
+
+  // Verify all apps reached the endorsement threshold
+  const remaining = await x2EarnApps.unendorsedAppIds()
+  console.log(`Remaining apps: ${remaining.length} ${remaining.join(", ")}`)
+  if (remaining.length > 0) {
+    const threshold = Number(await x2EarnApps.endorsementScoreThreshold())
+    console.log(`Threshold: ${threshold}`)
+    for (const appId of remaining) {
+      const score = Number(await x2EarnApps.getScore(appId))
+      console.error(`App ${appId} has ${score}/${threshold} endorsement points`)
+    }
+    throw new Error(`${remaining.length} app(s) did not reach endorsement threshold`)
+  }
+  console.log(`All apps verified as endorsed (>= ${await x2EarnApps.endorsementScoreThreshold()} pts)`)
+
+  // await proposeUpgradeGovernance(governor, xAllocationVoting)
+
+  const end = new Date(performance.now() - start)
+
+  console.log(`Setup complete in ${end.getMinutes()}m ${end.getSeconds()}s`)
+}
+
+export const setupTestnetStagingEnvironment = async (
   emissions: Emissions,
   treasury: Treasury,
   x2EarnApps: X2EarnApps,

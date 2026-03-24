@@ -85,36 +85,43 @@ export const endorseXApps = async (
     `  Endorsers with nodes: ${endorserNodes.length} (total nodes: ${endorserNodes.reduce((sum, e) => sum + e.nodeIds.length, 0)})`,
   )
 
-  // For each app, use multiple endorsers to reach the threshold
-  for (const appId of apps) {
+  // For each app, stagger starting endorser to avoid exhausting the same
+  // nodes' total budget (each MjolnirX node has 100 pts across ALL apps).
+  for (let appIdx = 0; appIdx < apps.length; appIdx++) {
+    const appId = apps[appIdx]
     const appInfo = await x2EarnApps.app(appId)
     const appName = appInfo.name || appId.slice(0, 10) + "..."
 
-    let totalPoints = 0
     const endorsements: string[] = []
 
-    // Round-robin through endorsers, using their available nodes
-    for (const endorser of endorserNodes) {
-      if (totalPoints >= threshold) break
+    for (let j = 0; j < endorserNodes.length; j++) {
+      const endorser = endorserNodes[(appIdx + j) % endorserNodes.length]
+      const actualScore = Number(await x2EarnApps.getScore(appId))
+      if (actualScore >= threshold) break
 
       for (const nodeId of endorser.nodeIds) {
-        if (totalPoints >= threshold) break
+        const scoreBefore = Number(await x2EarnApps.getScore(appId))
+        if (scoreBefore >= threshold) break
 
-        const remaining = threshold - totalPoints
+        const remaining = threshold - scoreBefore
         const points = Math.min(remaining, maxPointsPerNode)
 
         try {
           await x2EarnApps.connect(endorser.signer).endorseApp(appId, nodeId, points)
-          totalPoints += points
-          endorsements.push(`    node #${nodeId} (${endorser.signer.address.slice(0, 8)}...) -> ${points} pts`)
+          const scoreAfter = Number(await x2EarnApps.getScore(appId))
+          const applied = scoreAfter - scoreBefore
+          if (applied > 0) {
+            endorsements.push(`    node #${nodeId} (${endorser.signer.address.slice(0, 8)}...) -> ${applied} pts`)
+          }
         } catch {
-          // Node may have hit its cap for this app, skip
+          // Node may have hit its cap or budget, skip
         }
       }
     }
 
-    const status = totalPoints >= threshold ? "ENDORSED" : "PARTIAL"
-    console.log(`\n  [${status}] ${appName} — ${totalPoints}/${threshold} pts`)
+    const finalScore = Number(await x2EarnApps.getScore(appId))
+    const status = finalScore >= threshold ? "ENDORSED" : "PARTIAL"
+    console.log(`\n  [${status}] ${appName} — ${finalScore}/${threshold} pts`)
     endorsements.forEach(line => console.log(line))
   }
 

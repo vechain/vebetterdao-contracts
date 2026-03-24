@@ -151,4 +151,12 @@ export const upgradeConfig: Record<string, UpgradeContract> = {
       v2: "Add self-minting functionality gated by admin-controlled flag",
     },
   },
+  "Relayer Rewards Pool": {
+    name: "relayer-rewards-pool",
+    configAddressField: "relayerRewardsPoolContractAddress",
+    versions: ["v2"],
+    descriptions: {
+      v2: "Allow users to set a preferred relayer for early-access vote and claim actions",
+    },
+  },
 } as const
