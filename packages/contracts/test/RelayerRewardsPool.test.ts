@@ -7,6 +7,12 @@ import { getOrDeployContractInstances, waitForNextCycle } from "./helpers"
 import { RelayerRewardsPool, B3TR, Emissions, XAllocationVoting } from "../typechain-types"
 
 describe("RelayerRewardsPool - @shard18", function () {
+  type RelayerRewardsPoolWithPreferredRelayer = RelayerRewardsPool & {
+    setPreferredRelayer(relayer: string): Promise<unknown>
+    getPreferredRelayer(user: string): Promise<string>
+    connect(signer: HardhatEthersSigner): RelayerRewardsPoolWithPreferredRelayer
+  }
+
   let relayerRewardsPool: RelayerRewardsPool
   let b3tr: B3TR
   let emissions: Emissions
@@ -20,6 +26,9 @@ describe("RelayerRewardsPool - @shard18", function () {
   let user1: HardhatEthersSigner
   let user2: HardhatEthersSigner
   let otherAccounts: HardhatEthersSigner[]
+
+  const relayerRewardsPoolWithPreferredRelayer = () =>
+    relayerRewardsPool as unknown as RelayerRewardsPoolWithPreferredRelayer
 
   // Main setup - used by most tests
   const setupContracts = async () => {
@@ -60,7 +69,7 @@ describe("RelayerRewardsPool - @shard18", function () {
 
   describe("Deployment and Initialization", function () {
     it("should deploy with correct initial values", async function () {
-      expect(await relayerRewardsPool.version()).to.equal("1")
+      expect(await relayerRewardsPool.version()).to.equal("2")
       expect(await relayerRewardsPool.getVoteWeight()).to.equal(3)
       expect(await relayerRewardsPool.getClaimWeight()).to.equal(1)
       expect(await relayerRewardsPool.getEarlyAccessBlocks()).to.equal(432000)
@@ -305,17 +314,138 @@ describe("RelayerRewardsPool - @shard18", function () {
       expect(updatedRelayers).to.not.include(relayer1.address)
     })
 
-    it("should not allow non-admin to register/unregister relayers", async function () {
-      await expect(relayerRewardsPool.connect(user1).registerRelayer(relayer1.address)).to.be.revertedWith(
-        "RelayerRewardsPool: caller must have admin or pool admin role",
-      )
+    it("should allow anyone to register any address as relayer", async function () {
+      await expect(relayerRewardsPool.connect(user1).registerRelayer(relayer1.address))
+        .to.emit(relayerRewardsPool, "RelayerRegistered")
+        .withArgs(relayer1.address)
+      expect(await relayerRewardsPool.isRegisteredRelayer(relayer1.address)).to.be.true
+    })
 
-      // Register first
+    it("should not allow non-admin to unregister another relayer", async function () {
       await relayerRewardsPool.connect(owner).registerRelayer(relayer1.address)
 
-      await expect(relayerRewardsPool.connect(user1).unregisterRelayer(relayer1.address)).to.be.revertedWith(
-        "RelayerRewardsPool: caller must have admin or pool admin role",
+      await expect(relayerRewardsPool.connect(user1).unregisterRelayer(relayer1.address))
+        .to.be.revertedWithCustomError(relayerRewardsPool, "UnauthorizedUnregister")
+        .withArgs(user1.address, relayer1.address)
+    })
+
+    it("should allow anyone to self-register as relayer", async function () {
+      await expect(relayerRewardsPool.connect(user1).registerRelayer(user1.address))
+        .to.emit(relayerRewardsPool, "RelayerRegistered")
+        .withArgs(user1.address)
+
+      expect(await relayerRewardsPool.isRegisteredRelayer(user1.address)).to.be.true
+      const registeredRelayers = await relayerRewardsPool.getRegisteredRelayers()
+      expect(registeredRelayers).to.include(user1.address)
+    })
+
+    it("should allow relayer to unregister themselves", async function () {
+      await relayerRewardsPool.connect(relayer1).registerRelayer(relayer1.address)
+      expect(await relayerRewardsPool.isRegisteredRelayer(relayer1.address)).to.be.true
+
+      await expect(relayerRewardsPool.connect(relayer1).unregisterRelayer(relayer1.address))
+        .to.emit(relayerRewardsPool, "RelayerUnregistered")
+        .withArgs(relayer1.address)
+
+      expect(await relayerRewardsPool.isRegisteredRelayer(relayer1.address)).to.be.false
+      const registeredRelayers = await relayerRewardsPool.getRegisteredRelayers()
+      expect(registeredRelayers).to.not.include(relayer1.address)
+    })
+  })
+
+  describe("Preferred Relayer", function () {
+    beforeEach(async function () {
+      await relayerRewardsPool.connect(owner).registerRelayer(relayer1.address)
+      await relayerRewardsPool.connect(owner).registerRelayer(relayer2.address)
+    })
+
+    it("should allow a user to set and clear their preferred relayer", async function () {
+      await expect(relayerRewardsPoolWithPreferredRelayer().connect(user1).setPreferredRelayer(relayer1.address))
+        .to.emit(relayerRewardsPool, "PreferredRelayerSet")
+        .withArgs(user1.address, relayer1.address)
+
+      expect(await relayerRewardsPoolWithPreferredRelayer().getPreferredRelayer(user1.address)).to.equal(
+        relayer1.address,
       )
+
+      await expect(relayerRewardsPoolWithPreferredRelayer().connect(user1).setPreferredRelayer(ethers.ZeroAddress))
+        .to.emit(relayerRewardsPool, "PreferredRelayerSet")
+        .withArgs(user1.address, ethers.ZeroAddress)
+
+      expect(await relayerRewardsPoolWithPreferredRelayer().getPreferredRelayer(user1.address)).to.equal(
+        ethers.ZeroAddress,
+      )
+    })
+
+    it("should revert when setting an unregistered relayer as preferred", async function () {
+      await expect(relayerRewardsPoolWithPreferredRelayer().connect(user1).setPreferredRelayer(user2.address))
+        .to.be.revertedWithCustomError(relayerRewardsPool, "RelayerNotRegistered")
+        .withArgs(user2.address)
+    })
+
+    it("should only allow the preferred relayer to vote during early access", async function () {
+      const roundId = await xAllocationVoting.currentRoundId()
+
+      await relayerRewardsPoolWithPreferredRelayer().connect(user1).setPreferredRelayer(relayer1.address)
+
+      await expect(relayerRewardsPool.validateVoteDuringEarlyAccess(roundId, user1.address, relayer1.address)).to.not.be
+        .reverted
+
+      await expect(relayerRewardsPool.validateVoteDuringEarlyAccess(roundId, user1.address, relayer2.address))
+        .to.be.revertedWithCustomError(relayerRewardsPool, "NotPreferredRelayer")
+        .withArgs(relayer2.address, relayer1.address)
+    })
+
+    it("should only allow the preferred relayer to claim during early access", async function () {
+      const roundId = await xAllocationVoting.currentRoundId()
+
+      await relayerRewardsPoolWithPreferredRelayer().connect(user1).setPreferredRelayer(relayer1.address)
+
+      await expect(relayerRewardsPool.validateClaimDuringEarlyAccess(roundId, user1.address, relayer1.address)).to.not
+        .be.reverted
+
+      await expect(relayerRewardsPool.validateClaimDuringEarlyAccess(roundId, user1.address, relayer2.address))
+        .to.be.revertedWithCustomError(relayerRewardsPool, "NotPreferredRelayer")
+        .withArgs(relayer2.address, relayer1.address)
+    })
+
+    it("should allow any registered relayer during early access when no preference is set", async function () {
+      const roundId = await xAllocationVoting.currentRoundId()
+
+      await expect(relayerRewardsPool.validateVoteDuringEarlyAccess(roundId, user1.address, relayer1.address)).to.not.be
+        .reverted
+      await expect(relayerRewardsPool.validateVoteDuringEarlyAccess(roundId, user1.address, relayer2.address)).to.not.be
+        .reverted
+
+      await expect(relayerRewardsPool.validateClaimDuringEarlyAccess(roundId, user1.address, relayer1.address)).to.not
+        .be.reverted
+      await expect(relayerRewardsPool.validateClaimDuringEarlyAccess(roundId, user1.address, relayer2.address)).to.not
+        .be.reverted
+    })
+
+    it("should fall back to any registered relayer when the preferred relayer is unregistered", async function () {
+      const roundId = await xAllocationVoting.currentRoundId()
+
+      await relayerRewardsPoolWithPreferredRelayer().connect(user1).setPreferredRelayer(relayer1.address)
+      await relayerRewardsPool.connect(relayer1).unregisterRelayer(relayer1.address)
+
+      await expect(relayerRewardsPool.validateVoteDuringEarlyAccess(roundId, user1.address, relayer2.address)).to.not.be
+        .reverted
+      await expect(relayerRewardsPool.validateClaimDuringEarlyAccess(roundId, user1.address, relayer2.address)).to.not
+        .be.reverted
+    })
+
+    it("should allow anyone after early access even when a preferred relayer is set", async function () {
+      const roundId = await xAllocationVoting.currentRoundId()
+
+      await relayerRewardsPoolWithPreferredRelayer().connect(user1).setPreferredRelayer(relayer1.address)
+      await relayerRewardsPool.connect(owner).setEarlyAccessBlocks(0)
+      await waitForNextCycle(emissions)
+
+      await expect(relayerRewardsPool.validateVoteDuringEarlyAccess(roundId, user1.address, user2.address)).to.not.be
+        .reverted
+      await expect(relayerRewardsPool.validateClaimDuringEarlyAccess(roundId, user1.address, user2.address)).to.not.be
+        .reverted
     })
   })
 
@@ -1228,7 +1358,7 @@ describe("RelayerRewardsPool - @shard18", function () {
 
   describe("Version", function () {
     it("should return the correct version", async function () {
-      expect(await relayerRewardsPool.version()).to.equal("1")
+      expect(await relayerRewardsPool.version()).to.equal("2")
     })
   })
 })

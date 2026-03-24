@@ -150,6 +150,13 @@ interface IRelayerRewardsPool {
   event RelayerUnregistered(address indexed relayer);
 
   /**
+   * @notice Emitted when a user updates their preferred relayer
+   * @param user The user updating the preference
+   * @param relayer The preferred relayer, or zero address when cleared
+   */
+  event PreferredRelayerSet(address indexed user, address indexed relayer);
+
+  /**
    * @notice Emitted when early access blocks are updated
    * @param newBlocks The new number of early access blocks
    * @param oldBlocks The old number of early access blocks
@@ -185,6 +192,9 @@ interface IRelayerRewardsPool {
   /// @notice Custom error for when relayer is not registered
   error RelayerNotRegistered(address relayer);
 
+  /// @notice Custom error for when caller is not the relayer (self-unregister) nor admin
+  error UnauthorizedUnregister(address caller, address relayer);
+
   /// @notice Custom error for when a round has not ended yet
   error RoundNotEnded(uint256 roundId);
 
@@ -199,6 +209,9 @@ interface IRelayerRewardsPool {
 
   /// @notice Custom error for invalid parameters
   error InvalidParameter(string parameter);
+
+  /// @notice Custom error for when caller is not the user's preferred relayer
+  error NotPreferredRelayer(address caller, address preferredRelayer);
 
   // =========================== Getters ===========================
 
@@ -299,6 +312,13 @@ interface IRelayerRewardsPool {
   function getRegisteredRelayers() external view returns (address[] memory);
 
   /**
+   * @notice Get the preferred relayer for a user
+   * @param user The user address
+   * @return The preferred relayer, or zero address if not set
+   */
+  function getPreferredRelayer(address user) external view returns (address);
+
+  /**
    * @notice Returns the claimable reward amount for a relayer in a specific round
    * @param relayer The relayer address
    * @param roundId The round ID
@@ -354,6 +374,12 @@ interface IRelayerRewardsPool {
    * @param newFeeCap The new fee cap
    */
   function setFeeCap(uint256 newFeeCap) external;
+
+  /**
+   * @notice Set or clear the caller's preferred relayer
+   * @param relayer The preferred relayer, or zero address to clear it
+   */
+  function setPreferredRelayer(address relayer) external;
 
   /**
    * @notice Reduces the total expected actions for a round when an auto-voting user cannot vote
