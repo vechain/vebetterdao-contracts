@@ -113,38 +113,56 @@ jobs:
           - shard: shard2
             label: Emissions
           - shard: shard3a
-            label: Available for Assignment
-          - shard: shard3b
             label: Galaxy Member
-          - shard: shard4a
-            label: Governor & TimeLock
+          - shard: shard3b
+            label: Galaxy Member - V6 Upgrade
+          - shard: shard3c
+            label: Galaxy Member - V6 Compatibility
+          - shard: shard4a1
+            label: Governor & TimeLock - Part 1
+          - shard: shard4a2
+            label: Governor & TimeLock - Part 2
           - shard: shard4b
-            label: Governance - Voting Power
+            label: Governance - Voting power with proposal deposit
           - shard: shard4c
             label: Governance - Milestone Creation
           - shard: shard4d
             label: Governance - Proposer Requirement
           - shard: shard4e
-            label: Governance - Compatibility & Thresholds
+            label: Governance - V7 Compatibility & Thresholds
           - shard: shard4f
-            label: Governance - Upgrades
-          - shard: shard5
-            label: Node Management
+            label: Governance - V7 Upgrade
+          - shard: shard4g
+            label: Governance - V8 Upgrade
+          - shard: shard4h
+            label: Governance - V8 Compatibility
+          - shard: shard4i
+            label: Governance - Grants Manager V2 Upgrade
+          - shard: shard4j
+            label: Governance - Grants Manager V2 Compatibility
           - shard: shard6
             label: TimeLock
           - shard: shard7
             label: Treasury
-          - shard: shard8
-            label: VeBetterPassport
+          - shard: shard7b
+            label: Dynamic Base Allocation Pool
+          - shard: shard8-core
+            label: VeBetterPassport - Core
           - shard: shard8a
             label: VeBetterPassport - Upgrade
           - shard: shard8b
             label: VeBetterPassport - Signaling
           - shard: shard8c
             label: VeBetterPassport - Reset Signal Count
+          - shard: shard8d
+            label: VeBetterPassport - Upgrades
+          - shard: shard8e
+            label: VeBetterPassport - Entities
+          - shard: shard8f
+            label: VeBetterPassport - Delegation
           - shard: shard9
             label: VOT3
-          - shard: shard10
+          - shard: shard10-core
             label: VoterRewards
           - shard: shard10a
             label: VoterRewards - Upgrade
@@ -156,16 +174,32 @@ jobs:
             label: X2EarnRewardsPool
           - shard: shard13
             label: X-Allocation Pool
-          - shard: shard14
+          - shard: shard14-core
             label: X-Allocation Voting
           - shard: shard14a
             label: X-Allocation Voting - Upgrade
           - shard: shard14b
             label: X-Allocation Voting - Auto Voting
-          - shard: shard15
-            label: X-Apps
-          - shard: shard16
-            label: VeBetterPassport Additional Tests
+          - shard: shard15a
+            label: X-Apps - Core Features
+          - shard: shard15b
+            label: X-Apps - Team Management
+          - shard: shard15c
+            label: X-Apps - Metadata and Endorsement
+          - shard: shard15d
+            label: X-Apps - V7 Upgrade
+          - shard: shard15e
+            label: X-Apps - Upgradeability
+          - shard: shard15f
+            label: X-Apps - V8 Upgrade
+          - shard: shard15g
+            label: X-Apps - EndorsementUtils Coverage
+          - shard: shard16-pop
+            label: VeBetterPassport - PoP Score
+          - shard: shard16a
+            label: VeBetterPassport - Whitelisting
+          - shard: shard16b
+            label: VeBetterPassport - GM & Governance
           - shard: shard17a
             label: X-Apps Additional Tests A
           - shard: shard17b
@@ -264,60 +298,3 @@ jobs:
           directory: packages/contracts/coverage/
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-
-  run-slither:
-    name: Slither Analysis
-    runs-on: ubuntu-latest
-    needs: check-changes
-    if: false
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Use Node v20
-        uses: actions/setup-node@v3
-        with:
-          node-version-file: .nvmrc
-          cache: "yarn"
-
-      - name: Install dependencies
-        run: yarn install --frozen-lockfile
-
-      - name: Cache Solidity compilers
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/hardhat-nodejs
-          key: ${{ runner.os }}-solc-${{ hashFiles('./packages/contracts/hardhat.config.ts') }}
-          restore-keys: |
-            ${{ runner.os }}-solc-
-
-      - name: Compile contracts
-        run: yarn contracts:compile
-
-      - name: Run Slither
-        uses: crytic/slither-action@v0.4.0
-        id: slither
-        with:
-          ignore-compile: true
-          target: "packages/contracts/"
-          solc-version: "0.8.20"
-          fail-on: none
-          slither-args: --filter-paths "(openzeppelin|mocks|interfaces|deprecated|templates)" --exclude-informational --exclude-optimization --checklist --markdown-root ${{ github.server_url }}/${{ github.repository }}/blob/${{ github.sha }}/
-
-      - name: Upload Slither report
-        uses: actions/upload-artifact@v4
-        with:
-          name: slither-report
-          path: slither-report.md
-
-      - name: Create/update checklist as PR comment
-        uses: actions/github-script@v7
-        if: github.event_name == 'pull_request'
-        env:
-          REPORT: ${{ steps.slither.outputs.stdout }}
-        with:
-          script: |
-            const script = require('.github/scripts/comment')
-            const header = '# Slither report'
-            const body = process.env.REPORT
-            await script({ github, context, header, body })

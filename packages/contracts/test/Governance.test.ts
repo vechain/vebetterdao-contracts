@@ -37,7 +37,7 @@ import {
 import { deployAndUpgrade, deployProxy } from "../scripts/helpers"
 import { GRANT_PROPOSAL_TYPE, STANDARD_PROPOSAL_TYPE } from "./governance/fixture.test"
 
-describe("Governor and TimeLock - @shard4a", function () {
+describe("Governor and TimeLock - @shard4a1", function () {
   describe("Governor deployment", function () {
     it("Should set constructors correctly", async function () {
       const config = createLocalConfig()
@@ -3256,7 +3256,9 @@ describe("Governor and TimeLock - @shard4a", function () {
       expect(creator).to.eql(owner.address)
     })
   })
+})
 
+describe("Governor and TimeLock - Part 2 - @shard4a2", function () {
   // the tests described in this section cannot be run in isolation, but need to run in cascade
   describe("Proposal Voting", function () {
     let voter1: HardhatEthersSigner

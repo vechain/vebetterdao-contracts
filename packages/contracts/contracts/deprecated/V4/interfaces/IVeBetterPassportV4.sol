@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.20;
 
-import { PassportTypes } from "../ve-better-passport/libraries/PassportTypes.sol";
-import { IX2EarnApps } from "./IX2EarnApps.sol";
-import { IXAllocationVotingGovernor } from "./IXAllocationVotingGovernor.sol";
+import { PassportTypesV4 } from "../ve-better-passport/libraries/PassportTypesV4.sol";
+import { IX2EarnApps } from "../../../interfaces/IX2EarnApps.sol";
+import { IXAllocationVotingGovernor } from "../../../interfaces/IXAllocationVotingGovernor.sol";
 
-interface IVeBetterPassport {
+interface IVeBetterPassportV4 {
   // ---------- Events ---------- //
 
   /// @notice Emitted when a specific check is toggled.
@@ -114,7 +114,7 @@ interface IVeBetterPassport {
   error OnlyOneLinkAllowed();
 
   /// @notice Emitted when a user tries to call a function that they are not authorized to call.
-  error VeBetterPassportUnauthorizedUser(address user);
+  error VeBetterPassportV4UnauthorizedUser(address user);
 
   /// @notice Emitted when a user does not have permission to delegate passport.
   error PassportDelegationUnauthorizedUser(address user);
@@ -154,8 +154,8 @@ interface IVeBetterPassport {
   /// @param data The initialization data for the contract
   /// @param roles The roles data for initialization
   function initialize(
-    PassportTypes.InitializationData calldata data,
-    PassportTypes.InitializationRoleData calldata roles
+    PassportTypesV4.InitializationData calldata data,
+    PassportTypesV4.InitializationRoleData calldata roles
   ) external;
 
   /// @notice Checks if a user is a person based on the participation score and other criteria
@@ -186,7 +186,7 @@ interface IVeBetterPassport {
   function isBlacklisted(address _user) external view returns (bool);
 
   /// @notice Toggles the specified check
-  function toggleCheck(PassportTypes.CheckType check) external;
+  function toggleCheck(PassportTypesV4.CheckType check) external;
 
   /// @notice Returns the passport address for a entity
   /// @param entity The entity's address
@@ -244,24 +244,6 @@ interface IVeBetterPassport {
   /// @return The total score of the user
   function userTotalScore(address user) external view returns (uint256);
 
-  /// @notice Gets the number of actions distributed by an app in a round
-  /// @param appId The app ID
-  /// @param round The round to check
-  /// @return The number of actions
-  function appRoundActionCount(bytes32 appId, uint256 round) external view returns (uint256);
-
-  /// @notice Gets the number of distinct apps a user has interacted with in a round
-  /// @param user The user address
-  /// @param round The round to check
-  /// @return The number of distinct apps
-  function userRoundAppCount(address user, uint256 round) external view returns (uint256);
-
-  /// @notice Gets how many actions a user registered in a specific round
-  /// @param user The user address
-  /// @param round The round to check
-  /// @return The number of registered actions for that user and round
-  function userRoundActionCount(address user, uint256 round) external view returns (uint256);
-
   /// @notice Gets the score of a user for an app in a specific round
   /// @param user The user address
   /// @param round The round to check
@@ -269,24 +251,11 @@ interface IVeBetterPassport {
   /// @return The score of the user for the app in the round
   function userRoundScoreApp(address user, uint256 round, bytes32 appId) external view returns (uint256);
 
-  /// @notice Gets how many actions a user registered for an app in a specific round
-  /// @param user The user address
-  /// @param round The round to check
-  /// @param appId The app ID
-  /// @return The number of registered actions for that user, app, and round
-  function userRoundActionCountApp(address user, uint256 round, bytes32 appId) external view returns (uint256);
-
   /// @notice Gets the total score of a user for an app
   /// @param user The user address
   /// @param appId The app ID
   /// @return The total score of the user for the app
   function userAppTotalScore(address user, bytes32 appId) external view returns (uint256);
-
-  /// @notice Checks if a user has ever interacted with a specific app
-  function userUniqueAppInteraction(address user, bytes32 appId) external view returns (bool);
-
-  /// @notice Gets the list of apps a user has interacted with
-  function userInteractedApps(address user) external view returns (bytes32[] memory);
 
   /// @notice Gets the threshold score for a user to be considered a person
   /// @return The threshold participation score
@@ -302,19 +271,19 @@ interface IVeBetterPassport {
   /// @notice Gets the security multiplier for an app security
   /// @param security The app security level (LOW, MEDIUM, HIGH)
   /// @return The security multiplier for the app
-  function securityMultiplier(PassportTypes.APP_SECURITY security) external view returns (uint256);
+  function securityMultiplier(PassportTypesV4.APP_SECURITY security) external view returns (uint256);
 
   /// @notice Gets the security level of an app
   /// @param appId The app ID
   /// @return The security level of the app
-  function appSecurity(bytes32 appId) external view returns (PassportTypes.APP_SECURITY);
+  function appSecurity(bytes32 appId) external view returns (PassportTypesV4.APP_SECURITY);
 
   /// @notice Gets the minimum galaxy member level required
   /// @return The minimum galaxy member level
   function getMinimumGalaxyMemberLevel() external view returns (uint256);
 
   /// @notice Returns if the specific check is enabled
-  function isCheckEnabled(PassportTypes.CheckType check) external view returns (bool);
+  function isCheckEnabled(PassportTypesV4.CheckType check) external view returns (bool);
 
   /// @notice Returns the signaling threshold
   /// @return The signaling threshold
@@ -391,12 +360,12 @@ interface IVeBetterPassport {
   /// @notice Sets the security multiplier for an app security level
   /// @param security The app security level
   /// @param multiplier The security multiplier
-  function setSecurityMultiplier(PassportTypes.APP_SECURITY security, uint256 multiplier) external;
+  function setSecurityMultiplier(PassportTypesV4.APP_SECURITY security, uint256 multiplier) external;
 
   /// @notice Sets the app security level for a specific app
   /// @param appId The app ID
   /// @param security The security level
-  function setAppSecurity(bytes32 appId, PassportTypes.APP_SECURITY security) external;
+  function setAppSecurity(bytes32 appId, PassportTypesV4.APP_SECURITY security) external;
 
   /// @notice Sets the threshold score for a user to be considered a person
   /// @param threshold The threshold score
@@ -457,6 +426,14 @@ interface IVeBetterPassport {
   /// @param appId - the app id of the action
   /// @param round - the round id of the action
   function registerActionForRound(address user, bytes32 appId, uint256 round) external;
+
+  /// @notice Function used to seed the passport with old actions by aggregating them
+  /// based on (user, appId, round) and summing up the total score offchain
+  /// @param user - the user that performed the actions
+  /// @param appId - the app id of the actions
+  /// @param round - the round id of the actions
+  /// @param totalScore - the total score of the actions
+  function registerAggregatedActionsForRound(address user, bytes32 appId, uint256 round, uint256 totalScore) external;
 
   /// @notice Gets the threshold percentage of blacklisted entities for a passport to be considered blacklisted
   function blacklistThreshold() external view returns (uint256);

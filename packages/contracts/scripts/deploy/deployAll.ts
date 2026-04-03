@@ -185,7 +185,16 @@ export async function deployAll(config: ContractsConfig) {
     PassportPoPScoreLogicV3,
     PassportSignalingLogicV3,
     PassportWhitelistAndBlacklistLogicV3,
-    // V4 (latest)
+    // V4
+    PassportChecksLogicV4,
+    PassportConfiguratorV4,
+    PassportEntityLogicV4,
+    PassportDelegationLogicV4,
+    PassportPersonhoodLogicV4,
+    PassportPoPScoreLogicV4,
+    PassportSignalingLogicV4,
+    PassportWhitelistAndBlacklistLogicV4,
+    // V5 (latest)
     PassportChecksLogic,
     PassportConfigurator,
     PassportEntityLogic,
@@ -231,6 +240,18 @@ export async function deployAll(config: ContractsConfig) {
     !PassportWhitelistAndBlacklistLogicV3
   ) {
     throw new Error("Failed to deploy VeBetter Passport V3 libraries")
+  }
+  if (
+    !PassportChecksLogicV4 ||
+    !PassportConfiguratorV4 ||
+    !PassportEntityLogicV4 ||
+    !PassportDelegationLogicV4 ||
+    !PassportPersonhoodLogicV4 ||
+    !PassportPoPScoreLogicV4 ||
+    !PassportSignalingLogicV4 ||
+    !PassportWhitelistAndBlacklistLogicV4
+  ) {
+    throw new Error("Failed to deploy VeBetter Passport V4 libraries")
   }
   if (
     !PassportChecksLogic ||
@@ -810,14 +831,36 @@ export async function deployAll(config: ContractsConfig) {
     },
   )) as VeBetterPassport
 
-  // V4 (latest)
-  const veBetterPassport = (await upgradeProxy(
+  // V4 (intermediate)
+  const veBetterPassportV4 = (await upgradeProxy(
     "VeBetterPassportV3",
-    "VeBetterPassport",
+    "VeBetterPassportV4",
     await veBetterPassportV1.getAddress(), // Proxy address remains unchanged for transparent proxy upgrades
     [config.CONTRACTS_ADMIN_ADDRESS], // Include as part of v4 initialization upgrade
     {
       version: 4,
+      libraries: {
+        PassportChecksLogicV4: await PassportChecksLogicV4.getAddress(),
+        PassportConfiguratorV4: await PassportConfiguratorV4.getAddress(),
+        PassportEntityLogicV4: await PassportEntityLogicV4.getAddress(),
+        PassportDelegationLogicV4: await PassportDelegationLogicV4.getAddress(),
+        PassportPersonhoodLogicV4: await PassportPersonhoodLogicV4.getAddress(),
+        PassportPoPScoreLogicV4: await PassportPoPScoreLogicV4.getAddress(),
+        PassportSignalingLogicV4: await PassportSignalingLogicV4.getAddress(),
+        PassportWhitelistAndBlacklistLogicV4: await PassportWhitelistAndBlacklistLogicV4.getAddress(),
+      },
+      logOutput: true,
+    },
+  )) as VeBetterPassport
+
+  // V5 (latest)
+  const veBetterPassport = (await upgradeProxy(
+    "VeBetterPassportV4",
+    "VeBetterPassport",
+    await veBetterPassportV1.getAddress(), // Proxy address remains unchanged for transparent proxy upgrades
+    [],
+    {
+      version: 5,
       libraries: {
         PassportChecksLogic: await PassportChecksLogic.getAddress(),
         PassportConfigurator: await PassportConfigurator.getAddress(),

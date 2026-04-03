@@ -23,19 +23,19 @@
 
 pragma solidity 0.8.20;
 
-import { PassportStorageTypes } from "./PassportStorageTypes.sol";
-import { PassportTypes } from "./PassportTypes.sol";
-import { PassportEntityLogic } from "./PassportEntityLogic.sol";
+import { PassportStorageTypesV4 } from "./PassportStorageTypesV4.sol";
+import { PassportTypesV4 } from "./PassportTypesV4.sol";
+import { PassportEntityLogicV4 } from "./PassportEntityLogicV4.sol";
 import { Checkpoints } from "@openzeppelin/contracts/utils/structs/Checkpoints.sol";
-import { PassportClockLogic } from "./PassportClockLogic.sol";
+import { PassportClockLogicV4 } from "./PassportClockLogicV4.sol";
 
 /**
- * @title PassportPoPScoreLogic
+ * @title PassportPoPScoreLogicV4
  * @dev This library manages the Proof of Participation (PoP) score system for the Passport system.
  * Users gain PoP scores by performing actions in XApps. The scores are influenced by the security level of the app,
  * exponential decay, and various other factors. The PoP score can determine if a user qualifies as a person in the Passport system.
  */
-library PassportPoPScoreLogic {
+library PassportPoPScoreLogicV4 {
   using Checkpoints for Checkpoints.Trace208;
 
   // ---------- Events ---------- //
@@ -61,22 +61,31 @@ library PassportPoPScoreLogic {
   /// @notice Gets the cumulative score of a user based on exponential decay for a number of last roundst
   /// @param user - the user address
   /// @param lastRound - the round to consider as a starting point for the cumulative score
-  function getCumulativeScoreWithDecay(address user, uint256 lastRound) external view returns (uint256) {
-    return _cumulativeScoreWithDecay(user, lastRound);
+  function getCumulativeScoreWithDecay(
+    PassportStorageTypesV4.PassportStorage storage self,
+    address user,
+    uint256 lastRound
+  ) external view returns (uint256) {
+    return _cumulativeScoreWithDecay(self, user, lastRound);
   }
 
   /// @notice Gets the round score of a user
   /// @param user - the user address
   /// @param round - the round
-  function userRoundScore(address user, uint256 round) internal view returns (uint256) {
-    PassportStorageTypes.PassportStorage storage self = PassportStorageTypes.getPassportStorage();
+  function userRoundScore(
+    PassportStorageTypesV4.PassportStorage storage self,
+    address user,
+    uint256 round
+  ) internal view returns (uint256) {
     return self.userRoundScore[user][round];
   }
 
   /// @notice Gets the total score of a user
   /// @param user - the user address
-  function userTotalScore(address user) internal view returns (uint256) {
-    PassportStorageTypes.PassportStorage storage self = PassportStorageTypes.getPassportStorage();
+  function userTotalScore(
+    PassportStorageTypesV4.PassportStorage storage self,
+    address user
+  ) internal view returns (uint256) {
     return self.userTotalScore[user];
   }
 
@@ -84,101 +93,64 @@ library PassportPoPScoreLogic {
   /// @param user - the user address
   /// @param round - the round
   /// @param appId - the app id
-  function userRoundScoreApp(address user, uint256 round, bytes32 appId) internal view returns (uint256) {
-    PassportStorageTypes.PassportStorage storage self = PassportStorageTypes.getPassportStorage();
+  function userRoundScoreApp(
+    PassportStorageTypesV4.PassportStorage storage self,
+    address user,
+    uint256 round,
+    bytes32 appId
+  ) internal view returns (uint256) {
     return self.userAppRoundScore[user][round][appId];
-  }
-
-  /// @notice Gets how many actions a user registered in a round (raw count, not score units)
-  /// @param user - the user address (passport; entity-linked scores accrue on the passport)
-  /// @param round - the round
-  function userRoundActionCount(address user, uint256 round) internal view returns (uint256) {
-    PassportStorageTypes.PassportStorage storage self = PassportStorageTypes.getPassportStorage();
-    return self.userRoundActionCount[user][round];
-  }
-
-  /// @notice Gets how many actions a user registered for an app in a round (raw count, not score units)
-  /// @param user - the user address (passport; entity-linked scores accrue on the passport)
-  /// @param round - the round
-  /// @param appId - the app id
-  function userRoundActionCountApp(address user, uint256 round, bytes32 appId) internal view returns (uint256) {
-    PassportStorageTypes.PassportStorage storage self = PassportStorageTypes.getPassportStorage();
-    return self.userAppRoundActionCount[user][round][appId];
-  }
-
-  /// @notice Gets the number of actions distributed by an app in a round
-  /// @param appId - the app id
-  /// @param round - the round
-  function appRoundActionCount(bytes32 appId, uint256 round) internal view returns (uint256) {
-    PassportStorageTypes.PassportStorage storage self = PassportStorageTypes.getPassportStorage();
-    return self.appRoundActionCount[appId][round];
-  }
-
-  /// @notice Gets the number of distinct apps a user has interacted with in a round
-  /// @param user - the user address
-  /// @param round - the round
-  function userRoundAppCount(address user, uint256 round) internal view returns (uint256) {
-    PassportStorageTypes.PassportStorage storage self = PassportStorageTypes.getPassportStorage();
-    return self.userRoundAppCount[user][round];
-  }
-
-  /// @notice Checks if a user has ever interacted with a specific app
-  /// @param user - the user address
-  /// @param appId - the app id
-  function userUniqueAppInteraction(address user, bytes32 appId) internal view returns (bool) {
-    PassportStorageTypes.PassportStorage storage self = PassportStorageTypes.getPassportStorage();
-    return self.userUniqueAppInteraction[user][appId];
-  }
-
-  /// @notice Gets the list of apps a user has interacted with
-  /// @param user - the user address
-  function userInteractedApps(address user) internal view returns (bytes32[] memory) {
-    PassportStorageTypes.PassportStorage storage self = PassportStorageTypes.getPassportStorage();
-    return self.userInteractedApps[user];
   }
 
   /// @notice Gets the total score of a user for an app
   /// @param user - the user address
   /// @param appId - the app id
-  function userAppTotalScore(address user, bytes32 appId) internal view returns (uint256) {
-    PassportStorageTypes.PassportStorage storage self = PassportStorageTypes.getPassportStorage();
+  function userAppTotalScore(
+    PassportStorageTypesV4.PassportStorage storage self,
+    address user,
+    bytes32 appId
+  ) internal view returns (uint256) {
     return self.userAppTotalScore[user][appId];
   }
 
   /// @notice Gets the threshold for a user to be considered a person
-  function thresholdPoPScore() internal view returns (uint256) {
-    PassportStorageTypes.PassportStorage storage self = PassportStorageTypes.getPassportStorage();
+  function thresholdPoPScore(PassportStorageTypesV4.PassportStorage storage self) internal view returns (uint256) {
     return self.popScoreThreshold.latest();
   }
 
   /// @notice Gets the threshold for a user to be considered a person at a specific timepoint
-  function thresholdPoPScoreAtTimepoint(uint48 timepoint) external view returns (uint256) {
-    return _thresholdPoPScoreAtTimepoint(timepoint);
+  function thresholdPoPScoreAtTimepoint(
+    PassportStorageTypesV4.PassportStorage storage self,
+    uint48 timepoint
+  ) external view returns (uint256) {
+    return _thresholdPoPScoreAtTimepoint(self, timepoint);
   }
 
   /// @notice Gets the security multiplier for an app security
   /// @param security - the app security between LOW, MEDIUM, HIGH
-  function securityMultiplier(PassportTypes.APP_SECURITY security) internal view returns (uint256) {
-    PassportStorageTypes.PassportStorage storage self = PassportStorageTypes.getPassportStorage();
+  function securityMultiplier(
+    PassportStorageTypesV4.PassportStorage storage self,
+    PassportTypesV4.APP_SECURITY security
+  ) internal view returns (uint256) {
     return self.securityMultiplier[security];
   }
 
   /// @notice Gets the security level of an app
   /// @param appId - the app id
-  function appSecurity(bytes32 appId) internal view returns (PassportTypes.APP_SECURITY) {
-    PassportStorageTypes.PassportStorage storage self = PassportStorageTypes.getPassportStorage();
+  function appSecurity(
+    PassportStorageTypesV4.PassportStorage storage self,
+    bytes32 appId
+  ) internal view returns (PassportTypesV4.APP_SECURITY) {
     return self.appSecurity[appId];
   }
 
   /// @notice Gets the round threshold for a user to be considered a person
-  function roundsForCumulativeScore() internal view returns (uint256) {
-    PassportStorageTypes.PassportStorage storage self = PassportStorageTypes.getPassportStorage();
+  function roundsForCumulativeScore(PassportStorageTypesV4.PassportStorage storage self) internal view returns (uint256) {
     return self.roundsForCumulativeScore;
   }
 
   /// @notice Gets the decay rate for the cumulative score
-  function decayRate() internal view returns (uint256) {
-    PassportStorageTypes.PassportStorage storage self = PassportStorageTypes.getPassportStorage();
+  function decayRate(PassportStorageTypesV4.PassportStorage storage self) internal view returns (uint256) {
     return self.decayRate;
   }
 
@@ -187,30 +159,73 @@ library PassportPoPScoreLogic {
   /// @notice Registers an action for a user
   /// @param user - the user that performed the action
   /// @param appId - the app id of the action
-  function registerAction(address user, bytes32 appId) external {
-    PassportStorageTypes.PassportStorage storage self = PassportStorageTypes.getPassportStorage();
-    _registerAction(user, appId, self.xAllocationVoting.currentRoundId());
+  function registerAction(PassportStorageTypesV4.PassportStorage storage self, address user, bytes32 appId) external {
+    _registerAction(self, user, appId, self.xAllocationVoting.currentRoundId());
   }
 
   /// @notice Registers an action for a user in a round
   /// @param user - the user that performed the action
   /// @param appId - the app id of the action
   /// @param round - the round id of the action
-  function registerActionForRound(address user, bytes32 appId, uint256 round) external {
-    _registerAction(user, appId, round);
+  function registerActionForRound(
+    PassportStorageTypesV4.PassportStorage storage self,
+    address user,
+    bytes32 appId,
+    uint256 round
+  ) external {
+    _registerAction(self, user, appId, round);
+  }
+
+  /// @notice Function used to seed the passport with old actions by aggregating them
+  /// based on (user, appId, round) and summing up the total score offchain
+  /// @param user - the user that performed the actions
+  /// @param appId - the app id of the actions
+  /// @param round - the round id of the actions
+  /// @param totalScore - the total score of the actions
+  function registerAggregatedActionsForRound(
+    PassportStorageTypesV4.PassportStorage storage self,
+    address user,
+    bytes32 appId,
+    uint256 round,
+    uint256 totalScore
+  ) external {
+    require(user != address(0), "ProofOfParticipation: user is the zero address");
+    require(self.x2EarnApps.appExists(appId), "ProofOfParticipation: app does not exist");
+
+    // Check if the user has attached their entity to a passport, if so, use the passport address, else use the users address (passport)
+    address passport = PassportEntityLogicV4._getPassportForEntity(self, user);
+
+    // Track unique apps core user has interacted with
+    if (!self.userUniqueAppInteraction[passport][appId]) {
+      updateUniqueAppInteractions(self, passport, appId);
+    }
+
+    // If the entity is linked to a passport and the entity has not interacted with the app track interaction
+    if (passport != user && !self.userUniqueAppInteraction[user][appId]) {
+      updateUniqueAppInteractions(self, user, appId);
+    }
+
+    // Update the user's score for the round
+    self.userRoundScore[passport][round] += totalScore;
+    // Update the user's total score
+    self.userTotalScore[passport] += totalScore;
+    // Update the user's score for the app in the round
+    self.userAppRoundScore[passport][round][appId] += totalScore;
+    // Update the user's total score for the app
+    self.userAppTotalScore[passport][appId] += totalScore;
+
+    emit RegisteredAction(user, passport, appId, round, totalScore);
   }
 
   /// @notice Sets the threshold for a user to be considered a person
   /// @param threshold - the round threshold
-  function setThresholdPoPScore(uint208 threshold) external {
-    PassportStorageTypes.PassportStorage storage self = PassportStorageTypes.getPassportStorage();
-    self.popScoreThreshold.push(PassportClockLogic.clock(), threshold);
+  function setThresholdPoPScore(PassportStorageTypesV4.PassportStorage storage self, uint208 threshold) external {
+    self.popScoreThreshold.push(PassportClockLogicV4.clock(), threshold);
   }
 
   /// @notice Sets the number of rounds to consider for the cumulative score
   /// @param rounds - the number of rounds
-  function setRoundsForCumulativeScore(uint256 rounds) external {
-    PassportStorageTypes.PassportStorage storage self = PassportStorageTypes.getPassportStorage();
+  function setRoundsForCumulativeScore(PassportStorageTypesV4.PassportStorage storage self, uint256 rounds) external {
     require(rounds > 0, "ProofOfParticipation: rounds is zero");
 
     self.roundsForCumulativeScore = rounds;
@@ -219,8 +234,11 @@ library PassportPoPScoreLogic {
   /// @notice Sets the  security multiplier
   /// @param security - the app security between LOW, MEDIUM, HIGH
   /// @param multiplier - the multiplier
-  function setSecurityMultiplier(PassportTypes.APP_SECURITY security, uint256 multiplier) external {
-    PassportStorageTypes.PassportStorage storage self = PassportStorageTypes.getPassportStorage();
+  function setSecurityMultiplier(
+    PassportStorageTypesV4.PassportStorage storage self,
+    PassportTypesV4.APP_SECURITY security,
+    uint256 multiplier
+  ) external {
     require(multiplier > 0, "ProofOfParticipation: multiplier is zero");
 
     self.securityMultiplier[security] = multiplier;
@@ -229,15 +247,17 @@ library PassportPoPScoreLogic {
   /// @dev Sets the security level of an app
   /// @param appId - the app id
   /// @param security  - the security level
-  function setAppSecurity(bytes32 appId, PassportTypes.APP_SECURITY security) external {
-    PassportStorageTypes.PassportStorage storage self = PassportStorageTypes.getPassportStorage();
+  function setAppSecurity(
+    PassportStorageTypesV4.PassportStorage storage self,
+    bytes32 appId,
+    PassportTypesV4.APP_SECURITY security
+  ) external {
     self.appSecurity[appId] = security;
   }
 
   /// @notice Sets the decay rate for the exponential decay
   /// @param newDecayRate - the decay rate
-  function setDecayRate(uint256 newDecayRate) external {
-    PassportStorageTypes.PassportStorage storage self = PassportStorageTypes.getPassportStorage();
+  function setDecayRate(PassportStorageTypesV4.PassportStorage storage self, uint256 newDecayRate) external {
     self.decayRate = newDecayRate;
   }
 
@@ -247,8 +267,11 @@ library PassportPoPScoreLogic {
   /// @dev This function calculates the decayed score f(t) = a * (1 - r)^t
   /// @param user - the user address
   /// @param lastRound - the round to consider as a starting point for the cumulative score
-  function _cumulativeScoreWithDecay(address user, uint256 lastRound) internal view returns (uint256) {
-    PassportStorageTypes.PassportStorage storage self = PassportStorageTypes.getPassportStorage();
+  function _cumulativeScoreWithDecay(
+    PassportStorageTypesV4.PassportStorage storage self,
+    address user,
+    uint256 lastRound
+  ) internal view returns (uint256) {
     // Calculate the starting round for the cumulative score. If the last round is less than the rounds for cumulative score, start from the first round
     uint256 startingRound = lastRound <= self.roundsForCumulativeScore
       ? 1
@@ -268,26 +291,33 @@ library PassportPoPScoreLogic {
   /**
    * @dev Internal funciton to get the threshold for a user to be considered a person at a specific timepoint
    */
-  function _thresholdPoPScoreAtTimepoint(uint48 timepoint) internal view returns (uint256) {
-    PassportStorageTypes.PassportStorage storage self = PassportStorageTypes.getPassportStorage();
+  function _thresholdPoPScoreAtTimepoint(
+    PassportStorageTypesV4.PassportStorage storage self,
+    uint48 timepoint
+  ) internal view returns (uint256) {
     return self.popScoreThreshold.upperLookupRecent(timepoint);
   }
 
   /**
    * @dev Registers an action for a user in a specific round. If the user is an entity attached to a passport,
    * the passport will receive the score instead of the entity. The score is calculated based on the security level of the app.
+   * @param self The storage object for the Passport contract.
    * @param user The address of the user (or entity) that performed the action.
    * @param appId The ID of the app where the action took place.
    * @param round The round or timepoint in which the action occurred.
    */
-  function _registerAction(address user, bytes32 appId, uint256 round) private {
-    PassportStorageTypes.PassportStorage storage self = PassportStorageTypes.getPassportStorage();
+  function _registerAction(
+    PassportStorageTypesV4.PassportStorage storage self,
+    address user,
+    bytes32 appId,
+    uint256 round
+  ) private {
     require(user != address(0), "ProofOfParticipation: user is the zero address");
 
     require(self.x2EarnApps.appExists(appId), "ProofOfParticipation: app does not exist");
 
     // If app was just added and the security level is not set, set it to LOW by default
-    if (self.appSecurity[appId] == PassportTypes.APP_SECURITY.NONE) {
+    if (self.appSecurity[appId] == PassportTypesV4.APP_SECURITY.NONE) {
       return;
     }
 
@@ -297,40 +327,27 @@ library PassportPoPScoreLogic {
     }
 
     // Check if the user has attached their entity to a passport, if so, use the passport address, else use the users address (passport)
-    address passport = PassportEntityLogic._getPassportForEntity(user);
+    address passport = PassportEntityLogicV4._getPassportForEntity(self, user);
 
     // Track unique apps core user has interacted with
     if (!self.userUniqueAppInteraction[passport][appId]) {
-      updateUniqueAppInteractions(passport, appId);
+      updateUniqueAppInteractions(self, passport, appId);
     }
 
     // If the entity is linked to a passport and the entity has not interacted with the app track interaction
     if (passport != user && !self.userUniqueAppInteraction[user][appId]) {
-      updateUniqueAppInteractions(user, appId);
+      updateUniqueAppInteractions(self, user, appId);
     }
-
-    // Track unique apps per round
-    if (!self.userRoundUniqueAppInteraction[passport][round][appId]) {
-      self.userRoundUniqueAppInteraction[passport][round][appId] = true;
-      self.userRoundAppCount[passport][round]++;
-    }
-
-    // Track app action count per round
-    self.appRoundActionCount[appId][round]++;
 
     // Calculate the action score, can be min 0, max 6
     uint256 actionScore = self.securityMultiplier[self.appSecurity[appId]];
 
     // Update the user's score for the round
     self.userRoundScore[passport][round] += actionScore;
-    // Update total per-user per-round action count (one per successful registration)
-    self.userRoundActionCount[passport][round]++;
     // Update the user's total score
     self.userTotalScore[passport] += actionScore;
     // Update the user's score for the app in the round
     self.userAppRoundScore[passport][round][appId] += actionScore;
-    // Update per-user per-app per-round action count (one per successful registration)
-    self.userAppRoundActionCount[passport][round][appId]++;
     // Update the user's total score for the app
     self.userAppTotalScore[passport][appId] += actionScore;
 
@@ -341,11 +358,15 @@ library PassportPoPScoreLogic {
    * @dev Updates the record of unique app interactions for a user. If this is the user's first interaction
    * with the specified app, the function marks the interaction as unique and stores the app ID in the user's
    * list of interacted apps.
+   * @param self The storage object for the Passport contract.
    * @param user The address of the user whose app interactions are being tracked.
    * @param appId The ID of the app that the user has interacted with.
    */
-  function updateUniqueAppInteractions(address user, bytes32 appId) internal {
-    PassportStorageTypes.PassportStorage storage self = PassportStorageTypes.getPassportStorage();
+  function updateUniqueAppInteractions(
+    PassportStorageTypesV4.PassportStorage storage self,
+    address user,
+    bytes32 appId
+  ) internal {
     // This is the first time the user interacts with this app
     self.userUniqueAppInteraction[user][appId] = true;
 
