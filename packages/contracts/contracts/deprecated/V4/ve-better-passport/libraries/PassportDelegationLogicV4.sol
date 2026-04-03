@@ -23,17 +23,17 @@
 
 pragma solidity 0.8.20;
 
-import { PassportStorageTypes } from "./PassportStorageTypes.sol";
-import { PassportClockLogic } from "./PassportClockLogic.sol";
-import { PassportEIP712SigningLogic } from "./PassportEIP712SigningLogic.sol";
-import { PassportEntityLogic } from "./PassportEntityLogic.sol";
-import { PassportTypes } from "./PassportTypes.sol";
+import { PassportStorageTypesV4 } from "./PassportStorageTypesV4.sol";
+import { PassportClockLogicV4 } from "./PassportClockLogicV4.sol";
+import { PassportEIP712SigningLogicV4 } from "./PassportEIP712SigningLogicV4.sol";
+import { PassportEntityLogicV4 } from "./PassportEntityLogicV4.sol";
+import { PassportTypesV4 } from "./PassportTypesV4.sol";
 import { Checkpoints } from "@openzeppelin/contracts/utils/structs/Checkpoints.sol";
 import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /**
- * @title PassportDelegationLogic
+ * @title PassportDelegationLogicV4
  * @dev A library that manages the delegation of passports between users in the Passport system.
  * It allows users to delegate their passports to others, revoke delegations, and check the delegation status.
  * Delegations can be created with or without signatures, and certain rules are enforced, such as preventing
@@ -42,14 +42,14 @@ import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
  * This library also emits various events for delegation creation, revocation, and pending delegations, allowing
  * external systems to track delegation status.
  */
-library PassportDelegationLogic {
+library PassportDelegationLogicV4 {
   // Ethereum addresses are uint160, we can store addresses as uint160 values within the Checkpoints.Trace160
   using Checkpoints for Checkpoints.Trace160;
   // Extends the bytes32 type to support ECDSA signatures
   using ECDSA for bytes32;
 
   // ---------- Constants ---------- //
-  string private constant SIGNING_DOMAIN = "VeBetterPassport";
+  string private constant SIGNING_DOMAIN = "VeBetterPassportV4";
   string private constant SIGNATURE_VERSION = "1";
   bytes32 private constant DELEGATION_TYPEHASH =
     keccak256("Delegation(address delegator,address delegatee,uint256 deadline)");
@@ -93,111 +93,121 @@ library PassportDelegationLogic {
 
   /**
    * @notice Returns the delegatee for a given delegator.
+   * @param self The storage object for the Passport contract containing delegation data.
    * @param delegator The address of the delegator.
    * @return The address of the delegatee for the given delegator.
    */
   function getDelegatee(
+    PassportStorageTypesV4.PassportStorage storage self,
     address delegator
   ) public view returns (address) {
-    PassportStorageTypes.PassportStorage storage self = PassportStorageTypes.getPassportStorage();
     return _addressFromUint160(self.delegatorToDelegatee[delegator].latest());
   }
 
   /**
    * @notice Returns the delegatee for a delegator at a specific timepoint.
+   * @param self The storage object for the Passport contract containing delegation data.
    * @param delegator The address of the delegator.
    * @param timepoint The timepoint to query.
    * @return The delegatee address at the given timepoint.
    */
   function getDelegateeInTimepoint(
+    PassportStorageTypesV4.PassportStorage storage self,
     address delegator,
     uint256 timepoint
   ) external view returns (address) {
-    PassportStorageTypes.PassportStorage storage self = PassportStorageTypes.getPassportStorage();
     return _addressFromUint160(self.delegatorToDelegatee[delegator].upperLookupRecent(SafeCast.toUint48(timepoint)));
   }
 
   /**
    * @notice Returns the delegator for a given delegatee.
+   * @param self The storage object for the Passport contract containing delegation data.
    * @param delegatee The address of the delegatee.
    * @return The address of the delegator for the given delegatee.
    */
   function getDelegator(
+    PassportStorageTypesV4.PassportStorage storage self,
     address delegatee
   ) public view returns (address) {
-    PassportStorageTypes.PassportStorage storage self = PassportStorageTypes.getPassportStorage();
     return _addressFromUint160(self.delegateeToDelegator[delegatee].latest());
   }
 
   /**
    * @notice Returns the delegator for a deleagtee at a specific timepoint.
+   * @param self The storage object for the Passport contract containing delegation data.
    * @param delegatee The address of the delegatee.
    * @param timepoint The timepoint to query.
    * @return The delegator address at the given timepoint.
    */
   function getDelegatorInTimepoint(
+    PassportStorageTypesV4.PassportStorage storage self,
     address delegatee,
     uint256 timepoint
   ) external view returns (address) {
-    return _getDelegatorInTimepoint(delegatee, timepoint);
+    return _getDelegatorInTimepoint(self, delegatee, timepoint);
   }
 
   /**
    * @notice Checks if the given user is currently a delegator.
+   * @param self The storage object for the Passport contract containing delegation data.
    * @param user The address of the user being queried.
    * @return True if the user is a delegator, false otherwise.
    */
-  function isDelegator(address user) internal view returns (bool) {
-    PassportStorageTypes.PassportStorage storage self = PassportStorageTypes.getPassportStorage();
+  function isDelegator(PassportStorageTypesV4.PassportStorage storage self, address user) internal view returns (bool) {
     return self.delegatorToDelegatee[user].latest() != 0;
   }
 
   /**
    * @notice Checks if the given user is a delegator at a specific timepoint.
+   * @param self The storage object for the Passport contract containing delegation data.
    * @param user The address of the user being queried.
    * @param timepoint The specific timepoint (block number or timestamp) to check.
    * @return True if the user is a delegator at the given timepoint, false otherwise.
    */
   function isDelegatorInTimepoint(
+    PassportStorageTypesV4.PassportStorage storage self,
     address user,
     uint256 timepoint
   ) external view returns (bool) {
-    return _isDelegatorInTimepoint(user, timepoint);
+    return _isDelegatorInTimepoint(self, user, timepoint);
   }
 
   /**
    * @notice Checks if the given user is currently a delegatee.
+   * @param self The storage object for the Passport contract containing delegation data.
    * @param user The address of the user being queried.
    * @return True if the user is a delegatee, false otherwise.
    */
-  function isDelegatee(address user) internal view returns (bool) {
-    PassportStorageTypes.PassportStorage storage self = PassportStorageTypes.getPassportStorage();
+  function isDelegatee(PassportStorageTypesV4.PassportStorage storage self, address user) internal view returns (bool) {
     return self.delegateeToDelegator[user].latest() != 0;
   }
 
   /**
    * @notice Checks if the given user is a delegatee at a specific timepoint.
+   * @param self The storage object for the Passport contract containing delegation data.
    * @param user The address of the user being queried.
    * @param timepoint The specific timepoint (block number or timestamp) to check.
    * @return True if the user is a delegatee at the given timepoint, false otherwise.
    */
   function isDelegateeInTimepoint(
+    PassportStorageTypesV4.PassportStorage storage self,
     address user,
     uint256 timepoint
   ) external view returns (bool) {
-    return _isDelegateeInTimepoint(user, timepoint);
+    return _isDelegateeInTimepoint(self, user, timepoint);
   }
 
   /**
    * @notice Returns a list of pending delegations for the given user.
+   * @param self The storage object for the Passport contract containing delegation data.
    * @param user The address of the user whose pending delegations are being queried.
    * @return incoming The addresses of users that are delegating to the user.
    * @return outgoing The address that the user is delegating to.
    */
   function getPendingDelegations(
+    PassportStorageTypesV4.PassportStorage storage self,
     address user
   ) internal view returns (address[] memory incoming, address outgoing) {
-    PassportStorageTypes.PassportStorage storage self = PassportStorageTypes.getPassportStorage();
     return (self.pendingDelegationsDelegateeToDelegators[user], self.pendingDelegationsDelegatorToDelegatee[user]);
   }
 
@@ -208,23 +218,24 @@ library PassportDelegationLogic {
    * The signature ensures the delegation is authorized by the delegator.
    * Eg: Alice has a passport where she is not considered a person, she delegates her passport to Bob, which
    * is considered a person. Bob now cannot vote because he is not considered a person anymore.
+   * @param self The storage object for the Passport contract.
    * @param delegator The address of the delegator.
    * @param deadline The expiration time of the delegation.
    * @param signature The ECDSA signature for authorization.
    */
   function delegateWithSignature(
+    PassportStorageTypesV4.PassportStorage storage self,
     address delegator,
     uint256 deadline,
     bytes memory signature
   ) external {
-    PassportStorageTypes.PassportStorage storage self = PassportStorageTypes.getPassportStorage();
     if (block.timestamp > deadline) {
       revert SignatureExpired();
     }
 
     // Recover the signer address from the signature
     bytes32 structHash = keccak256(abi.encode(DELEGATION_TYPEHASH, delegator, msg.sender, deadline));
-    bytes32 digest = PassportEIP712SigningLogic.hashTypedDataV4(structHash);
+    bytes32 digest = PassportEIP712SigningLogicV4.hashTypedDataV4(structHash);
     address signer = digest.recover(signature);
 
     // Check if the signer is the delegator
@@ -233,11 +244,11 @@ library PassportDelegationLogic {
     }
 
     // Check delegation rules
-    _checkDelegation(delegator, msg.sender);
+    _checkDelegation(self, delegator, msg.sender);
 
     // Check if the delegatee has already been delegated
-    if (isDelegatee(msg.sender)) {
-      _removeDelegation(_addressFromUint160(self.delegateeToDelegator[msg.sender].latest()), msg.sender);
+    if (isDelegatee(self, msg.sender)) {
+      _removeDelegation(self, _addressFromUint160(self.delegateeToDelegator[msg.sender].latest()), msg.sender);
     }
 
     _pushCheckpoint(self.delegatorToDelegatee[delegator], msg.sender);
@@ -251,12 +262,12 @@ library PassportDelegationLogic {
    * The delegatee must accept the delegation for it to become active.
    * Eg: Alice has a passport where she is not considered a person, she delegates her passport to Bob, which
    * is considered a person. Bob now cannot vote because he is not considered a person anymore.
+   * @param self The storage object for the Passport contract.
    * @param delegatee The address of the delegatee.
    */
-  function delegatePassport(address delegatee) external {
-    PassportStorageTypes.PassportStorage storage self = PassportStorageTypes.getPassportStorage();
+  function delegatePassport(PassportStorageTypesV4.PassportStorage storage self, address delegatee) external {
     // Check delegation rules
-    _checkDelegation(msg.sender, delegatee);
+    _checkDelegation(self, msg.sender, delegatee);
 
     // Get the length of the pending delegations
     uint256 length = self.pendingDelegationsDelegateeToDelegators[delegatee].length;
@@ -273,10 +284,10 @@ library PassportDelegationLogic {
 
   /**
    * @notice Allows the delegatee to accept a pending delegation.
+   * @param self The storage object for the Passport contract.
    * @param delegator The address of the delegator.
    */
-  function acceptDelegation(address delegator) external {
-    PassportStorageTypes.PassportStorage storage self = PassportStorageTypes.getPassportStorage();
+  function acceptDelegation(PassportStorageTypesV4.PassportStorage storage self, address delegator) external {
     address delegatee = self.pendingDelegationsDelegatorToDelegatee[delegator];
 
     // Check if the pending delegation exists
@@ -290,8 +301,8 @@ library PassportDelegationLogic {
     }
 
     // Check if the delegatee has already accepted a delegation
-    if (isDelegatee(msg.sender)) {
-      _removeDelegation(_addressFromUint160(self.delegateeToDelegator[msg.sender].latest()), msg.sender);
+    if (isDelegatee(self, msg.sender)) {
+      _removeDelegation(self, _addressFromUint160(self.delegateeToDelegator[msg.sender].latest()), msg.sender);
     }
 
     // Add the delegator to the delegatee and the delegatee to the delegator
@@ -299,19 +310,20 @@ library PassportDelegationLogic {
     _pushCheckpoint(self.delegatorToDelegatee[delegator], msg.sender);
 
     // Remove the pending delegation
-    _removePendingDelegation(delegator, msg.sender);
+    _removePendingDelegation(self, delegator, msg.sender);
 
     emit DelegationCreated(delegator, msg.sender);
   }
 
   /**
    * @notice Allows a user to deny (and remove) an incoming pending delegation.
+   * @param self The storage object for the Passport contract.
    * @param delegator the user who is delegating to me (aka the delegator)
    */
   function denyIncomingPendingDelegation(
+    PassportStorageTypesV4.PassportStorage storage self,
     address delegator
   ) external {
-    PassportStorageTypes.PassportStorage storage self = PassportStorageTypes.getPassportStorage();
     address delegatee = self.pendingDelegationsDelegatorToDelegatee[delegator];
 
     // Check if the pending delegation exists
@@ -325,16 +337,16 @@ library PassportDelegationLogic {
     }
 
     // Use the _removePendingDelegation function to handle the deletion logic
-    _removePendingDelegation(delegator, delegatee);
+    _removePendingDelegation(self, delegator, delegatee);
 
     emit DelegationRevoked(delegator, delegatee);
   }
 
   /**
    * @notice Allows a delegator to cancel (and remove) the outgoing pending delegation.
+   * @param self The storage object for the Passport contract.
    */
-  function cancelOutgoingPendingDelegation() external {
-    PassportStorageTypes.PassportStorage storage self = PassportStorageTypes.getPassportStorage();
+  function cancelOutgoingPendingDelegation(PassportStorageTypesV4.PassportStorage storage self) external {
     address delegatee = self.pendingDelegationsDelegatorToDelegatee[msg.sender];
 
     // Check if the pending delegation exists
@@ -343,7 +355,7 @@ library PassportDelegationLogic {
     }
 
     // Use the _removePendingDelegation function to handle the deletion logic
-    _removePendingDelegation(msg.sender, delegatee);
+    _removePendingDelegation(self, msg.sender, delegatee);
 
     emit DelegationRevoked(msg.sender, delegatee);
   }
@@ -351,43 +363,45 @@ library PassportDelegationLogic {
   /**
    * @notice Allows a delegator or delegatee to revoke an existing delegation.
    * This removes the delegation between the delegator and the delegatee.
+   * @param self The storage object for the Passport contract.
    */
-  function revokeDelegation() external {
+  function revokeDelegation(PassportStorageTypesV4.PassportStorage storage self) external {
     address user = msg.sender;
     address delegator;
     address delegatee;
 
     // Check if user is either a delegator or delegatee
-    if (isDelegator(user)) {
+    if (isDelegator(self, user)) {
       delegator = user;
-      delegatee = getDelegatee(user);
-    } else if (isDelegatee(user)) {
+      delegatee = getDelegatee(self, user);
+    } else if (isDelegatee(self, user)) {
       delegatee = user;
-      delegator = getDelegator(user);
+      delegator = getDelegator(self, user);
     } else {
       revert NotDelegated(user);
     }
 
     // Revoke the delegation and reset the checkpoints
-    _removeDelegation(delegator, delegatee);
+    _removeDelegation(self, delegator, delegatee);
   }
 
   // ---------- Private ---------- //
   /// @notice Push a new checkpoint for the delegator and delegatee
   function _pushCheckpoint(Checkpoints.Trace160 storage store, address value) private {
-    store.push(PassportClockLogic.clock(), uint160(value));
+    store.push(PassportClockLogicV4.clock(), uint160(value));
   }
 
   /// @notice Removes a pending delegation between a delegator and a delegatee.
   /// @dev This function removes the delegator from the delegatee's pending delegation list and updates the pendingDelegationsIndexes for the delegator.
   ///     The function swaps the last element in the pending delegation array with the one being removed and pops the last element to avoid leaving gaps.
+  /// @param self The PassportStorage structure containing delegation mappings and lists.
   /// @param delegator The address of the delegator who initiated the pending delegation.
   /// @param delegatee The address of the delegatee to whom the delegator is delegating.
   function _removePendingDelegation(
+    PassportStorageTypesV4.PassportStorage storage self,
     address delegator,
     address delegatee
   ) private {
-    PassportStorageTypes.PassportStorage storage self = PassportStorageTypes.getPassportStorage();
     uint256 index = self.pendingDelegationsIndexes[delegator];
 
     uint256 pendingDelegationsLength = self.pendingDelegationsDelegateeToDelegators[delegatee].length;
@@ -412,10 +426,10 @@ library PassportDelegationLogic {
 
   /// @dev Removes the delegation relationship between a delegator and a delegatee.
   function _removeDelegation(
+    PassportStorageTypesV4.PassportStorage storage self,
     address delegator,
     address delegatee
   ) private {
-    PassportStorageTypes.PassportStorage storage self = PassportStorageTypes.getPassportStorage();
     _pushCheckpoint(self.delegatorToDelegatee[delegator], address(0));
     _pushCheckpoint(self.delegateeToDelegator[delegatee], address(0));
 
@@ -429,59 +443,59 @@ library PassportDelegationLogic {
 
   /// @notice Checks if user is a delegatee at a specific timepoint
   function _isDelegateeInTimepoint(
+    PassportStorageTypesV4.PassportStorage storage self,
     address user,
     uint256 timepoint
   ) internal view returns (bool) {
-    PassportStorageTypes.PassportStorage storage self = PassportStorageTypes.getPassportStorage();
     return self.delegateeToDelegator[user].upperLookupRecent(SafeCast.toUint48(timepoint)) != 0;
   }
 
   /// @notice Returns the delegator for a given delegatee.
   function _getDelegatorInTimepoint(
+    PassportStorageTypesV4.PassportStorage storage self,
     address delegatee,
     uint256 timepoint
   ) internal view returns (address) {
-    PassportStorageTypes.PassportStorage storage self = PassportStorageTypes.getPassportStorage();
     return _addressFromUint160(self.delegateeToDelegator[delegatee].upperLookupRecent(SafeCast.toUint48(timepoint)));
   }
 
   /// @notice Checks if the given user is a delegator at a specific timepoint.
   function _isDelegatorInTimepoint(
+    PassportStorageTypesV4.PassportStorage storage self,
     address user,
     uint256 timepoint
   ) internal view returns (bool) {
-    PassportStorageTypes.PassportStorage storage self = PassportStorageTypes.getPassportStorage();
     return self.delegatorToDelegatee[user].upperLookupRecent(SafeCast.toUint48(timepoint)) != 0;
   }
 
   function _checkDelegation(
+    PassportStorageTypesV4.PassportStorage storage self,
     address delegator,
     address delegatee
   ) private {
-    PassportStorageTypes.PassportStorage storage self = PassportStorageTypes.getPassportStorage();
     // Check if the delegator is trying to delegate to themselves
     if (delegator == delegatee) {
       revert CannotDelegateToSelf(delegator);
     }
 
     // Check if the delegator is an entity linked to a passport or has a pending link
-    if (PassportEntityLogic.isEntity(delegator) || self.pendingLinksEntityToPassport[delegator] != address(0)) {
+    if (PassportEntityLogicV4.isEntity(self, delegator) || self.pendingLinksEntityToPassport[delegator] != address(0)) {
       revert PassportDelegationFromEntity();
     }
 
     // Check if the delegatee is an entity linked to a passport or has a pending link
-    if (PassportEntityLogic.isEntity(delegatee) || self.pendingLinksEntityToPassport[delegatee] != address(0)) {
+    if (PassportEntityLogicV4.isEntity(self, delegatee) || self.pendingLinksEntityToPassport[delegatee] != address(0)) {
       revert PassportDelegationToEntity();
     }
 
     // Check if the passport has already been delegated removing the previous delegation
-    if (isDelegator(delegator)) {
-      _removeDelegation(delegator, _addressFromUint160(self.delegatorToDelegatee[delegator].latest()));
+    if (isDelegator(self, delegator)) {
+      _removeDelegation(self, delegator, _addressFromUint160(self.delegatorToDelegatee[delegator].latest()));
     }
 
     // Check if the passport is already pending delegation
     if (self.pendingDelegationsDelegatorToDelegatee[delegator] != address(0)) {
-      _removePendingDelegation(delegator, self.pendingDelegationsDelegatorToDelegatee[delegator]);
+      _removePendingDelegation(self, delegator, self.pendingDelegationsDelegatorToDelegatee[delegator]);
     }
   }
 }

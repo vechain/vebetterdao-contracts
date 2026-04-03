@@ -23,17 +23,17 @@
 
 pragma solidity 0.8.20;
 
-import { PassportStorageTypes } from "./PassportStorageTypes.sol";
-import { PassportTypes } from "./PassportTypes.sol";
+import { PassportStorageTypesV4 } from "./PassportStorageTypesV4.sol";
+import { PassportTypesV4 } from "./PassportTypesV4.sol";
 
 /**
- * @title PassportChecksLogic
+ * @title PassportChecksLogicV4
  * @dev A library that manages various checks related to personhood in the Passport contract.
  * It provides the ability to enable or disable specific personhood checks (such as whitelist, blacklist, signaling, etc.)
  * and to update certain configurations such as the minimum Galaxy Member level.
  * This library operates using a bitmask for efficient storage and toggling of checks.
  */
-library PassportChecksLogic {
+library PassportChecksLogicV4 {
   // ---------- Consants ---------- //
   uint256 constant WHITELIST_CHECK = 1 << 0; // Bitwise shift to the left by 0
   uint256 constant BLACKLIST_CHECK = 1 << 1; // Bitwise shift to the left by 1
@@ -59,27 +59,27 @@ library PassportChecksLogic {
 
   // ---------- Private Functions ---------- //
 
-  /// @notice Maps the PassportTypes.CheckType enum to the corresponding bitmask constant.
+  /// @notice Maps the PassportTypesV4.CheckType enum to the corresponding bitmask constant.
   /// @param checkType The type of check from the enum.
   /// @return The bitmask constant and the check name for the specified check.
-  function _mapCheckTypeToBitmask(PassportTypes.CheckType checkType) private pure returns (uint256, string memory) {
-    if (checkType == PassportTypes.CheckType.WHITELIST_CHECK) return (WHITELIST_CHECK, WHITELIST_CHECK_NAME);
-    if (checkType == PassportTypes.CheckType.BLACKLIST_CHECK) return (BLACKLIST_CHECK, BLACKLIST_CHECK_NAME);
-    if (checkType == PassportTypes.CheckType.SIGNALING_CHECK) return (SIGNALING_CHECK, SIGNALING_CHECK_NAME);
-    if (checkType == PassportTypes.CheckType.PARTICIPATION_SCORE_CHECK)
+  function _mapCheckTypeToBitmask(PassportTypesV4.CheckType checkType) private pure returns (uint256, string memory) {
+    if (checkType == PassportTypesV4.CheckType.WHITELIST_CHECK) return (WHITELIST_CHECK, WHITELIST_CHECK_NAME);
+    if (checkType == PassportTypesV4.CheckType.BLACKLIST_CHECK) return (BLACKLIST_CHECK, BLACKLIST_CHECK_NAME);
+    if (checkType == PassportTypesV4.CheckType.SIGNALING_CHECK) return (SIGNALING_CHECK, SIGNALING_CHECK_NAME);
+    if (checkType == PassportTypesV4.CheckType.PARTICIPATION_SCORE_CHECK)
       return (PARTICIPATION_SCORE_CHECK, PARTICIPATION_SCORE_CHECK_NAME);
-    if (checkType == PassportTypes.CheckType.GM_OWNERSHIP_CHECK) return (GM_OWNERSHIP_CHECK, GM_OWNERSHIP_CHECK_NAME);
-    revert("Invalid PassportTypes");
+    if (checkType == PassportTypesV4.CheckType.GM_OWNERSHIP_CHECK) return (GM_OWNERSHIP_CHECK, GM_OWNERSHIP_CHECK_NAME);
+    revert("Invalid PassportTypesV4");
   }
 
   /// @notice Checks if a specific check is enabled
   /// @param checkType The type of check to query (from the enum)
   /// @return True if the check is enabled, false otherwise
   function _isCheckEnabled(
-    PassportTypes.CheckType checkType
+    PassportStorageTypesV4.PassportStorage storage self,
+    PassportTypesV4.CheckType checkType
   ) internal view returns (bool) {
-    PassportStorageTypes.PassportStorage storage self = PassportStorageTypes.getPassportStorage();
-    require(checkType != PassportTypes.CheckType.UNDEFINED, "Invalid check type");
+    require(checkType != PassportTypesV4.CheckType.UNDEFINED, "Invalid check type");
 
     (uint256 checkBit, ) = _mapCheckTypeToBitmask(checkType);
     return (self.personhoodChecks & checkBit) != 0;
@@ -88,26 +88,29 @@ library PassportChecksLogic {
   // ---------- Getters ---------- //
 
   /// @notice Checks if a specific check is enabled.
+  /// @param self The storage object for the Passport contract containing all checks.
   /// @param checkType The type of check to query (from the enum).
   /// @return True if the check is enabled, false otherwise.
   function isCheckEnabled(
-    PassportTypes.CheckType checkType
+    PassportStorageTypesV4.PassportStorage storage self,
+    PassportTypesV4.CheckType checkType
   ) external view returns (bool) {
-    return _isCheckEnabled(checkType);
+    return _isCheckEnabled(self, checkType);
   }
 
   /// @notice Returns the minimum galaxy member level
-  function getMinimumGalaxyMemberLevel() internal view returns (uint256) {
-    PassportStorageTypes.PassportStorage storage self = PassportStorageTypes.getPassportStorage();
+  function getMinimumGalaxyMemberLevel(
+    PassportStorageTypesV4.PassportStorage storage self
+  ) internal view returns (uint256) {
     return self.minimumGalaxyMemberLevel;
   }
 
   // ---------- Setters ---------- //
   /// @notice Toggles the specified check between enabled and disabled.
+  /// @param self The storage object for the Passport contract containing all checks.
   /// @param checkType The type of check to toggle (from the enum).
-  function toggleCheck(PassportTypes.CheckType checkType) external {
-    PassportStorageTypes.PassportStorage storage self = PassportStorageTypes.getPassportStorage();
-    require(checkType != PassportTypes.CheckType.UNDEFINED, "Invalid check type");
+  function toggleCheck(PassportStorageTypesV4.PassportStorage storage self, PassportTypesV4.CheckType checkType) external {
+    require(checkType != PassportTypesV4.CheckType.UNDEFINED, "Invalid check type");
 
     (uint256 checkBit, string memory checkName) = _mapCheckTypeToBitmask(checkType);
 
@@ -126,10 +129,10 @@ library PassportChecksLogic {
   /// @notice Sets the minimum galaxy member level
   /// @param minimumGalaxyMemberLevel The new minimum galaxy member level
   function setMinimumGalaxyMemberLevel(
+    PassportStorageTypesV4.PassportStorage storage self,
     uint256 minimumGalaxyMemberLevel
   ) external {
-    PassportStorageTypes.PassportStorage storage self = PassportStorageTypes.getPassportStorage();
-    require(minimumGalaxyMemberLevel > 0, "VeBetterPassport: minimum galaxy member level must be greater than 0");
+    require(minimumGalaxyMemberLevel > 0, "VeBetterPassportV4: minimum galaxy member level must be greater than 0");
 
     self.minimumGalaxyMemberLevel = minimumGalaxyMemberLevel;
     emit MinimumGalaxyMemberLevelSet(minimumGalaxyMemberLevel);

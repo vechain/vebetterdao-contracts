@@ -143,7 +143,7 @@ describe("VeBetterPassport Upgrades - @shard8d", function () {
         forceDeploy: true,
       })
 
-      expect(await veBetterPassport.version()).to.equal("4")
+      expect(await veBetterPassport.version()).to.equal("5")
     })
     it("Should not be able to initialize twice", async function () {
       const config = createTestConfig()
@@ -2372,180 +2372,6 @@ describe("VeBetterPassport Entities - @shard8e", function () {
 
       expect(await veBetterPassport.userRoundScore(otherAccount, 6)).to.equal(0)
       expect(await veBetterPassport.userRoundScore(passport, 6)).to.equal(100)
-    })
-
-    it("Should register aggregated actions for a round correctly", async function () {
-      const {
-        veBetterPassport,
-        owner,
-        x2EarnApps,
-        b3tr,
-        otherAccounts,
-        xAllocationVoting,
-        x2EarnRewardsPool,
-        minterAccount,
-        creators,
-      } = await getOrDeployContractInstances({
-        forceDeploy: true,
-      })
-
-      const user1 = otherAccounts[0]
-      const user2 = otherAccounts[1]
-      const creator1 = creators[0]
-      const creator2 = creators[1]
-
-      // Add 3 apps FIRST (before bootstrap) so they're eligible for all rounds
-      const app1Id = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[2].address))
-      await x2EarnApps
-        .connect(owner)
-        .submitApp(otherAccounts[2].address, otherAccounts[2].address, otherAccounts[2].address, "metadataURI")
-      const app2Id = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[3].address))
-      await x2EarnApps
-        .connect(creator1)
-        .submitApp(otherAccounts[3].address, otherAccounts[3].address, otherAccounts[3].address, "metadataURI")
-      const app3Id = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[4].address))
-      await x2EarnApps
-        .connect(creator2)
-        .submitApp(otherAccounts[4].address, otherAccounts[4].address, otherAccounts[4].address, "metadataURI")
-
-      // Endorse apps before bootstrapping so they're eligible from round 1
-      await endorseApp(app1Id, otherAccounts[2])
-      await endorseApp(app2Id, otherAccounts[3])
-      await endorseApp(app3Id, otherAccounts[4])
-
-      // Bootstrap emissions after apps are endorsed
-      await bootstrapAndStartEmissions()
-      // simulate 5 rounds of actions - apps are now eligible for these rounds
-      await moveToCycle(6)
-
-      // Set apps security to LOW
-      await veBetterPassport.connect(owner).setAppSecurity(app1Id, 1)
-      await veBetterPassport.connect(owner).setAppSecurity(app2Id, 1)
-      await veBetterPassport.connect(owner).setAppSecurity(app3Id, 1)
-
-      // Owner can distribute rewards for all apps
-      await x2EarnApps.connect(owner).addRewardDistributor(app1Id, owner.address)
-      expect(await x2EarnApps.isRewardDistributor(app1Id, owner.address)).to.equal(true)
-      await x2EarnApps.connect(owner).addRewardDistributor(app2Id, owner.address)
-      expect(await x2EarnApps.isRewardDistributor(app2Id, owner.address)).to.equal(true)
-      await x2EarnApps.connect(owner).addRewardDistributor(app3Id, owner.address)
-      expect(await x2EarnApps.isRewardDistributor(app3Id, owner.address)).to.equal(true)
-
-      // fill the pool
-      await b3tr.connect(minterAccount).mint(owner.address, ethers.parseEther("100"))
-      await b3tr.connect(owner).approve(await x2EarnRewardsPool.getAddress(), ethers.parseEther("100"))
-      await x2EarnRewardsPool.connect(owner).deposit(ethers.parseEther("30"), app1Id)
-      await x2EarnRewardsPool.connect(owner).deposit(ethers.parseEther("30"), app2Id)
-      await x2EarnRewardsPool.connect(owner).deposit(ethers.parseEther("30"), app3Id)
-
-      const currentRound = await xAllocationVoting.currentRoundId()
-      const currentBlock = await ethers.provider.getBlockNumber()
-      const currentRoundSnapshot = await xAllocationVoting.currentRoundSnapshot()
-      const currentRoundDeadline = await xAllocationVoting.currentRoundDeadline()
-      expect(currentRound).to.equal(5n)
-      expect(currentBlock > currentRoundSnapshot && currentBlock < currentRoundDeadline).to.be.true
-
-      expect(await x2EarnApps.isAppAdmin(app1Id, otherAccounts[2].address)).to.equal(true)
-      expect(await x2EarnApps.isAppAdmin(app2Id, otherAccounts[3].address)).to.equal(true)
-      expect(await x2EarnApps.isAppAdmin(app3Id, otherAccounts[4].address)).to.equal(true)
-
-      // // x2EarnApps V4 introduced a default rewards pool for each new app
-      // // For backwards compatibility, we need to disable the default rewards pool for the apps created in this test
-      await x2EarnRewardsPool.connect(otherAccounts[2]).toggleRewardsPoolBalance(app1Id, false)
-      await x2EarnRewardsPool.connect(otherAccounts[3]).toggleRewardsPoolBalance(app2Id, false)
-      await x2EarnRewardsPool.connect(otherAccounts[4]).toggleRewardsPoolBalance(app3Id, false)
-
-      // Let's assume we deployed VeBetterPassport in the middle of the 5th round
-      // and we want to register the actions for the first 4 rounds aggregating data offchain.
-      // Scenario:
-      // User 1 used app1 4 times, app2 2 times and app3 never (distributed in multiple rounds), before deploying VBP
-      // User 2 used app1 2 times, app2 2 times and app3 2 times (distributed in multiple rounds), before deploying VBP
-
-      // Simulate that while we seed old actions, User1 uses app2 1 more time and app3 1 time
-      await x2EarnRewardsPool.connect(owner).distributeReward(app2Id, ethers.parseEther("1"), user1.address, "0x")
-      await x2EarnRewardsPool.connect(owner).distributeReward(app3Id, ethers.parseEther("1"), user1.address, "0x")
-
-      // Now we seed old aggregated actions for the first 4 rounds and part of the 5th
-      await veBetterPassport.connect(owner).registerAggregatedActionsForRound(user1.address, app1Id, 1, 200) // user1 used app1 2 times in round 1
-      await veBetterPassport.connect(owner).registerAggregatedActionsForRound(user1.address, app1Id, 2, 200) // user1 used app1 2 times in round 2
-      await veBetterPassport.connect(owner).registerAggregatedActionsForRound(user1.address, app2Id, 2, 100) // user1 used app2 1 time in round 2
-      await veBetterPassport.connect(owner).registerAggregatedActionsForRound(user1.address, app2Id, 5, 100) // user1 used app2 1 time in round 2
-
-      await veBetterPassport.connect(owner).registerAggregatedActionsForRound(user2.address, app3Id, 1, 100) // user2 used app3 1 time in round 1
-      await veBetterPassport.connect(owner).registerAggregatedActionsForRound(user2.address, app1Id, 3, 100) // user2 used app1 1 time in round 3
-      await veBetterPassport.connect(owner).registerAggregatedActionsForRound(user2.address, app3Id, 3, 100) // user2 used app3 1 time in round 3
-      await veBetterPassport.connect(owner).registerAggregatedActionsForRound(user2.address, app1Id, 4, 100) // user2 used app1 1 time in round 4
-      await veBetterPassport.connect(owner).registerAggregatedActionsForRound(user2.address, app2Id, 5, 200) // user2 used app2 2 time in round 5
-
-      // At the end this should be the result:
-      // user1:
-      //   round 1: 200, using app1 2 times
-      //   round 2: 200 + 100 = 300, using app1 2 times and app2 1 time
-      //   round 3: 0
-      //   round 4: 0
-      //   round 5: 200 + 100 = 300, using app1 1 time, app2 1 time, app3 1 time
-      // user2:
-      //   round 1: 100, using app1 1 time
-      //   round 2: 0
-      //   round 3: 100 + 100 = 200, using app1 1 time and app3 1 time
-      //   round 4: 100, using app1 1 time
-      //   round 5: 100 + 100 = 200, using app2 2 times
-      //
-      // Now we should check that the following mappings were updated correctly in the contract:
-      // userRoundScore[passport][round]
-      // userTotalScore[passport]
-      // userAppRoundScore[passport][round][appId]
-      // userAppTotalScore[passport][appId]
-      //user1
-      expect(await veBetterPassport.userRoundScore(user1.address, 1)).to.equal(200n)
-      expect(await veBetterPassport.userRoundScore(user1.address, 2)).to.equal(300n)
-      expect(await veBetterPassport.userRoundScore(user1.address, 3)).to.equal(0n)
-      expect(await veBetterPassport.userRoundScore(user1.address, 4)).to.equal(0n)
-      expect(await veBetterPassport.userRoundScore(user1.address, 5)).to.equal(300n)
-      expect(await veBetterPassport.userTotalScore(user1.address)).to.equal(800n)
-      expect(await veBetterPassport.userRoundScoreApp(user1.address, 1, app1Id)).to.equal(200n)
-      expect(await veBetterPassport.userRoundScoreApp(user1.address, 1, app2Id)).to.equal(0n)
-      expect(await veBetterPassport.userRoundScoreApp(user1.address, 1, app3Id)).to.equal(0n)
-      expect(await veBetterPassport.userRoundScoreApp(user1.address, 2, app1Id)).to.equal(200n)
-      expect(await veBetterPassport.userRoundScoreApp(user1.address, 2, app2Id)).to.equal(100n)
-      expect(await veBetterPassport.userRoundScoreApp(user1.address, 2, app3Id)).to.equal(0n)
-      expect(await veBetterPassport.userRoundScoreApp(user1.address, 3, app1Id)).to.equal(0n)
-      expect(await veBetterPassport.userRoundScoreApp(user1.address, 3, app2Id)).to.equal(0n)
-      expect(await veBetterPassport.userRoundScoreApp(user1.address, 3, app3Id)).to.equal(0n)
-      expect(await veBetterPassport.userRoundScoreApp(user1.address, 4, app1Id)).to.equal(0n)
-      expect(await veBetterPassport.userRoundScoreApp(user1.address, 4, app2Id)).to.equal(0n)
-      expect(await veBetterPassport.userRoundScoreApp(user1.address, 4, app3Id)).to.equal(0n)
-      expect(await veBetterPassport.userRoundScoreApp(user1.address, 5, app1Id)).to.equal(0n)
-      expect(await veBetterPassport.userRoundScoreApp(user1.address, 5, app2Id)).to.equal(200n)
-      expect(await veBetterPassport.userRoundScoreApp(user1.address, 5, app3Id)).to.equal(100n)
-      expect(await veBetterPassport.userAppTotalScore(user1.address, app1Id)).to.equal(400n)
-      expect(await veBetterPassport.userAppTotalScore(user1.address, app2Id)).to.equal(300n)
-      expect(await veBetterPassport.userAppTotalScore(user1.address, app3Id)).to.equal(100n)
-      //user2
-      expect(await veBetterPassport.userRoundScore(user2.address, 1)).to.equal(100n)
-      expect(await veBetterPassport.userRoundScore(user2.address, 2)).to.equal(0n)
-      expect(await veBetterPassport.userRoundScore(user2.address, 3)).to.equal(200n)
-      expect(await veBetterPassport.userRoundScore(user2.address, 4)).to.equal(100n)
-      expect(await veBetterPassport.userRoundScore(user2.address, 5)).to.equal(200n)
-      expect(await veBetterPassport.userTotalScore(user2.address)).to.equal(600n)
-      expect(await veBetterPassport.userRoundScoreApp(user2.address, 1, app1Id)).to.equal(0n)
-      expect(await veBetterPassport.userRoundScoreApp(user2.address, 1, app2Id)).to.equal(0n)
-      expect(await veBetterPassport.userRoundScoreApp(user2.address, 1, app3Id)).to.equal(100n)
-      expect(await veBetterPassport.userRoundScoreApp(user2.address, 2, app1Id)).to.equal(0n)
-      expect(await veBetterPassport.userRoundScoreApp(user2.address, 2, app2Id)).to.equal(0n)
-      expect(await veBetterPassport.userRoundScoreApp(user2.address, 2, app3Id)).to.equal(0n)
-      expect(await veBetterPassport.userRoundScoreApp(user2.address, 3, app1Id)).to.equal(100n)
-      expect(await veBetterPassport.userRoundScoreApp(user2.address, 3, app2Id)).to.equal(0n)
-      expect(await veBetterPassport.userRoundScoreApp(user2.address, 3, app3Id)).to.equal(100n)
-      expect(await veBetterPassport.userRoundScoreApp(user2.address, 4, app1Id)).to.equal(100n)
-      expect(await veBetterPassport.userRoundScoreApp(user2.address, 4, app2Id)).to.equal(0n)
-      expect(await veBetterPassport.userRoundScoreApp(user2.address, 4, app3Id)).to.equal(0n)
-      expect(await veBetterPassport.userRoundScoreApp(user2.address, 5, app1Id)).to.equal(0n)
-      expect(await veBetterPassport.userRoundScoreApp(user2.address, 5, app2Id)).to.equal(200n)
-      expect(await veBetterPassport.userRoundScoreApp(user2.address, 5, app3Id)).to.equal(0n)
-      expect(await veBetterPassport.userAppTotalScore(user2.address, app1Id)).to.equal(200n)
-      expect(await veBetterPassport.userAppTotalScore(user2.address, app2Id)).to.equal(200n)
-      expect(await veBetterPassport.userAppTotalScore(user2.address, app3Id)).to.equal(200n)
     })
 
     it("Should remove an enities score correctly", async function () {
@@ -5061,6 +4887,120 @@ describe("VeBetterPassport - @shard16-pop", function () {
       expect(await veBetterPassport.userRoundScore(otherAccount, await xAllocationVoting.currentRoundId())).to.equal(
         100,
       )
+    })
+
+    describe("userRoundActionCountApp", function () {
+      it("counts one per successful registration for same user, app, and round", async function () {
+        const { veBetterPassport, owner, x2EarnApps, otherAccount, otherAccounts } = await getOrDeployContractInstances(
+          {
+            forceDeploy: true,
+          },
+        )
+
+        const app1Id = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[2].address))
+        await x2EarnApps
+          .connect(owner)
+          .submitApp(otherAccounts[2].address, otherAccounts[2].address, otherAccounts[2].address, "metadataURI")
+
+        await endorseApp(app1Id, otherAccounts[2])
+
+        await veBetterPassport.grantRole(await veBetterPassport.ACTION_SCORE_MANAGER_ROLE(), owner)
+        await veBetterPassport.grantRole(await veBetterPassport.ACTION_REGISTRAR_ROLE(), owner)
+        await veBetterPassport.connect(owner).setAppSecurity(app1Id, 1)
+
+        await veBetterPassport.connect(owner).registerActionForRound(otherAccount, app1Id, 1)
+        await veBetterPassport.connect(owner).registerActionForRound(otherAccount, app1Id, 1)
+        await veBetterPassport.connect(owner).registerActionForRound(otherAccount, app1Id, 1)
+
+        expect(await veBetterPassport.userRoundActionCountApp(otherAccount.address, 1, app1Id)).to.equal(3)
+        expect(await veBetterPassport.userRoundScoreApp(otherAccount.address, 1, app1Id)).to.equal(300)
+      })
+
+      it("tracks counts separately per app in the same round", async function () {
+        const { veBetterPassport, owner, x2EarnApps, otherAccount, otherAccounts, creators } =
+          await getOrDeployContractInstances({
+            forceDeploy: true,
+          })
+        const creator1 = creators[0]
+
+        const app1Id = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[2].address))
+        await x2EarnApps
+          .connect(owner)
+          .submitApp(otherAccounts[2].address, otherAccounts[2].address, otherAccounts[2].address, "metadataURI")
+        await endorseApp(app1Id, otherAccounts[2])
+
+        const app2Id = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[3].address))
+        await x2EarnApps
+          .connect(creator1)
+          .submitApp(otherAccounts[3].address, otherAccounts[3].address, otherAccounts[3].address, "metadataURI")
+        await endorseApp(app2Id, otherAccounts[3])
+
+        await veBetterPassport.grantRole(await veBetterPassport.ACTION_SCORE_MANAGER_ROLE(), owner)
+        await veBetterPassport.grantRole(await veBetterPassport.ACTION_REGISTRAR_ROLE(), owner)
+        await veBetterPassport.connect(owner).setAppSecurity(app1Id, 1)
+        await veBetterPassport.connect(owner).setAppSecurity(app2Id, 1)
+
+        await veBetterPassport.connect(owner).registerActionForRound(otherAccount, app1Id, 1)
+        await veBetterPassport.connect(owner).registerActionForRound(otherAccount, app2Id, 1)
+        await veBetterPassport.connect(owner).registerActionForRound(otherAccount, app1Id, 1)
+
+        expect(await veBetterPassport.userRoundActionCountApp(otherAccount.address, 1, app1Id)).to.equal(2)
+        expect(await veBetterPassport.userRoundActionCountApp(otherAccount.address, 1, app2Id)).to.equal(1)
+      })
+
+      it("attributes entity registrations to the linked passport", async function () {
+        const { veBetterPassport, owner, x2EarnApps, otherAccounts } = await getOrDeployContractInstances({
+          forceDeploy: true,
+        })
+
+        const passport = otherAccounts[0]
+        const entity = otherAccounts[1]
+
+        const app1Id = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[2].address))
+        await x2EarnApps
+          .connect(owner)
+          .submitApp(otherAccounts[2].address, otherAccounts[2].address, otherAccounts[2].address, "metadataURI")
+        await endorseApp(app1Id, otherAccounts[2])
+
+        await veBetterPassport.grantRole(await veBetterPassport.ACTION_SCORE_MANAGER_ROLE(), owner)
+        await veBetterPassport.grantRole(await veBetterPassport.ACTION_REGISTRAR_ROLE(), owner)
+        await veBetterPassport.connect(owner).setAppSecurity(app1Id, 1)
+
+        await linkEntityToPassportWithSignature(veBetterPassport, passport, entity, 1000)
+
+        await veBetterPassport.connect(owner).registerActionForRound(entity, app1Id, 1)
+        await veBetterPassport.connect(owner).registerActionForRound(entity, app1Id, 1)
+
+        expect(await veBetterPassport.userRoundActionCountApp(passport.address, 1, app1Id)).to.equal(2)
+        expect(await veBetterPassport.userRoundActionCountApp(entity.address, 1, app1Id)).to.equal(0)
+      })
+
+      it("does not increment action count when user is blacklisted", async function () {
+        const { veBetterPassport, owner, x2EarnApps, otherAccount, otherAccounts } = await getOrDeployContractInstances(
+          {
+            forceDeploy: true,
+          },
+        )
+
+        const app1Id = ethers.keccak256(ethers.toUtf8Bytes(otherAccounts[2].address))
+        await x2EarnApps
+          .connect(owner)
+          .submitApp(otherAccounts[2].address, otherAccounts[2].address, otherAccounts[2].address, "metadataURI")
+        await endorseApp(app1Id, otherAccounts[2])
+
+        await veBetterPassport.grantRole(await veBetterPassport.ACTION_SCORE_MANAGER_ROLE(), owner)
+        await veBetterPassport.grantRole(await veBetterPassport.ACTION_REGISTRAR_ROLE(), owner)
+        await veBetterPassport.connect(owner).setAppSecurity(app1Id, 1)
+
+        await veBetterPassport.connect(owner).registerActionForRound(otherAccount, app1Id, 1)
+        expect(await veBetterPassport.userRoundActionCountApp(otherAccount.address, 1, app1Id)).to.equal(1)
+
+        await veBetterPassport.connect(owner).blacklist(otherAccount.address)
+        await veBetterPassport.connect(owner).registerActionForRound(otherAccount, app1Id, 2)
+
+        expect(await veBetterPassport.userRoundActionCountApp(otherAccount.address, 1, app1Id)).to.equal(1)
+        expect(await veBetterPassport.userRoundActionCountApp(otherAccount.address, 2, app1Id)).to.equal(0)
+      })
     })
 
     it("Should correctly calculate cumulative score", async function () {

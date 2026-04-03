@@ -26,6 +26,7 @@ import {
   VeBetterPassportV2,
   B3TRMultiSig,
   VeBetterPassportV3,
+  VeBetterPassportV4,
   StargateNFT,
   GrantsManager,
   GrantsManagerV1,
@@ -78,6 +79,7 @@ export interface DeployInstance
   veBetterPassportV1: VeBetterPassportV1
   veBetterPassportV2: VeBetterPassportV2
   veBetterPassportV3: VeBetterPassportV3
+  veBetterPassportV4: VeBetterPassportV4
   dynamicBaseAllocationPool: DBAPool
   owner: HardhatEthersSigner
   otherAccount: HardhatEthersSigner
@@ -247,7 +249,16 @@ export const getOrDeployContractInstances = async ({
     PassportPoPScoreLogicV1,
     PassportSignalingLogicV1,
     PassportWhitelistAndBlacklistLogicV1,
-    // V4 (latest)
+    // V4
+    PassportChecksLogicV4,
+    PassportConfiguratorV4,
+    PassportEntityLogicV4,
+    PassportDelegationLogicV4,
+    PassportPersonhoodLogicV4,
+    PassportPoPScoreLogicV4,
+    PassportSignalingLogicV4,
+    PassportWhitelistAndBlacklistLogicV4,
+    // V5 (latest)
     PassportChecksLogic,
     PassportConfigurator,
     PassportEntityLogic,
@@ -776,14 +787,35 @@ export const getOrDeployContractInstances = async ({
     },
   )) as VeBetterPassportV3
 
-  // V4 (latest version)
-  const veBetterPassport = (await upgradeProxy(
+  // V4 (intermediate)
+  const veBetterPassportV4 = (await upgradeProxy(
     "VeBetterPassportV3",
+    "VeBetterPassportV4",
+    await veBetterPassportV1.getAddress(), // Proxy address remains the same
+    [config.CONTRACTS_ADMIN_ADDRESS], // initializeV4: resetSignaler address
+    {
+      version: 4,
+      libraries: {
+        PassportChecksLogicV4: await PassportChecksLogicV4.getAddress(),
+        PassportConfiguratorV4: await PassportConfiguratorV4.getAddress(),
+        PassportEntityLogicV4: await PassportEntityLogicV4.getAddress(),
+        PassportDelegationLogicV4: await PassportDelegationLogicV4.getAddress(),
+        PassportPersonhoodLogicV4: await PassportPersonhoodLogicV4.getAddress(),
+        PassportPoPScoreLogicV4: await PassportPoPScoreLogicV4.getAddress(),
+        PassportSignalingLogicV4: await PassportSignalingLogicV4.getAddress(),
+        PassportWhitelistAndBlacklistLogicV4: await PassportWhitelistAndBlacklistLogicV4.getAddress(),
+      },
+    },
+  )) as VeBetterPassportV4
+
+  // V5 (latest version)
+  const veBetterPassport = (await upgradeProxy(
+    "VeBetterPassportV4",
     "VeBetterPassport",
     await veBetterPassportV1.getAddress(), // Proxy address remains the same
     [],
     {
-      version: 4,
+      version: 5,
       libraries: {
         PassportChecksLogic: await PassportChecksLogic.getAddress(),
         PassportConfigurator: await PassportConfigurator.getAddress(),
@@ -1216,6 +1248,7 @@ export const getOrDeployContractInstances = async ({
     veBetterPassportV1,
     veBetterPassportV2,
     veBetterPassportV3,
+    veBetterPassportV4,
     b3trMultiSig,
     governorClockLogicLib: GovernorClockLogicLib,
     governorConfiguratorLib: GovernorConfiguratorLib,
@@ -1321,6 +1354,14 @@ export const getOrDeployContractInstances = async ({
     passportPoPScoreLogicV3: PassportPoPScoreLogicV3,
     passportSignalingLogicV3: PassportSignalingLogicV3,
     passportWhitelistAndBlacklistLogicV3: PassportWhitelistAndBlacklistLogicV3,
+    passportChecksLogicV4: PassportChecksLogicV4,
+    passportConfiguratorV4: PassportConfiguratorV4,
+    passportEntityLogicV4: PassportEntityLogicV4,
+    passportDelegationLogicV4: PassportDelegationLogicV4,
+    passportPersonhoodLogicV4: PassportPersonhoodLogicV4,
+    passportPoPScoreLogicV4: PassportPoPScoreLogicV4,
+    passportSignalingLogicV4: PassportSignalingLogicV4,
+    passportWhitelistAndBlacklistLogicV4: PassportWhitelistAndBlacklistLogicV4,
     administrationUtils: AdministrationUtils,
     endorsementUtils: EndorsementUtils,
     voteEligibilityUtils: VoteEligibilityUtils,

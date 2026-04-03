@@ -2,11 +2,17 @@ import { deployProxyOnly, initializeProxy, upgradeProxy } from "../../scripts/he
 import { getOrDeployContractInstances } from "../helpers/deploy"
 import { expect } from "chai"
 import { describe, it } from "mocha"
-import { VeBetterPassportV1, VeBetterPassportV2, VeBetterPassportV3, VeBetterPassport } from "../../typechain-types"
+import {
+  VeBetterPassportV1,
+  VeBetterPassportV2,
+  VeBetterPassportV3,
+  VeBetterPassportV4,
+  VeBetterPassport,
+} from "../../typechain-types"
 import { createTestConfig } from "../helpers/config"
 
 describe("VeBetterPassport Upgrade - @shard8a", function () {
-  it("Should upgrade from V1 -> V2 -> V3 -> V4 (latest) and preserve storage", async function () {
+  it("Should upgrade from V1 -> V2 -> V3 -> V4 -> V5 (latest) and preserve storage", async function () {
     const config = createTestConfig()
     const {
       owner,
@@ -36,6 +42,14 @@ describe("VeBetterPassport Upgrade - @shard8a", function () {
       passportSignalingLogicV3,
       passportWhitelistAndBlacklistLogicV3,
       passportEntityLogicV3,
+      passportChecksLogicV4,
+      passportConfiguratorV4,
+      passportDelegationLogicV4,
+      passportPersonhoodLogicV4,
+      passportPoPScoreLogicV4,
+      passportSignalingLogicV4,
+      passportWhitelistAndBlacklistLogicV4,
+      passportEntityLogicV4,
       passportChecksLogic,
       passportConfigurator,
       passportDelegationLogic,
@@ -154,14 +168,37 @@ describe("VeBetterPassport Upgrade - @shard8a", function () {
       },
     )) as VeBetterPassportV3
 
-    // Upgrade V3 -> V4 (latest)
+    // Upgrade V3 -> V4
     const veBetterPassportV4 = (await upgradeProxy(
       "VeBetterPassportV3",
-      "VeBetterPassport",
+      "VeBetterPassportV4",
       await veBetterPassportV3.getAddress(),
       [config.CONTRACTS_ADMIN_ADDRESS], // initializeV4: resetSignaler address
       {
         version: 4,
+        libraries: {
+          PassportChecksLogicV4: await passportChecksLogicV4.getAddress(),
+          PassportConfiguratorV4: await passportConfiguratorV4.getAddress(),
+          PassportEntityLogicV4: await passportEntityLogicV4.getAddress(),
+          PassportDelegationLogicV4: await passportDelegationLogicV4.getAddress(),
+          PassportPersonhoodLogicV4: await passportPersonhoodLogicV4.getAddress(),
+          PassportPoPScoreLogicV4: await passportPoPScoreLogicV4.getAddress(),
+          PassportSignalingLogicV4: await passportSignalingLogicV4.getAddress(),
+          PassportWhitelistAndBlacklistLogicV4: await passportWhitelistAndBlacklistLogicV4.getAddress(),
+        },
+      },
+    )) as VeBetterPassportV4
+
+    expect(await veBetterPassportV4.version()).to.equal("4")
+
+    // Upgrade V4 -> V5 (latest)
+    const veBetterPassportV5 = (await upgradeProxy(
+      "VeBetterPassportV4",
+      "VeBetterPassport",
+      await veBetterPassportV4.getAddress(),
+      [],
+      {
+        version: 5,
         libraries: {
           PassportChecksLogic: await passportChecksLogic.getAddress(),
           PassportConfigurator: await passportConfigurator.getAddress(),
@@ -175,7 +212,7 @@ describe("VeBetterPassport Upgrade - @shard8a", function () {
       },
     )) as VeBetterPassport
 
-    expect(await veBetterPassportV4.version()).to.equal("4")
+    expect(await veBetterPassportV5.version()).to.equal("5")
 
     const adminRoleV1 = await veBetterPassportV1.DEFAULT_ADMIN_ROLE()
     const ownerHasAdminV1 = await veBetterPassportV1.hasRole(adminRoleV1, owner.address)
@@ -193,6 +230,10 @@ describe("VeBetterPassport Upgrade - @shard8a", function () {
     const ownerHasAdminV4 = await veBetterPassportV4.hasRole(adminRoleV4, owner.address)
     const thresholdV4 = await veBetterPassportV4.thresholdPoPScore()
 
+    const adminRoleV5 = await veBetterPassportV5.DEFAULT_ADMIN_ROLE()
+    const ownerHasAdminV5 = await veBetterPassportV5.hasRole(adminRoleV5, owner.address)
+    const thresholdV5 = await veBetterPassportV5.thresholdPoPScore()
+
     expect(ownerHasAdminV1).to.be.true
     expect(ownerHasAdminV2).to.equal(ownerHasAdminV1) // Check admin role persisted
     expect(thresholdV2).to.equal(thresholdV1)
@@ -203,12 +244,18 @@ describe("VeBetterPassport Upgrade - @shard8a", function () {
     expect(ownerHasAdminV4).to.equal(ownerHasAdminV3) // Check admin role persisted
     expect(thresholdV4).to.equal(thresholdV3)
 
-    // Check if the RESET_SIGNALER_ROLE was assigned during V4 initialization
-    const RESET_SIGNALER_ROLE = await veBetterPassportV4.RESET_SIGNALER_ROLE()
-    expect(await veBetterPassportV4.hasRole(RESET_SIGNALER_ROLE, config.CONTRACTS_ADMIN_ADDRESS)).to.be.true
+    expect(ownerHasAdminV5).to.equal(ownerHasAdminV4) // Check admin role persisted
+    expect(thresholdV5).to.equal(thresholdV4)
 
-    // Verify a role granted in V1 still exists in V4
-    const SETTINGS_MANAGER_ROLE = await veBetterPassportV4.SETTINGS_MANAGER_ROLE()
-    expect(await veBetterPassportV4.hasRole(SETTINGS_MANAGER_ROLE, owner.address)).to.be.true
+    // Check if the RESET_SIGNALER_ROLE was assigned during V4 initialization
+    const RESET_SIGNALER_ROLE = await veBetterPassportV5.RESET_SIGNALER_ROLE()
+    expect(await veBetterPassportV5.hasRole(RESET_SIGNALER_ROLE, config.CONTRACTS_ADMIN_ADDRESS)).to.be.true
+
+    // Verify a role granted in V1 still exists in V5
+    const SETTINGS_MANAGER_ROLE = await veBetterPassportV5.SETTINGS_MANAGER_ROLE()
+    expect(await veBetterPassportV5.hasRole(SETTINGS_MANAGER_ROLE, owner.address)).to.be.true
+
+    // Verify the new userRoundAppCount function exists in V5
+    expect(veBetterPassportV5.userRoundAppCount).to.be.a("function")
   })
 })

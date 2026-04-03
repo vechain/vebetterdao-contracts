@@ -23,14 +23,14 @@
 
 pragma solidity 0.8.20;
 
-import { IXAllocationVotingGovernor } from "../../interfaces/IXAllocationVotingGovernor.sol";
-import { IGalaxyMember } from "../../interfaces/IGalaxyMember.sol";
-import { IX2EarnApps } from "../../interfaces/IX2EarnApps.sol";
-import { PassportTypes } from "./PassportTypes.sol";
+import { IXAllocationVotingGovernor } from "../../../../interfaces/IXAllocationVotingGovernor.sol";
+import { IGalaxyMember } from "../../../../interfaces/IGalaxyMember.sol";
+import { IX2EarnApps } from "../../../../interfaces/IX2EarnApps.sol";
+import { PassportTypesV4 } from "./PassportTypesV4.sol";
 import { Checkpoints } from "@openzeppelin/contracts/utils/structs/Checkpoints.sol";
 
 /**
- * @title PassportStorageTypes
+ * @title PassportStorageTypesV4
  * @notice This library defines the primary storage types used within the Passport contract.
  * It uses the ERC-7201 Storage Namespaces standard to separate storage concerns efficiently.
  *
@@ -41,7 +41,7 @@ import { Checkpoints } from "@openzeppelin/contracts/utils/structs/Checkpoints.s
  * @dev This library manages complex contract state by grouping mappings and settings into
  * distinct storage types. It leverages the ERC-7201 standard for organizing these namespaces.
  */
-library PassportStorageTypes {
+library PassportStorageTypesV4 {
   struct PassportStorage {
     // ------------------ Passport Settings ------------------ //
     // Bitmask of enabled checks (e.g. whitelist, blacklist, signaling, etc.)
@@ -70,9 +70,9 @@ library PassportStorageTypes {
     uint256 blacklistThreshold;
     // ---------- Proof of Participation ---------- //
     // Multiplier of the base action score based on the app security
-    mapping(PassportTypes.APP_SECURITY security => uint256 multiplier) securityMultiplier;
+    mapping(PassportTypesV4.APP_SECURITY security => uint256 multiplier) securityMultiplier;
     // Security level of an app -> will be UNDEFINED and set to LOW by default
-    mapping(bytes32 appId => PassportTypes.APP_SECURITY security) appSecurity;
+    mapping(bytes32 appId => PassportTypesV4.APP_SECURITY security) appSecurity;
     // All-time total score of a user
     mapping(address user => uint256 totalScore) userTotalScore;
     // All-time total score of a user for a specific app
@@ -130,25 +130,5 @@ library PassportStorageTypes {
     mapping(bytes32 app => mapping(address user => uint256)) appSignalsCounter;
     // Mapping of apps to total signals
     mapping(bytes32 app => uint256) appTotalSignalsCounter;
-    // ---------- Version 5 - Participation Tracking ---------- //
-    // Track which apps a user has interacted with in a specific round
-    mapping(address user => mapping(uint256 round => mapping(bytes32 appId => bool))) userRoundUniqueAppInteraction;
-    // Number of distinct apps a user has interacted with in a specific round
-    mapping(address user => mapping(uint256 round => uint256 count)) userRoundAppCount;
-    // Number of actions distributed by an app in a specific round
-    mapping(bytes32 appId => mapping(uint256 round => uint256 count)) appRoundActionCount;
-    // Number of actions registered per user (passport) per app per round
-    mapping(address user => mapping(uint256 round => mapping(bytes32 appId => uint256 count))) userAppRoundActionCount;
-    // Total number of actions registered per user (passport) per round
-    mapping(address user => mapping(uint256 round => uint256 count)) userRoundActionCount;
-  }
-
-  // keccak256(abi.encode(uint256(keccak256("PassportStorageLocation")) - 1)) & ~bytes32(uint256(0xff))
-  bytes32 private constant PassportStorageLocation = 0x273c9387b78d9b22e6f3371bb3aa3a918f53507e8cacc54e4831933cbb844100;
-
-  function getPassportStorage() internal pure returns (PassportStorage storage $) {
-    assembly {
-      $.slot := PassportStorageLocation
-    }
   }
 }
